@@ -1,5 +1,5 @@
 export const site = {
   name: "Beigefield",
   description: "Real Estate Holdings",
-  url: "https://beigefield.vercel.app",
+  url: "https://www.beigefield.com",
 } as const;
