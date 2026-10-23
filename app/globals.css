@@ -1,26 +1,229 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --paper: #f3eee6;
+  --paper-bright: #f8f4ed;
+  --paper-deep: #e4dbcd;
+  --ink: #2b241c;
+  --taupe: #5a4e44;
+  --font-serif: var(--font-cormorant), "Iowan Old Style", "Palatino Linotype",
+    Palatino, serif;
+  --font-sans: var(--font-outfit), "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-taupe: var(--taupe);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--paper-deep);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100dvh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: #e4d5c0;
+  color: var(--ink);
+}
+
+.page {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 100dvh;
+  background:
+    radial-gradient(
+      ellipse 78% 64% at 50% 42%,
+      var(--paper-bright) 0%,
+      var(--paper) 54%,
+      var(--paper-deep) 100%
+    );
+}
+
+.frame {
+  pointer-events: none;
+  position: absolute;
+  inset: 1.15rem;
+  animation: fade 1.6s ease 0.12s both;
+}
+
+.corner {
+  position: absolute;
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.corner::before,
+.corner::after {
+  content: "";
+  position: absolute;
+  background: var(--ink);
+  opacity: 0.55;
+}
+
+.corner::before {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+}
+
+.corner::after {
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 100%;
+}
+
+.corner-tl {
+  top: 0;
+  left: 0;
+}
+
+.corner-tr {
+  top: 0;
+  right: 0;
+  transform: scaleX(-1);
+}
+
+.corner-bl {
+  bottom: 0;
+  left: 0;
+  transform: scaleY(-1);
+}
+
+.corner-br {
+  right: 0;
+  bottom: 0;
+  transform: scale(-1);
+}
+
+.lockup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: auto;
+  padding: 4.75rem 1.25rem;
+  text-align: center;
+  animation: rise 1.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.mark {
+  width: clamp(2.85rem, 6.5vw, 5.25rem);
+  height: auto;
+  color: var(--ink);
+}
+
+.lockup h1 {
+  margin: clamp(1.35rem, 2.6vw, 2.05rem) 0 0;
+  font-family: var(--font-serif);
+  font-size: clamp(3.35rem, 7.5vw, 7.75rem);
+  font-weight: 500;
+  font-feature-settings: "kern" 1, "liga" 1;
+  line-height: 0.92;
+  letter-spacing: 0.015em;
+  color: var(--ink);
+}
+
+.rule {
+  display: block;
+  width: clamp(3.25rem, 7vw, 5.25rem);
+  height: 1px;
+  margin-top: clamp(1.15rem, 2vw, 1.55rem);
+  background: var(--ink);
+  opacity: 0.72;
+  transform-origin: center;
+  animation: draw 1.05s cubic-bezier(0.22, 1, 0.36, 1) 0.28s both;
+}
+
+.lockup p {
+  margin: clamp(0.95rem, 1.7vw, 1.2rem) 0 0;
+  padding-left: 0.42em;
+  font-family: var(--font-sans);
+  font-size: clamp(0.68rem, 0.22vw + 0.62rem, 0.84rem);
+  font-weight: 300;
+  line-height: 1.4;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--taupe);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes draw {
+  from {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+
+  to {
+    opacity: 0.72;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (min-width: 640px) {
+  .frame {
+    inset: 2rem;
+  }
+
+  .corner {
+    width: 1.45rem;
+    height: 1.45rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .frame {
+    inset: 2.75rem;
+  }
+
+  .corner {
+    width: 1.7rem;
+    height: 1.7rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .lockup p {
+    padding-left: 0.28em;
+    letter-spacing: 0.28em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame,
+  .lockup,
+  .rule {
+    animation: none;
+  }
 }
