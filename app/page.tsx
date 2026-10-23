@@ -1,5 +1,3 @@
-import { Monogram } from "@/components/monogram";
-
 export default function Home() {
   return (
     <div className="page">
@@ -10,7 +8,6 @@ export default function Home() {
         <span className="corner corner-br" />
       </div>
       <main className="lockup">
-        <Monogram className="mark" />
         <h1>Beigefield</h1>
         <span className="rule" aria-hidden="true" />
         <p>Real Estate Holdings</p>
