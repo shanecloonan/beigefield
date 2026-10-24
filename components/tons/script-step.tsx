@@ -48,7 +48,8 @@ export function ScriptStepCard({
       : undefined;
   const stake = template?.id === "stake-ton";
   const burn = template?.id === "uton-burn";
-  const tailored = stake || burn;
+  const notify = template?.id === "burn-notification";
+  const tailored = stake || burn || notify;
 
   function setBody(body: MessageBody) {
     onChange({ ...step, body });
@@ -77,17 +78,23 @@ export function ScriptStepCard({
   return (
     <section
       className="ton-step"
-      id={stake ? "stake-form" : burn ? "burn-form" : undefined}
+      id={stake ? "stake-form" : burn ? "burn-form" : notify ? "notify-form" : undefined}
       aria-labelledby={`${step.id}-title`}
     >
       <div className="ton-step-head">
         <div>
           <p className="ton-kicker">
-            {stake ? "Step 1" : burn ? "Step 2" : preview ? "Ready" : "Draft"}
+            {stake ? "Step 1" : burn ? "Step 2" : notify ? "Step 3" : preview ? "Ready" : "Draft"}
             {template ? ` · ${template.label}` : ""}
           </p>
           <h2 id={`${step.id}-title`}>
-            {stake ? "Stake native TON" : burn ? "uTON burn" : `Step ${index + 1}`}
+            {stake
+              ? "Stake native TON"
+              : burn
+                ? "uTON burn"
+                : notify
+                  ? "Burn notification"
+                  : `Step ${index + 1}`}
           </h2>
         </div>
         {tailored ? null : (
@@ -132,9 +139,20 @@ export function ScriptStepCard({
           field below. Proxy id and forward value travel in the custom payload.
         </p>
       ) : null}
+      {notify ? (
+        <p className="ton-section-copy">
+          Opcode 0x7bdd97de to the minter. The owner address is stored before
+          the uTON amount. The jetton wallet has already reduced its balance
+          before it sends this. The message is bounceable. If the minter
+          rejects it, for example an invalid proxy id, the bounce returns to
+          on_bounce on the wallet.
+        </p>
+      ) : null}
 
       <label className="ton-field" htmlFor={destinationId}>
-        <span>{stake ? "proxy_ton address" : burn ? "Your uTON jetton wallet" : "Destination"}</span>
+        <span>
+          {stake ? "proxy_ton address" : burn ? "Your uTON jetton wallet" : notify ? "Minter" : "Destination"}
+        </span>
         <input
           id={destinationId}
           value={step.destination}
@@ -143,7 +161,9 @@ export function ScriptStepCard({
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
-          placeholder={stake ? "Paste proxy_ton" : burn ? "Paste your uTON wallet" : "EQ… or UQ…"}
+          placeholder={
+            stake ? "Paste proxy_ton" : burn ? "Paste your uTON wallet" : notify ? "Minter address" : "EQ… or UQ…"
+          }
           aria-invalid={Boolean(visible?.destination)}
         />
       </label>
@@ -151,7 +171,7 @@ export function ScriptStepCard({
       {visible?.destination ? <p className="ton-error">{visible.destination}</p> : null}
 
       <div className="ton-field">
-        <span id={amountId}>{stake ? "TON to stake" : burn ? "TON attached" : "Value"}</span>
+        <span id={amountId}>{stake ? "TON to stake" : burn || notify ? "TON attached" : "Value"}</span>
         <div className="ton-choice" role="group" aria-label="Value unit">
           <button
             type="button"
@@ -199,7 +219,9 @@ export function ScriptStepCard({
           ? "On by default. Leave it on so proxy_ton can return the TON if it does not accept the stake."
           : burn
             ? "On by default. Leave it on so your jetton wallet can return the attached TON if it does not accept the burn."
-            : "Bounceable asks the destination to return the value if it cannot accept the message."}
+            : notify
+              ? "On by default. If the minter rejects the notification, the bounce returns to on_bounce on the jetton wallet."
+              : "Bounceable asks the destination to return the value if it cannot accept the message."}
       </p>
 
       <div className="ton-field">
@@ -483,6 +505,17 @@ function stakeFieldHint(templateId: string | undefined, fieldId: string): string
     if (fieldId === "proxy_id") return "32 bits, stored at dictionary key 0. Starts at 0.";
     if (fieldId === "fwd_value") {
       return "Nanotons in the custom payload. Starts at 10000000. The empty forward cell is not editable.";
+    }
+  }
+  if (templateId === "burn-notification") {
+    if (fieldId === "query_id") return "64 bits. Starts at 0.";
+    if (fieldId === "owner") return "Stored before the uTON amount. Starts as the desk wallet.";
+    if (fieldId === "withdraw_id") return "64 bits. Starts at 0.";
+    if (fieldId === "amount") return "uTON in the notification, in nanotons. Left blank.";
+    if (fieldId === "proxy_id") return "32 bits. Starts at 0.";
+    if (fieldId === "response") return "Receives excess gas. Starts as the desk wallet.";
+    if (fieldId === "fwd_value") {
+      return "Nanotons. Starts at 10000000. The empty forward cell is not editable.";
     }
   }
   return null;

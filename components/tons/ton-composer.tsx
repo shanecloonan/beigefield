@@ -29,6 +29,7 @@ import {
   type StepErrors,
 } from "@/lib/ton-message";
 import { utonTemplateBody, utonTemplateById } from "@/lib/uton-templates";
+import { utonMinter } from "@/lib/uton";
 import {
   FUNDED_WALLET_ADDRESS,
 } from "@/lib/funded-wallet-public";
@@ -63,6 +64,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
   const [steps, setSteps] = useState<ScriptStep[]>(() => [
     stakeDraft("step-1"),
     burnDraft("step-2"),
+    notificationDraft("step-3"),
   ]);
   const [attempted, setAttempted] = useState<Record<string, boolean>>({});
   const [notice, setNotice] = useState<Notice>(null);
@@ -235,11 +237,9 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
       return;
     }
     const preview = result.previews[0];
-    const kind =
-      step.body.kind === "fields" && step.body.templateId === "uton-burn" ? "burn" : "stake";
     void transmit(
       result.request,
-      `Sent the ${kind} on mainnet. ${preview?.valueLabel ?? ""} to ${preview?.address ?? ""}.`.trim(),
+      `Sent the ${sentName(step)} on mainnet. ${preview?.valueLabel ?? ""} to ${preview?.address ?? ""}.`.trim(),
       step.id,
     );
   }
@@ -248,13 +248,15 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     <section className="ton-section" id="message" aria-labelledby="ton-message-title">
       <h2 id="ton-message-title">Messages</h2>
       <p className="ton-section-copy">
-        Step 1 stakes native TON. Step 2 burns uTON. Edit any value. TonConnect
-        or the funded wallet signs the message you choose. Nothing is sent
-        until you press the button on that step.
+        Step 1 stakes native TON. Step 2 burns uTON. Step 3 is the burn
+        notification the jetton wallet sends to the minter. Edit any value.
+        TonConnect or the funded wallet signs the message you choose. Nothing
+        is sent until you press the button on that step.
       </p>
       <nav className="ton-contents" aria-label="Message steps">
         <a href="#stake-form">Step 1 · Stake</a>
         <a href="#burn-form">Step 2 · Burn</a>
+        <a href="#notify-form">Step 3 · Burn notification</a>
       </nav>
 
       <section className="ton-wallet" aria-live="polite">
@@ -406,9 +408,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
                     ? localWallet
                       ? "Sending"
                       : "Waiting for the wallet"
-                    : step.body.kind === "fields" && step.body.templateId === "uton-burn"
-                      ? "Send burn"
-                      : "Send stake"
+                    : sendLabel(step)
                 }
                 sendDisabled={
                   sending ||
@@ -464,6 +464,20 @@ function isFundedRejected(
   );
 }
 
+function sendLabel(step: ScriptStep): string {
+  const id = step.body.kind === "fields" ? step.body.templateId : undefined;
+  if (id === "uton-burn") return "Send burn";
+  if (id === "burn-notification") return "Send burn notification";
+  return "Send stake";
+}
+
+function sentName(step: ScriptStep): string {
+  const id = step.body.kind === "fields" ? step.body.templateId : undefined;
+  if (id === "uton-burn") return "burn";
+  if (id === "burn-notification") return "burn notification";
+  return "stake";
+}
+
 function stakeDraft(id: string): ScriptStep {
   const template = utonTemplateById("stake-ton");
   if (!template) {
@@ -508,6 +522,27 @@ function burnDraft(id: string): ScriptStep {
       ...body,
       fields: body.fields.map((field) =>
         field.id === "response" ? { ...field, value: FUNDED_WALLET_ADDRESS } : field,
+      ),
+    },
+  };
+}
+
+function notificationDraft(id: string): ScriptStep {
+  const template = utonTemplateById("burn-notification");
+  if (!template) return burnDraft(id);
+  const body = utonTemplateBody(template);
+  return {
+    id,
+    destination: utonMinter,
+    amount: "",
+    unit: "ton",
+    bounceable: template.bounceable,
+    body: {
+      ...body,
+      fields: body.fields.map((field) =>
+        field.id === "owner" || field.id === "response"
+          ? { ...field, value: FUNDED_WALLET_ADDRESS }
+          : field,
       ),
     },
   };

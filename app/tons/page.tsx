@@ -4,9 +4,9 @@ import { UtonNotes } from "@/components/tons/uton-notes";
 import { site, tonManifestUrl } from "@/lib/site";
 import Link from "next/link";
 
-const title = `Stake and burn — ${site.name}`;
+const title = `Stake, burn, notify — ${site.name}`;
 const description =
-  "Two uTON messages on mainnet: a native TON stake to proxy_ton (opcode 0x1003), then a burn from your uTON jetton wallet (opcode 0x595f07bc).";
+  "Three uTON messages on mainnet: a native TON stake to proxy_ton (opcode 0x1003), a burn from your uTON jetton wallet (opcode 0x595f07bc), then the burn notification that wallet sends to the minter (opcode 0x7bdd97de).";
 
 export const metadata: Metadata = {
   title,
@@ -39,11 +39,12 @@ export default function TonPage() {
         <Link className="ton-mark" href="/">
           Beigefield
         </Link>
-        <p className="ton-kicker">Steps 1–2 · mainnet</p>
-        <h1>Stake and burn</h1>
+        <p className="ton-kicker">Steps 1–3 · mainnet</p>
+        <h1>Stake, burn, notify</h1>
         <p className="ton-lede">
           Step 1 deposits native TON with proxy_ton. Step 2 burns uTON from
-          your jetton wallet. Each message is filled and sent on its own.
+          your jetton wallet. Step 3 is the burn notification that wallet
+          sends to the minter. Each message is filled and sent on its own.
         </p>
         <UtonNotes />
         <TonComposer manifestUrl={tonManifestUrl} />
