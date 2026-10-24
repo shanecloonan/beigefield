@@ -18,6 +18,7 @@ export function ScriptStepCard({
   errors,
   showErrors,
   sending,
+  sendLabel,
   sendDisabled,
   onChange,
   onMove,
@@ -31,6 +32,7 @@ export function ScriptStepCard({
   errors?: StepErrors;
   showErrors: boolean;
   sending: boolean;
+  sendLabel: string;
   sendDisabled: boolean;
   onChange: (step: ScriptStep) => void;
   onMove: (direction: -1 | 1) => void;
@@ -45,6 +47,8 @@ export function ScriptStepCard({
       ? utonTemplateById(step.body.templateId)
       : undefined;
   const stake = template?.id === "stake-ton";
+  const burn = template?.id === "uton-burn";
+  const tailored = stake || burn;
 
   function setBody(body: MessageBody) {
     onChange({ ...step, body });
@@ -71,16 +75,22 @@ export function ScriptStepCard({
   }
 
   return (
-    <section className="ton-step" aria-labelledby={`${step.id}-title`}>
+    <section
+      className="ton-step"
+      id={stake ? "stake-form" : burn ? "burn-form" : undefined}
+      aria-labelledby={`${step.id}-title`}
+    >
       <div className="ton-step-head">
         <div>
           <p className="ton-kicker">
-            {stake ? "Step 1" : preview ? "Ready" : "Draft"}
+            {stake ? "Step 1" : burn ? "Step 2" : preview ? "Ready" : "Draft"}
             {template ? ` · ${template.label}` : ""}
           </p>
-          <h2 id={`${step.id}-title`}>{stake ? "Stake native TON" : `Step ${index + 1}`}</h2>
+          <h2 id={`${step.id}-title`}>
+            {stake ? "Stake native TON" : burn ? "uTON burn" : `Step ${index + 1}`}
+          </h2>
         </div>
-        {total > 1 ? (
+        {tailored ? null : (
           <div className="ton-step-actions">
             <button
               type="button"
@@ -104,10 +114,10 @@ export function ScriptStepCard({
               onClick={onRemove}
               disabled={sending}
             >
-              Remove
-            </button>
+            Remove
+          </button>
           </div>
-        ) : null}
+        )}
       </div>
 
       {stake ? (
@@ -116,9 +126,15 @@ export function ScriptStepCard({
           Query id, user, and response stay editable.
         </p>
       ) : null}
+      {burn ? (
+        <p className="ton-section-copy">
+          Opcode 0x595f07bc to your uTON jetton wallet. The uTON amount is a
+          field below. Proxy id and forward value travel in the custom payload.
+        </p>
+      ) : null}
 
       <label className="ton-field" htmlFor={destinationId}>
-        <span>{stake ? "proxy_ton address" : "Destination"}</span>
+        <span>{stake ? "proxy_ton address" : burn ? "Your uTON jetton wallet" : "Destination"}</span>
         <input
           id={destinationId}
           value={step.destination}
@@ -127,7 +143,7 @@ export function ScriptStepCard({
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
-          placeholder={stake ? "Paste proxy_ton" : "EQ… or UQ…"}
+          placeholder={stake ? "Paste proxy_ton" : burn ? "Paste your uTON wallet" : "EQ… or UQ…"}
           aria-invalid={Boolean(visible?.destination)}
         />
       </label>
@@ -135,7 +151,7 @@ export function ScriptStepCard({
       {visible?.destination ? <p className="ton-error">{visible.destination}</p> : null}
 
       <div className="ton-field">
-        <span id={amountId}>{stake ? "TON to stake" : "Value"}</span>
+        <span id={amountId}>{stake ? "TON to stake" : burn ? "TON attached" : "Value"}</span>
         <div className="ton-choice" role="group" aria-label="Value unit">
           <button
             type="button"
@@ -181,11 +197,13 @@ export function ScriptStepCard({
       <p className="ton-hint">
         {stake
           ? "On by default. Leave it on so proxy_ton can return the TON if it does not accept the stake."
-          : "Bounceable asks the destination to return the value if it cannot accept the message."}
+          : burn
+            ? "On by default. Leave it on so your jetton wallet can return the attached TON if it does not accept the burn."
+            : "Bounceable asks the destination to return the value if it cannot accept the message."}
       </p>
 
       <div className="ton-field">
-        {stake ? null : (
+        {tailored ? null : (
           <>
         <span>Body</span>
         <div className="ton-choice" role="group" aria-label="Message body">
@@ -275,11 +293,11 @@ export function ScriptStepCard({
 
       <button
         type="button"
-        className="ton-button ton-button-quiet"
+        className={tailored ? "ton-button" : "ton-button ton-button-quiet"}
         onClick={onSend}
         disabled={sendDisabled}
       >
-        Send stake
+        {sendLabel}
       </button>
     </section>
   );
@@ -453,10 +471,20 @@ function BodyEditor({
 }
 
 function stakeFieldHint(templateId: string | undefined, fieldId: string): string | null {
-  if (templateId !== "stake-ton") return null;
-  if (fieldId === "query_id") return "64 bits. Starts at 0.";
-  if (fieldId === "user") return "Receives the minted uTON. Starts as the desk wallet.";
-  if (fieldId === "response") return "Receives excess gas. Starts as the desk wallet.";
+  if (templateId === "stake-ton") {
+    if (fieldId === "query_id") return "64 bits. Starts at 0.";
+    if (fieldId === "user") return "Receives the minted uTON. Starts as the desk wallet.";
+    if (fieldId === "response") return "Receives excess gas. Starts as the desk wallet.";
+  }
+  if (templateId === "uton-burn") {
+    if (fieldId === "query_id") return "64 bits. Starts at 0.";
+    if (fieldId === "amount") return "uTON to burn, in nanotons.";
+    if (fieldId === "response") return "Receives excess gas. Starts as the desk wallet.";
+    if (fieldId === "proxy_id") return "32 bits, stored at dictionary key 0. Starts at 0.";
+    if (fieldId === "fwd_value") {
+      return "Nanotons in the custom payload. Starts at 10000000. The empty forward cell is not editable.";
+    }
+  }
   return null;
 }
 

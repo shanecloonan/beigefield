@@ -23,8 +23,6 @@ import {
   compileStep,
   connectFailureMessage,
   isMainnetChain,
-  readMaxMessages,
-  scriptValueSummary,
   sendFailureMessage,
   type MainnetScriptRequest,
   type ScriptStep,
@@ -33,7 +31,6 @@ import {
 import { utonTemplateBody, utonTemplateById } from "@/lib/uton-templates";
 import {
   FUNDED_WALLET_ADDRESS,
-  FUNDED_WALLET_MAX_MESSAGES,
 } from "@/lib/funded-wallet-public";
 
 type Notice =
@@ -63,11 +60,16 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
   const address = useTonAddress();
   const restored = useIsConnectionRestored();
   const sendingRef = useRef(false);
-  const [steps, setSteps] = useState<ScriptStep[]>(() => [stakeDraft("step-1")]);
+  const [steps, setSteps] = useState<ScriptStep[]>(() => [
+    stakeDraft("step-1"),
+    burnDraft("step-2"),
+  ]);
   const [attempted, setAttempted] = useState<Record<string, boolean>>({});
   const [notice, setNotice] = useState<Notice>(null);
+  const [noticeStepId, setNoticeStepId] = useState<string | null>(null);
   const [connectNotice, setConnectNotice] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [sendingId, setSendingId] = useState<string | null>(null);
   const [localWallet, setLocalWallet] = useState(false);
 
   const onMainnet = isMainnetChain(wallet?.account.chain);
@@ -75,17 +77,14 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     () => Address.parse(FUNDED_WALLET_ADDRESS).toRawString(),
     [],
   );
-  const limit = localWallet
-    ? { maxMessages: FUNDED_WALLET_MAX_MESSAGES, advertised: true }
-    : readMaxMessages(wallet?.device.features);
   const compiled = useMemo(() => steps.map((step) => compileStep(step)), [steps]);
-  const overLimit = Boolean(limit && steps.length > limit.maxMessages);
 
   useEffect(() => subscribeConnectNotice(setConnectNotice), []);
 
   function updateStep(id: string, next: ScriptStep) {
     setSteps((current) => current.map((step) => (step.id === id ? next : step)));
     setNotice(null);
+    setNoticeStepId(null);
   }
 
   function moveStep(index: number, direction: -1 | 1) {
@@ -126,10 +125,11 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     }
   }
 
-  async function transmit(request: MainnetScriptRequest, text: string) {
+  async function transmit(request: MainnetScriptRequest, text: string, stepId: string) {
     if (sendingRef.current) return;
+    setNoticeStepId(stepId);
     if (localWallet) {
-      await transmitLocal(request, text);
+      await transmitLocal(request, text, stepId);
       return;
     }
 
@@ -150,8 +150,10 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     }
 
     sendingRef.current = true;
+    setSendingId(stepId);
     setSending(true);
     setNotice(null);
+    setNoticeStepId(stepId);
 
     try {
       const response = await tonConnectUI.sendTransaction(request);
@@ -177,13 +179,16 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     } finally {
       sendingRef.current = false;
       setSending(false);
+      setSendingId(null);
     }
   }
 
-  async function transmitLocal(request: MainnetScriptRequest, text: string) {
+  async function transmitLocal(request: MainnetScriptRequest, text: string, stepId: string) {
     sendingRef.current = true;
+    setSendingId(stepId);
     setSending(true);
     setNotice(null);
+    setNoticeStepId(stepId);
 
     try {
       const response = await fetch("/api/ton/send", {
@@ -215,6 +220,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     } finally {
       sendingRef.current = false;
       setSending(false);
+      setSendingId(null);
     }
   }
 
@@ -224,43 +230,32 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
       fromRaw: localWallet ? fundedRaw : wallet?.account.address,
     });
     if (!result.ok || !result.request.messages[0]) {
+      setNoticeStepId(step.id);
       setNotice(null);
       return;
     }
     const preview = result.previews[0];
+    const kind =
+      step.body.kind === "fields" && step.body.templateId === "uton-burn" ? "burn" : "stake";
     void transmit(
       result.request,
-      `Sent the stake on mainnet. ${preview?.valueLabel ?? ""} to ${preview?.address ?? ""}.`.trim(),
+      `Sent the ${kind} on mainnet. ${preview?.valueLabel ?? ""} to ${preview?.address ?? ""}.`.trim(),
+      step.id,
     );
   }
 
-  function sendScript() {
-    setAttempted(Object.fromEntries(steps.map((step) => [step.id, true])));
-    const result = compileScript(steps, {
-      fromRaw: localWallet ? fundedRaw : wallet?.account.address,
-      maxMessages: limit?.maxMessages,
-    });
-    if (!result.ok) {
-      setNotice(result.message ? { tone: "bad", text: result.message } : null);
-      return;
-    }
-    void transmit(result.request, "Sent the stake on mainnet.");
-  }
-
-  const limitCopy = limit
-    ? limit.advertised
-      ? `This wallet accepts ${limit.maxMessages} ${limit.maxMessages === 1 ? "message" : "messages"} per confirmation.`
-      : `This wallet did not advertise a message limit, so a script is capped at ${limit.maxMessages} messages per confirmation.`
-    : "Connect a mainnet wallet, or use the funded wallet, to send this stake.";
-
   return (
     <section className="ton-section" id="message" aria-labelledby="ton-message-title">
-      <h2 id="ton-message-title">Stake</h2>
+      <h2 id="ton-message-title">Messages</h2>
       <p className="ton-section-copy">
-        The fields are the stake proxy_ton expects. Edit any value. TonConnect
-        or the funded wallet signs this one message. Nothing is sent until you
-        choose Send stake.
+        Step 1 stakes native TON. Step 2 burns uTON. Edit any value. TonConnect
+        or the funded wallet signs the message you choose. Nothing is sent
+        until you press the button on that step.
       </p>
+      <nav className="ton-contents" aria-label="Message steps">
+        <a href="#stake-form">Step 1 · Stake</a>
+        <a href="#burn-form">Step 2 · Burn</a>
+      </nav>
 
       <section className="ton-wallet" aria-live="polite">
         {localWallet ? (
@@ -397,15 +392,24 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
             const result = compiled[index];
             const errors: StepErrors | undefined = result && !result.ok ? result.errors : undefined;
             return (
+              <div key={step.id}>
               <ScriptStepCard
-                key={step.id}
                 index={index}
                 total={steps.length}
                 step={step}
                 preview={result?.ok ? result.preview : undefined}
                 errors={errors}
                 showErrors={Boolean(attempted[step.id])}
-                sending={sending}
+                sending={sendingId === step.id}
+                sendLabel={
+                  sendingId === step.id
+                    ? localWallet
+                      ? "Sending"
+                      : "Waiting for the wallet"
+                    : step.body.kind === "fields" && step.body.templateId === "uton-burn"
+                      ? "Send burn"
+                      : "Send stake"
+                }
                 sendDisabled={
                   sending ||
                   (!localWallet && (!restored || Boolean(wallet && !onMainnet)))
@@ -415,58 +419,28 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
                 onRemove={() => {
                   setSteps((current) => current.filter((item) => item.id !== step.id));
                   setNotice(null);
+                  setNoticeStepId(null);
                 }}
                 onSend={() => sendStep(step)}
               />
+              {notice && noticeStepId === step.id ? (
+                <p className={notice.tone === "good" ? "ton-good" : "ton-error"} role="status">
+                  {notice.text}{" "}
+                  {notice.tone === "good" ? (
+                    <a href={notice.href} target="_blank" rel="noreferrer">
+                      {notice.hrefLabel}
+                    </a>
+                  ) : null}
+                </p>
+              ) : null}
+              </div>
             );
           })}
         </div>
 
-        <div className="ton-script">
-          <p className="ton-summary-line">{scriptValueSummary(compiled)}</p>
-          <p className="ton-hint">{limitCopy}</p>
-          {overLimit && limit ? (
-            <p className="ton-error">
-              This wallet accepts {limit.maxMessages}{" "}
-              {limit.maxMessages === 1 ? "message" : "messages"} per confirmation.
-              This script has {steps.length}.
-            </p>
-          ) : null}
-          <div aria-live="polite">
-            {notice ? (
-              <p className={notice.tone === "good" ? "ton-good" : "ton-error"} role="status">
-                {notice.text}{" "}
-                {notice.tone === "good" ? (
-                  <a href={notice.href} target="_blank" rel="noreferrer">
-                    {notice.hrefLabel}
-                  </a>
-                ) : null}
-              </p>
-            ) : null}
-          </div>
-          <div className="ton-actions">
-            <button
-              type="button"
-              className="ton-button"
-              onClick={sendScript}
-              disabled={
-                sending ||
-                steps.length === 0 ||
-                overLimit ||
-                (!localWallet && (!restored || Boolean(wallet && !onMainnet)))
-              }
-            >
-              {sending
-                ? localWallet
-                  ? "Sending"
-                  : "Waiting for the wallet"
-                : "Send stake"}
-            </button>
-          </div>
-          <p className="ton-hint">
-            Send stake signs this deposit on mainnet. A sent message is final.
-          </p>
-        </div>
+        <p className="ton-hint">
+          Each button sends only that message. Mainnet. A sent message is final.
+        </p>
     </section>
   );
 }
@@ -515,6 +489,25 @@ function stakeDraft(id: string): ScriptStep {
         field.id === "user" || field.id === "response"
           ? { ...field, value: FUNDED_WALLET_ADDRESS }
           : field,
+      ),
+    },
+  };
+}
+
+function burnDraft(id: string): ScriptStep {
+  const template = utonTemplateById("uton-burn");
+  if (!template) return stakeDraft(id);
+  const body = utonTemplateBody(template);
+  return {
+    id,
+    destination: "",
+    amount: "",
+    unit: "ton",
+    bounceable: template.bounceable,
+    body: {
+      ...body,
+      fields: body.fields.map((field) =>
+        field.id === "response" ? { ...field, value: FUNDED_WALLET_ADDRESS } : field,
       ),
     },
   };
