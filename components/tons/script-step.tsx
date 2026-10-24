@@ -176,7 +176,7 @@ export function ScriptStepCard({
           Opcode 0x4502 to the pending withdraw contract. Send it only after
           withdraw_pending_time has elapsed. This call starts that contract
           withdraw path, which queries the minter.{" "}
-          <a href="#user-withdraw">That query is step 6.</a>
+          <a href="#payout-form">That query is step 6.</a>
         </p>
       ) : null}
 

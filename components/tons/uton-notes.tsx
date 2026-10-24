@@ -70,6 +70,7 @@ export function UtonNotes() {
         <a href="#burn-notify">Step 3</a>
         <a href="#proxy-burn">Step 4</a>
         <a href="#user-withdraw">Step 5</a>
+        <a href="#payout">Step 6</a>
       </nav>
 
       <section className="ton-section" id="stake" aria-labelledby="ton-stake-title">
@@ -199,13 +200,37 @@ export function UtonNotes() {
           withdraw contract after withdraw_pending_time has elapsed. The body
           is a 64-bit query id, the recipient, and the response address. The
           attached TON is gas. The contract then queries the minter. That
-          exchange is step 6 and is not sent from this page.
+          exchange is <a href="#payout-form">step 6</a> and is not sent from
+          this page.
         </p>
         <div className="ton-links">
           <a href={utonLinks.withdraw} target="_blank" rel="noreferrer">
             Withdraw at {utonSource.short}
           </a>
           <a href="#withdraw-form">Open the withdraw form</a>
+        </div>
+      </section>
+
+      <section className="ton-section" id="payout" aria-labelledby="ton-payout-title">
+        <h2 id="ton-payout-title">Step 6 · Query, ack, and proxy payout</h2>
+        <p className="ton-section-copy">
+          The pending withdraw from <a href="#withdraw-form">step 5</a> sends
+          opcode 0x1001 to the minter. The minter answers with opcode 0x1002.
+          A later price can only lower the TON stored on the withdraw. The
+          contract then sends opcode 0x4004 to proxy_ton, which pays the
+          recipient. Price and supply are not read here.
+        </p>
+        <div className="ton-links">
+          <a href={utonLinks.minter} target="_blank" rel="noreferrer">
+            Minter at {utonSource.short}
+          </a>
+          <a href={utonLinks.withdraw} target="_blank" rel="noreferrer">
+            Withdraw at {utonSource.short}
+          </a>
+          <a href={utonLinks.proxyTon} target="_blank" rel="noreferrer">
+            proxy_ton at {utonSource.short}
+          </a>
+          <a href="#payout-form">Open the payout desk</a>
         </div>
       </section>
     </>

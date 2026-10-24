@@ -9,6 +9,7 @@ import {
   useTonWallet,
 } from "@tonconnect/ui-react";
 import { CopyButton } from "@/components/tons/copy-button";
+import { PayoutDesk } from "@/components/tons/payout-desk";
 import { ProxyBurnDesk } from "@/components/tons/proxy-burn-desk";
 import { ScriptStepCard } from "@/components/tons/script-step";
 import {
@@ -268,9 +269,10 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
         Step 1 stakes native TON. Step 2 burns uTON. Step 3 is the burn
         notification the jetton wallet sends to the minter. Step 4 is the
         minter and proxy after that notification is accepted. Step 5 is the
-        owner withdraw to the pending contract. Edit any value. TonConnect or
-        the funded wallet signs the message you choose. Nothing is sent until
-        you press the button on that step.
+        owner withdraw to the pending contract. Step 6 is the query, the ack,
+        and the proxy payout after that. Edit any value. TonConnect or the
+        funded wallet signs the message you choose. Nothing is sent until you
+        press the button on that step.
       </p>
       <nav className="ton-contents" aria-label="Message steps">
         <a href="#stake-form">Step 1 · Stake</a>
@@ -278,6 +280,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
         <a href="#notify-form">Step 3 · Burn notification</a>
         <a href="#proxy-burn-form">Step 4 · Proxy burn</a>
         <a href="#withdraw-form">Step 5 · Withdraw</a>
+        <a href="#payout-form">Step 6 · Payout</a>
       </nav>
 
       <section className="ton-wallet" aria-live="polite">
@@ -514,11 +517,15 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
               </div>
             );
           })}
+          <PayoutDesk
+            pendingAddress={pendingAddress}
+            withdraw={steps.find((step) => templateId(step) === "withdraw") ?? withdrawDraft("step-5")}
+          />
         </div>
 
         <p className="ton-hint">
           Each send button sends only that message. Mainnet. A sent message is
-          final. Step 4 is not sent from this page.
+          final. Steps 4 and 6 are not sent from this page.
         </p>
     </section>
   );
