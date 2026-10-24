@@ -1,4 +1,4 @@
-/** Mainnet uTON jetton minter. Static reference — this app does not read chain state. */
+/** Mainnet uTON jetton minter. Static reference. The notes do not read chain state. */
 export const utonMinter = "EQAfF5j3JMIpZlLmACv7Ub7RH7WmiVMuV4ivcgNYHvNnqHTz";
 
 export const utonSource = {

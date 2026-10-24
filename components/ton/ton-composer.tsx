@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Address } from "@ton/core";
 import {
   useIsConnectionRestored,
   useTonAddress,
@@ -31,6 +32,10 @@ import {
   type StepErrors,
 } from "@/lib/ton-message";
 import { utonTemplateBody, utonTemplateById } from "@/lib/uton-templates";
+import {
+  FUNDED_WALLET_ADDRESS,
+  FUNDED_WALLET_MAX_MESSAGES,
+} from "@/lib/funded-wallet-public";
 
 type Notice =
   | {
@@ -64,9 +69,16 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
   const [notice, setNotice] = useState<Notice>(null);
   const [connectNotice, setConnectNotice] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [localWallet, setLocalWallet] = useState(false);
 
   const onMainnet = isMainnetChain(wallet?.account.chain);
-  const limit = readMaxMessages(wallet?.device.features);
+  const fundedRaw = useMemo(
+    () => Address.parse(FUNDED_WALLET_ADDRESS).toRawString(),
+    [],
+  );
+  const limit = localWallet
+    ? { maxMessages: FUNDED_WALLET_MAX_MESSAGES, advertised: true }
+    : readMaxMessages(wallet?.device.features);
   const compiled = useMemo(() => steps.map((step) => compileStep(step)), [steps]);
   const overLimit = Boolean(limit && steps.length > limit.maxMessages);
 
@@ -117,6 +129,10 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
 
   async function transmit(request: MainnetScriptRequest, text: string) {
     if (sendingRef.current) return;
+    if (localWallet) {
+      await transmitLocal(request, text);
+      return;
+    }
 
     if (!restored || !wallet) {
       setNotice({
@@ -165,9 +181,49 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     }
   }
 
+  async function transmitLocal(request: MainnetScriptRequest, text: string) {
+    sendingRef.current = true;
+    setSending(true);
+    setNotice(null);
+
+    try {
+      const response = await fetch("/api/ton/send", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(request),
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      if (isFundedOk(payload)) {
+        const first = request.messages[0]?.address ?? "";
+        setNotice({
+          tone: "good",
+          text,
+          href: `https://tonviewer.com/${encodeURIComponent(first)}`,
+          hrefLabel:
+            request.messages.length === 1
+              ? "View the destination on Tonviewer"
+              : "View the first destination on Tonviewer",
+        });
+        return;
+      }
+      if (isFundedRejected(payload)) {
+        setNotice({ tone: "bad", text: payload.message });
+        return;
+      }
+      setNotice({ tone: "bad", text: sendFailureMessage("ambiguous") });
+    } catch {
+      setNotice({ tone: "bad", text: sendFailureMessage("ambiguous") });
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
+    }
+  }
+
   function sendStep(step: ScriptStep) {
     setAttempted((current) => ({ ...current, [step.id]: true }));
-    const result = compileScript([step], { fromRaw: wallet?.account.address });
+    const result = compileScript([step], {
+      fromRaw: localWallet ? fundedRaw : wallet?.account.address,
+    });
     if (!result.ok || !result.request.messages[0]) {
       setNotice(null);
       return;
@@ -182,7 +238,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
   function sendScript() {
     setAttempted(Object.fromEntries(steps.map((step) => [step.id, true])));
     const result = compileScript(steps, {
-      fromRaw: wallet?.account.address,
+      fromRaw: localWallet ? fundedRaw : wallet?.account.address,
       maxMessages: limit?.maxMessages,
     });
     if (!result.ok) {
@@ -200,20 +256,56 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     ? limit.advertised
       ? `This wallet accepts ${limit.maxMessages} ${limit.maxMessages === 1 ? "message" : "messages"} per confirmation.`
       : `This wallet did not advertise a message limit, so a script is capped at ${limit.maxMessages} messages per confirmation.`
-    : "Connect a mainnet wallet to send. Its maxMessages decides how many steps fit in one confirmation.";
+    : "Connect a mainnet wallet, or use the funded wallet, to send. A wallet's maxMessages decides how many steps fit in one confirmation.";
 
   return (
     <section className="ton-section" id="message" aria-labelledby="ton-message-title">
       <h2 id="ton-message-title">Message</h2>
       <p className="ton-section-copy">
-        Script outgoing messages on mainnet. The connected wallet signs and
-        broadcasts them. A known message fills a uTON layout. You can still
-        edit every value, or write a payload of your own.
+        Script outgoing messages on mainnet. TonConnect or the funded wallet
+        signs and broadcasts them. A known message fills a uTON layout. You
+        can still edit every value, or write a payload of your own.
       </p>
 
       <section className="ton-wallet" aria-live="polite">
-        {!restored ? (
-          <p className="ton-status">Checking for a connected wallet.</p>
+        {localWallet ? (
+          <div className="ton-wallet-row">
+            <div>
+              <p className="ton-kicker">Local wallet · mainnet</p>
+              <p className="ton-address">{FUNDED_WALLET_ADDRESS}</p>
+              <div className="ton-links">
+                <CopyButton value={FUNDED_WALLET_ADDRESS} label="Copy address" />
+                <a
+                  href={`https://tonviewer.com/${encodeURIComponent(FUNDED_WALLET_ADDRESS)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Tonviewer
+                </a>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="ton-button ton-button-quiet"
+              onClick={() => setLocalWallet(false)}
+              disabled={sending}
+            >
+              Disconnect
+            </button>
+          </div>
+        ) : !restored ? (
+          <div>
+            <p className="ton-status">Checking for a connected wallet.</p>
+            <div className="ton-wallet-actions">
+              <button
+                type="button"
+                className="ton-button ton-button-quiet"
+                onClick={() => setLocalWallet(true)}
+              >
+                Use funded wallet
+              </button>
+            </div>
+          </div>
         ) : wallet && onMainnet ? (
           <div className="ton-wallet-row">
             <div>
@@ -232,36 +324,76 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
                 </div>
               ) : null}
             </div>
-            <button
-              type="button"
-              className="ton-button ton-button-quiet"
-              onClick={() => void disconnect()}
-            >
-              Disconnect
-            </button>
+            <div className="ton-wallet-actions">
+              <button
+                type="button"
+                className="ton-button ton-button-quiet"
+                onClick={() => setLocalWallet(true)}
+                disabled={sending}
+              >
+                Use funded wallet
+              </button>
+              <button
+                type="button"
+                className="ton-button ton-button-quiet"
+                onClick={() => void disconnect()}
+                disabled={sending}
+              >
+                Disconnect
+              </button>
+            </div>
           </div>
         ) : wallet ? (
           <div className="ton-wallet-row">
-            <p className="ton-status">
-              This wallet is on {chainLabel(wallet.account.chain)}. Switch it
-              to TON mainnet and connect again.
-            </p>
-            <button
-              type="button"
-              className="ton-button ton-button-quiet"
-              onClick={() => void disconnect()}
-            >
-              Disconnect
-            </button>
+            <div>
+              <p className="ton-status">
+                This wallet is on {chainLabel(wallet.account.chain)}. Switch it
+                to TON mainnet and connect again.
+              </p>
+            </div>
+            <div className="ton-wallet-actions">
+              <button
+                type="button"
+                className="ton-button ton-button-quiet"
+                onClick={() => setLocalWallet(true)}
+              >
+                Use funded wallet
+              </button>
+              <button
+                type="button"
+                className="ton-button ton-button-quiet"
+                onClick={() => void disconnect()}
+              >
+                Disconnect
+              </button>
+            </div>
           </div>
         ) : (
           <div>
-            <button type="button" className="ton-button" onClick={() => void connect()}>
-              Connect wallet
-            </button>
-            <p className="ton-hint">Mainnet only. A testnet wallet is refused.</p>
+            <div className="ton-wallet-actions">
+              <button type="button" className="ton-button" onClick={() => void connect()}>
+                Connect wallet
+              </button>
+              <button
+                type="button"
+                className="ton-button ton-button-quiet"
+                onClick={() => setLocalWallet(true)}
+              >
+                Use funded wallet
+              </button>
+            </div>
+            <p className="ton-hint">
+              Mainnet only. A testnet wallet is refused. Use funded wallet
+              sends from the desk wallet without TonConnect.
+            </p>
           </div>
         )}
+        {localWallet ? (
+          <p className="ton-hint">
+            Signs on the server and broadcasts on mainnet. Disconnect to use
+            TonConnect instead.
+          </p>
+        ) : null}
         {connectNotice ? <p className="ton-status">{connectNotice}</p> : null}
       </section>
 
@@ -280,7 +412,8 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
                 showErrors={Boolean(attempted[step.id])}
                 sending={sending}
                 sendDisabled={
-                  sending || !restored || Boolean(wallet && !onMainnet)
+                  sending ||
+                  (!localWallet && (!restored || Boolean(wallet && !onMainnet)))
                 }
                 onChange={(next) => updateStep(step.id, next)}
                 onMove={(direction) => moveStep(index, direction)}
@@ -350,13 +483,16 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
               onClick={sendScript}
               disabled={
                 sending ||
-                !restored ||
                 steps.length === 0 ||
                 overLimit ||
-                Boolean(wallet && !onMainnet)
+                (!localWallet && (!restored || Boolean(wallet && !onMainnet)))
               }
             >
-              {sending ? "Waiting for the wallet" : "Send script"}
+              {sending
+                ? localWallet
+                  ? "Sending"
+                  : "Waiting for the wallet"
+                : "Send script"}
             </button>
           </div>
           <p className="ton-hint">
@@ -368,6 +504,25 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
           </p>
         </div>
     </section>
+  );
+}
+
+function isFundedOk(payload: unknown): payload is { ok: true } {
+  return Boolean(payload && typeof payload === "object" && "ok" in payload && payload.ok === true);
+}
+
+function isFundedRejected(
+  payload: unknown,
+): payload is { ok: false; kind: "rejected"; message: string } {
+  return Boolean(
+    payload &&
+      typeof payload === "object" &&
+      "ok" in payload &&
+      payload.ok === false &&
+      "kind" in payload &&
+      payload.kind === "rejected" &&
+      "message" in payload &&
+      typeof payload.message === "string",
   );
 }
 

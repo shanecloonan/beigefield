@@ -534,6 +534,17 @@ body {
   justify-content: space-between;
 }
 
+.ton-wallet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.ton-wallet-actions .ton-button {
+  margin-top: 0;
+}
+
 .ton-address {
   margin: 0.4rem 0 0;
 }
