@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   useIsConnectionRestored,
@@ -8,6 +8,7 @@ import {
   useTonConnectUI,
   useTonWallet,
 } from "@tonconnect/ui-react";
+import { ScriptStepCard } from "@/components/ton/script-step";
 import {
   TonProvider,
   clearConnectNotice,
@@ -17,11 +18,16 @@ import {
 import {
   chainLabel,
   classifySendError,
+  compileScript,
+  compileStep,
   connectFailureMessage,
+  emptyStep,
   isMainnetChain,
+  readMaxMessages,
   sendFailureMessage,
-  validateMainnetTransfer,
-  type FieldErrors,
+  type MainnetScriptRequest,
+  type ScriptStep,
+  type StepErrors,
 } from "@/lib/ton-message";
 
 type Notice =
@@ -51,32 +57,36 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
   const address = useTonAddress();
   const restored = useIsConnectionRestored();
   const sendingRef = useRef(false);
-
-  const [destination, setDestination] = useState("");
-  const [amount, setAmount] = useState("");
-  const [comment, setComment] = useState("");
-  const [errors, setErrors] = useState<FieldErrors>({});
+  const [steps, setSteps] = useState<ScriptStep[]>(() => [emptyStep("step-1")]);
+  const [attempted, setAttempted] = useState<Record<string, boolean>>({});
   const [notice, setNotice] = useState<Notice>(null);
   const [connectNotice, setConnectNotice] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
   const onMainnet = isMainnetChain(wallet?.account.chain);
+  const limit = readMaxMessages(wallet?.device.features);
+  const compiled = useMemo(() => steps.map((step) => compileStep(step)), [steps]);
+  const overLimit = Boolean(limit && steps.length > limit.maxMessages);
 
   useEffect(() => subscribeConnectNotice(setConnectNotice), []);
-  const preview = useMemo(
-    () =>
-      validateMainnetTransfer({
-        destination,
-        amountTon: amount,
-        comment,
-      }),
-    [destination, amount, comment],
-  );
 
-  function clearField(field: keyof FieldErrors) {
-    setErrors((current) =>
-      current[field] ? { ...current, [field]: undefined } : current,
-    );
+  function updateStep(id: string, next: ScriptStep) {
+    setSteps((current) => current.map((step) => (step.id === id ? next : step)));
+    setNotice(null);
+  }
+
+  function moveStep(index: number, direction: -1 | 1) {
+    setSteps((current) => {
+      const target = index + direction;
+      if (target < 0 || target >= current.length) return current;
+      const next = current.slice();
+      const item = next[index];
+      const swap = next[target];
+      if (!item || !swap) return current;
+      next[index] = swap;
+      next[target] = item;
+      return next;
+    });
     setNotice(null);
   }
 
@@ -103,29 +113,13 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     }
   }
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function transmit(request: MainnetScriptRequest, text: string) {
     if (sendingRef.current) return;
-
-    const result = validateMainnetTransfer({
-      destination,
-      amountTon: amount,
-      comment,
-      fromRaw: wallet?.account.address,
-    });
-
-    if (!result.ok) {
-      setErrors(result.errors);
-      setNotice(null);
-      return;
-    }
-
-    setErrors({});
 
     if (!restored || !wallet) {
       setNotice({
         tone: "bad",
-        text: "Connect a mainnet wallet to send this transfer.",
+        text: "Nothing was sent. Connect a mainnet wallet first.",
       });
       return;
     }
@@ -133,7 +127,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     if (!isMainnetChain(wallet.account.chain)) {
       setNotice({
         tone: "bad",
-        text: `This wallet is on ${chainLabel(wallet.account.chain)}. Switch it to TON mainnet and connect again. The transfer was not sent.`,
+        text: `This wallet is on ${chainLabel(wallet.account.chain)}. Switch it to TON mainnet and connect again. Nothing was sent.`,
       });
       return;
     }
@@ -143,17 +137,20 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     setNotice(null);
 
     try {
-      const response = await tonConnectUI.sendTransaction(result.request);
+      const response = await tonConnectUI.sendTransaction(request);
       if (!response?.boc) {
         setNotice({ tone: "bad", text: sendFailureMessage("ambiguous") });
         return;
       }
-      const sentTo = result.request.messages[0].address;
+      const first = request.messages[0]?.address ?? "";
       setNotice({
         tone: "good",
-        text: `Sent on mainnet. ${amount.trim()} TON to ${sentTo}.`,
-        href: `https://tonviewer.com/${encodeURIComponent(sentTo)}`,
-        hrefLabel: "View the destination on Tonviewer",
+        text,
+        href: `https://tonviewer.com/${encodeURIComponent(first)}`,
+        hrefLabel:
+          request.messages.length === 1
+            ? "View the destination on Tonviewer"
+            : "View the first destination on Tonviewer",
       });
     } catch (error) {
       setNotice({
@@ -165,6 +162,43 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
       setSending(false);
     }
   }
+
+  function sendStep(step: ScriptStep) {
+    setAttempted((current) => ({ ...current, [step.id]: true }));
+    const result = compileScript([step], { fromRaw: wallet?.account.address });
+    if (!result.ok || !result.request.messages[0]) {
+      setNotice(null);
+      return;
+    }
+    const preview = result.previews[0];
+    void transmit(
+      result.request,
+      `Sent step on mainnet. ${preview?.valueLabel ?? ""} to ${preview?.address ?? ""}.`.trim(),
+    );
+  }
+
+  function sendScript() {
+    setAttempted(Object.fromEntries(steps.map((step) => [step.id, true])));
+    const result = compileScript(steps, {
+      fromRaw: wallet?.account.address,
+      maxMessages: limit?.maxMessages,
+    });
+    if (!result.ok) {
+      setNotice(result.message ? { tone: "bad", text: result.message } : null);
+      return;
+    }
+    const count = result.request.messages.length;
+    void transmit(
+      result.request,
+      `Sent ${count} ${count === 1 ? "message" : "messages"} on mainnet in one confirmation.`,
+    );
+  }
+
+  const limitCopy = limit
+    ? limit.advertised
+      ? `This wallet accepts ${limit.maxMessages} ${limit.maxMessages === 1 ? "message" : "messages"} per confirmation.`
+      : `This wallet did not advertise a message limit, so a script is capped at ${limit.maxMessages} messages per confirmation.`
+    : "Connect a mainnet wallet to send. Its maxMessages decides how many steps fit in one confirmation.";
 
   return (
     <div className="page">
@@ -181,8 +215,8 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
         <p className="ton-kicker">Mainnet</p>
         <h1>TON messages</h1>
         <p className="ton-lede">
-          Compose a transfer on The Open Network main network. The connected
-          wallet signs the message and broadcasts it.
+          Script outgoing messages on The Open Network main network. Each step
+          is one message. The connected wallet signs and broadcasts it.
         </p>
 
         <section className="ton-wallet" aria-live="polite">
@@ -217,107 +251,70 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
               </button>
             </div>
           ) : (
-            <button
-              type="button"
-              className="ton-button"
-              onClick={() => void connect()}
-            >
+            <button type="button" className="ton-button" onClick={() => void connect()}>
               Connect wallet
             </button>
           )}
           {connectNotice ? <p className="ton-status">{connectNotice}</p> : null}
         </section>
 
-        <form className="ton-form" onSubmit={(event) => void onSubmit(event)} noValidate>
-          <label className="ton-field">
-            <span>Destination</span>
-            <input
-              name="destination"
-              value={destination}
-              onChange={(event) => {
-                setDestination(event.target.value);
-                clearField("destination");
-              }}
-              autoComplete="off"
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="UQ…"
-              aria-invalid={Boolean(errors.destination)}
-              aria-describedby="destination-hint"
-            />
-          </label>
-          <p id="destination-hint" className="ton-hint">
-            Mainnet address. Bounceable and non-bounceable forms are kept as
-            written.
-          </p>
-          {errors.destination ? (
-            <p className="ton-error" role="alert">
-              {errors.destination}
-            </p>
-          ) : null}
-
-          <label className="ton-field">
-            <span>Amount</span>
-            <span className="ton-amount">
-              <input
-                name="amount"
-                value={amount}
-                onChange={(event) => {
-                  setAmount(event.target.value);
-                  clearField("amount");
+        <div className="ton-steps">
+          {steps.map((step, index) => {
+            const result = compiled[index];
+            const errors: StepErrors | undefined = result && !result.ok ? result.errors : undefined;
+            return (
+              <ScriptStepCard
+                key={step.id}
+                index={index}
+                total={steps.length}
+                step={step}
+                preview={result?.ok ? result.preview : undefined}
+                errors={errors}
+                showErrors={Boolean(attempted[step.id])}
+                sending={sending}
+                sendDisabled={
+                  sending || !restored || Boolean(wallet && !onMainnet)
+                }
+                onChange={(next) => updateStep(step.id, next)}
+                onMove={(direction) => moveStep(index, direction)}
+                onRemove={() => {
+                  setSteps((current) => current.filter((item) => item.id !== step.id));
+                  setNotice(null);
                 }}
-                inputMode="decimal"
-                autoComplete="off"
-                placeholder="0.1"
-                aria-invalid={Boolean(errors.amount)}
-                aria-describedby="amount-suffix"
+                onSend={() => sendStep(step)}
               />
-              <span id="amount-suffix">TON</span>
-            </span>
-          </label>
-          {errors.amount ? (
-            <p className="ton-error" role="alert">
-              {errors.amount}
-            </p>
-          ) : null}
+            );
+          })}
+        </div>
 
-          <label className="ton-field">
-            <span>Comment</span>
-            <textarea
-              name="comment"
-              value={comment}
-              onChange={(event) => {
-                setComment(event.target.value);
-                clearField("comment");
-              }}
-              rows={3}
-              placeholder="Optional note"
-              aria-invalid={Boolean(errors.comment)}
-              aria-describedby="comment-hint"
-            />
-          </label>
-          <p id="comment-hint" className="ton-hint">
-            Optional text included with the transfer.
+        <div className="ton-script">
+          <button
+            type="button"
+            className="ton-button ton-button-quiet"
+            onClick={() =>
+              setSteps((current) => [
+                ...current,
+                emptyStep(`step-${current.length + 1}-${Date.now()}`),
+              ])
+            }
+            disabled={sending}
+          >
+            Add message
+          </button>
+          <p className="ton-hint">
+            Send script puts every step in one TonConnect confirmation when the
+            script fits the wallet limit. Send step always sends that one
+            message. Messages in one confirmation are signed together, and each
+            destination still runs on its own. {limitCopy}
           </p>
-          {errors.comment ? (
-            <p className="ton-error" role="alert">
-              {errors.comment}
+          {overLimit && limit ? (
+            <p className="ton-error">
+              This wallet accepts {limit.maxMessages}{" "}
+              {limit.maxMessages === 1 ? "message" : "messages"} per confirmation.
+              This script has {steps.length}.
             </p>
           ) : null}
-
-          {preview.ok ? (
-            <p className="ton-preview">
-              Mainnet transfer of {amount.trim()} TON to{" "}
-              {preview.request.messages[0].address}
-              {preview.request.messages[0].payload
-                ? ", with a text comment"
-                : ""}
-              .
-            </p>
-          ) : null}
-
-          <div className="ton-submit" aria-live="polite">
+          <div aria-live="polite">
             {notice ? (
               <p className={notice.tone === "good" ? "ton-good" : "ton-error"} role="status">
                 {notice.text}{" "}
@@ -328,16 +325,23 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
                 ) : null}
               </p>
             ) : null}
-            <button
-              type="submit"
-              className="ton-button"
-              disabled={!restored || sending || Boolean(wallet && !onMainnet)}
-            >
-              {sending ? "Waiting for the wallet" : "Send on mainnet"}
-            </button>
-            <p className="ton-hint">Mainnet transfers are final.</p>
           </div>
-        </form>
+          <button
+            type="button"
+            className="ton-button"
+            onClick={sendScript}
+            disabled={
+              sending ||
+              !restored ||
+              steps.length === 0 ||
+              overLimit ||
+              Boolean(wallet && !onMainnet)
+            }
+          >
+            {sending ? "Waiting for the wallet" : "Send script"}
+          </button>
+          <p className="ton-hint">Mainnet. Sent messages are final.</p>
+        </div>
       </main>
     </div>
   );
