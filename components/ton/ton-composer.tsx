@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import {
   useIsConnectionRestored,
   useTonAddress,
   useTonConnectUI,
   useTonWallet,
 } from "@tonconnect/ui-react";
+import { CopyButton } from "@/components/ton/copy-button";
 import { ScriptStepCard } from "@/components/ton/script-step";
 import {
   TonProvider,
@@ -24,6 +24,7 @@ import {
   emptyStep,
   isMainnetChain,
   readMaxMessages,
+  scriptValueSummary,
   sendFailureMessage,
   type MainnetScriptRequest,
   type ScriptStep,
@@ -201,62 +202,67 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     : "Connect a mainnet wallet to send. Its maxMessages decides how many steps fit in one confirmation.";
 
   return (
-    <div className="page">
-      <div className="frame" aria-hidden="true">
-        <span className="corner corner-tl" />
-        <span className="corner corner-tr" />
-        <span className="corner corner-bl" />
-        <span className="corner corner-br" />
-      </div>
-      <main className="ton-main">
-        <Link className="ton-mark" href="/">
-          Beigefield
-        </Link>
-        <p className="ton-kicker">Mainnet</p>
-        <h1>TON messages</h1>
-        <p className="ton-lede">
-          Script outgoing messages on The Open Network main network. Each step
-          is one message. The connected wallet signs and broadcasts it.
-        </p>
+    <section className="ton-section" id="message" aria-labelledby="ton-message-title">
+      <h2 id="ton-message-title">Message</h2>
+      <p className="ton-section-copy">
+        Script outgoing messages on mainnet. The connected wallet signs and
+        broadcasts them. A destination can be the minter, or any other mainnet
+        address. You write the payload.
+      </p>
 
-        <section className="ton-wallet" aria-live="polite">
-          {!restored ? (
-            <p className="ton-status">Checking for a connected wallet.</p>
-          ) : wallet && onMainnet ? (
-            <div className="ton-wallet-row">
-              <div>
-                <p className="ton-kicker">Connected · mainnet</p>
-                <p className="ton-address">{address}</p>
-              </div>
-              <button
-                type="button"
-                className="ton-button ton-button-quiet"
-                onClick={() => void disconnect()}
-              >
-                Disconnect
-              </button>
+      <section className="ton-wallet" aria-live="polite">
+        {!restored ? (
+          <p className="ton-status">Checking for a connected wallet.</p>
+        ) : wallet && onMainnet ? (
+          <div className="ton-wallet-row">
+            <div>
+              <p className="ton-kicker">Connected · mainnet</p>
+              <p className="ton-address">{address}</p>
+              {address ? (
+                <div className="ton-links">
+                  <CopyButton value={address} label="Copy address" />
+                  <a
+                    href={`https://tonviewer.com/${encodeURIComponent(address)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Tonviewer
+                  </a>
+                </div>
+              ) : null}
             </div>
-          ) : wallet ? (
-            <div className="ton-wallet-row">
-              <p className="ton-status">
-                This wallet is on {chainLabel(wallet.account.chain)}. Switch it
-                to TON mainnet and connect again.
-              </p>
-              <button
-                type="button"
-                className="ton-button ton-button-quiet"
-                onClick={() => void disconnect()}
-              >
-                Disconnect
-              </button>
-            </div>
-          ) : (
+            <button
+              type="button"
+              className="ton-button ton-button-quiet"
+              onClick={() => void disconnect()}
+            >
+              Disconnect
+            </button>
+          </div>
+        ) : wallet ? (
+          <div className="ton-wallet-row">
+            <p className="ton-status">
+              This wallet is on {chainLabel(wallet.account.chain)}. Switch it
+              to TON mainnet and connect again.
+            </p>
+            <button
+              type="button"
+              className="ton-button ton-button-quiet"
+              onClick={() => void disconnect()}
+            >
+              Disconnect
+            </button>
+          </div>
+        ) : (
+          <div>
             <button type="button" className="ton-button" onClick={() => void connect()}>
               Connect wallet
             </button>
-          )}
-          {connectNotice ? <p className="ton-status">{connectNotice}</p> : null}
-        </section>
+            <p className="ton-hint">Mainnet only. A testnet wallet is refused.</p>
+          </div>
+        )}
+        {connectNotice ? <p className="ton-status">{connectNotice}</p> : null}
+      </section>
 
         <div className="ton-steps">
           {steps.map((step, index) => {
@@ -288,25 +294,8 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
         </div>
 
         <div className="ton-script">
-          <button
-            type="button"
-            className="ton-button ton-button-quiet"
-            onClick={() =>
-              setSteps((current) => [
-                ...current,
-                emptyStep(`step-${current.length + 1}-${Date.now()}`),
-              ])
-            }
-            disabled={sending}
-          >
-            Add message
-          </button>
-          <p className="ton-hint">
-            Send script puts every step in one TonConnect confirmation when the
-            script fits the wallet limit. Send step always sends that one
-            message. Messages in one confirmation are signed together, and each
-            destination still runs on its own. {limitCopy}
-          </p>
+          <p className="ton-summary-line">{scriptValueSummary(compiled)}</p>
+          <p className="ton-hint">{limitCopy}</p>
           {overLimit && limit ? (
             <p className="ton-error">
               This wallet accepts {limit.maxMessages}{" "}
@@ -326,23 +315,41 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
               </p>
             ) : null}
           </div>
-          <button
-            type="button"
-            className="ton-button"
-            onClick={sendScript}
-            disabled={
-              sending ||
-              !restored ||
-              steps.length === 0 ||
-              overLimit ||
-              Boolean(wallet && !onMainnet)
-            }
-          >
-            {sending ? "Waiting for the wallet" : "Send script"}
-          </button>
-          <p className="ton-hint">Mainnet. Sent messages are final.</p>
+          <div className="ton-actions">
+            <button
+              type="button"
+              className="ton-button ton-button-quiet"
+              onClick={() =>
+                setSteps((current) => [
+                  ...current,
+                  emptyStep(`step-${current.length + 1}-${Date.now()}`),
+                ])
+              }
+              disabled={sending}
+            >
+              Add message
+            </button>
+            <button
+              type="button"
+              className="ton-button"
+              onClick={sendScript}
+              disabled={
+                sending ||
+                !restored ||
+                steps.length === 0 ||
+                overLimit ||
+                Boolean(wallet && !onMainnet)
+              }
+            >
+              {sending ? "Waiting for the wallet" : "Send script"}
+            </button>
+          </div>
+          <p className="ton-hint">
+            Send step sends that one message. Send script signs every step in
+            one confirmation when the script fits the wallet limit. Each
+            destination still runs on its own. Mainnet. A sent message is final.
+          </p>
         </div>
-      </main>
-    </div>
+    </section>
   );
 }

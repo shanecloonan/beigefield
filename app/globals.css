@@ -223,9 +223,9 @@ body {
 }
 
 .ton-main {
-  width: min(42rem, 100%);
+  width: min(48rem, 100%);
   margin: auto;
-  padding: 4.75rem 2.5rem 3.5rem;
+  padding: 4.5rem 1.85rem 3.5rem;
 }
 
 .ton-mark {
@@ -266,11 +266,260 @@ body {
 }
 
 .ton-lede {
+  max-width: 38rem;
   margin: 1.05rem 0 0;
   color: var(--taupe);
   font-size: 1.02rem;
   font-weight: 300;
   line-height: 1.55;
+}
+
+.ton-contents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1.15rem;
+  margin-top: 1.55rem;
+}
+
+.ton-contents a,
+.ton-links a,
+.ton-role h3 a {
+  color: var(--taupe);
+  font-size: 0.72rem;
+  font-weight: 300;
+  letter-spacing: 0.16em;
+  line-height: 1.4;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.ton-links a,
+.ton-role h3 a {
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-size: 0.92rem;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+.ton-contents a:hover,
+.ton-links a:hover,
+.ton-role h3 a:hover {
+  color: var(--ink);
+}
+
+.ton-section {
+  margin-top: 2.35rem;
+  padding-top: 1.35rem;
+  scroll-margin-top: 1.25rem;
+  border-top: 1px solid rgb(43 36 28 / 28%);
+}
+
+.ton-section h2,
+.ton-subhead {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.ton-section h2 {
+  font-size: clamp(1.85rem, 3.2vw, 2.35rem);
+}
+
+.ton-subhead {
+  margin-top: 1.7rem;
+  font-size: 1.45rem;
+}
+
+.ton-section-copy,
+.ton-notes p,
+.ton-role p,
+.ton-flow p,
+.ton-where dd {
+  color: var(--taupe);
+  font-size: 0.98rem;
+  font-weight: 300;
+  line-height: 1.55;
+}
+
+.ton-section-copy {
+  max-width: 40rem;
+  margin: 0.75rem 0 0;
+}
+
+.ton-ref {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin: 1.35rem 0 0;
+}
+
+.ton-ref dt,
+.ton-where dt,
+.ton-preview-list dt {
+  color: var(--taupe);
+  font-size: 0.68rem;
+  font-weight: 300;
+  letter-spacing: 0.16em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.ton-ref dd,
+.ton-where dd,
+.ton-preview-list dd {
+  margin: 0.35rem 0 0;
+}
+
+.ton-mono,
+.ton-address {
+  color: var(--ink);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  font-weight: 300;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.ton-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.9rem;
+  align-items: center;
+  margin-top: 0.55rem;
+}
+
+.ton-roles {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.ton-role h3 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.ton-role h3 a {
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  letter-spacing: 0.01em;
+}
+
+.ton-role p {
+  margin: 0.28rem 0 0;
+}
+
+.ton-where,
+.ton-preview-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.ton-where div,
+.ton-preview-list div {
+  display: grid;
+  grid-template-columns: minmax(8.5rem, 11.5rem) minmax(0, 1fr);
+  gap: 0.35rem 0.85rem;
+  align-items: baseline;
+}
+
+.ton-where dd,
+.ton-preview-list dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 300;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.ton-flow {
+  display: flex;
+  flex-direction: column;
+  margin: 1.15rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ton-flow li {
+  display: grid;
+  grid-template-columns: 1.7rem minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid rgb(43 36 28 / 16%);
+}
+
+.ton-flow li:first-child {
+  padding-top: 0.15rem;
+  border-top: 0;
+}
+
+.ton-flow-index,
+.ton-flow h3 {
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.ton-flow-index {
+  font-size: 1.25rem;
+}
+
+.ton-flow h3 {
+  margin: 0;
+  font-size: 1.28rem;
+}
+
+.ton-flow p {
+  margin: 0.28rem 0 0;
+}
+
+.ton-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-width: 40rem;
+  margin-top: 0.95rem;
+}
+
+.ton-notes p {
+  margin: 0;
+}
+
+.ton-summary-line {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: clamp(1.45rem, 2.4vw, 1.85rem);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.ton-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+  margin-top: 1.15rem;
+}
+
+.ton-actions .ton-button {
+  margin-top: 0;
+}
+
+.ton-preview-nano {
+  color: var(--taupe);
 }
 
 .ton-wallet {
@@ -287,11 +536,6 @@ body {
 
 .ton-address {
   margin: 0.4rem 0 0;
-  color: var(--ink);
-  font-size: 0.92rem;
-  font-weight: 300;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
 }
 
 .ton-status,
@@ -317,7 +561,10 @@ body {
 }
 
 .ton-good a,
-.ton-mark:focus-visible {
+.ton-mark:focus-visible,
+.ton-contents a:focus-visible,
+.ton-links a:focus-visible,
+.ton-role a:focus-visible {
   color: var(--ink);
 }
 
@@ -402,9 +649,9 @@ body {
   text-transform: uppercase;
 }
 
-.ton-preview {
-  margin-top: 1.35rem;
-  overflow-wrap: anywhere;
+.ton-preview,
+.ton-preview-list {
+  margin-top: 1.15rem;
 }
 
 .ton-submit {
@@ -446,7 +693,10 @@ body {
 .ton-field textarea:focus-visible,
 .ton-field select:focus-visible,
 .ton-substep select:focus-visible,
-.ton-good a:focus-visible {
+.ton-good a:focus-visible,
+.ton-contents a:focus-visible,
+.ton-links a:focus-visible,
+.ton-role a:focus-visible {
   outline: 1px solid var(--ink);
   outline-offset: 3px;
 }
@@ -464,10 +714,10 @@ body {
 }
 
 .ton-step h2 {
-  margin: 0;
+  margin: 0.15rem 0 0;
   color: var(--ink);
   font-family: var(--font-serif);
-  font-size: 2rem;
+  font-size: clamp(1.7rem, 3vw, 2.05rem);
   font-weight: 500;
   line-height: 1;
 }
@@ -580,14 +830,32 @@ body {
 }
 
 @media (max-width: 560px) {
-  .ton-split {
+  .ton-split,
+  .ton-where div,
+  .ton-preview-list div {
     grid-template-columns: 1fr;
+  }
+
+  .ton-step-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 
 @media (min-width: 640px) {
   .ton-main {
-    padding-right: 3rem;
-    padding-left: 3rem;
+    padding: 5rem 3.25rem 4rem;
+  }
+
+  .ton-roles {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.15rem 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .ton-main {
+    padding-right: 4.5rem;
+    padding-left: 4.5rem;
   }
 }

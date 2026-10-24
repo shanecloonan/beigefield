@@ -5,14 +5,17 @@ import {
   TON_MAINNET_CHAIN,
   chainLabel,
   classifySendError,
+  addNanotons,
   compileScript,
   compileStep,
   connectFailureMessage,
   decodeTextComment,
   emptyStep,
+  formatNanotons,
   isMainnetChain,
   normalizeMainnetAddress,
   readMaxMessages,
+  scriptValueSummary,
   sendFailureMessage,
   type ScriptStep,
 } from "./ton-message";
@@ -236,6 +239,28 @@ describe("compileScript", () => {
     assert.equal(limited.ok, false);
     if (limited.ok) return;
     assert.match(limited.message ?? "", /accepts 1 message/);
+  });
+});
+
+describe("script value", () => {
+  it("sums compiled steps and leaves an unfinished script unlabeled as zero", () => {
+    assert.equal(formatNanotons("0"), "0 TON");
+    assert.equal(formatNanotons("1250000000"), "1.25 TON");
+    assert.equal(formatNanotons("42"), "0.000000042 TON");
+    assert.equal(addNanotons(["500000000", "1250000000"]), "1750000000");
+
+    const ready = compileStep(step({ amount: "1.5" }));
+    const draft = compileStep(step({ destination: "", amount: "" }));
+    assert.equal(scriptValueSummary([]), "No messages in this script.");
+    assert.equal(scriptValueSummary([draft]), "1 message. Complete it to see a total.");
+    assert.equal(
+      scriptValueSummary([ready]),
+      "1 message · 1.5 TON in this script.",
+    );
+    assert.equal(
+      scriptValueSummary([ready, draft]),
+      "1 of 2 steps compile · 1.5 TON so far.",
+    );
   });
 });
 

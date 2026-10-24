@@ -225,6 +225,48 @@ export function compileStep(step: ScriptStep): StepCompile {
   };
 }
 
+export function addNanotons(values: readonly string[]): string {
+  let sum = BigInt(0);
+  for (const value of values) {
+    if (!/^\d+$/.test(value)) {
+      throw new Error("Nanoton totals are whole numbers.");
+    }
+    sum += BigInt(value);
+  }
+  return sum.toString();
+}
+
+export function formatNanotons(nanotons: string): string {
+  if (!/^\d+$/.test(nanotons)) {
+    throw new Error("Nanoton totals are whole numbers.");
+  }
+  const value = BigInt(nanotons);
+  const scale = BigInt("1000000000");
+  const whole = value / scale;
+  const fraction = (value % scale).toString().padStart(9, "0").replace(/0+$/, "");
+  const amount = fraction ? `${whole.toString()}.${fraction}` : whole.toString();
+  return `${amount} TON`;
+}
+
+export function scriptValueSummary(compiled: readonly StepCompile[]): string {
+  const count = compiled.length;
+  if (count === 0) return "No messages in this script.";
+
+  const ready = compiled.flatMap((item) => (item.ok ? [item.preview.nanotons] : []));
+  if (ready.length === 0) {
+    return count === 1
+      ? "1 message. Complete it to see a total."
+      : `${count} messages. Complete them to see a total.`;
+  }
+
+  const total = formatNanotons(addNanotons(ready));
+  if (ready.length === count) {
+    const noun = count === 1 ? "message" : "messages";
+    return `${count} ${noun} · ${total} in this script.`;
+  }
+  return `${ready.length} of ${count} steps compile · ${total} so far.`;
+}
+
 export function compileScript(
   steps: ScriptStep[],
   options?: {

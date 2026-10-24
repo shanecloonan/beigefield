@@ -67,7 +67,10 @@ export function ScriptStepCard({
   return (
     <section className="ton-step" aria-labelledby={`${step.id}-title`}>
       <div className="ton-step-head">
-        <h2 id={`${step.id}-title`}>Step {index + 1}</h2>
+        <div>
+          <p className="ton-kicker">{preview ? "Ready" : "Draft"}</p>
+          <h2 id={`${step.id}-title`}>Step {index + 1}</h2>
+        </div>
         <div className="ton-step-actions">
           <button
             type="button"
@@ -132,15 +135,18 @@ export function ScriptStepCard({
             Nanotons
           </button>
         </div>
-        <input
-          aria-labelledby={amountId}
-          value={step.amount}
-          onChange={(event) => onChange({ ...step, amount: event.target.value })}
-          inputMode="decimal"
-          autoComplete="off"
-          placeholder={step.unit === "ton" ? "0.1" : "100000000"}
-          aria-invalid={Boolean(visible?.amount)}
-        />
+        <div className="ton-amount">
+          <input
+            aria-labelledby={amountId}
+            value={step.amount}
+            onChange={(event) => onChange({ ...step, amount: event.target.value })}
+            inputMode="decimal"
+            autoComplete="off"
+            placeholder={step.unit === "ton" ? "0.1" : "100000000"}
+            aria-invalid={Boolean(visible?.amount)}
+          />
+          <span>{step.unit === "ton" ? "TON" : "Nano"}</span>
+        </div>
       </div>
       {visible?.amount ? <p className="ton-error">{visible.amount}</p> : null}
 
@@ -152,6 +158,10 @@ export function ScriptStepCard({
         />
         <span>Bounceable destination</span>
       </label>
+      <p className="ton-hint">
+        Bounceable asks the destination to return the value if it cannot accept
+        the message.
+      </p>
 
       <div className="ton-field">
         <span>Body</span>
@@ -180,10 +190,27 @@ export function ScriptStepCard({
       {visible?.body ? <p className="ton-error">{visible.body}</p> : null}
 
       {preview ? (
-        <p className="ton-preview">
-          {preview.bounceable ? "Bounceable" : "Non-bounceable"} {preview.valueLabel} to{" "}
-          {preview.address}. {preview.bodyLabel}. {preview.nanotons} nanotons.
-        </p>
+        <dl className="ton-preview-list">
+          <div>
+            <dt>To</dt>
+            <dd>{preview.address}</dd>
+          </div>
+          <div>
+            <dt>Value</dt>
+            <dd>
+              {preview.valueLabel}
+              <span className="ton-preview-nano"> · {preview.nanotons} nanotons</span>
+            </dd>
+          </div>
+          <div>
+            <dt>Bounce</dt>
+            <dd>{preview.bounceable ? "Bounceable" : "Non-bounceable"}</dd>
+          </div>
+          <div>
+            <dt>Body</dt>
+            <dd>{preview.bodyLabel}</dd>
+          </div>
+        </dl>
       ) : null}
 
       <button
@@ -214,18 +241,21 @@ function BodyEditor({
   onMoveField: (index: number, direction: -1 | 1) => void;
 }) {
   if (body.kind === "empty") {
-    return <p className="ton-hint">No message body.</p>;
+    return <p className="ton-hint">No payload. The message carries value only.</p>;
   }
 
   if (body.kind === "comment") {
     return (
-      <textarea
-        value={body.text}
-        onChange={(event) => onChange({ kind: "comment", text: event.target.value })}
-        rows={3}
-        placeholder="Text carried in the message"
-        aria-label="Comment"
-      />
+      <>
+        <textarea
+          value={body.text}
+          onChange={(event) => onChange({ kind: "comment", text: event.target.value })}
+          rows={3}
+          placeholder="Text carried in the message"
+          aria-label="Comment"
+        />
+        <p className="ton-hint">Text carried in the message body.</p>
+      </>
     );
   }
 

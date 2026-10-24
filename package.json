@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test lib/ton-message.test.ts"
+    "test": "tsx --test lib/*.test.ts"
   },
   "dependencies": {
     "@ton/core": "^0.63.1",
