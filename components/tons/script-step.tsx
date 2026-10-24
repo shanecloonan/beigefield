@@ -1,7 +1,7 @@
 "use client";
 
 import type { BodyField, MessageBody, ScriptStep, StepErrors, StepPreview } from "@/lib/ton-message";
-import { utonTemplateBody, utonTemplateById, utonTemplates } from "@/lib/uton-templates";
+import { utonTemplateBody, utonTemplateById } from "@/lib/uton-templates";
 
 const bodyKinds: Array<{ kind: MessageBody["kind"]; label: string }> = [
   { kind: "empty", label: "Empty" },
@@ -44,6 +44,7 @@ export function ScriptStepCard({
     step.body.kind === "fields" && step.body.templateId
       ? utonTemplateById(step.body.templateId)
       : undefined;
+  const stake = template?.id === "stake-ton";
 
   function setBody(body: MessageBody) {
     onChange({ ...step, body });
@@ -74,41 +75,50 @@ export function ScriptStepCard({
       <div className="ton-step-head">
         <div>
           <p className="ton-kicker">
-            {preview ? "Ready" : "Draft"}
+            {stake ? "Step 1" : preview ? "Ready" : "Draft"}
             {template ? ` · ${template.label}` : ""}
           </p>
-          <h2 id={`${step.id}-title`}>Step {index + 1}</h2>
+          <h2 id={`${step.id}-title`}>{stake ? "Stake native TON" : `Step ${index + 1}`}</h2>
         </div>
-        <div className="ton-step-actions">
-          <button
-            type="button"
-            className="ton-button ton-button-quiet ton-button-tiny"
-            onClick={() => onMove(-1)}
-            disabled={index === 0 || sending}
-          >
-            Up
-          </button>
-          <button
-            type="button"
-            className="ton-button ton-button-quiet ton-button-tiny"
-            onClick={() => onMove(1)}
-            disabled={index === total - 1 || sending}
-          >
-            Down
-          </button>
-          <button
-            type="button"
-            className="ton-button ton-button-quiet ton-button-tiny"
-            onClick={onRemove}
-            disabled={sending}
-          >
-            Remove
-          </button>
-        </div>
+        {total > 1 ? (
+          <div className="ton-step-actions">
+            <button
+              type="button"
+              className="ton-button ton-button-quiet ton-button-tiny"
+              onClick={() => onMove(-1)}
+              disabled={index === 0 || sending}
+            >
+              Up
+            </button>
+            <button
+              type="button"
+              className="ton-button ton-button-quiet ton-button-tiny"
+              onClick={() => onMove(1)}
+              disabled={index === total - 1 || sending}
+            >
+              Down
+            </button>
+            <button
+              type="button"
+              className="ton-button ton-button-quiet ton-button-tiny"
+              onClick={onRemove}
+              disabled={sending}
+            >
+              Remove
+            </button>
+          </div>
+        ) : null}
       </div>
 
+      {stake ? (
+        <p className="ton-section-copy">
+          Opcode 0x1003 to proxy_ton. The TON on this message is the deposit.
+          Query id, user, and response stay editable.
+        </p>
+      ) : null}
+
       <label className="ton-field" htmlFor={destinationId}>
-        <span>Destination</span>
+        <span>{stake ? "proxy_ton address" : "Destination"}</span>
         <input
           id={destinationId}
           value={step.destination}
@@ -117,7 +127,7 @@ export function ScriptStepCard({
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
-          placeholder="EQ… or UQ…"
+          placeholder={stake ? "Paste proxy_ton" : "EQ… or UQ…"}
           aria-invalid={Boolean(visible?.destination)}
         />
       </label>
@@ -125,7 +135,7 @@ export function ScriptStepCard({
       {visible?.destination ? <p className="ton-error">{visible.destination}</p> : null}
 
       <div className="ton-field">
-        <span id={amountId}>Value</span>
+        <span id={amountId}>{stake ? "TON to stake" : "Value"}</span>
         <div className="ton-choice" role="group" aria-label="Value unit">
           <button
             type="button"
@@ -169,11 +179,14 @@ export function ScriptStepCard({
         <span>Bounceable destination</span>
       </label>
       <p className="ton-hint">
-        Bounceable asks the destination to return the value if it cannot accept
-        the message.
+        {stake
+          ? "On by default. Leave it on so proxy_ton can return the TON if it does not accept the stake."
+          : "Bounceable asks the destination to return the value if it cannot accept the message."}
       </p>
 
       <div className="ton-field">
+        {stake ? null : (
+          <>
         <span>Body</span>
         <div className="ton-choice" role="group" aria-label="Message body">
           {bodyKinds.map((option) => (
@@ -211,7 +224,7 @@ export function ScriptStepCard({
                 return;
               }
               const next = utonTemplateById(id);
-              if (!next) return;
+              if (!next || next.id !== "stake-ton") return;
               onChange({
                 ...step,
                 bounceable: next.bounceable,
@@ -220,13 +233,11 @@ export function ScriptStepCard({
             }}
           >
             <option value="">Custom</option>
-            {utonTemplates.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-              </option>
-            ))}
+            <option value="stake-ton">Stake native TON</option>
           </select>
         </label>
+          </>
+        )}
         <BodyEditor
           stepId={step.id}
           body={step.body}
@@ -268,7 +279,7 @@ export function ScriptStepCard({
         onClick={onSend}
         disabled={sendDisabled}
       >
-        Send step
+        Send stake
       </button>
     </section>
   );
@@ -412,6 +423,9 @@ function BodyEditor({
             )}
           </div>
           <FieldInputs field={field} onField={onField} />
+          {stakeFieldHint(body.templateId, field.id) ? (
+            <p className="ton-hint">{stakeFieldHint(body.templateId, field.id)}</p>
+          ) : null}
           {fieldErrors?.[field.id] ? (
             <p className="ton-error">{fieldErrors[field.id]}</p>
           ) : null}
@@ -436,6 +450,14 @@ function BodyEditor({
       )}
     </div>
   );
+}
+
+function stakeFieldHint(templateId: string | undefined, fieldId: string): string | null {
+  if (templateId !== "stake-ton") return null;
+  if (fieldId === "query_id") return "64 bits. Starts at 0.";
+  if (fieldId === "user") return "Receives the minted uTON. Starts as the desk wallet.";
+  if (fieldId === "response") return "Receives excess gas. Starts as the desk wallet.";
+  return null;
 }
 
 function fieldKindLabel(kind: BodyField["kind"]): string {

@@ -22,7 +22,6 @@ import {
   compileScript,
   compileStep,
   connectFailureMessage,
-  emptyStep,
   isMainnetChain,
   readMaxMessages,
   scriptValueSummary,
@@ -64,7 +63,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
   const address = useTonAddress();
   const restored = useIsConnectionRestored();
   const sendingRef = useRef(false);
-  const [steps, setSteps] = useState<ScriptStep[]>(() => [emptyStep("step-1")]);
+  const [steps, setSteps] = useState<ScriptStep[]>(() => [stakeDraft("step-1")]);
   const [attempted, setAttempted] = useState<Record<string, boolean>>({});
   const [notice, setNotice] = useState<Notice>(null);
   const [connectNotice, setConnectNotice] = useState<string | null>(null);
@@ -231,7 +230,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     const preview = result.previews[0];
     void transmit(
       result.request,
-      `Sent step on mainnet. ${preview?.valueLabel ?? ""} to ${preview?.address ?? ""}.`.trim(),
+      `Sent the stake on mainnet. ${preview?.valueLabel ?? ""} to ${preview?.address ?? ""}.`.trim(),
     );
   }
 
@@ -245,26 +244,22 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
       setNotice(result.message ? { tone: "bad", text: result.message } : null);
       return;
     }
-    const count = result.request.messages.length;
-    void transmit(
-      result.request,
-      `Sent ${count} ${count === 1 ? "message" : "messages"} on mainnet in one confirmation.`,
-    );
+    void transmit(result.request, "Sent the stake on mainnet.");
   }
 
   const limitCopy = limit
     ? limit.advertised
       ? `This wallet accepts ${limit.maxMessages} ${limit.maxMessages === 1 ? "message" : "messages"} per confirmation.`
       : `This wallet did not advertise a message limit, so a script is capped at ${limit.maxMessages} messages per confirmation.`
-    : "Connect a mainnet wallet, or use the funded wallet, to send. A wallet's maxMessages decides how many steps fit in one confirmation.";
+    : "Connect a mainnet wallet, or use the funded wallet, to send this stake.";
 
   return (
     <section className="ton-section" id="message" aria-labelledby="ton-message-title">
-      <h2 id="ton-message-title">Message</h2>
+      <h2 id="ton-message-title">Stake</h2>
       <p className="ton-section-copy">
-        Script outgoing messages on mainnet. TonConnect or the funded wallet
-        signs and broadcasts them. A known message fills a uTON layout. You
-        can still edit every value, or write a payload of your own.
+        The fields are the stake proxy_ton expects. Edit any value. TonConnect
+        or the funded wallet signs this one message. Nothing is sent until you
+        choose Send stake.
       </p>
 
       <section className="ton-wallet" aria-live="polite">
@@ -452,33 +447,6 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
           <div className="ton-actions">
             <button
               type="button"
-              className="ton-button ton-button-quiet"
-              onClick={() =>
-                setSteps((current) => [
-                  ...current,
-                  emptyStep(`step-${current.length + 1}-${Date.now()}`),
-                ])
-              }
-              disabled={sending}
-            >
-              Add message
-            </button>
-            <button
-              type="button"
-              className="ton-button ton-button-quiet"
-              onClick={() =>
-                setSteps((current) => {
-                  const draft = burnDraft(`step-${current.length + 1}-${Date.now()}`);
-                  if (current.length === 1 && current[0] && isUntouched(current[0])) return [draft];
-                  return [...current, draft];
-                })
-              }
-              disabled={sending}
-            >
-              Load uTON burn
-            </button>
-            <button
-              type="button"
               className="ton-button"
               onClick={sendScript}
               disabled={
@@ -492,15 +460,11 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
                 ? localWallet
                   ? "Sending"
                   : "Waiting for the wallet"
-                : "Send script"}
+                : "Send stake"}
             </button>
           </div>
           <p className="ton-hint">
-            Load uTON burn adds a draft aimed at your uTON wallet. Nothing is
-            sent. Send step sends that one message. Send script signs every
-            step in one confirmation when the script fits the wallet limit.
-            Each destination still runs on its own. Mainnet. A sent message is
-            final.
+            Send stake signs this deposit on mainnet. A sent message is final.
           </p>
         </div>
     </section>
@@ -526,19 +490,32 @@ function isFundedRejected(
   );
 }
 
-function isUntouched(step: ScriptStep): boolean {
-  return step.destination.trim() === "" && step.amount.trim() === "" && step.body.kind === "empty";
-}
-
-function burnDraft(id: string): ScriptStep {
-  const template = utonTemplateById("uton-burn");
-  if (!template) return emptyStep(id);
+function stakeDraft(id: string): ScriptStep {
+  const template = utonTemplateById("stake-ton");
+  if (!template) {
+    return {
+      id,
+      destination: "",
+      amount: "",
+      unit: "ton",
+      bounceable: true,
+      body: { kind: "empty" },
+    };
+  }
+  const body = utonTemplateBody(template);
   return {
     id,
     destination: "",
     amount: "",
     unit: "ton",
     bounceable: template.bounceable,
-    body: utonTemplateBody(template),
+    body: {
+      ...body,
+      fields: body.fields.map((field) =>
+        field.id === "user" || field.id === "response"
+          ? { ...field, value: FUNDED_WALLET_ADDRESS }
+          : field,
+      ),
+    },
   };
 }

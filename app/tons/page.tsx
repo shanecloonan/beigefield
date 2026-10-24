@@ -4,9 +4,9 @@ import { UtonNotes } from "@/components/tons/uton-notes";
 import { site, tonManifestUrl } from "@/lib/site";
 import Link from "next/link";
 
-const title = `uTON — ${site.name}`;
+const title = `Stake native TON — ${site.name}`;
 const description =
-  "Notes on UTONIC uTON: the mainnet minter, how a native TON stake is minted, and how burn and withdraw return native TON. A mainnet message desk sits on the same page.";
+  "Step 1 of a uTON deposit: a stake message, opcode 0x1003, sent to proxy_ton with a query id, a user address, and a response address.";
 
 export const metadata: Metadata = {
   title,
@@ -39,12 +39,12 @@ export default function TonPage() {
         <Link className="ton-mark" href="/">
           Beigefield
         </Link>
-        <p className="ton-kicker">UTONIC · mainnet</p>
-        <h1>uTON</h1>
+        <p className="ton-kicker">Step 1 · mainnet</p>
+        <h1>Stake native TON</h1>
         <p className="ton-lede">
-          The liquid restaking jetton on UTONIC. Minted with native TON or an
-          LST such as stTON or tsTON, and withdrawn as native TON. The notes
-          follow the published contracts at one commit.
+          Deposit native TON with proxy_ton. The desk below is that one
+          message: opcode 0x1003, a query id, the user who receives the uTON,
+          and the address that receives excess gas.
         </p>
         <UtonNotes />
         <TonComposer manifestUrl={tonManifestUrl} />
