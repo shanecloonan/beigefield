@@ -6,9 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "tsx --test lib/ton-message.test.ts"
   },
   "dependencies": {
+    "@ton/core": "^0.63.1",
+    "@tonconnect/ui-react": "^5.0.1",
+    "buffer": "^6.0.3",
     "next": "16.2.4",
     "react": "19.2.4",
     "react-dom": "19.2.4"
@@ -21,6 +25,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }
