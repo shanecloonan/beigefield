@@ -30,6 +30,7 @@ import {
   type ScriptStep,
   type StepErrors,
 } from "@/lib/ton-message";
+import { utonTemplateBody, utonTemplateById } from "@/lib/uton-templates";
 
 type Notice =
   | {
@@ -206,8 +207,8 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
       <h2 id="ton-message-title">Message</h2>
       <p className="ton-section-copy">
         Script outgoing messages on mainnet. The connected wallet signs and
-        broadcasts them. A destination can be the minter, or any other mainnet
-        address. You write the payload.
+        broadcasts them. A known message fills a uTON layout. You can still
+        edit every value, or write a payload of your own.
       </p>
 
       <section className="ton-wallet" aria-live="polite">
@@ -331,6 +332,20 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
             </button>
             <button
               type="button"
+              className="ton-button ton-button-quiet"
+              onClick={() =>
+                setSteps((current) => {
+                  const draft = burnDraft(`step-${current.length + 1}-${Date.now()}`);
+                  if (current.length === 1 && current[0] && isUntouched(current[0])) return [draft];
+                  return [...current, draft];
+                })
+              }
+              disabled={sending}
+            >
+              Load uTON burn
+            </button>
+            <button
+              type="button"
               className="ton-button"
               onClick={sendScript}
               disabled={
@@ -345,11 +360,30 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
             </button>
           </div>
           <p className="ton-hint">
-            Send step sends that one message. Send script signs every step in
-            one confirmation when the script fits the wallet limit. Each
-            destination still runs on its own. Mainnet. A sent message is final.
+            Load uTON burn adds a draft aimed at your uTON wallet. Nothing is
+            sent. Send step sends that one message. Send script signs every
+            step in one confirmation when the script fits the wallet limit.
+            Each destination still runs on its own. Mainnet. A sent message is
+            final.
           </p>
         </div>
     </section>
   );
+}
+
+function isUntouched(step: ScriptStep): boolean {
+  return step.destination.trim() === "" && step.amount.trim() === "" && step.body.kind === "empty";
+}
+
+function burnDraft(id: string): ScriptStep {
+  const template = utonTemplateById("uton-burn");
+  if (!template) return emptyStep(id);
+  return {
+    id,
+    destination: "",
+    amount: "",
+    unit: "ton",
+    bounceable: template.bounceable,
+    body: utonTemplateBody(template),
+  };
 }

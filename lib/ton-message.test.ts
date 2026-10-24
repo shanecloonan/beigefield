@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { Address, beginCell, Cell } from "@ton/core";
+import { Address, beginCell, Cell, Dictionary } from "@ton/core";
 import {
   TON_MAINNET_CHAIN,
   chainLabel,
@@ -19,6 +19,7 @@ import {
   sendFailureMessage,
   type ScriptStep,
 } from "./ton-message";
+import { utonTemplateBody, utonTemplateById } from "./uton-templates";
 
 const sample = new Address(0, Buffer.alloc(32, 7));
 const other = new Address(0, Buffer.alloc(32, 9));
@@ -261,6 +262,186 @@ describe("script value", () => {
       scriptValueSummary([ready, draft]),
       "1 of 2 steps compile · 1.5 TON so far.",
     );
+  });
+});
+
+describe("uTON templates", () => {
+  function drafted(
+    templateId: string,
+    values: Record<string, string>,
+    patch: Partial<ScriptStep> = {},
+  ): ScriptStep {
+    const template = utonTemplateById(templateId);
+    if (!template) throw new Error(templateId);
+    const body = utonTemplateBody(template);
+    return {
+      ...emptyStep("template"),
+      destination: sample.toString({ urlSafe: true, bounceable: true, testOnly: false }),
+      amount: "0.05",
+      bounceable: true,
+      ...patch,
+      body: {
+        ...body,
+        ...((patch.body ?? {}) as object),
+        fields: body.fields.map((field) => ({
+          ...field,
+          value: values[field.id] ?? field.value,
+        })),
+      },
+    };
+  }
+
+  it("encodes a burn as opcode, coins, response, and a dictionary at key 0", () => {
+    const response = other.toString({ urlSafe: true, bounceable: false, testOnly: false });
+    const compiled = compileStep(
+      drafted("uton-burn", {
+        query_id: "7",
+        amount: "1000",
+        response,
+        proxy_id: "0",
+        fwd_value: "10000000",
+      }),
+    );
+    assert.equal(compiled.ok, true);
+    if (!compiled.ok) return;
+    assert.equal(compiled.preview.bodyLabel, "uTON burn · proxy_id 0");
+
+    const slice = Cell.fromBase64(compiled.message.payload ?? "").beginParse();
+    assert.equal(slice.loadUint(32), 0x595f07bc);
+    assert.equal(slice.loadUint(64), 7);
+    assert.equal(slice.loadCoins(), 1000n);
+    assert.equal(slice.loadAddress().equals(other), true);
+    const dict = slice.loadDict(Dictionary.Keys.Uint(32), Dictionary.Values.Cell());
+    assert.equal(slice.remainingBits, 0);
+    const payload = dict.get(0);
+    assert.ok(payload);
+    const inner = payload.beginParse();
+    assert.equal(inner.loadUint(32), 0);
+    assert.equal(inner.loadCoins(), 10000000n);
+    assert.equal(inner.loadRef().beginParse().remainingBits, 0);
+    assert.equal(inner.remainingRefs, 0);
+  });
+
+  it("stores the burn notification owner before the amount and keeps an empty forward ref", () => {
+    const owner = sample.toString({ urlSafe: true, bounceable: true, testOnly: false });
+    const response = other.toString({ urlSafe: true, bounceable: true, testOnly: false });
+    const compiled = compileStep(
+      drafted("burn-notification", {
+        query_id: "1",
+        owner,
+        withdraw_id: "4",
+        amount: "50",
+        proxy_id: "2",
+        response,
+        fwd_value: "3",
+      }),
+    );
+    assert.equal(compiled.ok, true);
+    if (!compiled.ok) return;
+    assert.match(compiled.preview.bodyLabel, /Burn notification · proxy_id 2/);
+    const slice = Cell.fromBase64(compiled.message.payload ?? "").beginParse();
+    assert.equal(slice.loadUint(32), 0x7bdd97de);
+    assert.equal(slice.loadUint(64), 1);
+    assert.equal(slice.loadAddress().equals(sample), true);
+    assert.equal(slice.loadUint(64), 4);
+    assert.equal(slice.loadCoins(), 50n);
+    assert.equal(slice.loadUint(32), 2);
+    assert.equal(slice.loadAddress().equals(other), true);
+    assert.equal(slice.loadCoins(), 3n);
+    assert.equal(slice.loadRef().beginParse().remainingBits, 0);
+  });
+
+  it("encodes withdraw, native stake, and a jetton transfer", () => {
+    const recipient = sample.toString({ urlSafe: true, bounceable: true, testOnly: false });
+    const response = other.toString({ urlSafe: true, bounceable: false, testOnly: false });
+
+    const withdraw = compileStep(
+      drafted("withdraw", { query_id: "9", recipient, response }),
+    );
+    assert.equal(withdraw.ok, true);
+    if (!withdraw.ok) return;
+    assert.equal(withdraw.preview.bodyLabel, "Withdraw");
+    const withdrawSlice = Cell.fromBase64(withdraw.message.payload ?? "").beginParse();
+    assert.equal(withdrawSlice.loadUint(32), 0x4502);
+    assert.equal(withdrawSlice.loadUint(64), 9);
+    assert.equal(withdrawSlice.loadAddress().equals(sample), true);
+    assert.equal(withdrawSlice.loadAddress().equals(other), true);
+    assert.equal(withdrawSlice.remainingBits, 0);
+
+    const stake = compileStep(
+      drafted("stake-ton", { query_id: "0", user: recipient, response }),
+    );
+    assert.equal(stake.ok, true);
+    if (!stake.ok) return;
+    const stakeSlice = Cell.fromBase64(stake.message.payload ?? "").beginParse();
+    assert.equal(stakeSlice.loadUint(32), 0x1003);
+    assert.equal(stakeSlice.loadUint(64), 0);
+    assert.equal(stakeSlice.loadAddress().equals(sample), true);
+
+    const transfer = compileStep(
+      drafted("jetton-transfer", {
+        query_id: "0",
+        amount: "8",
+        destination: recipient,
+        response,
+        forward_ton: "0",
+        forward_text: "",
+      }),
+    );
+    assert.equal(transfer.ok, true);
+    if (!transfer.ok) return;
+    assert.equal(transfer.preview.bodyLabel, "uTON transfer");
+    const transferSlice = Cell.fromBase64(transfer.message.payload ?? "").beginParse();
+    assert.equal(transferSlice.loadUint(32), 0x0f8a7ea5);
+    assert.equal(transferSlice.loadUint(64), 0);
+    assert.equal(transferSlice.loadCoins(), 8n);
+    assert.equal(transferSlice.loadAddress().equals(sample), true);
+    assert.equal(transferSlice.loadAddress().equals(other), true);
+    assert.equal(transferSlice.loadBit(), false);
+    assert.equal(transferSlice.loadCoins(), 0n);
+    assert.equal(transferSlice.loadBit(), false);
+
+    const withText = compileStep(
+      drafted("jetton-transfer", {
+        query_id: "0",
+        amount: "8",
+        destination: recipient,
+        response,
+        forward_ton: "5",
+        forward_text: "hi",
+      }),
+    );
+    assert.equal(withText.ok, true);
+    if (!withText.ok) return;
+    const textSlice = Cell.fromBase64(withText.message.payload ?? "").beginParse();
+    textSlice.loadUint(32);
+    textSlice.loadUint(64);
+    textSlice.loadCoins();
+    textSlice.loadAddress();
+    textSlice.loadAddress();
+    assert.equal(textSlice.loadBit(), false);
+    assert.equal(textSlice.loadCoins(), 5n);
+    assert.equal(textSlice.loadBit(), true);
+    assert.equal(textSlice.loadRef().beginParse().loadStringTail(), "hi");
+  });
+
+  it("uses an edited opcode and reports a missing burn amount", () => {
+    const edited = drafted("withdraw", {
+      query_id: "1",
+      recipient: sample.toString({ urlSafe: true, bounceable: true, testOnly: false }),
+      response: other.toString({ urlSafe: true, bounceable: true, testOnly: false }),
+    });
+    if (edited.body.kind !== "fields") return;
+    edited.body.opcode = "0x1";
+    const compiled = compileStep(edited);
+    assert.equal(compiled.ok, true);
+    if (!compiled.ok) return;
+    assert.equal(Cell.fromBase64(compiled.message.payload ?? "").beginParse().loadUint(32), 1);
+
+    const missing = compileStep(drafted("uton-burn", { amount: "" }));
+    assert.equal(missing.ok, false);
+    if (missing.ok) return;
+    assert.match(missing.errors.fields?.amount ?? "", /nanotons/);
   });
 });
 

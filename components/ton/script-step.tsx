@@ -1,6 +1,7 @@
 "use client";
 
 import type { BodyField, MessageBody, ScriptStep, StepErrors, StepPreview } from "@/lib/ton-message";
+import { utonTemplateBody, utonTemplateById, utonTemplates } from "@/lib/uton-templates";
 
 const bodyKinds: Array<{ kind: MessageBody["kind"]; label: string }> = [
   { kind: "empty", label: "Empty" },
@@ -39,6 +40,10 @@ export function ScriptStepCard({
   const visible = showErrors ? errors : undefined;
   const destinationId = `${step.id}-destination`;
   const amountId = `${step.id}-amount`;
+  const template =
+    step.body.kind === "fields" && step.body.templateId
+      ? utonTemplateById(step.body.templateId)
+      : undefined;
 
   function setBody(body: MessageBody) {
     onChange({ ...step, body });
@@ -68,7 +73,10 @@ export function ScriptStepCard({
     <section className="ton-step" aria-labelledby={`${step.id}-title`}>
       <div className="ton-step-head">
         <div>
-          <p className="ton-kicker">{preview ? "Ready" : "Draft"}</p>
+          <p className="ton-kicker">
+            {preview ? "Ready" : "Draft"}
+            {template ? ` · ${template.label}` : ""}
+          </p>
           <h2 id={`${step.id}-title`}>Step {index + 1}</h2>
         </div>
         <div className="ton-step-actions">
@@ -113,6 +121,7 @@ export function ScriptStepCard({
           aria-invalid={Boolean(visible?.destination)}
         />
       </label>
+      {template ? <p className="ton-hint">{template.destinationHint}</p> : null}
       {visible?.destination ? <p className="ton-error">{visible.destination}</p> : null}
 
       <div className="ton-field">
@@ -148,6 +157,7 @@ export function ScriptStepCard({
           <span>{step.unit === "ton" ? "TON" : "Nano"}</span>
         </div>
       </div>
+      {template ? <p className="ton-hint">{template.valueHint}</p> : null}
       {visible?.amount ? <p className="ton-error">{visible.amount}</p> : null}
 
       <label className="ton-check">
@@ -172,12 +182,51 @@ export function ScriptStepCard({
               type="button"
               className="ton-button ton-button-quiet ton-button-tiny"
               aria-pressed={step.body.kind === option.kind}
-              onClick={() => setBody(bodyForKind(option.kind, step.body))}
+              onClick={() => {
+                if (option.kind === "fields" && template) {
+                  setBody({ kind: "fields", opcode: "", opcodeBits: "32", fields: [] });
+                  return;
+                }
+                setBody(bodyForKind(option.kind, step.body));
+              }}
             >
               {option.label}
             </button>
           ))}
         </div>
+        <label className="ton-field ton-known">
+          <span>Known message</span>
+          <select
+            aria-label="Known message"
+            value={template?.id ?? ""}
+            onChange={(event) => {
+              const id = event.target.value;
+              if (!id) {
+                if (step.body.kind === "fields" && step.body.templateId) {
+                  onChange({
+                    ...step,
+                    body: { kind: "fields", opcode: "", opcodeBits: "32", fields: [] },
+                  });
+                }
+                return;
+              }
+              const next = utonTemplateById(id);
+              if (!next) return;
+              onChange({
+                ...step,
+                bounceable: next.bounceable,
+                body: utonTemplateBody(next),
+              });
+            }}
+          >
+            <option value="">Custom</option>
+            {utonTemplates.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <BodyEditor
           stepId={step.id}
           body={step.body}
@@ -276,8 +325,11 @@ function BodyEditor({
     );
   }
 
+  const template = body.templateId ? utonTemplateById(body.templateId) : undefined;
+
   return (
     <div className="ton-fields">
+      {template ? <p className="ton-hint">{template.detail}</p> : null}
       <div className="ton-split">
         <label className="ton-field">
           <span>Opcode</span>
@@ -299,27 +351,34 @@ function BodyEditor({
           />
         </label>
       </div>
-      <p className="ton-hint">
-        The opcode is stored first as an unsigned integer. Leave it blank to start with the fields.
-      </p>
+      {template ? null : (
+        <p className="ton-hint">
+          The opcode is stored first as an unsigned integer. Leave it blank to start with the fields.
+        </p>
+      )}
       {body.fields.map((field, index) => (
         <div className="ton-substep" key={field.id}>
           <div className="ton-substep-head">
             <label>
-              <span className="ton-mini">Field {index + 1}</span>
-              <select
-                value={field.kind}
-                aria-label={`Field ${index + 1} type`}
-                onChange={(event) =>
-                  onField(field.id, fieldOfKind(field.id, event.target.value))
-                }
-              >
-                <option value="uint">Unsigned integer</option>
-                <option value="coins">Coins</option>
-                <option value="address">Address</option>
-                <option value="text">Text tail</option>
-              </select>
+              <span className="ton-mini">{field.label ?? `Field ${index + 1}`}</span>
+              {template ? (
+                <span className="ton-field-kind">{fieldKindLabel(field.kind)}</span>
+              ) : (
+                <select
+                  value={field.kind}
+                  aria-label={`Field ${index + 1} type`}
+                  onChange={(event) =>
+                    onField(field.id, fieldOfKind(field.id, event.target.value))
+                  }
+                >
+                  <option value="uint">Unsigned integer</option>
+                  <option value="coins">Coins</option>
+                  <option value="address">Address</option>
+                  <option value="text">Text tail</option>
+                </select>
+              )}
             </label>
+            {template ? null : (
             <div className="ton-step-actions">
               <button
                 type="button"
@@ -350,6 +409,7 @@ function BodyEditor({
                 Remove
               </button>
             </div>
+            )}
           </div>
           <FieldInputs field={field} onField={onField} />
           {fieldErrors?.[field.id] ? (
@@ -357,23 +417,32 @@ function BodyEditor({
           ) : null}
         </div>
       ))}
-      <button
-        type="button"
-        className="ton-button ton-button-quiet ton-button-tiny"
-        onClick={() =>
-          onChange({
-            ...body,
-            fields: [
-              ...body.fields,
-              { id: `${stepId}-field-${body.fields.length + 1}-${Date.now()}`, kind: "uint", bits: "32", value: "" },
-            ],
-          })
-        }
-      >
-        Add field
-      </button>
+      {template ? null : (
+        <button
+          type="button"
+          className="ton-button ton-button-quiet ton-button-tiny"
+          onClick={() =>
+            onChange({
+              ...body,
+              fields: [
+                ...body.fields,
+                { id: `${stepId}-field-${body.fields.length + 1}-${Date.now()}`, kind: "uint", bits: "32", value: "" },
+              ],
+            })
+          }
+        >
+          Add field
+        </button>
+      )}
     </div>
   );
+}
+
+function fieldKindLabel(kind: BodyField["kind"]): string {
+  if (kind === "uint") return "Unsigned integer";
+  if (kind === "coins") return "Nanotons";
+  if (kind === "address") return "Address";
+  return "Text";
 }
 
 function FieldInputs({

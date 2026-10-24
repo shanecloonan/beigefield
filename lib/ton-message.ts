@@ -1,5 +1,6 @@
 import "./buffer-polyfill";
-import { Address, beginCell, Cell, type Builder } from "@ton/core";
+import { Address, beginCell, Cell, Dictionary, type Builder } from "@ton/core";
+import { templatePreviewLabel, utonTemplateById } from "./uton-templates";
 
 /** TON mainnet global id. Testnet is `-3`. */
 export const TON_MAINNET_CHAIN = "-239";
@@ -11,10 +12,10 @@ const UNADVERTISED_MAX_MESSAGES = 4;
 export type AmountUnit = "ton" | "nanoton";
 
 export type BodyField =
-  | { id: string; kind: "uint"; bits: string; value: string }
-  | { id: string; kind: "coins"; value: string }
-  | { id: string; kind: "address"; value: string }
-  | { id: string; kind: "text"; value: string };
+  | { id: string; kind: "uint"; bits: string; value: string; label?: string }
+  | { id: string; kind: "coins"; value: string; label?: string }
+  | { id: string; kind: "address"; value: string; label?: string }
+  | { id: string; kind: "text"; value: string; label?: string };
 
 export type MessageBody =
   | { kind: "empty" }
@@ -25,6 +26,7 @@ export type MessageBody =
       opcode: string;
       opcodeBits: string;
       fields: BodyField[];
+      templateId?: string;
     };
 
 export type ScriptStep = {
@@ -450,6 +452,8 @@ function buildFields(body: Extract<MessageBody, { kind: "fields" }>): {
   label: string;
   fieldErrors?: Record<string, string>;
 } {
+  if (body.templateId) return buildUtonTemplate(body);
+
   const fieldErrors: Record<string, string> = {};
   const builder = beginCell();
   const opcode = body.opcode.trim();
@@ -505,6 +509,232 @@ function buildFields(body: Extract<MessageBody, { kind: "fields" }>): {
     payload: cell.toBoc().toString("base64"),
     label: `${opcodeLabel}${count} ${count === 1 ? "field" : "fields"}, ${cell.bits.length} bits`,
   };
+}
+
+function buildUtonTemplate(body: Extract<MessageBody, { kind: "fields" }>): {
+  payload?: string;
+  label: string;
+  fieldErrors?: Record<string, string>;
+} {
+  const templateId = body.templateId ?? "";
+  if (!utonTemplateById(templateId)) {
+    throw new Error("Unknown message template.");
+  }
+
+  const fieldErrors: Record<string, string> = {};
+  const builder = beginCell();
+
+  try {
+    storeOpcode(builder, body);
+  } catch (error) {
+    throw new Error(errorText(error));
+  }
+
+  const uintAt = (id: string) => {
+    const field = requireField(body.fields, id, fieldErrors);
+    if (!field) return undefined;
+    if (field.kind !== "uint") {
+      fieldErrors[id] = "Expected an unsigned integer.";
+      return undefined;
+    }
+    try {
+      const parsed = readUint(field);
+      builder.storeUint(parsed.value, parsed.bits);
+      return parsed;
+    } catch (error) {
+      fieldErrors[id] = errorText(error);
+      return undefined;
+    }
+  };
+  const coinsAt = (id: string) => {
+    const field = requireField(body.fields, id, fieldErrors);
+    if (!field) return undefined;
+    if (field.kind !== "coins") {
+      fieldErrors[id] = "Expected a coin amount.";
+      return undefined;
+    }
+    try {
+      const value = readCoins(field);
+      builder.storeCoins(value);
+      return value;
+    } catch (error) {
+      fieldErrors[id] = errorText(error);
+      return undefined;
+    }
+  };
+  const addressAt = (id: string) => {
+    const field = requireField(body.fields, id, fieldErrors);
+    if (!field) return undefined;
+    if (field.kind !== "address") {
+      fieldErrors[id] = "Expected an address.";
+      return undefined;
+    }
+    try {
+      const address = readAddress(field);
+      builder.storeAddress(address);
+      return address;
+    } catch (error) {
+      fieldErrors[id] = errorText(error);
+      return undefined;
+    }
+  };
+
+  if (templateId === "uton-burn") {
+    uintAt("query_id");
+    coinsAt("amount");
+    addressAt("response");
+    const proxy = readOptionalUint(body.fields, "proxy_id", fieldErrors);
+    const forward = readOptionalCoins(body.fields, "fwd_value", fieldErrors);
+    if (Object.keys(fieldErrors).length > 0) return { label: "", fieldErrors };
+    if (proxy === undefined || forward === undefined) return { label: "", fieldErrors };
+    const payload = beginCell()
+      .storeUint(proxy.value, proxy.bits)
+      .storeCoins(forward)
+      .storeRef(beginCell().endCell())
+      .endCell();
+    const dictionary = Dictionary.empty(
+      Dictionary.Keys.Uint(32),
+      Dictionary.Values.Cell(),
+    );
+    dictionary.set(0, payload);
+    builder.storeDict(dictionary);
+  } else if (templateId === "burn-notification") {
+    uintAt("query_id");
+    addressAt("owner");
+    uintAt("withdraw_id");
+    coinsAt("amount");
+    uintAt("proxy_id");
+    addressAt("response");
+    coinsAt("fwd_value");
+    if (Object.keys(fieldErrors).length > 0) return { label: "", fieldErrors };
+    builder.storeRef(beginCell().endCell());
+  } else if (templateId === "withdraw") {
+    uintAt("query_id");
+    addressAt("recipient");
+    addressAt("response");
+    if (Object.keys(fieldErrors).length > 0) return { label: "", fieldErrors };
+  } else if (templateId === "stake-ton") {
+    uintAt("query_id");
+    addressAt("user");
+    addressAt("response");
+    if (Object.keys(fieldErrors).length > 0) return { label: "", fieldErrors };
+  } else if (templateId === "jetton-transfer") {
+    uintAt("query_id");
+    coinsAt("amount");
+    addressAt("destination");
+    addressAt("response");
+    if (Object.keys(fieldErrors).length > 0) return { label: "", fieldErrors };
+    builder.storeMaybeRef(null);
+    coinsAt("forward_ton");
+    const textField = requireField(body.fields, "forward_text", fieldErrors);
+    if (textField && textField.kind !== "text" && !fieldErrors.forward_text) {
+      fieldErrors.forward_text = "Expected text.";
+    }
+    if (Object.keys(fieldErrors).length > 0) return { label: "", fieldErrors };
+    const text = textField && textField.kind === "text" ? textField.value.trim() : "";
+    if (!text) {
+      builder.storeBit(0);
+    } else {
+      builder.storeBit(1).storeRef(beginCell().storeStringTail(text).endCell());
+    }
+  } else {
+    throw new Error("Unknown message template.");
+  }
+
+  let cell: Cell;
+  try {
+    cell = builder.endCell();
+  } catch (error) {
+    throw new Error(errorText(error));
+  }
+
+  return {
+    payload: cell.toBoc().toString("base64"),
+    label: templatePreviewLabel(templateId, body.fields),
+  };
+}
+
+function requireField(
+  fields: BodyField[],
+  id: string,
+  fieldErrors: Record<string, string>,
+): BodyField | undefined {
+  const field = fields.find((item) => item.id === id);
+  if (!field) {
+    fieldErrors[id] = "This input is missing.";
+    return undefined;
+  }
+  return field;
+}
+
+function readOptionalUint(
+  fields: BodyField[],
+  id: string,
+  fieldErrors: Record<string, string>,
+): { value: bigint; bits: number } | undefined {
+  const field = requireField(fields, id, fieldErrors);
+  if (!field) return undefined;
+  if (field.kind !== "uint") {
+    fieldErrors[id] = "Expected an unsigned integer.";
+    return undefined;
+  }
+  try {
+    return readUint(field);
+  } catch (error) {
+    fieldErrors[id] = errorText(error);
+    return undefined;
+  }
+}
+
+function readOptionalCoins(
+  fields: BodyField[],
+  id: string,
+  fieldErrors: Record<string, string>,
+): bigint | undefined {
+  const field = requireField(fields, id, fieldErrors);
+  if (!field) return undefined;
+  if (field.kind !== "coins") {
+    fieldErrors[id] = "Expected a coin amount.";
+    return undefined;
+  }
+  try {
+    return readCoins(field);
+  } catch (error) {
+    fieldErrors[id] = errorText(error);
+    return undefined;
+  }
+}
+
+function readUint(field: Extract<BodyField, { kind: "uint" }>): {
+  value: bigint;
+  bits: number;
+} {
+  const bits = parseBitWidth(field.bits);
+  const value = parseUnsigned(field.value, "Enter a non-negative integer, or 0x hex.");
+  if (!fitsUnsigned(value, bits)) {
+    throw new Error("That value does not fit in the bit width.");
+  }
+  return { value, bits };
+}
+
+function readCoins(field: Extract<BodyField, { kind: "coins" }>): bigint {
+  return parseUnsigned(field.value, "Enter a whole number of nanotons.");
+}
+
+function readAddress(field: Extract<BodyField, { kind: "address" }>): Address {
+  if (!field.value.trim()) throw new Error("Enter an address.");
+  return Address.parse(normalizeMainnetAddress(field.value));
+}
+
+function storeOpcode(builder: Builder, body: Extract<MessageBody, { kind: "fields" }>) {
+  const opcode = body.opcode.trim();
+  if (!opcode) throw new Error("Enter an opcode.");
+  const bits = parseBitWidth(body.opcodeBits);
+  const value = parseUnsigned(opcode, "Enter an opcode as an integer or 0x hex.");
+  if (!fitsUnsigned(value, bits)) {
+    throw new Error("The opcode does not fit in that bit width.");
+  }
+  builder.storeUint(value, bits);
 }
 
 function storeField(builder: Builder, field: BodyField) {
