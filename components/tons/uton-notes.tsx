@@ -46,6 +46,21 @@ const notifyNotes = [
   },
 ] as const;
 
+const proxyNotes = [
+  {
+    title: "Whitelist, then supply",
+    text: "proxy_burn resolves the proxy id on the whitelist before it changes total supply. The caller must be the jetton wallet of the owner on the notification.",
+  },
+  {
+    title: "Pending withdraw",
+    text: "The proxy deploys one withdraw contract for the owner and withdraw id. State init stores finished as 0. The address depends on the withdraw code, so this page does not derive it.",
+  },
+  {
+    title: "Time lock",
+    text: "withdraw_timestamp is the burn time plus withdraw_pending_time on the proxy. The published unstake wait is 3 days. The duration is not a constant in the source.",
+  },
+] as const;
+
 export function UtonNotes() {
   return (
     <>
@@ -53,6 +68,7 @@ export function UtonNotes() {
         <a href="#stake">Step 1</a>
         <a href="#burn">Step 2</a>
         <a href="#burn-notify">Step 3</a>
+        <a href="#proxy-burn">Step 4</a>
       </nav>
 
       <section className="ton-section" id="stake" aria-labelledby="ton-stake-title">
@@ -138,6 +154,40 @@ export function UtonNotes() {
             Jetton wallet at {utonSource.short}
           </a>
           <a href="#notify-form">Open the burn notification form</a>
+        </div>
+      </section>
+
+      <section className="ton-section" id="proxy-burn" aria-labelledby="ton-proxy-burn-title">
+        <h2 id="ton-proxy-burn-title">Step 4 · Proxy burn and pending withdraw</h2>
+        <p className="ton-section-copy">
+          The minter handles opcode {UTON_OP.burnNotification} in proxy_burn.
+          It checks the proxy id, then reduces supply and sends opcode 0x1004
+          to that proxy. proxy_ton records the priced TON as debt and deploys
+          a pending withdraw with opcode 0x4501. A missing proxy id throws
+          before the supply change. That return is the bounce on step 3.
+        </p>
+        <ol className="ton-flow">
+          {proxyNotes.map((note, index) => (
+            <li key={note.title}>
+              <span className="ton-flow-index">{index + 1}</span>
+              <div>
+                <h3>{note.title}</h3>
+                <p>{note.text}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <div className="ton-links">
+          <a href={utonLinks.minter} target="_blank" rel="noreferrer">
+            Minter at {utonSource.short}
+          </a>
+          <a href={utonLinks.proxyTon} target="_blank" rel="noreferrer">
+            proxy_ton at {utonSource.short}
+          </a>
+          <a href={utonLinks.withdraw} target="_blank" rel="noreferrer">
+            Withdraw at {utonSource.short}
+          </a>
+          <a href="#proxy-burn-form">Open the proxy burn desk</a>
         </div>
       </section>
     </>

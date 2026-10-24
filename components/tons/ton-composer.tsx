@@ -9,6 +9,7 @@ import {
   useTonWallet,
 } from "@tonconnect/ui-react";
 import { CopyButton } from "@/components/tons/copy-button";
+import { ProxyBurnDesk } from "@/components/tons/proxy-burn-desk";
 import { ScriptStepCard } from "@/components/tons/script-step";
 import {
   TonProvider,
@@ -249,7 +250,8 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
       <h2 id="ton-message-title">Messages</h2>
       <p className="ton-section-copy">
         Step 1 stakes native TON. Step 2 burns uTON. Step 3 is the burn
-        notification the jetton wallet sends to the minter. Edit any value.
+        notification the jetton wallet sends to the minter. Step 4 is the
+        minter and proxy after that notification is accepted. Edit any value.
         TonConnect or the funded wallet signs the message you choose. Nothing
         is sent until you press the button on that step.
       </p>
@@ -257,6 +259,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
         <a href="#stake-form">Step 1 · Stake</a>
         <a href="#burn-form">Step 2 · Burn</a>
         <a href="#notify-form">Step 3 · Burn notification</a>
+        <a href="#proxy-burn-form">Step 4 · Proxy burn</a>
       </nav>
 
       <section className="ton-wallet" aria-live="polite">
@@ -436,10 +439,18 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
               </div>
             );
           })}
+          <ProxyBurnDesk
+            burn={steps.find((step) => templateId(step) === "uton-burn") ?? burnDraft("step-2")}
+            notification={
+              steps.find((step) => templateId(step) === "burn-notification") ??
+              notificationDraft("step-3")
+            }
+          />
         </div>
 
         <p className="ton-hint">
-          Each button sends only that message. Mainnet. A sent message is final.
+          Each send button sends only that message. Mainnet. A sent message is
+          final. Step 4 is not sent from this page.
         </p>
     </section>
   );
@@ -462,6 +473,10 @@ function isFundedRejected(
       "message" in payload &&
       typeof payload.message === "string",
   );
+}
+
+function templateId(step: ScriptStep): string | undefined {
+  return step.body.kind === "fields" ? step.body.templateId : undefined;
 }
 
 function sendLabel(step: ScriptStep): string {
