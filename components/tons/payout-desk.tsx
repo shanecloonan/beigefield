@@ -96,8 +96,12 @@ export function PayoutDesk({
         The pending withdraw asks the minter for the price, keeps the lower TON
         amount, and proxy_ton pays the recipient. A static list. Not a chain read.
       </p>
+      <button type="button" className="ton-button" disabled aria-disabled="true">
+        Send
+      </button>
       <p className="ton-hint">
-        This leg is contract-to-contract after step 5. Payout is not a user message.
+        Locked. This leg is contract-to-contract after step 5. Pressing Send
+        does nothing.
       </p>
     </section>
   );

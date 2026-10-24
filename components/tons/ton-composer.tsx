@@ -525,7 +525,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
 
         <p className="ton-hint">
           Each send button sends only that message. Mainnet. A sent message is
-          final. Steps 4 and 6 are not sent from this page.
+          final. Send on steps 4 and 6 is locked.
         </p>
     </section>
   );

@@ -134,9 +134,12 @@ export function ProxyBurnDesk({
         ))}
       </ol>
       <p className="ton-hint">A static list of the contract steps. Not a chain read.</p>
+      <button type="button" className="ton-button" disabled aria-disabled="true">
+        Send
+      </button>
       <p className="ton-hint">
-        This leg is contract-to-contract after step 3. There is no user message
-        to send here.
+        Locked. This leg is contract-to-contract after step 3. Pressing Send
+        does nothing.
       </p>
     </section>
   );
