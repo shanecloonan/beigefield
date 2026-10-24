@@ -221,3 +221,237 @@ body {
     animation: none;
   }
 }
+
+.ton-main {
+  width: min(34rem, 100%);
+  margin: auto;
+  padding: 4.75rem 2.5rem 3.5rem;
+}
+
+.ton-mark {
+  display: inline-block;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+
+.ton-mark:hover {
+  opacity: 0.72;
+}
+
+.ton-kicker {
+  margin: 0;
+  color: var(--taupe);
+  font-size: 0.72rem;
+  font-weight: 300;
+  letter-spacing: 0.28em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.ton-main > .ton-kicker {
+  margin-top: 1.35rem;
+}
+
+.ton-main h1 {
+  margin: 0.65rem 0 0;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: clamp(2.7rem, 6vw, 4.5rem);
+  font-weight: 500;
+  letter-spacing: 0.015em;
+  line-height: 0.95;
+}
+
+.ton-lede {
+  margin: 1.05rem 0 0;
+  color: var(--taupe);
+  font-size: 1.02rem;
+  font-weight: 300;
+  line-height: 1.55;
+}
+
+.ton-wallet {
+  margin-top: 2rem;
+}
+
+.ton-wallet-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem 1.25rem;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.ton-address {
+  margin: 0.4rem 0 0;
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 300;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.ton-status,
+.ton-hint,
+.ton-preview,
+.ton-error,
+.ton-good {
+  margin: 0.7rem 0 0;
+  font-size: 0.92rem;
+  font-weight: 300;
+  line-height: 1.5;
+}
+
+.ton-status,
+.ton-hint,
+.ton-preview {
+  color: var(--taupe);
+}
+
+.ton-error,
+.ton-good {
+  color: var(--ink);
+}
+
+.ton-good a,
+.ton-mark:focus-visible {
+  color: var(--ink);
+}
+
+.ton-good a {
+  text-underline-offset: 0.18em;
+}
+
+.ton-form {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1.6rem;
+}
+
+.ton-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 1.35rem;
+}
+
+.ton-field > span:first-child {
+  color: var(--taupe);
+  font-size: 0.72rem;
+  font-weight: 300;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.ton-field input,
+.ton-field textarea {
+  width: 100%;
+  margin: 0;
+  padding: 0.55rem 0;
+  border: 0;
+  border-bottom: 1px solid rgb(43 36 28 / 35%);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 300;
+}
+
+.ton-field textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+.ton-field input::placeholder,
+.ton-field textarea::placeholder {
+  color: rgb(90 78 68 / 55%);
+}
+
+.ton-field input:focus,
+.ton-field textarea:focus {
+  outline: none;
+  border-bottom-color: var(--ink);
+}
+
+.ton-amount {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+  border-bottom: 1px solid rgb(43 36 28 / 35%);
+}
+
+.ton-amount input {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  border-bottom: 0;
+}
+
+.ton-amount:focus-within {
+  border-bottom-color: var(--ink);
+}
+
+.ton-amount span {
+  color: var(--taupe);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.ton-preview {
+  margin-top: 1.35rem;
+  overflow-wrap: anywhere;
+}
+
+.ton-submit {
+  margin-top: 1.5rem;
+}
+
+.ton-button {
+  appearance: none;
+  margin-top: 0.85rem;
+  padding: 0.95rem 1.15rem;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 300;
+  letter-spacing: 0.2em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.ton-button-quiet {
+  background: transparent;
+  color: var(--ink);
+}
+
+.ton-wallet .ton-button {
+  margin-top: 0;
+}
+
+.ton-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.ton-button:focus-visible,
+.ton-field input:focus-visible,
+.ton-field textarea:focus-visible,
+.ton-good a:focus-visible {
+  outline: 1px solid var(--ink);
+  outline-offset: 3px;
+}
+
+@media (min-width: 640px) {
+  .ton-main {
+    padding-right: 3rem;
+    padding-left: 3rem;
+  }
+}
