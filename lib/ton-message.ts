@@ -1,32 +1,76 @@
 import "./buffer-polyfill";
-import { Address, beginCell, Cell } from "@ton/core";
+import { Address, beginCell, Cell, type Builder } from "@ton/core";
 
 /** TON mainnet global id. Testnet is `-3`. */
 export const TON_MAINNET_CHAIN = "-239";
 
 const TRANSFER_TTL_SECONDS = 600;
 const TEXT_COMMENT_OPCODE = 0;
+const UNADVERTISED_MAX_MESSAGES = 4;
 
-export type FieldName = "destination" | "amount" | "comment";
+export type AmountUnit = "ton" | "nanoton";
 
-export type FieldErrors = Partial<Record<FieldName, string>>;
+export type BodyField =
+  | { id: string; kind: "uint"; bits: string; value: string }
+  | { id: string; kind: "coins"; value: string }
+  | { id: string; kind: "address"; value: string }
+  | { id: string; kind: "text"; value: string };
 
-export type MainnetTransferMessage = {
+export type MessageBody =
+  | { kind: "empty" }
+  | { kind: "comment"; text: string }
+  | { kind: "boc"; hex: string }
+  | {
+      kind: "fields";
+      opcode: string;
+      opcodeBits: string;
+      fields: BodyField[];
+    };
+
+export type ScriptStep = {
+  id: string;
+  destination: string;
+  amount: string;
+  unit: AmountUnit;
+  bounceable: boolean;
+  body: MessageBody;
+};
+
+export type StepErrors = {
+  destination?: string;
+  amount?: string;
+  body?: string;
+  fields?: Record<string, string>;
+};
+
+export type OutgoingMessage = {
   address: string;
   amount: string;
   payload?: string;
 };
 
-export type MainnetTransferRequest = {
+export type MainnetScriptRequest = {
   validUntil: number;
   network: typeof TON_MAINNET_CHAIN;
   from?: string;
-  messages: [MainnetTransferMessage];
+  messages: OutgoingMessage[];
 };
 
-export type TransferValidation =
-  | { ok: true; request: MainnetTransferRequest }
-  | { ok: false; errors: FieldErrors };
+export type StepPreview = {
+  address: string;
+  bounceable: boolean;
+  nanotons: string;
+  valueLabel: string;
+  bodyLabel: string;
+};
+
+export type StepCompile =
+  | { ok: true; message: OutgoingMessage; preview: StepPreview }
+  | { ok: false; errors: StepErrors };
+
+export type ScriptCompile =
+  | { ok: true; request: MainnetScriptRequest; previews: StepPreview[] }
+  | { ok: false; steps: Array<StepErrors | undefined>; message?: string };
 
 export type SendFailureKind =
   | "cancelled"
@@ -34,6 +78,22 @@ export type SendFailureKind =
   | "rejected"
   | "manifest"
   | "ambiguous";
+
+export type WalletMessageLimit = {
+  maxMessages: number;
+  advertised: boolean;
+};
+
+export function emptyStep(id: string): ScriptStep {
+  return {
+    id,
+    destination: "",
+    amount: "",
+    unit: "ton",
+    bounceable: true,
+    body: { kind: "empty" },
+  };
+}
 
 export function isMainnetChain(chain: string | null | undefined): boolean {
   return chain === TON_MAINNET_CHAIN;
@@ -46,7 +106,35 @@ export function chainLabel(chain: string | null | undefined): string {
   return `network ${chain}`;
 }
 
-export function normalizeMainnetAddress(input: string): string {
+export function readMaxMessages(
+  features: readonly unknown[] | null | undefined,
+): WalletMessageLimit | null {
+  if (!features) return null;
+
+  for (const feature of features) {
+    if (!feature || typeof feature !== "object" || !("name" in feature)) continue;
+    if (feature.name !== "SendTransaction" || !("maxMessages" in feature)) continue;
+    const maxMessages = feature.maxMessages;
+    if (
+      typeof maxMessages === "number" &&
+      Number.isInteger(maxMessages) &&
+      maxMessages >= 1
+    ) {
+      return { maxMessages, advertised: true };
+    }
+  }
+
+  if (features.some((feature) => feature === "SendTransaction")) {
+    return { maxMessages: UNADVERTISED_MAX_MESSAGES, advertised: false };
+  }
+
+  return { maxMessages: 1, advertised: false };
+}
+
+export function normalizeMainnetAddress(
+  input: string,
+  bounceable?: boolean,
+): string {
   const trimmed = input.trim();
   if (!trimmed) {
     throw new Error("Enter a destination address.");
@@ -62,7 +150,7 @@ export function normalizeMainnetAddress(input: string): string {
       }
       return parsed.address.toString({
         urlSafe: true,
-        bounceable: parsed.isBounceable,
+        bounceable: bounceable ?? parsed.isBounceable,
         testOnly: false,
       });
     }
@@ -70,7 +158,7 @@ export function normalizeMainnetAddress(input: string): string {
     const address = Address.parse(trimmed);
     return address.toString({
       urlSafe: true,
-      bounceable: false,
+      bounceable: bounceable ?? false,
       testOnly: false,
     });
   } catch (error) {
@@ -83,60 +171,101 @@ export function normalizeMainnetAddress(input: string): string {
   }
 }
 
-export function validateMainnetTransfer(input: {
-  destination: string;
-  amountTon: string;
-  comment: string;
-  fromRaw?: string;
-  nowSeconds?: number;
-}): TransferValidation {
-  const errors: FieldErrors = {};
+export function compileStep(step: ScriptStep): StepCompile {
+  const errors: StepErrors = {};
   let address: string | undefined;
   let amount: string | undefined;
   let payload: string | undefined;
-  let commentFailed = false;
+  let bodyLabel = "Empty body";
+  let bodyFailed = false;
 
   try {
-    address = normalizeMainnetAddress(input.destination);
+    address = normalizeMainnetAddress(step.destination, step.bounceable);
   } catch (error) {
     errors.destination = errorText(error);
   }
 
   try {
-    amount = nanoton(input.amountTon);
+    amount = amountToNanoton(step.amount, step.unit);
   } catch (error) {
     errors.amount = errorText(error);
   }
 
   try {
-    payload = textCommentPayload(input.comment);
+    const body = buildBody(step.body);
+    if (body.fieldErrors && Object.keys(body.fieldErrors).length > 0) {
+      errors.fields = body.fieldErrors;
+      bodyFailed = true;
+    } else {
+      payload = body.payload;
+      bodyLabel = body.label;
+    }
   } catch (error) {
-    commentFailed = true;
-    errors.comment = errorText(error);
+    errors.body = errorText(error);
+    bodyFailed = true;
   }
 
-  if (!address || !amount || commentFailed) {
+  if (!address || amount === undefined || bodyFailed) {
     return { ok: false, errors };
   }
 
-  const message: MainnetTransferMessage = { address, amount };
-  if (payload) {
-    message.payload = payload;
-  }
+  const message: OutgoingMessage = { address, amount };
+  if (payload) message.payload = payload;
 
-  const request: MainnetTransferRequest = {
-    validUntil:
-      (input.nowSeconds ?? Math.floor(Date.now() / 1000)) + TRANSFER_TTL_SECONDS,
-    network: TON_MAINNET_CHAIN,
-    messages: [message],
+  return {
+    ok: true,
+    message,
+    preview: {
+      address,
+      bounceable: step.bounceable,
+      nanotons: amount,
+      valueLabel: valueLabel(step, amount),
+      bodyLabel,
+    },
   };
+}
 
-  const from = senderRaw(input.fromRaw);
-  if (from) {
-    request.from = from;
+export function compileScript(
+  steps: ScriptStep[],
+  options?: {
+    fromRaw?: string;
+    nowSeconds?: number;
+    maxMessages?: number;
+  },
+): ScriptCompile {
+  if (steps.length === 0) {
+    return { ok: false, steps: [], message: "Add a message." };
   }
 
-  return { ok: true, request };
+  const compiled = steps.map((step) => compileStep(step));
+  const stepErrors = compiled.map((item) => (item.ok ? undefined : item.errors));
+  const limitMessage =
+    options?.maxMessages !== undefined && steps.length > options.maxMessages
+      ? limitText(options.maxMessages, steps.length)
+      : undefined;
+
+  if (compiled.some((item) => !item.ok) || limitMessage) {
+    return { ok: false, steps: stepErrors, message: limitMessage };
+  }
+
+  const messages: OutgoingMessage[] = [];
+  const previews: StepPreview[] = [];
+  for (const item of compiled) {
+    if (!item.ok) return { ok: false, steps: stepErrors, message: limitMessage };
+    messages.push(item.message);
+    previews.push(item.preview);
+  }
+
+  const request: MainnetScriptRequest = {
+    validUntil:
+      (options?.nowSeconds ?? Math.floor(Date.now() / 1000)) + TRANSFER_TTL_SECONDS,
+    network: TON_MAINNET_CHAIN,
+    messages,
+  };
+  const from = senderRaw(options?.fromRaw);
+  if (from) request.from = from;
+
+  return { ok: true, request, previews };
 }
 
 export function classifySendError(error: unknown): SendFailureKind {
@@ -157,6 +286,7 @@ export function classifySendError(error: unknown): SendFailureKind {
     name === "BadRequestError" ||
     name === "UnknownAppError" ||
     name === "MethodNotSupportedError" ||
+    name === "WalletNotSupportFeatureError" ||
     code === 1 ||
     code === 100 ||
     code === 400
@@ -169,15 +299,15 @@ export function classifySendError(error: unknown): SendFailureKind {
 export function sendFailureMessage(kind: SendFailureKind): string {
   switch (kind) {
     case "cancelled":
-      return "Cancelled in the wallet. The transfer was not sent.";
+      return "Cancelled in the wallet. Nothing was sent.";
     case "wrong-network":
-      return "This wallet is on another network. Switch it to TON mainnet and connect again. The transfer was not sent.";
+      return "This wallet is on another network. Switch it to TON mainnet and connect again. Nothing was sent.";
     case "rejected":
-      return "The wallet rejected the transfer. It was not sent.";
+      return "The wallet rejected the message. Nothing was sent.";
     case "manifest":
-      return "The wallet could not read the app manifest. The transfer was not sent.";
+      return "The wallet could not read the app manifest. Nothing was sent.";
     case "ambiguous":
-      return "The wallet did not confirm the transfer. Check the wallet before trying again, so the same transfer is not sent twice.";
+      return "The wallet did not confirm the message. Check the wallet before trying again, so it is not sent twice.";
   }
 }
 
@@ -207,40 +337,222 @@ export function decodeTextComment(payload: string): string {
   return slice.loadStringTail();
 }
 
-function nanoton(amountTon: string): string {
-  const trimmed = amountTon.trim();
-  if (!trimmed) {
-    throw new Error("Enter an amount in TON.");
+function buildBody(body: MessageBody): {
+  payload?: string;
+  label: string;
+  fieldErrors?: Record<string, string>;
+} {
+  if (body.kind === "empty") {
+    return { label: "Empty body" };
   }
-  if (!/^\d+(\.\d{1,9})?$/.test(trimmed)) {
-    throw new Error("Enter an amount in TON, with up to 9 decimal places.");
-  }
-
-  const [whole, frac = ""] = trimmed.split(".");
-  const nano =
-    BigInt(whole) * BigInt("1000000000") + BigInt(frac.padEnd(9, "0") || "0");
-  if (nano <= BigInt(0)) {
-    throw new Error("Amount must be greater than zero.");
-  }
-  return nano.toString();
+  if (body.kind === "comment") return buildComment(body.text);
+  if (body.kind === "boc") return buildBoc(body.hex);
+  return buildFields(body);
 }
 
-function textCommentPayload(comment: string): string | undefined {
-  const trimmed = comment.trim();
-  if (!trimmed) return undefined;
+function buildComment(text: string): { payload: string; label: string } {
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error("Enter a comment.");
 
   const cell = beginCell()
     .storeUint(TEXT_COMMENT_OPCODE, 32)
     .storeStringTail(trimmed)
     .endCell();
-
   if (cell.refs.length > 0) {
     throw new Error(
       "That comment is too long for a single message. Shorten it and try again.",
     );
   }
 
-  return cell.toBoc().toString("base64");
+  const shown = trimmed.length > 48 ? `${trimmed.slice(0, 48)}…` : trimmed;
+  return {
+    payload: cell.toBoc().toString("base64"),
+    label: `Text comment “${shown}”`,
+  };
+}
+
+function buildBoc(hex: string): { payload: string; label: string } {
+  const cell = parseBoc(hex);
+  const refs =
+    cell.refs.length > 0
+      ? `, ${cell.refs.length} ${cell.refs.length === 1 ? "ref" : "refs"}`
+      : "";
+  return {
+    payload: cell.toBoc().toString("base64"),
+    label: `BoC cell, ${cell.bits.length} bits${refs}`,
+  };
+}
+
+function parseBoc(input: string): Cell {
+  const compact = input.trim().replace(/\s+/g, "");
+  if (!compact) throw new Error("Paste a BoC.");
+
+  const bare = compact.replace(/^0x/i, "");
+  if (/^[0-9a-fA-F]+$/.test(bare) && bare.length % 2 === 0) {
+    try {
+      return Cell.fromHex(bare);
+    } catch {
+      throw new Error("That hex is not a single-root BoC.");
+    }
+  }
+
+  try {
+    return Cell.fromBase64(compact);
+  } catch {
+    throw new Error("Paste a hex BoC, or a base64 BoC of one cell.");
+  }
+}
+
+function buildFields(body: Extract<MessageBody, { kind: "fields" }>): {
+  payload?: string;
+  label: string;
+  fieldErrors?: Record<string, string>;
+} {
+  const fieldErrors: Record<string, string> = {};
+  const builder = beginCell();
+  const opcode = body.opcode.trim();
+
+  if (!opcode && body.fields.length === 0) {
+    throw new Error("Add an opcode or a field.");
+  }
+
+  if (opcode) {
+    const bits = parseBitWidth(body.opcodeBits);
+    const value = parseUnsigned(opcode, "Enter an opcode as an integer or 0x hex.");
+    if (!fitsUnsigned(value, bits)) {
+      throw new Error("The opcode does not fit in that bit width.");
+    }
+    builder.storeUint(value, bits);
+  }
+
+  body.fields.forEach((field, index) => {
+    if (field.kind === "text" && index !== body.fields.length - 1) {
+      fieldErrors[field.id] = "A text tail has to be the last field.";
+    }
+  });
+  if (Object.keys(fieldErrors).length > 0) {
+    return { label: "", fieldErrors };
+  }
+
+  for (const field of body.fields) {
+    try {
+      storeField(builder, field);
+    } catch (error) {
+      fieldErrors[field.id] = errorText(error);
+    }
+  }
+  if (Object.keys(fieldErrors).length > 0) {
+    return { label: "", fieldErrors };
+  }
+
+  let cell: Cell;
+  try {
+    cell = builder.endCell();
+  } catch (error) {
+    throw new Error(errorText(error));
+  }
+  if (cell.refs.length > 0) {
+    throw new Error(
+      "That body does not fit in one cell. Shorten it and try again.",
+    );
+  }
+
+  const opcodeLabel = opcode ? `Opcode ${formatInteger(opcode)}, ` : "";
+  const count = body.fields.length;
+  return {
+    payload: cell.toBoc().toString("base64"),
+    label: `${opcodeLabel}${count} ${count === 1 ? "field" : "fields"}, ${cell.bits.length} bits`,
+  };
+}
+
+function storeField(builder: Builder, field: BodyField) {
+  if (field.kind === "uint") {
+    const bits = parseBitWidth(field.bits);
+    const value = parseUnsigned(field.value, "Enter a non-negative integer, or 0x hex.");
+    if (!fitsUnsigned(value, bits)) {
+      throw new Error("That value does not fit in the bit width.");
+    }
+    builder.storeUint(value, bits);
+    return;
+  }
+
+  if (field.kind === "coins") {
+    const value = parseUnsigned(field.value, "Enter a whole number of nanotons.");
+    builder.storeCoins(value);
+    return;
+  }
+
+  if (field.kind === "address") {
+    const friendly = normalizeMainnetAddress(field.value);
+    builder.storeAddress(Address.parse(friendly));
+    return;
+  }
+
+  const text = field.value.trim();
+  if (!text) throw new Error("Enter the text tail.");
+  builder.storeStringTail(text);
+}
+
+function amountToNanoton(amount: string, unit: AmountUnit): string {
+  const trimmed = amount.trim();
+  if (!trimmed) throw new Error("Enter a value.");
+
+  if (unit === "nanoton") {
+    if (!/^\d+$/.test(trimmed)) {
+      throw new Error("Enter a whole number of nanotons.");
+    }
+    return BigInt(trimmed).toString();
+  }
+
+  if (!/^\d+(\.\d{1,9})?$/.test(trimmed)) {
+    throw new Error("Enter a TON amount with up to 9 decimal places.");
+  }
+
+  const [whole, frac = ""] = trimmed.split(".");
+  const nano =
+    BigInt(whole) * BigInt("1000000000") + BigInt(frac.padEnd(9, "0") || "0");
+  return nano.toString();
+}
+
+function valueLabel(step: ScriptStep, nanotons: string): string {
+  if (step.unit === "nanoton") return `${nanotons} nanotons`;
+  return `${step.amount.trim()} TON`;
+}
+
+function parseBitWidth(input: string): number {
+  const trimmed = input.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    throw new Error("Enter a bit width from 1 to 256.");
+  }
+  const bits = Number(trimmed);
+  if (!Number.isInteger(bits) || bits < 1 || bits > 256) {
+    throw new Error("Enter a bit width from 1 to 256.");
+  }
+  return bits;
+}
+
+function parseUnsigned(input: string, message: string): bigint {
+  const trimmed = input.trim();
+  if (/^0x[0-9a-fA-F]+$/.test(trimmed) || /^\d+$/.test(trimmed)) {
+    return BigInt(trimmed);
+  }
+  throw new Error(message);
+}
+
+function fitsUnsigned(value: bigint, bits: number): boolean {
+  if (value < BigInt(0)) return false;
+  if (value === BigInt(0)) return bits >= 1;
+  return value.toString(2).length <= bits;
+}
+
+function formatInteger(input: string): string {
+  const value = parseUnsigned(input, "");
+  return `0x${value.toString(16)}`;
+}
+
+function limitText(maxMessages: number, count: number): string {
+  const noun = maxMessages === 1 ? "message" : "messages";
+  return `This wallet accepts ${maxMessages} ${noun} per confirmation. This script has ${count}. Send a step on its own, or shorten the script.`;
 }
 
 function senderRaw(value: string | undefined): string | undefined {

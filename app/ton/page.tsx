@@ -4,7 +4,7 @@ import { site, tonManifestUrl } from "@/lib/site";
 
 const title = `TON messages — ${site.name}`;
 const description =
-  "Compose and send a transfer on The Open Network mainnet with a connected wallet.";
+  "Script outgoing messages on The Open Network mainnet with a connected wallet.";
 
 export const metadata: Metadata = {
   title,
