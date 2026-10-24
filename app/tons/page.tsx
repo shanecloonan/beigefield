@@ -4,9 +4,9 @@ import { UtonNotes } from "@/components/tons/uton-notes";
 import { site, tonManifestUrl } from "@/lib/site";
 import Link from "next/link";
 
-const title = `Stake, burn, notify, pending — ${site.name}`;
+const title = `Stake through withdraw — ${site.name}`;
 const description =
-  "Four uTON steps on mainnet: a native TON stake (opcode 0x1003), a burn (opcode 0x595f07bc), the burn notification to the minter (opcode 0x7bdd97de), then the proxy burn and pending withdraw the contracts perform after that.";
+  "Five uTON steps on mainnet: a native TON stake (opcode 0x1003), a burn (opcode 0x595f07bc), the burn notification (opcode 0x7bdd97de), the pending withdraw the contracts create, then the owner withdraw (opcode 0x4502).";
 
 export const metadata: Metadata = {
   title,
@@ -39,14 +39,15 @@ export default function TonPage() {
         <Link className="ton-mark" href="/">
           Beigefield
         </Link>
-        <p className="ton-kicker">Steps 1–4 · mainnet</p>
-        <h1>Stake, burn, notify, pending</h1>
+        <p className="ton-kicker">Steps 1–5 · mainnet</p>
+        <h1>Stake through withdraw</h1>
         <p className="ton-lede">
           Step 1 deposits native TON with proxy_ton. Step 2 burns uTON from
           your jetton wallet. Step 3 is the burn notification that wallet
           sends to the minter. Step 4 is the pending withdraw the minter and
-          proxy create after that notification is accepted. Steps 1–3 are sent
-          on their own. Step 4 is not a user message.
+          proxy create after that notification is accepted. Step 5 is the
+          owner withdraw to that contract, after the time lock. Steps 1–3 and
+          5 are sent on their own. Step 4 is not a user message.
         </p>
         <UtonNotes />
         <TonComposer manifestUrl={tonManifestUrl} />

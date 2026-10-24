@@ -69,6 +69,7 @@ export function UtonNotes() {
         <a href="#burn">Step 2</a>
         <a href="#burn-notify">Step 3</a>
         <a href="#proxy-burn">Step 4</a>
+        <a href="#user-withdraw">Step 5</a>
       </nav>
 
       <section className="ton-section" id="stake" aria-labelledby="ton-stake-title">
@@ -188,6 +189,23 @@ export function UtonNotes() {
             Withdraw at {utonSource.short}
           </a>
           <a href="#proxy-burn-form">Open the proxy burn desk</a>
+        </div>
+      </section>
+
+      <section className="ton-section" id="user-withdraw" aria-labelledby="ton-user-withdraw-title">
+        <h2 id="ton-user-withdraw-title">Step 5 · Withdraw</h2>
+        <p className="ton-section-copy">
+          Opcode {UTON_OP.withdraw}. The owner sends this to the pending
+          withdraw contract after withdraw_pending_time has elapsed. The body
+          is a 64-bit query id, the recipient, and the response address. The
+          attached TON is gas. The contract then queries the minter. That
+          exchange is step 6 and is not sent from this page.
+        </p>
+        <div className="ton-links">
+          <a href={utonLinks.withdraw} target="_blank" rel="noreferrer">
+            Withdraw at {utonSource.short}
+          </a>
+          <a href="#withdraw-form">Open the withdraw form</a>
         </div>
       </section>
     </>

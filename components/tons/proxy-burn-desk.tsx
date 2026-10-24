@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { ScriptStep } from "@/lib/ton-message";
 
 const chain = [
@@ -25,11 +24,14 @@ const chain = [
 export function ProxyBurnDesk({
   burn,
   notification,
+  pendingAddress,
+  onPendingAddress,
 }: {
   burn: ScriptStep;
   notification: ScriptStep;
+  pendingAddress: string;
+  onPendingAddress: (value: string) => void;
 }) {
-  const [pendingAddress, setPendingAddress] = useState("");
   const queryId = paired(fieldValue(burn, "query_id"), fieldValue(notification, "query_id"));
   const proxyId = paired(fieldValue(burn, "proxy_id"), fieldValue(notification, "proxy_id"));
   const withdrawId = fieldValue(notification, "withdraw_id").trim();
@@ -90,7 +92,7 @@ export function ProxyBurnDesk({
         <input
           id="pending-withdraw-address"
           value={pendingAddress}
-          onChange={(event) => setPendingAddress(event.target.value)}
+          onChange={(event) => onPendingAddress(event.target.value)}
           autoComplete="off"
           autoCapitalize="off"
           autoCorrect="off"

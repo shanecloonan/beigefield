@@ -66,7 +66,10 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     stakeDraft("step-1"),
     burnDraft("step-2"),
     notificationDraft("step-3"),
+    withdrawDraft("step-5"),
   ]);
+  const [pendingAddress, setPendingAddress] = useState("");
+  const pendingRef = useRef("");
   const [attempted, setAttempted] = useState<Record<string, boolean>>({});
   const [notice, setNotice] = useState<Notice>(null);
   const [noticeStepId, setNoticeStepId] = useState<string | null>(null);
@@ -83,6 +86,19 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
   const compiled = useMemo(() => steps.map((step) => compileStep(step)), [steps]);
 
   useEffect(() => subscribeConnectNotice(setConnectNotice), []);
+
+  function updatePendingAddress(next: string) {
+    const previous = pendingRef.current;
+    pendingRef.current = next;
+    setPendingAddress(next);
+    setSteps((current) =>
+      current.map((step) =>
+        templateId(step) === "withdraw" && step.destination === previous
+          ? { ...step, destination: next }
+          : step,
+      ),
+    );
+  }
 
   function updateStep(id: string, next: ScriptStep) {
     setSteps((current) => current.map((step) => (step.id === id ? next : step)));
@@ -251,15 +267,17 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
       <p className="ton-section-copy">
         Step 1 stakes native TON. Step 2 burns uTON. Step 3 is the burn
         notification the jetton wallet sends to the minter. Step 4 is the
-        minter and proxy after that notification is accepted. Edit any value.
-        TonConnect or the funded wallet signs the message you choose. Nothing
-        is sent until you press the button on that step.
+        minter and proxy after that notification is accepted. Step 5 is the
+        owner withdraw to the pending contract. Edit any value. TonConnect or
+        the funded wallet signs the message you choose. Nothing is sent until
+        you press the button on that step.
       </p>
       <nav className="ton-contents" aria-label="Message steps">
         <a href="#stake-form">Step 1 · Stake</a>
         <a href="#burn-form">Step 2 · Burn</a>
         <a href="#notify-form">Step 3 · Burn notification</a>
         <a href="#proxy-burn-form">Step 4 · Proxy burn</a>
+        <a href="#withdraw-form">Step 5 · Withdraw</a>
       </nav>
 
       <section className="ton-wallet" aria-live="polite">
@@ -394,6 +412,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
 
         <div className="ton-steps">
           {steps.map((step, index) => {
+            if (templateId(step) === "withdraw") return null;
             const result = compiled[index];
             const errors: StepErrors | undefined = result && !result.ok ? result.errors : undefined;
             return (
@@ -445,7 +464,56 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
               steps.find((step) => templateId(step) === "burn-notification") ??
               notificationDraft("step-3")
             }
+            pendingAddress={pendingAddress}
+            onPendingAddress={updatePendingAddress}
           />
+          {steps.map((step, index) => {
+            if (templateId(step) !== "withdraw") return null;
+            const result = compiled[index];
+            const errors: StepErrors | undefined = result && !result.ok ? result.errors : undefined;
+            return (
+              <div key={step.id}>
+              <ScriptStepCard
+                index={index}
+                total={steps.length}
+                step={step}
+                preview={result?.ok ? result.preview : undefined}
+                errors={errors}
+                showErrors={Boolean(attempted[step.id])}
+                sending={sendingId === step.id}
+                sendLabel={
+                  sendingId === step.id
+                    ? localWallet
+                      ? "Sending"
+                      : "Waiting for the wallet"
+                    : sendLabel(step)
+                }
+                sendDisabled={
+                  sending ||
+                  (!localWallet && (!restored || Boolean(wallet && !onMainnet)))
+                }
+                onChange={(next) => updateStep(step.id, next)}
+                onMove={(direction) => moveStep(index, direction)}
+                onRemove={() => {
+                  setSteps((current) => current.filter((item) => item.id !== step.id));
+                  setNotice(null);
+                  setNoticeStepId(null);
+                }}
+                onSend={() => sendStep(step)}
+              />
+              {notice && noticeStepId === step.id ? (
+                <p className={notice.tone === "good" ? "ton-good" : "ton-error"} role="status">
+                  {notice.text}{" "}
+                  {notice.tone === "good" ? (
+                    <a href={notice.href} target="_blank" rel="noreferrer">
+                      {notice.hrefLabel}
+                    </a>
+                  ) : null}
+                </p>
+              ) : null}
+              </div>
+            );
+          })}
         </div>
 
         <p className="ton-hint">
@@ -483,6 +551,7 @@ function sendLabel(step: ScriptStep): string {
   const id = step.body.kind === "fields" ? step.body.templateId : undefined;
   if (id === "uton-burn") return "Send burn";
   if (id === "burn-notification") return "Send burn notification";
+  if (id === "withdraw") return "Send withdraw";
   return "Send stake";
 }
 
@@ -490,6 +559,7 @@ function sentName(step: ScriptStep): string {
   const id = step.body.kind === "fields" ? step.body.templateId : undefined;
   if (id === "uton-burn") return "burn";
   if (id === "burn-notification") return "burn notification";
+  if (id === "withdraw") return "withdraw";
   return "stake";
 }
 
@@ -537,6 +607,27 @@ function burnDraft(id: string): ScriptStep {
       ...body,
       fields: body.fields.map((field) =>
         field.id === "response" ? { ...field, value: FUNDED_WALLET_ADDRESS } : field,
+      ),
+    },
+  };
+}
+
+function withdrawDraft(id: string): ScriptStep {
+  const template = utonTemplateById("withdraw");
+  if (!template) return stakeDraft(id);
+  const body = utonTemplateBody(template);
+  return {
+    id,
+    destination: "",
+    amount: "",
+    unit: "ton",
+    bounceable: template.bounceable,
+    body: {
+      ...body,
+      fields: body.fields.map((field) =>
+        field.id === "recipient" || field.id === "response"
+          ? { ...field, value: FUNDED_WALLET_ADDRESS }
+          : field,
       ),
     },
   };

@@ -49,7 +49,8 @@ export function ScriptStepCard({
   const stake = template?.id === "stake-ton";
   const burn = template?.id === "uton-burn";
   const notify = template?.id === "burn-notification";
-  const tailored = stake || burn || notify;
+  const withdraw = template?.id === "withdraw";
+  const tailored = stake || burn || notify || withdraw;
 
   function setBody(body: MessageBody) {
     onChange({ ...step, body });
@@ -78,13 +79,33 @@ export function ScriptStepCard({
   return (
     <section
       className="ton-step"
-      id={stake ? "stake-form" : burn ? "burn-form" : notify ? "notify-form" : undefined}
+      id={
+        stake
+          ? "stake-form"
+          : burn
+            ? "burn-form"
+            : notify
+              ? "notify-form"
+              : withdraw
+                ? "withdraw-form"
+                : undefined
+      }
       aria-labelledby={`${step.id}-title`}
     >
       <div className="ton-step-head">
         <div>
           <p className="ton-kicker">
-            {stake ? "Step 1" : burn ? "Step 2" : notify ? "Step 3" : preview ? "Ready" : "Draft"}
+            {stake
+              ? "Step 1"
+              : burn
+                ? "Step 2"
+                : notify
+                  ? "Step 3"
+                  : withdraw
+                    ? "Step 5"
+                    : preview
+                      ? "Ready"
+                      : "Draft"}
             {template ? ` · ${template.label}` : ""}
           </p>
           <h2 id={`${step.id}-title`}>
@@ -94,7 +115,9 @@ export function ScriptStepCard({
                 ? "uTON burn"
                 : notify
                   ? "Burn notification"
-                  : `Step ${index + 1}`}
+                  : withdraw
+                    ? "Withdraw"
+                    : `Step ${index + 1}`}
           </h2>
         </div>
         {tailored ? null : (
@@ -148,10 +171,26 @@ export function ScriptStepCard({
           on_bounce on the wallet.
         </p>
       ) : null}
+      {withdraw ? (
+        <p className="ton-section-copy">
+          Opcode 0x4502 to the pending withdraw contract. Send it only after
+          withdraw_pending_time has elapsed. This call starts that contract
+          withdraw path, which queries the minter.{" "}
+          <a href="#user-withdraw">That query is step 6.</a>
+        </p>
+      ) : null}
 
       <label className="ton-field" htmlFor={destinationId}>
         <span>
-          {stake ? "proxy_ton address" : burn ? "Your uTON jetton wallet" : notify ? "Minter" : "Destination"}
+          {stake
+            ? "proxy_ton address"
+            : burn
+              ? "Your uTON jetton wallet"
+              : notify
+                ? "Minter"
+                : withdraw
+                  ? "Pending withdraw contract"
+                  : "Destination"}
         </span>
         <input
           id={destinationId}
@@ -162,7 +201,15 @@ export function ScriptStepCard({
           autoCorrect="off"
           spellCheck={false}
           placeholder={
-            stake ? "Paste proxy_ton" : burn ? "Paste your uTON wallet" : notify ? "Minter address" : "EQ… or UQ…"
+            stake
+              ? "Paste proxy_ton"
+              : burn
+                ? "Paste your uTON wallet"
+                : notify
+                  ? "Minter address"
+                  : withdraw
+                    ? "Paste the pending withdraw"
+                    : "EQ… or UQ…"
           }
           aria-invalid={Boolean(visible?.destination)}
         />
@@ -171,7 +218,9 @@ export function ScriptStepCard({
       {visible?.destination ? <p className="ton-error">{visible.destination}</p> : null}
 
       <div className="ton-field">
-        <span id={amountId}>{stake ? "TON to stake" : burn || notify ? "TON attached" : "Value"}</span>
+        <span id={amountId}>
+          {stake ? "TON to stake" : burn || notify || withdraw ? "TON attached" : "Value"}
+        </span>
         <div className="ton-choice" role="group" aria-label="Value unit">
           <button
             type="button"
@@ -221,7 +270,9 @@ export function ScriptStepCard({
             ? "On by default. Leave it on so your jetton wallet can return the attached TON if it does not accept the burn."
             : notify
               ? "On by default. If the minter rejects the notification, the bounce returns to on_bounce on the jetton wallet."
-              : "Bounceable asks the destination to return the value if it cannot accept the message."}
+              : withdraw
+                ? "On by default. Leave it on so the pending withdraw can return the attached TON if it does not accept the message."
+                : "Bounceable asks the destination to return the value if it cannot accept the message."}
       </p>
 
       <div className="ton-field">
@@ -517,6 +568,11 @@ function stakeFieldHint(templateId: string | undefined, fieldId: string): string
     if (fieldId === "fwd_value") {
       return "Nanotons. Starts at 10000000. The empty forward cell is not editable.";
     }
+  }
+  if (templateId === "withdraw") {
+    if (fieldId === "query_id") return "64 bits. Starts at 0.";
+    if (fieldId === "recipient") return "Receives the withdrawn TON. Starts as the desk wallet.";
+    if (fieldId === "response") return "Receives excess gas. Starts as the desk wallet.";
   }
   return null;
 }
