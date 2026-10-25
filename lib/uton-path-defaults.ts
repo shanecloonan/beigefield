@@ -57,7 +57,8 @@ export async function loadPathDefaults(
     return {
       ok: false,
       status: 502,
-      message: "The minter did not answer, so the uTON jetton wallet was not filled.",
+      message:
+        "The TON network did not answer, so the uTON jetton wallet was not filled. Wait a moment and try again.",
     };
   }
 

@@ -98,5 +98,6 @@ describe("path default lookup", () => {
     if (down.ok) return;
     assert.equal(down.status, 502);
     assert.match(down.message, /uTON jetton wallet was not filled/);
+    assert.match(down.message, /Wait a moment and try again/);
   });
 });
