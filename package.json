@@ -10,14 +10,17 @@
     "test": "tsx --test lib/*.test.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "@ton/core": "^0.63.1",
     "@ton/crypto": "^3.3.0",
     "@ton/ton": "^16.3.0",
     "@tonconnect/ui-react": "^5.0.1",
     "buffer": "^6.0.3",
     "next": "16.2.4",
+    "postgres": "^3.4.9",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
