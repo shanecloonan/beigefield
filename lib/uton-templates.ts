@@ -10,6 +10,10 @@ export const UTON_OP = {
   withdraw: "0x4502",
   stake: "0x1003",
   transfer: "0x0f8a7ea5",
+  /** COMMON::OP::QUERY. The pending withdraw sends this to the minter. */
+  query: "0x1001",
+  /** COMMON::OP::QUERY_ACK. The minter sends this back to the query caller. */
+  queryAck: "0x1002",
 } as const;
 
 /** Starting nanotons for a burn's forward value. This is MINTER::BURN_FEE in the source. The wallet only requires a value above zero. */

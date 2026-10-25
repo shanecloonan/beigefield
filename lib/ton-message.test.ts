@@ -8,6 +8,7 @@ import {
   addNanotons,
   compileScript,
   compileStep,
+  outgoingRequest,
   connectFailureMessage,
   decodeTextComment,
   draftStepForTemplate,
@@ -234,6 +235,13 @@ describe("compileScript", () => {
     assert.equal(result.request.validUntil, 1_700_000_600);
     assert.equal(result.request.from, sample.toRawString());
     assert.equal(result.request.messages.length, 2);
+    assert.deepEqual(
+      outgoingRequest(result.request.messages, {
+        fromRaw: sample.toRawString(),
+        nowSeconds: 1_700_000_000,
+      }),
+      result.request,
+    );
     assert.equal(result.request.messages[0]?.amount, "500000000");
     assert.equal(decodeTextComment(result.request.messages[1]?.payload ?? ""), "next");
     assert.equal(result.previews[1]?.bounceable, false);

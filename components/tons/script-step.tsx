@@ -11,6 +11,8 @@ export type StepPlace = {
   kicker: string;
   title: string;
   sources: readonly PathSource[];
+  destinationNote?: string;
+  amountNote?: string;
 };
 
 const bodyKinds: Array<{ kind: MessageBody["kind"]; label: string }> = [
@@ -220,16 +222,17 @@ export function ScriptStepCard({
             stake
               ? "Paste proxy_ton"
               : burn
-                ? "Paste your uTON wallet"
+                ? "Calculated from the wallet that sends"
                 : notify
                   ? "Minter address"
                   : withdraw
-                    ? "Paste the pending withdraw"
+                    ? "Created after a listed burn"
                     : "EQ… or UQ…"
           }
           aria-invalid={Boolean(visible?.destination)}
         />
       </label>
+      {place?.destinationNote ? <p className="ton-hint">{place.destinationNote}</p> : null}
       {place || !template ? null : <p className="ton-hint">{template.destinationHint}</p>}
       {visible?.destination ? <p className="ton-error">{visible.destination}</p> : null}
 
@@ -268,6 +271,7 @@ export function ScriptStepCard({
           <span>{step.unit === "ton" ? "TON" : "Nano"}</span>
         </div>
       </div>
+      {place?.amountNote ? <p className="ton-hint">{place.amountNote}</p> : null}
       {place || !template ? null : <p className="ton-hint">{template.valueHint}</p>}
       {visible?.amount ? <p className="ton-error">{visible.amount}</p> : null}
 
@@ -355,6 +359,7 @@ export function ScriptStepCard({
           onChange={setBody}
           onField={setField}
           onMoveField={moveField}
+          anchor={place?.anchor}
         />
       </div>
       {visible?.body ? <p className="ton-error">{visible.body}</p> : null}
@@ -404,6 +409,7 @@ function BodyEditor({
   onChange,
   onField,
   onMoveField,
+  anchor,
 }: {
   stepId: string;
   body: MessageBody;
@@ -412,6 +418,7 @@ function BodyEditor({
   onChange: (body: MessageBody) => void;
   onField: (id: string, field: BodyField) => void;
   onMoveField: (index: number, direction: -1 | 1) => void;
+  anchor?: string;
 }) {
   if (body.kind === "empty") {
     return <p className="ton-hint">No payload. The message carries value only.</p>;
@@ -536,8 +543,8 @@ function BodyEditor({
             )}
           </div>
           <FieldInputs field={field} onField={onField} />
-          {quiet ? null : stakeFieldHint(body.templateId, field.id) ? (
-            <p className="ton-hint">{stakeFieldHint(body.templateId, field.id)}</p>
+          {stakeFieldHint(body.templateId, field.id, anchor) ? (
+            <p className="ton-hint">{stakeFieldHint(body.templateId, field.id, anchor)}</p>
           ) : null}
           {fieldErrors?.[field.id] ? (
             <p className="ton-error">{fieldErrors[field.id]}</p>
@@ -565,7 +572,12 @@ function BodyEditor({
   );
 }
 
-function stakeFieldHint(templateId: string | undefined, fieldId: string): string | null {
+function stakeFieldHint(
+  templateId: string | undefined,
+  fieldId: string,
+  anchor?: string,
+): string | null {
+  const redeem = anchor === "redeem-form" || anchor === "redeem-notify-form";
   if (templateId === "stake-ton") {
     if (fieldId === "query_id") return "64 bits. Starts at 0.";
     if (fieldId === "user") return "Receives the minted uTON. Starts as the desk wallet.";
@@ -573,10 +585,14 @@ function stakeFieldHint(templateId: string | undefined, fieldId: string): string
   }
   if (templateId === "uton-burn") {
     if (fieldId === "query_id") return "64 bits. Starts at 0.";
-    if (fieldId === "amount") return "uTON to burn, in nanotons.";
-    if (fieldId === "response") return "Receives excess gas. Starts as the desk wallet.";
+    if (fieldId === "amount") {
+      return "How many uTON to burn, in nanotons. 1000000000 is 1 uTON. This is separate from the TON attached for gas. Run path burns this amount twice: once with proxy id 3, and once with the listed proxy.";
+    }
+    if (fieldId === "response") return "Receives excess gas. Starts as the desk wallet, then follows the wallet you connect.";
     if (fieldId === "proxy_id") {
-      return "32 bits, stored at dictionary key 0. Starts at 3. Not on the minter whitelist.";
+      return redeem
+        ? "A proxy id the minter lists. Run path fills the native TON proxy (type 0) from the whitelist. Proxy id 3 stays on the first burn, because that id is not listed and the notification bounces."
+        : "Starts at 3. That id is not on the minter whitelist, so the burn notification bounces back to your jetton wallet.";
     }
     if (fieldId === "fwd_value") {
       return "Nanotons in the custom payload. Starts at 10000000. The empty forward cell is not editable.";
@@ -584,21 +600,25 @@ function stakeFieldHint(templateId: string | undefined, fieldId: string): string
   }
   if (templateId === "burn-notification") {
     if (fieldId === "query_id") return "64 bits. Starts at 0.";
-    if (fieldId === "owner") return "Stored before the uTON amount. Starts as the desk wallet.";
+    if (fieldId === "owner") return "The wallet that owns the uTON. Starts as the desk wallet, then follows the wallet you connect.";
     if (fieldId === "withdraw_id") return "64 bits. Starts at 0.";
-    if (fieldId === "amount") return "uTON in the notification, in nanotons. Left blank.";
-    if (fieldId === "proxy_id") {
-      return "32 bits. Starts at 3. A missing whitelist entry throws, and the message bounces.";
+    if (fieldId === "amount") {
+      return "The same uTON amount as the burn, in nanotons. 1000000000 is 1 uTON.";
     }
-    if (fieldId === "response") return "Receives excess gas. Starts as the desk wallet.";
+    if (fieldId === "proxy_id") {
+      return redeem
+        ? "The same listed proxy id as the redeem burn. Run path fills it from the minter whitelist."
+        : "Starts at 3. A missing whitelist entry throws, and the message bounces to your jetton wallet.";
+    }
+    if (fieldId === "response") return "Receives excess gas. Starts as the desk wallet, then follows the wallet you connect.";
     if (fieldId === "fwd_value") {
       return "Nanotons. Starts at 10000000. The empty forward cell is not editable.";
     }
   }
   if (templateId === "withdraw") {
     if (fieldId === "query_id") return "64 bits. Starts at 0.";
-    if (fieldId === "recipient") return "Receives the withdrawn TON. Starts as the desk wallet.";
-    if (fieldId === "response") return "Receives excess gas. Starts as the desk wallet.";
+    if (fieldId === "recipient") return "Receives the withdrawn TON. Starts as the desk wallet, then follows the wallet you connect.";
+    if (fieldId === "response") return "Receives excess gas. Starts as the desk wallet, then follows the wallet you connect.";
   }
   return null;
 }
