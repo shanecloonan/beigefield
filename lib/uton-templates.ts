@@ -152,6 +152,15 @@ export function utonTemplateById(id: string | undefined): UtonTemplate | undefin
   return utonTemplates.find((template) => template.id === id);
 }
 
+/** One composer action per known template. Each inserts a single editable draft. */
+export const utonDeskLoads: readonly { id: UtonTemplateId; label: string }[] = [
+  { id: "stake-ton", label: "Load native stake" },
+  { id: "uton-burn", label: "Load uTON burn" },
+  { id: "burn-notification", label: "Load burn notification" },
+  { id: "withdraw", label: "Load withdraw" },
+  { id: "jetton-transfer", label: "Load uTON transfer" },
+];
+
 export function utonTemplateBody(template: UtonTemplate): {
   kind: "fields";
   templateId: UtonTemplateId;

@@ -1,5 +1,14 @@
 import { CopyButton } from "@/components/ton/copy-button";
+import { DeskLoadButton } from "@/components/ton/desk-load";
 import { utonLinks, utonMinter, utonSource } from "@/lib/uton";
+import type { UtonTemplateId } from "@/lib/uton-templates";
+
+type FlowStep = {
+  title: string;
+  text: string;
+  load?: UtonTemplateId;
+  loadNote?: string;
+};
 
 const contracts = [
   {
@@ -31,10 +40,13 @@ const routes = [
   ["Withdraw", "The withdraw contract for that withdraw id"],
 ] as const;
 
-const stake = [
+const stake: readonly FlowStep[] = [
   {
     title: "Deposit",
     text: "The user sends native TON to proxy_ton with a stake message: who should receive the uTON, and where excess gas returns.",
+    load: "stake-ton",
+    loadNote:
+      "Inserts that stake message as one editable step. The proxy sends the notify, and the minter mints.",
   },
   {
     title: "Notify",
@@ -44,12 +56,15 @@ const stake = [
     title: "Mint",
     text: "The minter accepts that caller only when the proxy id is on the whitelist and the type matches. It prices the deposit, increases supply, and mints uTON into the user's jetton wallet.",
   },
-] as const;
+];
 
-const redeem = [
+const redeem: readonly FlowStep[] = [
   {
     title: "burn_tokens",
     text: "The owner sends a burn to their own uTON wallet. The wallet checks the owner and the balance, takes the next withdraw id, reduces the jetton balance, and notifies the minter.",
+    load: "uton-burn",
+    loadNote:
+      "Inserts the burn as one editable step aimed at your uTON wallet. The wallet sends the burn notification on to the minter. That body can be loaded on its own from the message desk.",
   },
   {
     title: "on_bounce",
@@ -66,6 +81,9 @@ const redeem = [
   {
     title: "Time lock",
     text: "The owner can call withdraw on that contract once the withdraw time has passed, and while the withdrawal is not already finished.",
+    load: "withdraw",
+    loadNote:
+      "Inserts the withdraw as one editable step aimed at that contract, for after the withdraw time. The price query and the TON payout are messages between the contract and the proxy.",
   },
   {
     title: "query_data / query_ack",
@@ -75,7 +93,29 @@ const redeem = [
     title: "Proxy withdraw",
     text: "The contract notifies proxy_ton. The proxy checks that the sender is the withdraw contract for that id, reduces the debt, and sends native TON to the recipient.",
   },
-] as const;
+];
+
+function FlowList({ steps }: { steps: readonly FlowStep[] }) {
+  return (
+    <ol className="ton-flow">
+      {steps.map((step, index) => (
+        <li key={step.title}>
+          <span className="ton-flow-index">{index + 1}</span>
+          <div>
+            <h3>{step.title}</h3>
+            <p>{step.text}</p>
+            {step.load ? (
+              <>
+                <DeskLoadButton templateId={step.load}>Load in message desk</DeskLoadButton>
+                {step.loadNote ? <p className="ton-hint">{step.loadNote}</p> : null}
+              </>
+            ) : null}
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 export function UtonNotes() {
   return (
@@ -159,19 +199,10 @@ export function UtonNotes() {
         <p className="ton-section-copy">
           Native TON enters through proxy_ton. An LST deposit is a jetton
           transfer into the LST wallet of that proxy, which then stakes through
-          the same minter. Either entry withdraws as native TON.
+          the same minter. Either entry withdraws as native TON. Deposit is
+          the native stake a wallet can load into the message desk.
         </p>
-        <ol className="ton-flow">
-          {stake.map((step, index) => (
-            <li key={step.title}>
-              <span className="ton-flow-index">{index + 1}</span>
-              <div>
-                <h3>{step.title}</h3>
-                <p>{step.text}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
+        <FlowList steps={stake} />
       </section>
 
       <section className="ton-section" id="redeem" aria-labelledby="ton-redeem-title">
@@ -179,19 +210,12 @@ export function UtonNotes() {
         <p className="ton-section-copy">
           A burn from the uTON wallet becomes a priced burn on a whitelisted
           proxy, then a withdraw contract that waits out the pending time on
-          that proxy before native TON is sent.
+          that proxy before native TON is sent. Burn and the later withdraw
+          are the messages a wallet can load, each as its own step. The
+          notification, the proxy, and the price query travel between the
+          contracts.
         </p>
-        <ol className="ton-flow">
-          {redeem.map((step, index) => (
-            <li key={step.title}>
-              <span className="ton-flow-index">{index + 1}</span>
-              <div>
-                <h3>{step.title}</h3>
-                <p>{step.text}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
+        <FlowList steps={redeem} />
       </section>
 
       <section className="ton-section" id="notes" aria-labelledby="ton-notes-title">

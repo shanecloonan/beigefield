@@ -508,6 +508,22 @@ body {
   margin: 0.28rem 0 0;
 }
 
+.ton-flow .ton-button {
+  margin-top: 0.75rem;
+}
+
+.ton-flow .ton-hint {
+  margin-top: 0.4rem;
+}
+
+.ton-load {
+  display: contents;
+}
+
+.ton-load .ton-button {
+  margin-top: 0;
+}
+
 .ton-notes {
   display: flex;
   flex-direction: column;

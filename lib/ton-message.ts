@@ -1,6 +1,6 @@
 import "./buffer-polyfill";
 import { Address, beginCell, Cell, Dictionary, type Builder } from "@ton/core";
-import { templatePreviewLabel, utonTemplateById } from "./uton-templates";
+import { templatePreviewLabel, utonTemplateBody, utonTemplateById } from "./uton-templates";
 
 /** TON mainnet global id. Testnet is `-3`. */
 export const TON_MAINNET_CHAIN = "-239";
@@ -95,6 +95,35 @@ export function emptyStep(id: string): ScriptStep {
     bounceable: true,
     body: { kind: "empty" },
   };
+}
+
+export function draftStepForTemplate(id: string, templateId: string): ScriptStep | undefined {
+  const template = utonTemplateById(templateId);
+  if (!template) return undefined;
+  return {
+    id,
+    destination: "",
+    amount: "",
+    unit: "ton",
+    bounceable: template.bounceable,
+    body: utonTemplateBody(template),
+  };
+}
+
+export function insertTemplateDraft(
+  steps: readonly ScriptStep[],
+  templateId: string,
+  id: string,
+): ScriptStep[] {
+  const draft = draftStepForTemplate(id, templateId);
+  if (!draft) return [...steps];
+  const only = steps.length === 1 ? steps[0] : undefined;
+  if (only && isUntouchedStep(only)) return [draft];
+  return [...steps, draft];
+}
+
+function isUntouchedStep(step: ScriptStep): boolean {
+  return step.destination.trim() === "" && step.amount.trim() === "" && step.body.kind === "empty";
 }
 
 export function isMainnetChain(chain: string | null | undefined): boolean {

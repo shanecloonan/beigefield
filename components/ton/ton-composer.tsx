@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Address } from "@ton/core";
 import {
   useIsConnectionRestored,
@@ -9,6 +9,7 @@ import {
   useTonWallet,
 } from "@tonconnect/ui-react";
 import { CopyButton } from "@/components/ton/copy-button";
+import { DeskLoaders, publishDeskSending, subscribeDeskLoad } from "@/components/ton/desk-load";
 import { ScriptStepCard } from "@/components/ton/script-step";
 import {
   TonProvider,
@@ -23,6 +24,7 @@ import {
   compileStep,
   connectFailureMessage,
   emptyStep,
+  insertTemplateDraft,
   isMainnetChain,
   readMaxMessages,
   scriptValueSummary,
@@ -31,7 +33,7 @@ import {
   type ScriptStep,
   type StepErrors,
 } from "@/lib/ton-message";
-import { utonTemplateBody, utonTemplateById } from "@/lib/uton-templates";
+import type { UtonTemplateId } from "@/lib/uton-templates";
 import {
   FUNDED_WALLET_ADDRESS,
   FUNDED_WALLET_MAX_MESSAGES,
@@ -64,6 +66,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
   const address = useTonAddress();
   const restored = useIsConnectionRestored();
   const sendingRef = useRef(false);
+  const draftSeq = useRef(0);
   const [steps, setSteps] = useState<ScriptStep[]>(() => [emptyStep("step-1")]);
   const [attempted, setAttempted] = useState<Record<string, boolean>>({});
   const [notice, setNotice] = useState<Notice>(null);
@@ -82,7 +85,23 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
   const compiled = useMemo(() => steps.map((step) => compileStep(step)), [steps]);
   const overLimit = Boolean(limit && steps.length > limit.maxMessages);
 
+  function setDeskBusy(next: boolean) {
+    sendingRef.current = next;
+    publishDeskSending(next);
+    setSending(next);
+  }
+
+  const loadTemplate = useCallback((templateId: UtonTemplateId) => {
+    if (sendingRef.current) return;
+    draftSeq.current += 1;
+    const seq = draftSeq.current;
+    setSteps((current) => insertTemplateDraft(current, templateId, `step-${current.length + 1}-${seq}`));
+    setNotice(null);
+  }, []);
+
   useEffect(() => subscribeConnectNotice(setConnectNotice), []);
+  useEffect(() => publishDeskSending(sending), [sending]);
+  useEffect(() => subscribeDeskLoad(loadTemplate), [loadTemplate]);
 
   function updateStep(id: string, next: ScriptStep) {
     setSteps((current) => current.map((step) => (step.id === id ? next : step)));
@@ -150,8 +169,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
       return;
     }
 
-    sendingRef.current = true;
-    setSending(true);
+    setDeskBusy(true);
     setNotice(null);
 
     try {
@@ -176,14 +194,12 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
         text: sendFailureMessage(classifySendError(error)),
       });
     } finally {
-      sendingRef.current = false;
-      setSending(false);
+      setDeskBusy(false);
     }
   }
 
   async function transmitLocal(request: MainnetScriptRequest, text: string) {
-    sendingRef.current = true;
-    setSending(true);
+    setDeskBusy(true);
     setNotice(null);
 
     try {
@@ -214,8 +230,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     } catch {
       setNotice({ tone: "bad", text: sendFailureMessage("ambiguous") });
     } finally {
-      sendingRef.current = false;
-      setSending(false);
+      setDeskBusy(false);
     }
   }
 
@@ -463,20 +478,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
             >
               Add message
             </button>
-            <button
-              type="button"
-              className="ton-button ton-button-quiet"
-              onClick={() =>
-                setSteps((current) => {
-                  const draft = burnDraft(`step-${current.length + 1}-${Date.now()}`);
-                  if (current.length === 1 && current[0] && isUntouched(current[0])) return [draft];
-                  return [...current, draft];
-                })
-              }
-              disabled={sending}
-            >
-              Load uTON burn
-            </button>
+            <DeskLoaders sending={sending} onLoad={loadTemplate} />
             <button
               type="button"
               className="ton-button"
@@ -496,11 +498,14 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
             </button>
           </div>
           <p className="ton-hint">
-            Load uTON burn adds a draft aimed at your uTON wallet. Nothing is
-            sent. Send step sends that one message. Send script signs every
-            step in one confirmation when the script fits the wallet limit.
-            Each destination still runs on its own. Mainnet. A sent message is
-            final.
+            Each load adds one editable draft and sends nothing. Native stake
+            is a message to proxy_ton. Burn and transfer are messages to your
+            uTON wallet. The burn notification is the body that wallet sends
+            on to the minter. Withdraw is a message to the pending withdraw
+            contract, after its time lock. Send step sends that one message.
+            Send script signs every step in one confirmation when the script
+            fits the wallet limit. Each destination still runs on its own.
+            Mainnet. A sent message is final.
           </p>
         </div>
     </section>
@@ -526,19 +531,3 @@ function isFundedRejected(
   );
 }
 
-function isUntouched(step: ScriptStep): boolean {
-  return step.destination.trim() === "" && step.amount.trim() === "" && step.body.kind === "empty";
-}
-
-function burnDraft(id: string): ScriptStep {
-  const template = utonTemplateById("uton-burn");
-  if (!template) return emptyStep(id);
-  return {
-    id,
-    destination: "",
-    amount: "",
-    unit: "ton",
-    bounceable: template.bounceable,
-    body: utonTemplateBody(template),
-  };
-}

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { Address } from "@ton/core";
 import { utonLinks, utonMinter, utonSource } from "./uton";
-import { UTON_OP, templatePreviewLabel, utonTemplateById } from "./uton-templates";
+import { UTON_OP, templatePreviewLabel, utonDeskLoads, utonTemplateById, utonTemplates } from "./uton-templates";
 
 describe("uTON reference", () => {
   it("records a mainnet minter and the pinned source commit", () => {
@@ -28,5 +28,10 @@ describe("uTON reference", () => {
     assert.equal(notifyProxy?.value, "3");
     assert.equal(templatePreviewLabel("uton-burn", [{ id: "proxy_id", value: "0" }]), "uTON burn · proxy_id 0");
     assert.equal(templatePreviewLabel("burn-notification", [{ id: "proxy_id", value: "3" }]), "Burn notification · proxy_id 3");
+    assert.deepEqual(
+      utonDeskLoads.map((item) => item.id).sort(),
+      utonTemplates.map((template) => template.id).sort(),
+    );
+    assert.equal(new Set(utonDeskLoads.map((item) => item.label)).size, utonDeskLoads.length);
   });
 });

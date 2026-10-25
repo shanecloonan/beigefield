@@ -10,8 +10,10 @@ import {
   compileStep,
   connectFailureMessage,
   decodeTextComment,
+  draftStepForTemplate,
   emptyStep,
   formatNanotons,
+  insertTemplateDraft,
   isMainnetChain,
   normalizeMainnetAddress,
   readMaxMessages,
@@ -19,7 +21,7 @@ import {
   sendFailureMessage,
   type ScriptStep,
 } from "./ton-message";
-import { utonTemplateBody, utonTemplateById } from "./uton-templates";
+import { utonTemplateBody, utonTemplateById, utonTemplates } from "./uton-templates";
 
 const sample = new Address(0, Buffer.alloc(32, 7));
 const other = new Address(0, Buffer.alloc(32, 9));
@@ -262,6 +264,45 @@ describe("script value", () => {
       scriptValueSummary([ready, draft]),
       "1 of 2 steps compile · 1.5 TON so far.",
     );
+  });
+});
+
+describe("template drafts", () => {
+  it("inserts one editable step per known template and keeps the whitelisted proxy id", () => {
+    let steps: ScriptStep[] = [emptyStep("step-1")];
+    for (const template of utonTemplates) {
+      const draft = draftStepForTemplate(`draft-${template.id}`, template.id);
+      assert.ok(draft);
+      assert.equal(draft.destination, "");
+      assert.equal(draft.amount, "");
+      assert.equal(draft.unit, "ton");
+      assert.equal(draft.bounceable, template.bounceable);
+      assert.equal(draft.body.kind, "fields");
+      if (draft.body.kind !== "fields") continue;
+      assert.equal(draft.body.templateId, template.id);
+      assert.equal(draft.body.opcode, template.opcode);
+      const proxy = draft.body.fields.find((field) => field.id === "proxy_id");
+      if (template.id === "uton-burn" || template.id === "burn-notification") {
+        assert.equal(proxy?.value, "3");
+      }
+      steps = insertTemplateDraft(steps, template.id, draft.id);
+    }
+
+    assert.deepEqual(
+      steps.map((step) => step.id),
+      utonTemplates.map((template) => `draft-${template.id}`),
+    );
+    const filled = steps[0];
+    assert.ok(filled);
+    const kept = insertTemplateDraft(
+      [{ ...filled, destination: "EQ..." }],
+      "withdraw",
+      "added",
+    );
+    assert.equal(kept.length, 2);
+    assert.equal(kept[0]?.id, filled.id);
+    assert.equal(kept[1]?.body.kind, "fields");
+    assert.equal(insertTemplateDraft(steps, "missing-template", "nope").length, steps.length);
   });
 });
 
