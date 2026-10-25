@@ -153,12 +153,12 @@ describe("funded send", () => {
     );
   });
 
-  it("treats a dropped broadcast as ambiguous and a refusal as unsent", async () => {
+  it("treats a dropped broadcast as unsent when the account is still uninitialized", async () => {
     const dropped = await sendFundedScript(
       { messages: [{ address: utonMinter, amount: "1" }] },
       {
         fetchImpl: async (_url, init) => {
-          const body = JSON.parse(String(init?.body)) as { method: string };
+          const body = JSON.parse(String(init?.body)) as { method?: string };
           if (body.method === "getAddressInformation") {
             return Response.json({ ok: true, result: { state: "uninitialized" } });
           }
@@ -168,8 +168,8 @@ describe("funded send", () => {
     );
     assert.equal(dropped.ok, false);
     if (!dropped.ok) {
-      assert.equal(dropped.kind, "ambiguous");
-      assert.match(dropped.message, /not sent twice/);
+      assert.equal(dropped.kind, "rejected");
+      assert.match(dropped.message, /Nothing was sent\. Safe to try again/);
     }
 
     const refused = await sendFundedScript(

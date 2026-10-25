@@ -19,6 +19,7 @@ import {
   normalizeMainnetAddress,
   readMaxMessages,
   scriptValueSummary,
+  readFundedSendResult,
   sendFailureMessage,
   type ScriptStep,
 } from "./ton-message";
@@ -508,6 +509,16 @@ describe("send failures", () => {
     );
     assert.equal(classifySendError(new Error("socket hang up")), "ambiguous");
     assert.match(sendFailureMessage("ambiguous"), /not sent twice/);
+    assert.deepEqual(
+      readFundedSendResult({
+        ok: false,
+        kind: "ambiguous",
+        message: "Nothing was sent. Safe to try again.",
+      }),
+      { ok: false, text: "Nothing was sent. Safe to try again." },
+    );
+    assert.equal(readFundedSendResult({ ok: false, kind: "ambiguous" }), null);
+    assert.deepEqual(readFundedSendResult({ ok: true }), { ok: true });
     assert.equal(
       connectFailureMessage("cancelled", "https://example.com/manifest.json"),
       null,

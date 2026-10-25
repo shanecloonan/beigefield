@@ -39,17 +39,23 @@ export async function readAccountState(
 }
 
 export async function readSeqno(address: string, deps: TonRpcDeps = {}): Promise<number | null> {
-  const toncenter = await toncenterCall(
-    "runGetMethod",
-    { address, method: "seqno", stack: [] },
-    deps,
-    { retry: true },
-  );
-  if (toncenter.ok) {
-    const parsed = parseSeqno(toncenter.result);
-    if (parsed !== null) return parsed;
-  }
+  const toncenter = await toncenterSeqno(address, deps, true);
+  if (toncenter !== null) return toncenter;
   return tonapiSeqno(address, deps);
+}
+
+/**
+ * Highest sequence number Toncenter or TonAPI reports.
+ * A cached Toncenter value can lag the block that accepted a broadcast.
+ */
+export async function readObservedSeqno(address: string, deps: TonRpcDeps = {}): Promise<number | null> {
+  const [toncenter, tonapi] = await Promise.all([
+    toncenterSeqno(address, deps, false),
+    tonapiSeqno(address, deps),
+  ]);
+  const values = [toncenter, tonapi].filter((value): value is number => value !== null);
+  if (values.length === 0) return null;
+  return Math.max(...values);
 }
 
 export async function readJettonWallet(
@@ -81,6 +87,39 @@ export async function toncenterSend(
   deps: TonRpcDeps = {},
 ): Promise<CallResult> {
   return toncenterCall("sendBoc", { boc: bocBase64 }, deps, { retry: false });
+}
+
+/** One TonAPI broadcast. Call this only after the sequence number is still unchanged. */
+export async function tonapiSend(bocBase64: string, deps: TonRpcDeps = {}): Promise<CallResult> {
+  const fetchImpl = deps.fetchImpl ?? fetch;
+  const base = (deps.tonapi ?? TONAPI_ENDPOINT).replace(/\/$/, "");
+  try {
+    const response = await fetchImpl(`${base}/v2/blockchain/message`, {
+      method: "POST",
+      headers: { accept: "application/json", "content-type": "application/json" },
+      body: JSON.stringify({ boc: bocBase64 }),
+      signal: AbortSignal.timeout(ATTEMPT_MS),
+    });
+    if (response.ok) return { ok: true, result: null };
+    return { ok: false, network: response.status === 429 || response.status >= 500 };
+  } catch {
+    return { ok: false, network: true };
+  }
+}
+
+async function toncenterSeqno(
+  address: string,
+  deps: TonRpcDeps,
+  retry: boolean,
+): Promise<number | null> {
+  const toncenter = await toncenterCall(
+    "runGetMethod",
+    { address, method: "seqno", stack: [] },
+    deps,
+    { retry },
+  );
+  if (!toncenter.ok) return null;
+  return parseSeqno(toncenter.result);
 }
 
 export async function toncenterCall(
