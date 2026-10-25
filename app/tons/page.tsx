@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { TonComposer } from "@/components/tons/ton-composer";
-import { site, tonManifestUrl } from "@/lib/site";
+import { ZigComposer } from "@/components/tons/zig-composer";
+import { site } from "@/lib/site";
+import { deskPublicAddress } from "@/lib/zig-funded-wallet";
 import Link from "next/link";
 
-const title = `Bounce, then redeem — ${site.name}`;
+const title = `withdraw_unbonded_by_id — ${site.name}`;
 const description =
-  "The uTON burn with proxy id 3, the bounced notification, the wallet on_bounce read, and a later redeem on a whitelisted proxy.";
+  "One MsgExecuteContract on the Valdora staker. The LCD lookup supplies a completed-unbonding id. The desk wallet signs it on ZIGChain.";
 
 export const metadata: Metadata = {
   title,
@@ -25,7 +26,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default function TonPage() {
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+export default async function TonPage() {
+  const deskAddress = await deskPublicAddress();
   return (
     <div className="page">
       <div className="frame" aria-hidden="true">
@@ -38,9 +43,9 @@ export default function TonPage() {
         <Link className="ton-mark" href="/">
           Beigefield
         </Link>
-        <p className="ton-kicker">Proxy id 3, then a whitelisted id</p>
-        <h1>Bounce, then redeem</h1>
-        <TonComposer manifestUrl={tonManifestUrl} />
+        <p className="ton-kicker">Valdora staker · code 179</p>
+        <h1>withdraw_unbonded_by_id</h1>
+        <ZigComposer deskAddress={deskAddress} />
       </main>
     </div>
   );

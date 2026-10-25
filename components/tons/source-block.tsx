@@ -1,4 +1,4 @@
-import type { PathSource } from "@/lib/uton-path";
+import type { PathSource } from "@/lib/valdora-path";
 
 export function SourceList({ sources }: { sources: readonly PathSource[] }) {
   return (

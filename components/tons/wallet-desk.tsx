@@ -1,50 +1,25 @@
 "use client";
 
 import { CopyButton } from "@/components/tons/copy-button";
+import { zigExplorerAccountUrl } from "@/lib/valdora";
 
-export function tonsStepSendDisabled(input: {
-  sending: boolean;
-  localWallet: boolean;
-  restored: boolean;
-  walletOnWrongChain: boolean;
-}): boolean {
-  return (
-    input.sending ||
-    (!input.localWallet && (!input.restored || input.walletOnWrongChain))
-  );
-}
-
-export function tonsInFlightLabel(localWallet: boolean): string {
-  return localWallet ? "Sending" : "Waiting for the wallet";
+export function tonsInFlightLabel(): string {
+  return "Sending";
 }
 
 export function TonsWalletDesk({
   localWallet,
-  restored,
-  connected,
-  onMainnet,
   address,
-  chainName,
   sending,
-  connectNotice,
-  fundedAddress,
+  notice,
   onUseFunded,
-  onClearFunded,
-  onConnect,
   onDisconnect,
 }: {
   localWallet: boolean;
-  restored: boolean;
-  connected: boolean;
-  onMainnet: boolean;
   address: string;
-  chainName: string;
   sending: boolean;
-  connectNotice: string | null;
-  fundedAddress: string;
+  notice: string | null;
   onUseFunded: () => void;
-  onClearFunded: () => void;
-  onConnect: () => void;
   onDisconnect: () => void;
 }) {
   return (
@@ -52,55 +27,29 @@ export function TonsWalletDesk({
       {localWallet ? (
         <div className="ton-wallet-row">
           <div>
-            <p className="ton-kicker">Local wallet · mainnet</p>
-            <p className="ton-address">{fundedAddress}</p>
-            <div className="ton-links">
-              <CopyButton value={fundedAddress} label="Copy address" />
-              <a
-                href={`https://tonviewer.com/${encodeURIComponent(fundedAddress)}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Tonviewer
-              </a>
-            </div>
+            <p className="ton-kicker">Local wallet · ZIGChain</p>
+            <p className="ton-address">{address || "Desk address unset"}</p>
+            {address ? (
+              <div className="ton-links">
+                <CopyButton value={address} label="Copy address" />
+                <a href={zigExplorerAccountUrl(address)} target="_blank" rel="noreferrer">
+                  ZIGChain explorer
+                </a>
+              </div>
+            ) : null}
           </div>
           <button
             type="button"
             className="ton-button ton-button-quiet"
-            onClick={onClearFunded}
+            onClick={onDisconnect}
             disabled={sending}
           >
             Disconnect
           </button>
         </div>
-      ) : !restored ? (
+      ) : (
         <div>
-          <p className="ton-status">Checking for a connected wallet.</p>
-          <div className="ton-wallet-actions">
-            <button type="button" className="ton-button ton-button-quiet" onClick={onUseFunded}>
-              Use funded wallet
-            </button>
-          </div>
-        </div>
-      ) : connected && onMainnet ? (
-        <div className="ton-wallet-row">
-          <div>
-            <p className="ton-kicker">Connected · mainnet</p>
-            <p className="ton-address">{address}</p>
-            {address ? (
-              <div className="ton-links">
-                <CopyButton value={address} label="Copy address" />
-                <a
-                  href={`https://tonviewer.com/${encodeURIComponent(address)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Tonviewer
-                </a>
-              </div>
-            ) : null}
-          </div>
+          <p className="ton-status">The desk wallet is the only signer.</p>
           <div className="ton-wallet-actions">
             <button
               type="button"
@@ -110,54 +59,13 @@ export function TonsWalletDesk({
             >
               Use funded wallet
             </button>
-            <button
-              type="button"
-              className="ton-button ton-button-quiet"
-              onClick={onDisconnect}
-              disabled={sending}
-            >
-              Disconnect
-            </button>
           </div>
-        </div>
-      ) : connected ? (
-        <div className="ton-wallet-row">
-          <div>
-            <p className="ton-status">
-              This wallet is on {chainName}. Switch it to TON mainnet and connect again.
-            </p>
-          </div>
-          <div className="ton-wallet-actions">
-            <button type="button" className="ton-button ton-button-quiet" onClick={onUseFunded}>
-              Use funded wallet
-            </button>
-            <button type="button" className="ton-button ton-button-quiet" onClick={onDisconnect}>
-              Disconnect
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div>
-          <div className="ton-wallet-actions">
-            <button type="button" className="ton-button" onClick={onConnect}>
-              Connect wallet
-            </button>
-            <button type="button" className="ton-button ton-button-quiet" onClick={onUseFunded}>
-              Use funded wallet
-            </button>
-          </div>
-          <p className="ton-hint">
-            Mainnet only. A testnet wallet is refused. Use funded wallet sends from the desk
-            wallet without TonConnect.
-          </p>
         </div>
       )}
       {localWallet ? (
-        <p className="ton-hint">
-          Signs on the server and broadcasts on mainnet. Disconnect to use TonConnect instead.
-        </p>
+        <p className="ton-hint">Signs on the server and broadcasts on ZIGChain.</p>
       ) : null}
-      {connectNotice ? <p className="ton-status">{connectNotice}</p> : null}
+      {notice ? <p className="ton-status">{notice}</p> : null}
     </section>
   );
 }

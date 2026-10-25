@@ -1,6 +1,16 @@
 "use client";
 
-import type { BounceNotice } from "@/components/tons/bounce-desk";
+export type PathNotice =
+  | {
+      tone: "good";
+      text: string;
+      href: string;
+      hrefLabel: string;
+    }
+  | {
+      tone: "bad";
+      text: string;
+    };
 
 export function PathRunBar({
   sending,
@@ -13,7 +23,7 @@ export function PathRunBar({
   sending: boolean;
   label: string;
   disabled: boolean;
-  notice: BounceNotice | null;
+  notice: PathNotice | null;
   lookupNote: string | null;
   onRun: () => void;
 }) {
@@ -26,10 +36,10 @@ export function PathRunBar({
         </div>
       </div>
       <p className="ton-hint">
-        Run path sends the burn, the burn notification, the redeem burn, and the
-        redeem notification, in that order. The minter query follows when the
-        withdraw fields are ready. The withdraw itself is included only after
-        its contract address is filled. The wallet confirms each batch.
+        Run path reads a completed-unbonding id from the LCD, then broadcasts one
+        MsgExecuteContract. The contract is the Valdora staker. The msg is
+        withdraw_unbonded_by_id. The message funds are empty. The fee is azig from
+        the desk account.
       </p>
       <button
         type="button"

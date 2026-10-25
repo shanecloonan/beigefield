@@ -2,194 +2,23 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { AutomationGap } from "../components/tons/automation-gap";
-import { BounceDesk } from "../components/tons/bounce-desk";
 import { PathRunBar } from "../components/tons/path-run-bar";
-import { PayoutDesk } from "../components/tons/payout-desk";
-import { ScriptStepCard } from "../components/tons/script-step";
-import type { ScriptStep } from "./ton-message";
-import { automationSource } from "./uton-automation";
-import { utonTemplateBody, utonTemplateById } from "./uton-templates";
+import { PathCards, ZigComposer } from "../components/tons/zig-composer";
 
-const draft: ScriptStep = {
-  id: "burn",
-  destination: "",
-  amount: "",
-  unit: "ton",
-  bounceable: true,
-  body: { kind: "empty" },
-};
+const desk = "zig1gy5zketezrfdea9g80we02663r2gjz3z0002kx";
 
-function sendButton(html: string, label: string): string {
+function button(html: string, label: string): string {
   const match = html.match(new RegExp(`<button\\b[^>]*>${label}</button>`));
   assert.ok(match, `missing ${label} button`);
   return match[0];
 }
 
-describe("tons send buttons", () => {
-  it("renders a step Send button that can run its handler", () => {
-    const html = renderToStaticMarkup(
-      h(ScriptStepCard, {
-        index: 0,
-        total: 1,
-        step: draft,
-        showErrors: true,
-        errors: { destination: "Enter a destination address.", amount: "Enter a value." },
-        sending: false,
-        sendLabel: "Send burn",
-        sendDisabled: false,
-        onChange: () => undefined,
-        onMove: () => undefined,
-        onRemove: () => undefined,
-        onSend: () => undefined,
-        status: h("p", { role: "status" }, "Nothing was sent. Connect a mainnet wallet first."),
-      }),
-    );
-    const button = sendButton(html, "Send burn");
-    assert.equal(button.includes("disabled"), false);
-    assert.equal(button.includes("aria-disabled"), false);
-    assert.match(html, /Enter a destination address\./);
-    assert.match(html, /Nothing was sent\. Connect a mainnet wallet first\./);
-  });
+function labels(html: string): string[] {
+  return [...html.matchAll(/<button\b[^>]*>([^<]*)<\/button>/g)].map((match) => match[1] ?? "");
+}
 
-  it("disables a step Send button only while a send is in flight", () => {
-    const html = renderToStaticMarkup(
-      h(ScriptStepCard, {
-        index: 0,
-        total: 1,
-        step: draft,
-        showErrors: false,
-        sending: true,
-        sendLabel: "Waiting for the wallet",
-        sendDisabled: true,
-        onChange: () => undefined,
-        onMove: () => undefined,
-        onRemove: () => undefined,
-        onSend: () => undefined,
-      }),
-    );
-    const button = sendButton(html, "Waiting for the wallet");
-    assert.match(button, /disabled/);
-  });
-
-  it("renders the path Send buttons as enabled controls", () => {
-    const bounce = renderToStaticMarkup(
-      h(BounceDesk, {
-        sending: false,
-        sendLabel: "Send",
-        disabled: false,
-        notice: null,
-        onSend: () => undefined,
-      }),
-    );
-    const payout = renderToStaticMarkup(
-      h(PayoutDesk, {
-        sending: false,
-        sendLabel: "Send",
-        disabled: false,
-        notice: null,
-        onSend: () => undefined,
-      }),
-    );
-    const gap = renderToStaticMarkup(
-      h(AutomationGap, {
-        id: "after-burn-1",
-        titleId: "after-burn-1-title",
-        kicker: "After step 1",
-        title: "afterBurn1",
-        sources: [automationSource.afterBurn1],
-        hint: "afterBurn1 queues the redeem burn, the redeem notification, and the withdraw once bounce is on the path. Send broadcasts those three messages on mainnet. A sent message is final.",
-        sending: false,
-        sendLabel: "Send",
-        disabled: false,
-        notice: null,
-        onSend: () => undefined,
-      }),
-    );
-    const next = renderToStaticMarkup(
-      h(AutomationGap, {
-        id: "queue-after-bounce",
-        titleId: "queue-after-bounce-title",
-        kicker: "After step 3",
-        title: "nextAfter",
-        sources: [automationSource.queueAfterBounce],
-        hint: "nextAfter names the redeem burn after the bounce. Send broadcasts that burn on mainnet. A sent message is final.",
-        sending: false,
-        sendLabel: "Send",
-        disabled: false,
-        notice: null,
-        onSend: () => undefined,
-      }),
-    );
-    for (const html of [bounce, payout, gap, next]) {
-      const button = sendButton(html, "Send");
-      assert.equal(button.includes("disabled"), false);
-      assert.equal(button.includes("aria-disabled"), false);
-    }
-    assert.doesNotMatch(bounce, /on_bounce runs on the jetton wallet/);
-    assert.match(gap, /broadcasts those three messages/);
-    assert.match(next, /broadcasts that burn/);
-    assert.match(payout, /0x1001/);
-    assert.match(payout, /0x1002/);
-    assert.doesNotMatch(gap, /It is not a wallet message/);
-    assert.doesNotMatch(payout, /Nothing was sent\. query_ack runs between/);
-  });
-
-  it("shows bounce send progress and the broadcast result", () => {
-    const sending = renderToStaticMarkup(
-      h(BounceDesk, {
-        sending: true,
-        sendLabel: "Sending",
-        disabled: true,
-        notice: null,
-        onSend: () => undefined,
-      }),
-    );
-    const button = sendButton(sending, "Sending");
-    assert.match(button, /disabled/);
-    assert.match(button, /aria-busy="true"/);
-    assert.match(sending, /role="status"/);
-
-    const rejected = renderToStaticMarkup(
-      h(BounceDesk, {
-        sending: false,
-        sendLabel: "Send",
-        disabled: false,
-        notice: {
-          tone: "bad",
-          text: "The network rejected the message. Nothing was sent.",
-        },
-        onSend: () => undefined,
-      }),
-    );
-    assert.match(rejected, /The network rejected the message\. Nothing was sent\./);
-    assert.doesNotMatch(rejected, /on_bounce runs on the jetton wallet/);
-
-    const queued = renderToStaticMarkup(
-      h(AutomationGap, {
-        id: "after-burn-1",
-        titleId: "after-burn-1-title",
-        kicker: "After step 1",
-        title: "afterBurn1",
-        sources: [automationSource.afterBurn1],
-        hint: "queued",
-        sending: false,
-        sendLabel: "Send",
-        disabled: false,
-        notice: {
-          tone: "good",
-          text: "Sent the queued path on mainnet.",
-          href: "https://tonviewer.com/EQAfF5j3JMIpZlLmACv7Ub7RH7WmiVMuV4ivcgNYHvNnqHTz",
-          hrefLabel: "View the destination on Tonviewer",
-        },
-        onSend: () => undefined,
-      }),
-    );
-    assert.match(queued, /Sent the queued path on mainnet\./);
-    assert.match(queued, /href="https:\/\/tonviewer.com\//);
-  });
-
-  it("renders one Run path control and explains the jetton wallet and the pending withdraw", () => {
+describe("tons run path control", () => {
+  it("keeps Run path as the only enabled lead control", () => {
     const html = renderToStaticMarkup(
       h(PathRunBar, {
         sending: false,
@@ -200,75 +29,65 @@ describe("tons send buttons", () => {
         onRun: () => undefined,
       }),
     );
-    const button = sendButton(html, "Run path");
-    assert.equal(button.includes("disabled"), false);
-    assert.match(button, /ton-button-lead/);
-    assert.match(html, /burn notification/);
-    assert.match(html, /pending withdraw|contract address/);
+    const lead = button(html, "Run path");
+    assert.equal(lead.includes("disabled"), false);
+    assert.match(lead, /ton-button-lead/);
+    assert.match(html, /MsgExecuteContract/);
+    assert.match(html, /withdraw_unbonded_by_id/);
+    assert.match(html, /LCD/);
+    assert.deepEqual(labels(html), ["Run path"]);
+  });
 
-    const burnTemplate = utonTemplateById("uton-burn");
-    const withdrawTemplate = utonTemplateById("withdraw");
-    assert.ok(burnTemplate && withdrawTemplate);
-    const burnStep: ScriptStep = {
-      ...draft,
-      body: utonTemplateBody(burnTemplate),
-    };
-    const withdrawStep: ScriptStep = {
-      ...draft,
-      id: "withdraw",
-      body: utonTemplateBody(withdrawTemplate),
-    };
-    const burn = renderToStaticMarkup(
-      h(ScriptStepCard, {
-        index: 0,
-        total: 5,
-        step: burnStep,
-        showErrors: false,
-        sending: false,
-        sendLabel: "Send burn",
-        sendDisabled: false,
-        place: {
-          anchor: "burn-form",
-          kicker: "Step 1",
-          title: "burn_tokens",
-          sources: [],
-          destinationNote:
-            "This is your uTON jetton wallet: the address that holds your uTON. The minter calculates it from the wallet you connect.",
-        },
-        onChange: () => undefined,
-        onMove: () => undefined,
-        onRemove: () => undefined,
-        onSend: () => undefined,
+  it("disables Run path while a send is in flight and links a broadcast", () => {
+    const sending = renderToStaticMarkup(
+      h(PathRunBar, {
+        sending: true,
+        label: "Sending",
+        disabled: true,
+        notice: null,
+        lookupNote: "LCD paused=false total_count=54 suggested_id=12.",
+        onRun: () => undefined,
       }),
     );
-    assert.match(burn, /Calculated from the wallet that sends/);
-    assert.match(burn, /uTON jetton wallet/);
-    assert.doesNotMatch(burn, /Paste your uTON/);
+    const lead = button(sending, "Sending");
+    assert.match(lead, /disabled/);
+    assert.match(lead, /aria-busy="true"/);
+    assert.match(sending, /suggested_id=12/);
 
-    const withdraw = renderToStaticMarkup(
-      h(ScriptStepCard, {
-        index: 4,
-        total: 5,
-        step: withdrawStep,
-        showErrors: false,
+    const done = renderToStaticMarkup(
+      h(PathRunBar, {
         sending: false,
-        sendLabel: "Send withdraw",
-        sendDisabled: false,
-        place: {
-          anchor: "withdraw-form",
-          kicker: "Step 6",
-          title: "withdraw_ton",
-          sources: [],
-          destinationNote:
-            "The pending withdraw contract is created when a listed proxy accepts a burn. Paste that contract here after it exists.",
+        label: "Run path",
+        disabled: false,
+        notice: {
+          tone: "good",
+          text: "Broadcast ab at height 9.",
+          href: "https://www.zigscan.org/tx/ab",
+          hrefLabel: "View the transaction",
         },
-        onChange: () => undefined,
-        onMove: () => undefined,
-        onRemove: () => undefined,
-        onSend: () => undefined,
+        lookupNote: null,
+        onRun: () => undefined,
       }),
     );
-    assert.match(withdraw, /Created after a listed burn/);
-    assert.match(withdraw, /pending withdraw contract/);
+    assert.match(done, /href="https:\/\/www.zigscan.org\/tx\/ab"/);
+    assert.match(done, /View the transaction/);
+  });
+
+  it("renders the path cards with no Send control", () => {
+    const cards = renderToStaticMarkup(h(PathCards));
+    assert.equal(cards.includes("<button"), false);
+    assert.match(cards, /total_completed_unbondings/);
+    assert.match(cards, /withdraw_unbonded_by_id/);
+    assert.match(cards, /completed_unbondings/);
+    assert.match(cards, /id="query-totals"/);
+    assert.match(cards, /id="execute"/);
+    assert.match(cards, /id="handler"/);
+
+    const page = renderToStaticMarkup(h(ZigComposer, { deskAddress: desk }));
+    assert.deepEqual(labels(page).sort(), ["Copy address", "Disconnect", "Run path"]);
+    assert.match(button(page, "Run path"), /disabled/);
+    assert.equal(/Connect wallet|TonConnect|tonconnect|>Send</i.test(page), false);
+    assert.match(page, /Local wallet · ZIGChain/);
+    assert.match(page, new RegExp(desk));
   });
 });
