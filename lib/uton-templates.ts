@@ -61,7 +61,7 @@ export const utonTemplates: readonly UtonTemplate[] = [
       queryId,
       { id: "amount", label: "uTON amount", kind: "coins", value: "" },
       { id: "response", label: "Response address", kind: "address", value: "" },
-      { id: "proxy_id", label: "Proxy id", kind: "uint", bits: "32", value: "0" },
+      { id: "proxy_id", label: "Proxy id", kind: "uint", bits: "32", value: "3" },
       {
         id: "fwd_value",
         label: "Forward value",
@@ -85,7 +85,7 @@ export const utonTemplates: readonly UtonTemplate[] = [
       { id: "owner", label: "Owner", kind: "address", value: "" },
       { id: "withdraw_id", label: "Withdraw id", kind: "uint", bits: "64", value: "0" },
       { id: "amount", label: "uTON amount", kind: "coins", value: "" },
-      { id: "proxy_id", label: "Proxy id", kind: "uint", bits: "32", value: "0" },
+      { id: "proxy_id", label: "Proxy id", kind: "uint", bits: "32", value: "3" },
       { id: "response", label: "Response address", kind: "address", value: "" },
       {
         id: "fwd_value",

@@ -4,9 +4,9 @@ import { UtonNotes } from "@/components/tons/uton-notes";
 import { site, tonManifestUrl } from "@/lib/site";
 import Link from "next/link";
 
-const title = `Stake through payout — ${site.name}`;
+const title = `Bounce, then redeem — ${site.name}`;
 const description =
-  "Six uTON steps on mainnet, from a native TON stake through burn, the minter notification, the pending withdraw, the owner withdraw, and the contract payout.";
+  "The uTON burn with proxy id 3, the bounced notification, the wallet on_bounce read, and a later redeem on a whitelisted proxy. Send stays locked.";
 
 export const metadata: Metadata = {
   title,
@@ -39,16 +39,21 @@ export default function TonPage() {
         <Link className="ton-mark" href="/">
           Beigefield
         </Link>
-        <p className="ton-kicker">Steps 1–6 · mainnet</p>
-        <h1>Stake through payout</h1>
+        <p className="ton-kicker">Proxy id 3, then a whitelisted id</p>
+        <h1>Bounce, then redeem</h1>
         <p className="ton-lede">
-          Step 1 deposits native TON with proxy_ton. Step 2 burns uTON from
-          your jetton wallet. Step 3 is the burn notification that wallet
-          sends to the minter. Step 4 is the pending withdraw the minter and
-          proxy create after that notification is accepted. Step 5 is the
-          owner withdraw to that contract, after the time lock. Step 6 is the
-          query, the ack, and the proxy payout. Steps 1–3 and 5 are sent on
-          their own. Steps 4 and 6 are not user messages.
+          Step 1 burns uTON from the jetton wallet with proxy id 3. That id is
+          not on the minter whitelist. The wallet still reduces its balance
+          and takes the next withdraw id, then sends the burn notification.
+          Step 2 is that notification. The minter throws before it changes
+          supply, and the bounceable message returns. Step 3 is on_bounce on
+          the wallet. It accepts the bounced burn notification, reads coins
+          where the owner address was stored, and adds that read to the
+          balance. withdraw_cnt stays where burn_tokens left it. Step 4 burns
+          again with a proxy id the whitelist contains. Step 5 is the
+          notification for that burn. Step 6 is the owner withdraw after the
+          time lock, and the payout the contracts run after that. Send is
+          locked on every step. Nothing on this page is broadcast.
         </p>
         <UtonNotes />
         <TonComposer manifestUrl={tonManifestUrl} />
