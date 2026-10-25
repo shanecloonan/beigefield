@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   useIsConnectionRestored,
   useTonAddress,
@@ -26,12 +26,10 @@ import {
   type ScriptStep,
   type StepErrors,
 } from "@/lib/ton-message";
+import { pathSource } from "@/lib/uton-path";
 import { utonTemplateBody, utonTemplateById } from "@/lib/uton-templates";
 import { utonMinter } from "@/lib/uton";
 import { FUNDED_WALLET_ADDRESS } from "@/lib/funded-wallet-public";
-
-const whitelistedProxy =
-  "32 bits. A whitelisted proxy id. Left blank. The minter resolves it before supply changes.";
 
 export function TonComposer({ manifestUrl }: { manifestUrl: string }) {
   return (
@@ -53,27 +51,12 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     redeemNotificationDraft("redeem-notify"),
     withdrawDraft("withdraw"),
   ]);
-  const [pendingAddress, setPendingAddress] = useState("");
-  const pendingRef = useRef("");
   const [connectNotice, setConnectNotice] = useState<string | null>(null);
 
   const onMainnet = isMainnetChain(wallet?.account.chain);
   const compiled = useMemo(() => steps.map((step) => compileStep(step)), [steps]);
 
   useEffect(() => subscribeConnectNotice(setConnectNotice), []);
-
-  function updatePendingAddress(next: string) {
-    const previous = pendingRef.current;
-    pendingRef.current = next;
-    setPendingAddress(next);
-    setSteps((current) =>
-      current.map((step) =>
-        templateId(step) === "withdraw" && step.destination === previous
-          ? { ...step, destination: next }
-          : step,
-      ),
-    );
-  }
 
   function updateStep(id: string, next: ScriptStep) {
     setSteps((current) => current.map((step) => (step.id === id ? next : step)));
@@ -114,13 +97,6 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
   return (
     <section className="ton-section" id="message" aria-labelledby="ton-message-title">
       <h2 id="ton-message-title">Path</h2>
-      <p className="ton-section-copy">
-        Step 1 burns with proxy id 3. Step 2 is the notification that bounces.
-        Step 3 is on_bounce on the wallet. Step 4 burns again with a
-        whitelisted proxy id. Step 5 is that notification. Step 6 is the
-        withdraw, and the payout desk is what the contracts do after it. Edit
-        any value. Send is locked. Nothing is broadcast.
-      </p>
       <nav className="ton-contents" aria-label="Message steps">
         <a href="#burn-form">Step 1 · Burn</a>
         <a href="#notify-form">Step 2 · Notification</a>
@@ -187,10 +163,6 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
               </button>
               <LockedWalletButton />
             </div>
-            <p className="ton-hint">
-              Send is locked. Connect does not broadcast, and the funded wallet
-              is not used.
-            </p>
           </div>
         )}
         {connectNotice ? <p className="ton-status">{connectNotice}</p> : null}
@@ -213,7 +185,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
           place={notifyPlace}
           onChange={(next) => updateStep("notify", next)}
         />
-        <BounceDesk burn={burn} notification={notification} />
+        <BounceDesk />
         <LockedStep
           step={steps.find((step) => step.id === "redeem-burn") ?? redeemBurnDraft("redeem-burn")}
           index={2}
@@ -238,16 +210,8 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
           place={withdrawPlace}
           onChange={(next) => updateStep("withdraw", next)}
         />
-        <PayoutDesk
-          pendingAddress={pendingAddress}
-          onPendingAddress={updatePendingAddress}
-          withdraw={withdraw}
-        />
+        <PayoutDesk />
       </div>
-
-      <p className="ton-hint">
-        Every Send button is locked. Nothing on this page is broadcast.
-      </p>
     </section>
   );
 }
@@ -297,48 +261,36 @@ function LockedStep({
 const burnPlace: StepPlace = {
   anchor: "burn-form",
   kicker: "Step 1 · Proxy id 3",
-  title: "Burn with an unwhitelisted proxy",
-  intro:
-    "Opcode 0x595f07bc to the uTON jetton wallet. Proxy id starts at 3. burn_tokens subtracts the uTON amount and increments withdraw_cnt before it notifies the minter. The wallet does not check the whitelist.",
+  title: "burn_tokens",
+  sources: [pathSource.burnTokens],
 };
 
 const notifyPlace: StepPlace = {
   anchor: "notify-form",
   kicker: "Step 2 · Proxy id 3",
-  title: "Notification that bounces",
-  intro:
-    "Opcode 0x7bdd97de to the minter. The owner address is stored before the withdraw id and the uTON amount. Proxy id starts at 3. The minter throws when that id is missing from the whitelist, before it changes supply. The message is bounceable, so the bounce returns to the wallet.",
+  title: "proxy_burn",
+  sources: [pathSource.minterRecv, pathSource.proxyBurn],
 };
 
 const redeemBurnPlace: StepPlace = {
   anchor: "redeem-form",
   kicker: "Step 4 · Whitelisted proxy",
-  title: "Redeem burn",
-  intro:
-    "The same burn opcode, sent to the uTON jetton wallet again. Proxy id is left blank for an id the minter whitelist contains. burn_tokens subtracts the balance and takes another withdraw id, then notifies the minter.",
-  hints: { proxy_id: whitelistedProxy },
+  title: "burn_tokens",
+  sources: [pathSource.burnTokens],
 };
 
 const redeemNotifyPlace: StepPlace = {
   anchor: "redeem-notify-form",
   kicker: "Step 5 · Whitelisted proxy",
-  title: "Redeem notification",
-  intro:
-    "The same notification opcode, to the minter. The proxy id matches the redeem burn. When the id is on the whitelist, the minter prices the burn, reduces supply, and the proxy opens a pending withdraw.",
-  hints: { proxy_id: whitelistedProxy },
+  title: "burn",
+  sources: [pathSource.proxyTonBurn],
 };
 
 const withdrawPlace: StepPlace = {
   anchor: "withdraw-form",
   kicker: "Step 6 · After the time lock",
-  title: "Withdraw",
-  intro: (
-    <>
-      Opcode 0x4502 to the pending withdraw contract, after withdraw_pending_time.
-      The attached TON is gas. The contract then queries the minter.{" "}
-      <a href="#payout-form">That query is the payout desk.</a>
-    </>
-  ),
+  title: "withdraw_ton",
+  sources: [pathSource.withdrawTon],
 };
 
 function templateId(step: ScriptStep): string | undefined {

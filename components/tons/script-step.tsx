@@ -1,15 +1,15 @@
 "use client";
 
-import type { ReactNode } from "react";
 import type { BodyField, MessageBody, ScriptStep, StepErrors, StepPreview } from "@/lib/ton-message";
+import type { PathSource } from "@/lib/uton-path";
+import { SourceList } from "@/components/tons/source-block";
 import { utonTemplateBody, utonTemplateById } from "@/lib/uton-templates";
 
 export type StepPlace = {
   anchor: string;
   kicker: string;
   title: string;
-  intro: ReactNode;
-  hints?: Record<string, string>;
+  sources: readonly PathSource[];
 };
 
 const bodyKinds: Array<{ kind: MessageBody["kind"]; label: string }> = [
@@ -158,7 +158,7 @@ export function ScriptStepCard({
         )}
       </div>
 
-      {place ? <p className="ton-section-copy">{place.intro}</p> : null}
+      {place ? <SourceList sources={place.sources} /> : null}
       {place ? null : stake ? (
         <p className="ton-section-copy">
           Opcode 0x1003 to proxy_ton. The TON on this message is the deposit.
@@ -223,7 +223,7 @@ export function ScriptStepCard({
           aria-invalid={Boolean(visible?.destination)}
         />
       </label>
-      {template ? <p className="ton-hint">{template.destinationHint}</p> : null}
+      {place || !template ? null : <p className="ton-hint">{template.destinationHint}</p>}
       {visible?.destination ? <p className="ton-error">{visible.destination}</p> : null}
 
       <div className="ton-field">
@@ -261,7 +261,7 @@ export function ScriptStepCard({
           <span>{step.unit === "ton" ? "TON" : "Nano"}</span>
         </div>
       </div>
-      {template ? <p className="ton-hint">{template.valueHint}</p> : null}
+      {place || !template ? null : <p className="ton-hint">{template.valueHint}</p>}
       {visible?.amount ? <p className="ton-error">{visible.amount}</p> : null}
 
       <label className="ton-check">
@@ -272,6 +272,7 @@ export function ScriptStepCard({
         />
         <span>Bounceable destination</span>
       </label>
+      {place ? null : (
       <p className="ton-hint">
         {stake
           ? "On by default. Leave it on so proxy_ton can return the TON if it does not accept the stake."
@@ -283,6 +284,7 @@ export function ScriptStepCard({
                 ? "On by default. Leave it on so the pending withdraw can return the attached TON if it does not accept the message."
                 : "Bounceable asks the destination to return the value if it cannot accept the message."}
       </p>
+      )}
 
       <div className="ton-field">
         {tailored ? null : (
@@ -342,7 +344,7 @@ export function ScriptStepCard({
           stepId={step.id}
           body={step.body}
           fieldErrors={visible?.fields}
-          hints={place?.hints}
+          quiet={Boolean(place)}
           onChange={setBody}
           onField={setField}
           onMoveField={moveField}
@@ -377,7 +379,6 @@ export function ScriptStepCard({
       <button type="button" className={tailored ? "ton-button" : "ton-button ton-button-quiet"} disabled aria-disabled="true">
         {sendLabel}
       </button>
-      <p className="ton-hint">Locked. Pressing Send does nothing.</p>
     </section>
   );
 }
@@ -386,7 +387,7 @@ function BodyEditor({
   stepId,
   body,
   fieldErrors,
-  hints,
+  quiet,
   onChange,
   onField,
   onMoveField,
@@ -394,7 +395,7 @@ function BodyEditor({
   stepId: string;
   body: MessageBody;
   fieldErrors?: Record<string, string>;
-  hints?: Record<string, string>;
+  quiet?: boolean;
   onChange: (body: MessageBody) => void;
   onField: (id: string, field: BodyField) => void;
   onMoveField: (index: number, direction: -1 | 1) => void;
@@ -439,7 +440,7 @@ function BodyEditor({
 
   return (
     <div className="ton-fields">
-      {template ? <p className="ton-hint">{template.detail}</p> : null}
+      {quiet || !template ? null : <p className="ton-hint">{template.detail}</p>}
       <div className="ton-split">
         <label className="ton-field">
           <span>Opcode</span>
@@ -522,8 +523,8 @@ function BodyEditor({
             )}
           </div>
           <FieldInputs field={field} onField={onField} />
-          {hints?.[field.id] ?? stakeFieldHint(body.templateId, field.id) ? (
-            <p className="ton-hint">{hints?.[field.id] ?? stakeFieldHint(body.templateId, field.id)}</p>
+          {quiet ? null : stakeFieldHint(body.templateId, field.id) ? (
+            <p className="ton-hint">{stakeFieldHint(body.templateId, field.id)}</p>
           ) : null}
           {fieldErrors?.[field.id] ? (
             <p className="ton-error">{fieldErrors[field.id]}</p>

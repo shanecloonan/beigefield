@@ -374,6 +374,29 @@ body {
   margin: 0.35rem 0 0;
 }
 
+.ton-source {
+  margin: 0.9rem 0 0;
+}
+
+.ton-source .ton-kicker {
+  margin: 0;
+}
+
+.ton-code {
+  margin: 0.35rem 0 0;
+  max-height: 28rem;
+  overflow: auto;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--paper-deep);
+  background: var(--paper-bright);
+  color: var(--ink);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  font-weight: 400;
+  line-height: 1.45;
+  white-space: pre;
+}
+
 .ton-mono,
 .ton-address {
   color: var(--ink);
