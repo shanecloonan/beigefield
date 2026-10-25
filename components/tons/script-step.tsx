@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { BodyField, MessageBody, ScriptStep, StepErrors, StepPreview } from "@/lib/ton-message";
 import type { PathSource } from "@/lib/uton-path";
 import { SourceList } from "@/components/tons/source-block";
@@ -28,10 +29,13 @@ export function ScriptStepCard({
   showErrors,
   sending,
   sendLabel,
+  sendDisabled,
   place,
+  status,
   onChange,
   onMove,
   onRemove,
+  onSend,
 }: {
   index: number;
   total: number;
@@ -41,10 +45,13 @@ export function ScriptStepCard({
   showErrors: boolean;
   sending: boolean;
   sendLabel: string;
+  sendDisabled: boolean;
   place?: StepPlace;
+  status?: ReactNode;
   onChange: (step: ScriptStep) => void;
   onMove: (direction: -1 | 1) => void;
   onRemove: () => void;
+  onSend: () => void;
 }) {
   const visible = showErrors ? errors : undefined;
   const destinationId = `${step.id}-destination`;
@@ -376,9 +383,15 @@ export function ScriptStepCard({
         </dl>
       ) : null}
 
-      <button type="button" className={tailored ? "ton-button" : "ton-button ton-button-quiet"} disabled aria-disabled="true">
+      <button
+        type="button"
+        className={tailored ? "ton-button" : "ton-button ton-button-quiet"}
+        onClick={onSend}
+        disabled={sendDisabled}
+      >
         {sendLabel}
       </button>
+      {status}
     </section>
   );
 }

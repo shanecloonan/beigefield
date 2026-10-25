@@ -1,3 +1,4 @@
+import { PathSendButton } from "@/components/tons/path-send-button";
 import { SourceList } from "@/components/tons/source-block";
 import type { PathSource } from "@/lib/uton-path";
 
@@ -7,12 +8,14 @@ export function AutomationGap({
   kicker,
   title,
   sources,
+  detail,
 }: {
   id: string;
   titleId: string;
   kicker: string;
   title: string;
   sources: readonly PathSource[];
+  detail: string;
 }) {
   return (
     <section className="ton-step" id={id} aria-labelledby={titleId}>
@@ -23,9 +26,7 @@ export function AutomationGap({
         </div>
       </div>
       <SourceList sources={sources} />
-      <button type="button" className="ton-button" disabled aria-disabled="true">
-        Send
-      </button>
+      <PathSendButton detail={detail} />
     </section>
   );
 }

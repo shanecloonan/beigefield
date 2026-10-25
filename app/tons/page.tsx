@@ -5,7 +5,7 @@ import Link from "next/link";
 
 const title = `Bounce, then redeem — ${site.name}`;
 const description =
-  "The uTON burn with proxy id 3, the bounced notification, the wallet on_bounce read, and a later redeem on a whitelisted proxy. Send stays locked.";
+  "The uTON burn with proxy id 3, the bounced notification, the wallet on_bounce read, and a later redeem on a whitelisted proxy.";
 
 export const metadata: Metadata = {
   title,

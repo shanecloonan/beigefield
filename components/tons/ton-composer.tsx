@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useIsConnectionRestored,
   useTonAddress,
@@ -21,9 +21,12 @@ import {
 import {
   chainLabel,
   classifySendError,
+  compileScript,
   compileStep,
   connectFailureMessage,
   isMainnetChain,
+  sendFailureMessage,
+  type MainnetScriptRequest,
   type ScriptStep,
   type StepErrors,
 } from "@/lib/ton-message";
@@ -46,6 +49,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
   const wallet = useTonWallet();
   const address = useTonAddress();
   const restored = useIsConnectionRestored();
+  const sendingRef = useRef(false);
   const [steps, setSteps] = useState<ScriptStep[]>(() => [
     burnDraft("burn"),
     notificationDraft("notify"),
@@ -53,6 +57,11 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     redeemNotificationDraft("redeem-notify"),
     withdrawDraft("withdraw"),
   ]);
+  const [attempted, setAttempted] = useState<Record<string, boolean>>({});
+  const [notice, setNotice] = useState<Notice>(null);
+  const [noticeStepId, setNoticeStepId] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [sendingId, setSendingId] = useState<string | null>(null);
   const [connectNotice, setConnectNotice] = useState<string | null>(null);
 
   const onMainnet = isMainnetChain(wallet?.account.chain);
@@ -62,6 +71,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
 
   function updateStep(id: string, next: ScriptStep) {
     setSteps((current) => current.map((step) => (step.id === id ? next : step)));
+    setNotice(null);
   }
 
   async function connect() {
@@ -87,6 +97,74 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     }
   }
 
+  async function transmit(request: MainnetScriptRequest, text: string, stepId: string) {
+    if (sendingRef.current) return;
+    setNoticeStepId(stepId);
+
+    if (!wallet) {
+      setNotice({
+        tone: "bad",
+        text: "Nothing was sent. Connect a mainnet wallet first.",
+      });
+      return;
+    }
+
+    if (!isMainnetChain(wallet.account.chain)) {
+      setNotice({
+        tone: "bad",
+        text: `This wallet is on ${chainLabel(wallet.account.chain)}. Switch it to TON mainnet and connect again. Nothing was sent.`,
+      });
+      return;
+    }
+
+    sendingRef.current = true;
+    setSendingId(stepId);
+    setSending(true);
+    setNotice(null);
+
+    try {
+      const response = await tonConnectUI.sendTransaction(request);
+      if (!response?.boc) {
+        setNotice({ tone: "bad", text: sendFailureMessage("ambiguous") });
+        return;
+      }
+      const first = request.messages[0]?.address ?? "";
+      setNotice({
+        tone: "good",
+        text,
+        href: `https://tonviewer.com/${encodeURIComponent(first)}`,
+        hrefLabel: "View the destination on Tonviewer",
+      });
+    } catch (error) {
+      setNotice({
+        tone: "bad",
+        text: sendFailureMessage(classifySendError(error)),
+      });
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
+      setSendingId(null);
+    }
+  }
+
+  function sendStep(step: ScriptStep) {
+    setAttempted((current) => ({ ...current, [step.id]: true }));
+    const result = compileScript([step], {
+      fromRaw: wallet?.account.address,
+    });
+    setNoticeStepId(step.id);
+    if (!result.ok || !result.request.messages[0]) {
+      setNotice(null);
+      return;
+    }
+    const preview = result.previews[0];
+    void transmit(
+      result.request,
+      `Sent the ${sentName(step)} on mainnet. ${preview?.valueLabel ?? ""} to ${preview?.address ?? ""}.`.trim(),
+      step.id,
+    );
+  }
+
   function resultFor(id: string) {
     const index = steps.findIndex((step) => step.id === id);
     return compiled[index];
@@ -94,7 +172,30 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
 
   const burn = steps.find((step) => step.id === "burn") ?? burnDraft("burn");
   const notification = steps.find((step) => step.id === "notify") ?? notificationDraft("notify");
+  const redeemBurn =
+    steps.find((step) => step.id === "redeem-burn") ?? redeemBurnDraft("redeem-burn");
+  const redeemNotify =
+    steps.find((step) => step.id === "redeem-notify") ?? redeemNotificationDraft("redeem-notify");
   const withdraw = steps.find((step) => step.id === "withdraw") ?? withdrawDraft("withdraw");
+
+  function renderStep(step: ScriptStep, index: number, place: StepPlace) {
+    return (
+      <LockedStep
+        key={step.id}
+        step={step}
+        index={index}
+        total={steps.length}
+        result={resultFor(step.id)}
+        place={place}
+        onChange={(next) => updateStep(step.id, next)}
+        sending={sendingId === step.id}
+        sendDisabled={sending}
+        showErrors={Boolean(attempted[step.id])}
+        notice={noticeStepId === step.id ? notice : null}
+        onSend={() => sendStep(step)}
+      />
+    );
+  }
 
   return (
     <section className="ton-section" id="message" aria-labelledby="ton-message-title">
@@ -173,29 +274,16 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
       </section>
 
       <div className="ton-steps">
-        <LockedStep
-          step={burn}
-          index={0}
-          total={steps.length}
-          result={resultFor("burn")}
-          place={burnPlace}
-          onChange={(next) => updateStep("burn", next)}
-        />
+        {renderStep(burn, 0, burnPlace)}
         <AutomationGap
           id="after-burn-1"
           titleId="after-burn-1-title"
           kicker="After step 1"
           title="afterBurn1"
           sources={[automationSource.afterBurn1]}
+          detail="Nothing was sent. afterBurn1 watches the path. It is not a wallet message."
         />
-        <LockedStep
-          step={notification}
-          index={1}
-          total={steps.length}
-          result={resultFor("notify")}
-          place={notifyPlace}
-          onChange={(next) => updateStep("notify", next)}
-        />
+        {renderStep(notification, 1, notifyPlace)}
         <BounceDesk />
         <AutomationGap
           id="queue-after-bounce"
@@ -203,31 +291,11 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
           kicker="After step 3"
           title="nextAfter"
           sources={[automationSource.queueAfterBounce]}
+          detail="Nothing was sent. nextAfter names the steps after the bounce. It is not a wallet message."
         />
-        <LockedStep
-          step={steps.find((step) => step.id === "redeem-burn") ?? redeemBurnDraft("redeem-burn")}
-          index={2}
-          total={steps.length}
-          result={resultFor("redeem-burn")}
-          place={redeemBurnPlace}
-          onChange={(next) => updateStep("redeem-burn", next)}
-        />
-        <LockedStep
-          step={steps.find((step) => step.id === "redeem-notify") ?? redeemNotificationDraft("redeem-notify")}
-          index={3}
-          total={steps.length}
-          result={resultFor("redeem-notify")}
-          place={redeemNotifyPlace}
-          onChange={(next) => updateStep("redeem-notify", next)}
-        />
-        <LockedStep
-          step={withdraw}
-          index={4}
-          total={steps.length}
-          result={resultFor("withdraw")}
-          place={withdrawPlace}
-          onChange={(next) => updateStep("withdraw", next)}
-        />
+        {renderStep(redeemBurn, 2, redeemBurnPlace)}
+        {renderStep(redeemNotify, 3, redeemNotifyPlace)}
+        {renderStep(withdraw, 4, withdrawPlace)}
         <PayoutDesk />
       </div>
     </section>
@@ -249,6 +317,11 @@ function LockedStep({
   result,
   place,
   onChange,
+  sending,
+  sendDisabled,
+  showErrors,
+  notice,
+  onSend,
 }: {
   step: ScriptStep;
   index: number;
@@ -256,6 +329,11 @@ function LockedStep({
   result: ReturnType<typeof compileStep> | undefined;
   place: StepPlace;
   onChange: (step: ScriptStep) => void;
+  sending: boolean;
+  sendDisabled: boolean;
+  showErrors: boolean;
+  notice: Notice;
+  onSend: () => void;
 }) {
   const errors: StepErrors | undefined = result && !result.ok ? result.errors : undefined;
   return (
@@ -265,14 +343,44 @@ function LockedStep({
       step={step}
       preview={result?.ok ? result.preview : undefined}
       errors={errors}
-      showErrors={false}
-      sending={false}
-      sendLabel={sendLabel(step)}
+      showErrors={showErrors}
+      sending={sending}
+      sendLabel={sending ? "Waiting for the wallet" : sendLabel(step)}
+      sendDisabled={sendDisabled}
       place={place}
+      status={<StepNotice notice={notice} />}
       onChange={onChange}
       onMove={() => undefined}
       onRemove={() => undefined}
+      onSend={onSend}
     />
+  );
+}
+
+type Notice =
+  | {
+      tone: "good";
+      text: string;
+      href: string;
+      hrefLabel: string;
+    }
+  | {
+      tone: "bad";
+      text: string;
+    }
+  | null;
+
+function StepNotice({ notice }: { notice: Notice }) {
+  if (!notice) return null;
+  return (
+    <p className={notice.tone === "good" ? "ton-good" : "ton-error"} role="status">
+      {notice.text}{" "}
+      {notice.tone === "good" ? (
+        <a href={notice.href} target="_blank" rel="noreferrer">
+          {notice.hrefLabel}
+        </a>
+      ) : null}
+    </p>
   );
 }
 
@@ -316,11 +424,23 @@ function templateId(step: ScriptStep): string | undefined {
 }
 
 function sendLabel(step: ScriptStep): string {
+  if (step.id === "redeem-burn") return "Send redeem burn";
+  if (step.id === "redeem-notify") return "Send redeem notification";
   const id = templateId(step);
   if (id === "uton-burn") return "Send burn";
   if (id === "burn-notification") return "Send burn notification";
   if (id === "withdraw") return "Send withdraw";
   return "Send";
+}
+
+function sentName(step: ScriptStep): string {
+  if (step.id === "redeem-burn") return "redeem burn";
+  if (step.id === "redeem-notify") return "redeem notification";
+  const id = templateId(step);
+  if (id === "uton-burn") return "burn";
+  if (id === "burn-notification") return "burn notification";
+  if (id === "withdraw") return "withdraw";
+  return "message";
 }
 
 function emptyDraft(id: string): ScriptStep {

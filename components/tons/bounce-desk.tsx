@@ -1,3 +1,4 @@
+import { PathSendButton } from "@/components/tons/path-send-button";
 import { SourceList } from "@/components/tons/source-block";
 import { pathSource } from "@/lib/uton-path";
 
@@ -11,9 +12,7 @@ export function BounceDesk() {
         </div>
       </div>
       <SourceList sources={[pathSource.walletOnBounce]} />
-      <button type="button" className="ton-button" disabled aria-disabled="true">
-        Send
-      </button>
+      <PathSendButton detail="Nothing was sent. on_bounce runs on the jetton wallet when the notification returns." />
     </section>
   );
 }
