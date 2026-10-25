@@ -21,7 +21,12 @@ describe("uTON reference", () => {
     assert.equal(UTON_OP.withdraw, "0x4502");
     assert.equal(UTON_OP.stake, "0x1003");
     assert.equal(UTON_OP.transfer, "0x0f8a7ea5");
-    assert.equal(utonTemplateById("uton-burn")?.fields.find((field) => field.id === "proxy_id")?.label, "Proxy id");
+    const burnProxy = utonTemplateById("uton-burn")?.fields.find((field) => field.id === "proxy_id");
+    const notifyProxy = utonTemplateById("burn-notification")?.fields.find((field) => field.id === "proxy_id");
+    assert.equal(burnProxy?.label, "Proxy id");
+    assert.equal(burnProxy?.value, "3");
+    assert.equal(notifyProxy?.value, "3");
     assert.equal(templatePreviewLabel("uton-burn", [{ id: "proxy_id", value: "0" }]), "uTON burn · proxy_id 0");
+    assert.equal(templatePreviewLabel("burn-notification", [{ id: "proxy_id", value: "3" }]), "Burn notification · proxy_id 3");
   });
 });

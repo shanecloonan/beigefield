@@ -1,7 +1,16 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { BodyField, MessageBody, ScriptStep, StepErrors, StepPreview } from "@/lib/ton-message";
 import { utonTemplateBody, utonTemplateById } from "@/lib/uton-templates";
+
+export type StepPlace = {
+  anchor: string;
+  kicker: string;
+  title: string;
+  intro: ReactNode;
+  hints?: Record<string, string>;
+};
 
 const bodyKinds: Array<{ kind: MessageBody["kind"]; label: string }> = [
   { kind: "empty", label: "Empty" },
@@ -19,11 +28,10 @@ export function ScriptStepCard({
   showErrors,
   sending,
   sendLabel,
-  sendDisabled,
+  place,
   onChange,
   onMove,
   onRemove,
-  onSend,
 }: {
   index: number;
   total: number;
@@ -33,11 +41,10 @@ export function ScriptStepCard({
   showErrors: boolean;
   sending: boolean;
   sendLabel: string;
-  sendDisabled: boolean;
+  place?: StepPlace;
   onChange: (step: ScriptStep) => void;
   onMove: (direction: -1 | 1) => void;
   onRemove: () => void;
-  onSend: () => void;
 }) {
   const visible = showErrors ? errors : undefined;
   const destinationId = `${step.id}-destination`;
@@ -50,7 +57,18 @@ export function ScriptStepCard({
   const burn = template?.id === "uton-burn";
   const notify = template?.id === "burn-notification";
   const withdraw = template?.id === "withdraw";
-  const tailored = stake || burn || notify || withdraw;
+  const tailored = Boolean(place) || stake || burn || notify || withdraw;
+  const anchor =
+    place?.anchor ??
+    (stake
+      ? "stake-form"
+      : burn
+        ? "burn-form"
+        : notify
+          ? "notify-form"
+          : withdraw
+            ? "withdraw-form"
+            : undefined);
 
   function setBody(body: MessageBody) {
     onChange({ ...step, body });
@@ -77,47 +95,37 @@ export function ScriptStepCard({
   }
 
   return (
-    <section
-      className="ton-step"
-      id={
-        stake
-          ? "stake-form"
-          : burn
-            ? "burn-form"
-            : notify
-              ? "notify-form"
-              : withdraw
-                ? "withdraw-form"
-                : undefined
-      }
-      aria-labelledby={`${step.id}-title`}
-    >
+    <section className="ton-step" id={anchor} aria-labelledby={`${step.id}-title`}>
       <div className="ton-step-head">
         <div>
           <p className="ton-kicker">
-            {stake
-              ? "Step 1"
-              : burn
-                ? "Step 2"
-                : notify
-                  ? "Step 3"
-                  : withdraw
-                    ? "Step 5"
-                    : preview
-                      ? "Ready"
-                      : "Draft"}
-            {template ? ` · ${template.label}` : ""}
+            {place
+              ? place.kicker
+              : stake
+                ? "Step 1"
+                : burn
+                  ? "Step 2"
+                  : notify
+                    ? "Step 3"
+                    : withdraw
+                      ? "Step 5"
+                      : preview
+                        ? "Ready"
+                        : "Draft"}
+            {place || !template ? "" : ` · ${template.label}`}
           </p>
           <h2 id={`${step.id}-title`}>
-            {stake
-              ? "Stake native TON"
-              : burn
-                ? "uTON burn"
-                : notify
-                  ? "Burn notification"
-                  : withdraw
-                    ? "Withdraw"
-                    : `Step ${index + 1}`}
+            {place
+              ? place.title
+              : stake
+                ? "Stake native TON"
+                : burn
+                  ? "uTON burn"
+                  : notify
+                    ? "Burn notification"
+                    : withdraw
+                      ? "Withdraw"
+                      : `Step ${index + 1}`}
           </h2>
         </div>
         {tailored ? null : (
@@ -150,19 +158,20 @@ export function ScriptStepCard({
         )}
       </div>
 
-      {stake ? (
+      {place ? <p className="ton-section-copy">{place.intro}</p> : null}
+      {place ? null : stake ? (
         <p className="ton-section-copy">
           Opcode 0x1003 to proxy_ton. The TON on this message is the deposit.
           Query id, user, and response stay editable.
         </p>
       ) : null}
-      {burn ? (
+      {place || !burn ? null : (
         <p className="ton-section-copy">
           Opcode 0x595f07bc to your uTON jetton wallet. The uTON amount is a
           field below. Proxy id and forward value travel in the custom payload.
         </p>
-      ) : null}
-      {notify ? (
+      )}
+      {place || !notify ? null : (
         <p className="ton-section-copy">
           Opcode 0x7bdd97de to the minter. The owner address is stored before
           the uTON amount. The jetton wallet has already reduced its balance
@@ -170,15 +179,15 @@ export function ScriptStepCard({
           rejects it, for example an invalid proxy id, the bounce returns to
           on_bounce on the wallet.
         </p>
-      ) : null}
-      {withdraw ? (
+      )}
+      {place || !withdraw ? null : (
         <p className="ton-section-copy">
           Opcode 0x4502 to the pending withdraw contract. Send it only after
           withdraw_pending_time has elapsed. This call starts that contract
           withdraw path, which queries the minter.{" "}
           <a href="#payout-form">That query is step 6.</a>
         </p>
-      ) : null}
+      )}
 
       <label className="ton-field" htmlFor={destinationId}>
         <span>
@@ -333,6 +342,7 @@ export function ScriptStepCard({
           stepId={step.id}
           body={step.body}
           fieldErrors={visible?.fields}
+          hints={place?.hints}
           onChange={setBody}
           onField={setField}
           onMoveField={moveField}
@@ -364,14 +374,10 @@ export function ScriptStepCard({
         </dl>
       ) : null}
 
-      <button
-        type="button"
-        className={tailored ? "ton-button" : "ton-button ton-button-quiet"}
-        onClick={onSend}
-        disabled={sendDisabled}
-      >
+      <button type="button" className={tailored ? "ton-button" : "ton-button ton-button-quiet"} disabled aria-disabled="true">
         {sendLabel}
       </button>
+      <p className="ton-hint">Locked. Pressing Send does nothing.</p>
     </section>
   );
 }
@@ -380,6 +386,7 @@ function BodyEditor({
   stepId,
   body,
   fieldErrors,
+  hints,
   onChange,
   onField,
   onMoveField,
@@ -387,6 +394,7 @@ function BodyEditor({
   stepId: string;
   body: MessageBody;
   fieldErrors?: Record<string, string>;
+  hints?: Record<string, string>;
   onChange: (body: MessageBody) => void;
   onField: (id: string, field: BodyField) => void;
   onMoveField: (index: number, direction: -1 | 1) => void;
@@ -514,8 +522,8 @@ function BodyEditor({
             )}
           </div>
           <FieldInputs field={field} onField={onField} />
-          {stakeFieldHint(body.templateId, field.id) ? (
-            <p className="ton-hint">{stakeFieldHint(body.templateId, field.id)}</p>
+          {hints?.[field.id] ?? stakeFieldHint(body.templateId, field.id) ? (
+            <p className="ton-hint">{hints?.[field.id] ?? stakeFieldHint(body.templateId, field.id)}</p>
           ) : null}
           {fieldErrors?.[field.id] ? (
             <p className="ton-error">{fieldErrors[field.id]}</p>
@@ -553,7 +561,9 @@ function stakeFieldHint(templateId: string | undefined, fieldId: string): string
     if (fieldId === "query_id") return "64 bits. Starts at 0.";
     if (fieldId === "amount") return "uTON to burn, in nanotons.";
     if (fieldId === "response") return "Receives excess gas. Starts as the desk wallet.";
-    if (fieldId === "proxy_id") return "32 bits, stored at dictionary key 0. Starts at 0.";
+    if (fieldId === "proxy_id") {
+      return "32 bits, stored at dictionary key 0. Starts at 3. Not on the minter whitelist.";
+    }
     if (fieldId === "fwd_value") {
       return "Nanotons in the custom payload. Starts at 10000000. The empty forward cell is not editable.";
     }
@@ -563,7 +573,9 @@ function stakeFieldHint(templateId: string | undefined, fieldId: string): string
     if (fieldId === "owner") return "Stored before the uTON amount. Starts as the desk wallet.";
     if (fieldId === "withdraw_id") return "64 bits. Starts at 0.";
     if (fieldId === "amount") return "uTON in the notification, in nanotons. Left blank.";
-    if (fieldId === "proxy_id") return "32 bits. Starts at 0.";
+    if (fieldId === "proxy_id") {
+      return "32 bits. Starts at 3. A missing whitelist entry throws, and the message bounces.";
+    }
     if (fieldId === "response") return "Receives excess gas. Starts as the desk wallet.";
     if (fieldId === "fwd_value") {
       return "Nanotons. Starts at 10000000. The empty forward cell is not editable.";
