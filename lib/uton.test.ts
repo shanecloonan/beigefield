@@ -21,6 +21,8 @@ describe("uTON reference", () => {
     assert.equal(UTON_OP.withdraw, "0x4502");
     assert.equal(UTON_OP.stake, "0x1003");
     assert.equal(UTON_OP.transfer, "0x0f8a7ea5");
+    assert.equal(UTON_OP.query, "0x1001");
+    assert.equal(UTON_OP.queryAck, "0x1002");
     const burnProxy = utonTemplateById("uton-burn")?.fields.find((field) => field.id === "proxy_id");
     const notifyProxy = utonTemplateById("burn-notification")?.fields.find((field) => field.id === "proxy_id");
     assert.equal(burnProxy?.label, "Proxy id");

@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { automationSource } from "./uton-automation";
+import {
+  afterBurn1,
+  afterBurn1Trace,
+  automationSource,
+  laterDraftId,
+  nextAfter,
+} from "./uton-automation";
 
 describe("uTON automation listing", () => {
   it("queues later names after a bounce and stays a listing", () => {
@@ -17,5 +23,20 @@ describe("uTON automation listing", () => {
       joined,
       /sendTransaction|\/api\/ton\/send|toncenter|tonapi|fetch\(|beginCell|sign\(/,
     );
+  });
+
+  it("names the wallet messages Send broadcasts", () => {
+    assert.deepEqual(afterBurn1(["burn-1"]), []);
+    assert.deepEqual(afterBurn1(afterBurn1Trace).map(laterDraftId), [
+      "redeem-burn",
+      "redeem-notify",
+      "withdraw",
+    ]);
+    const next = nextAfter("bounce");
+    assert.equal(next, "burn-2");
+    if (next) assert.equal(laterDraftId(next), "redeem-burn");
+    assert.equal(nextAfter("burn-2"), "redeem-notification");
+    assert.equal(nextAfter("redeem-notification"), "withdraw");
+    assert.equal(nextAfter("withdraw"), undefined);
   });
 });

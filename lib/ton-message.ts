@@ -341,6 +341,24 @@ export function compileScript(
   return { ok: true, request, previews };
 }
 
+export function outgoingRequest(
+  messages: readonly OutgoingMessage[],
+  options?: {
+    fromRaw?: string;
+    nowSeconds?: number;
+  },
+): MainnetScriptRequest {
+  const request: MainnetScriptRequest = {
+    validUntil:
+      (options?.nowSeconds ?? Math.floor(Date.now() / 1000)) + TRANSFER_TTL_SECONDS,
+    network: TON_MAINNET_CHAIN,
+    messages: [...messages],
+  };
+  const from = senderRaw(options?.fromRaw);
+  if (from) request.from = from;
+  return request;
+}
+
 export function classifySendError(error: unknown): SendFailureKind {
   const name = readName(error);
   const code = readWalletErrorCode(error);
