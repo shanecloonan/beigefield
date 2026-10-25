@@ -112,6 +112,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
         return;
       }
       setLookupNote(null);
+      setNotice((current) => (current && stalePathNotice(current.text) ? null : current));
       setSteps((current) =>
         applyPathDefaults(current, {
           owner,
@@ -732,6 +733,13 @@ function sentName(step: ScriptStep): string {
   if (id === "burn-notification") return "burn notification";
   if (id === "withdraw") return "withdraw";
   return "message";
+}
+
+function stalePathNotice(text: string): boolean {
+  return (
+    text.startsWith("Nothing was sent. Connect a mainnet wallet") ||
+    text.includes("uTON jetton wallet is still empty")
+  );
 }
 
 function isFundedOk(payload: unknown): payload is { ok: true } {
