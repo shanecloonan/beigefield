@@ -38,6 +38,9 @@ describe("funded wallet", () => {
       new URL("./funded-wallet-public.ts", import.meta.url),
       new URL("../components/ton/ton-composer.tsx", import.meta.url),
       new URL("../app/ton/page.tsx", import.meta.url),
+      new URL("../components/tons/ton-composer.tsx", import.meta.url),
+      new URL("../components/tons/wallet-desk.tsx", import.meta.url),
+      new URL("../app/tons/page.tsx", import.meta.url),
     ]) {
       assert.equal(textContainsFundedMnemonic(readFileSync(path, "utf8")), false);
     }

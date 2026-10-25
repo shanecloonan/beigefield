@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Address } from "@ton/core";
 import {
   useIsConnectionRestored,
   useTonAddress,
@@ -9,7 +10,6 @@ import {
 } from "@tonconnect/ui-react";
 import { AutomationGap } from "@/components/tons/automation-gap";
 import { BounceDesk } from "@/components/tons/bounce-desk";
-import { CopyButton } from "@/components/tons/copy-button";
 import { PayoutDesk } from "@/components/tons/payout-desk";
 import { ScriptStepCard, type StepPlace } from "@/components/tons/script-step";
 import {
@@ -18,6 +18,11 @@ import {
   reportConnectNotice,
   subscribeConnectNotice,
 } from "@/components/tons/ton-provider";
+import {
+  TonsWalletDesk,
+  tonsInFlightLabel,
+  tonsStepSendDisabled,
+} from "@/components/tons/wallet-desk";
 import {
   chainLabel,
   classifySendError,
@@ -63,8 +68,13 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
   const [sending, setSending] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [connectNotice, setConnectNotice] = useState<string | null>(null);
+  const [localWallet, setLocalWallet] = useState(false);
 
   const onMainnet = isMainnetChain(wallet?.account.chain);
+  const fundedRaw = useMemo(
+    () => Address.parse(FUNDED_WALLET_ADDRESS).toRawString(),
+    [],
+  );
   const compiled = useMemo(() => steps.map((step) => compileStep(step)), [steps]);
 
   useEffect(() => subscribeConnectNotice(setConnectNotice), []);
@@ -99,6 +109,10 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
 
   async function transmit(request: MainnetScriptRequest, text: string, stepId: string) {
     if (sendingRef.current) return;
+    if (localWallet) {
+      await transmitLocal(request, text, stepId);
+      return;
+    }
     setNoticeStepId(stepId);
 
     if (!wallet) {
@@ -147,10 +161,48 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     }
   }
 
+  async function transmitLocal(request: MainnetScriptRequest, text: string, stepId: string) {
+    sendingRef.current = true;
+    setSendingId(stepId);
+    setSending(true);
+    setNotice(null);
+    setNoticeStepId(stepId);
+
+    try {
+      const response = await fetch("/api/ton/send", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(request),
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      if (isFundedOk(payload)) {
+        const first = request.messages[0]?.address ?? "";
+        setNotice({
+          tone: "good",
+          text,
+          href: `https://tonviewer.com/${encodeURIComponent(first)}`,
+          hrefLabel: "View the destination on Tonviewer",
+        });
+        return;
+      }
+      if (isFundedRejected(payload)) {
+        setNotice({ tone: "bad", text: payload.message });
+        return;
+      }
+      setNotice({ tone: "bad", text: sendFailureMessage("ambiguous") });
+    } catch {
+      setNotice({ tone: "bad", text: sendFailureMessage("ambiguous") });
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
+      setSendingId(null);
+    }
+  }
+
   function sendStep(step: ScriptStep) {
     setAttempted((current) => ({ ...current, [step.id]: true }));
     const result = compileScript([step], {
-      fromRaw: wallet?.account.address,
+      fromRaw: localWallet ? fundedRaw : wallet?.account.address,
     });
     setNoticeStepId(step.id);
     if (!result.ok || !result.request.messages[0]) {
@@ -189,7 +241,13 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
         place={place}
         onChange={(next) => updateStep(step.id, next)}
         sending={sendingId === step.id}
-        sendDisabled={sending}
+        sendDisabled={tonsStepSendDisabled({
+          sending,
+          localWallet,
+          restored,
+          walletOnWrongChain: Boolean(wallet && !onMainnet),
+        })}
+        localWallet={localWallet}
         showErrors={Boolean(attempted[step.id])}
         notice={noticeStepId === step.id ? notice : null}
         onSend={() => sendStep(step)}
@@ -212,66 +270,21 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
         <a href="#payout-form">Payout</a>
       </nav>
 
-      <section className="ton-wallet" aria-live="polite">
-        {!restored ? (
-          <div>
-            <p className="ton-status">Checking for a connected wallet.</p>
-            <div className="ton-wallet-actions">
-              <LockedWalletButton />
-            </div>
-          </div>
-        ) : wallet && onMainnet ? (
-          <div className="ton-wallet-row">
-            <div>
-              <p className="ton-kicker">Connected · mainnet</p>
-              <p className="ton-address">{address}</p>
-              {address ? (
-                <div className="ton-links">
-                  <CopyButton value={address} label="Copy address" />
-                  <a
-                    href={`https://tonviewer.com/${encodeURIComponent(address)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Tonviewer
-                  </a>
-                </div>
-              ) : null}
-            </div>
-            <div className="ton-wallet-actions">
-              <LockedWalletButton />
-              <button type="button" className="ton-button ton-button-quiet" onClick={() => void disconnect()}>
-                Disconnect
-              </button>
-            </div>
-          </div>
-        ) : wallet ? (
-          <div className="ton-wallet-row">
-            <div>
-              <p className="ton-status">
-                This wallet is on {chainLabel(wallet.account.chain)}. Switch it
-                to TON mainnet and connect again.
-              </p>
-            </div>
-            <div className="ton-wallet-actions">
-              <LockedWalletButton />
-              <button type="button" className="ton-button ton-button-quiet" onClick={() => void disconnect()}>
-                Disconnect
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <div className="ton-wallet-actions">
-              <button type="button" className="ton-button" onClick={() => void connect()}>
-                Connect wallet
-              </button>
-              <LockedWalletButton />
-            </div>
-          </div>
-        )}
-        {connectNotice ? <p className="ton-status">{connectNotice}</p> : null}
-      </section>
+      <TonsWalletDesk
+        localWallet={localWallet}
+        restored={restored}
+        connected={Boolean(wallet)}
+        onMainnet={onMainnet}
+        address={address}
+        chainName={wallet ? chainLabel(wallet.account.chain) : ""}
+        sending={sending}
+        connectNotice={connectNotice}
+        fundedAddress={FUNDED_WALLET_ADDRESS}
+        onUseFunded={() => setLocalWallet(true)}
+        onClearFunded={() => setLocalWallet(false)}
+        onConnect={() => void connect()}
+        onDisconnect={() => void disconnect()}
+      />
 
       <div className="ton-steps">
         {renderStep(burn, 0, burnPlace)}
@@ -302,14 +315,6 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
   );
 }
 
-function LockedWalletButton() {
-  return (
-    <button type="button" className="ton-button ton-button-quiet" disabled aria-disabled="true">
-      Use funded wallet
-    </button>
-  );
-}
-
 function LockedStep({
   step,
   index,
@@ -319,6 +324,7 @@ function LockedStep({
   onChange,
   sending,
   sendDisabled,
+  localWallet,
   showErrors,
   notice,
   onSend,
@@ -331,6 +337,7 @@ function LockedStep({
   onChange: (step: ScriptStep) => void;
   sending: boolean;
   sendDisabled: boolean;
+  localWallet: boolean;
   showErrors: boolean;
   notice: Notice;
   onSend: () => void;
@@ -345,7 +352,7 @@ function LockedStep({
       errors={errors}
       showErrors={showErrors}
       sending={sending}
-      sendLabel={sending ? "Waiting for the wallet" : sendLabel(step)}
+      sendLabel={sending ? tonsInFlightLabel(localWallet) : sendLabel(step)}
       sendDisabled={sendDisabled}
       place={place}
       status={<StepNotice notice={notice} />}
@@ -441,6 +448,25 @@ function sentName(step: ScriptStep): string {
   if (id === "burn-notification") return "burn notification";
   if (id === "withdraw") return "withdraw";
   return "message";
+}
+
+function isFundedOk(payload: unknown): payload is { ok: true } {
+  return Boolean(payload && typeof payload === "object" && "ok" in payload && payload.ok === true);
+}
+
+function isFundedRejected(
+  payload: unknown,
+): payload is { ok: false; kind: "rejected"; message: string } {
+  return Boolean(
+    payload &&
+      typeof payload === "object" &&
+      "ok" in payload &&
+      payload.ok === false &&
+      "kind" in payload &&
+      payload.kind === "rejected" &&
+      "message" in payload &&
+      typeof payload.message === "string",
+  );
 }
 
 function emptyDraft(id: string): ScriptStep {
