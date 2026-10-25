@@ -1,3 +1,4 @@
+import { PathSendButton } from "@/components/tons/path-send-button";
 import { SourceList } from "@/components/tons/source-block";
 import { pathSource } from "@/lib/uton-path";
 
@@ -11,9 +12,7 @@ export function PayoutDesk() {
         </div>
       </div>
       <SourceList sources={[pathSource.queryAck, pathSource.proxyWithdraw]} />
-      <button type="button" className="ton-button" disabled aria-disabled="true">
-        Send
-      </button>
+      <PathSendButton detail="Nothing was sent. query_ack runs between the pending withdraw and the minter." />
     </section>
   );
 }
