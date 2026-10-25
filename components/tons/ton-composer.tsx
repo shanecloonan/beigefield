@@ -47,7 +47,13 @@ import {
 } from "@/lib/uton-automation";
 import { pathSource } from "@/lib/uton-path";
 import { compileMinterQuery, minterQueryFailure } from "@/lib/uton-query";
-import { applyPathDefaults, compilePathRun, PATH_GAS_TON, PATH_UTON_NANO } from "@/lib/uton-path-run";
+import {
+  applyPathDefaults,
+  compilePathRun,
+  pathOwner,
+  PATH_GAS_TON,
+  PATH_UTON_NANO,
+} from "@/lib/uton-path-run";
 import { utonTemplateBody, utonTemplateById } from "@/lib/uton-templates";
 import { utonMinter } from "@/lib/uton";
 import { FUNDED_WALLET_ADDRESS, FUNDED_WALLET_MAX_MESSAGES } from "@/lib/funded-wallet-public";
@@ -101,8 +107,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
   useEffect(() => subscribeConnectNotice(setConnectNotice), []);
 
   useEffect(() => {
-    const owner = localWallet ? FUNDED_WALLET_ADDRESS : onMainnet && address ? address : "";
-    if (!owner) return;
+    const owner = pathOwner({ localWallet, onMainnet, address });
     let cancel = false;
     void (async () => {
       const defaults = await fetchPathDefaults(owner);
@@ -378,7 +383,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     setNotice(null);
     setPathPart(null);
     try {
-      const owner = localWallet ? FUNDED_WALLET_ADDRESS : onMainnet && address ? address : "";
+      const owner = pathOwner({ localWallet, onMainnet, address });
       let current = stepsRef.current;
       if (owner) {
         const defaults = await fetchPathDefaults(owner);
@@ -659,8 +664,9 @@ function StepNotice({ notice }: { notice: Notice }) {
   );
 }
 
-const jettonNote =
-  "This is your uTON jetton wallet: the address that holds your uTON. The minter calculates it from the wallet you connect, or from the funded desk wallet. It is not that wallet, and it is not the minter. Run path fills it. You do not look it up or paste it.";
+const minterNote = `The uTON minter, ${utonMinter}. Filled for you. It is not the jetton wallet.`;
+
+const jettonNote = `This address holds your uTON. ${utonMinter} is the minter, and it is filled on the notification steps. This field is a different address. The minter calculates it from the wallet that sends, starting with the funded desk wallet. You do not paste it.`;
 
 const burnPlace: StepPlace = {
   anchor: "burn-form",
@@ -677,7 +683,7 @@ const notifyPlace: StepPlace = {
   kicker: "Step 2 · Proxy id 3",
   title: "proxy_burn",
   sources: [pathSource.minterRecv, pathSource.proxyBurn],
-  destinationNote: "The minter. Filled for you.",
+  destinationNote: minterNote,
   amountNote: "TON attached pays the minter. It starts at 0.15 TON.",
 };
 
@@ -696,7 +702,7 @@ const redeemNotifyPlace: StepPlace = {
   kicker: "Step 5 · Whitelisted proxy",
   title: "burn",
   sources: [pathSource.proxyTonBurn],
-  destinationNote: "The minter. Filled for you.",
+  destinationNote: minterNote,
   amountNote: "TON attached pays the minter. It starts at 0.15 TON.",
 };
 

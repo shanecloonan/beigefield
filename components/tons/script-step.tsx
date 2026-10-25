@@ -222,7 +222,7 @@ export function ScriptStepCard({
             stake
               ? "Paste proxy_ton"
               : burn
-                ? "Calculated from the wallet you connect"
+                ? "Calculated from the wallet that sends"
                 : notify
                   ? "Minter address"
                   : withdraw

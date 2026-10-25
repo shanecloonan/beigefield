@@ -35,6 +35,16 @@ export type PathDefaultsInput = {
 
 const addressFields = new Set(["response", "owner", "recipient"]);
 
+/** The wallet the path is filled for. A connected mainnet wallet wins. Otherwise the desk wallet. */
+export function pathOwner(input: {
+  localWallet: boolean;
+  onMainnet: boolean;
+  address?: string;
+}): string {
+  if (!input.localWallet && input.onMainnet && input.address?.trim()) return input.address.trim();
+  return FUNDED_WALLET_ADDRESS;
+}
+
 export function applyPathDefaults(
   steps: readonly ScriptStep[],
   input: PathDefaultsInput,
@@ -129,7 +139,7 @@ function fillStep(step: ScriptStep, input: PathDefaultsInput): ScriptStep {
   if (gas && !next.amount.trim()) next = { ...next, amount: gas };
 
   if (step.id === "burn" || step.id === "redeem-burn") {
-    const destination = takeAddress(next.destination, input.jettonWallet, input.previousJetton);
+    const destination = takeJetton(next.destination, input.jettonWallet, input.previousJetton);
     if (destination !== next.destination) next = { ...next, destination };
   }
   if ((step.id === "notify" || step.id === "redeem-notify") && !next.destination.trim()) {
@@ -160,6 +170,12 @@ function fillField(stepId: string, field: BodyField, input: PathDefaultsInput): 
     return { ...field, value: input.proxyId };
   }
   return field;
+}
+
+function takeJetton(current: string, next: string | undefined, previous: string | undefined): string {
+  if (!next || sameAddress(next, utonMinter)) return current;
+  if (current.trim() && sameAddress(current, utonMinter)) return next;
+  return takeAddress(current, next, previous);
 }
 
 function takeAddress(current: string, next: string | undefined, previous: string | undefined): string {

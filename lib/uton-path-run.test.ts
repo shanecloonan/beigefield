@@ -5,7 +5,7 @@ import { FUNDED_WALLET_ADDRESS } from "./funded-wallet-public";
 import { TON_MAINNET_CHAIN, type ScriptStep } from "./ton-message";
 import { utonMinter } from "./uton";
 import { utonTemplateBody, utonTemplateById } from "./uton-templates";
-import { applyPathDefaults, compilePathRun, PATH_GAS_TON, PATH_UTON_NANO } from "./uton-path-run";
+import { applyPathDefaults, compilePathRun, pathOwner, PATH_GAS_TON, PATH_UTON_NANO } from "./uton-path-run";
 
 const owner = new Address(0, Buffer.alloc(32, 4));
 const jetton = new Address(0, Buffer.alloc(32, 8));
@@ -73,6 +73,17 @@ function pathSteps(): ScriptStep[] {
     }),
   ];
 }
+
+describe("path owner", () => {
+  it("uses a connected mainnet wallet and otherwise the funded desk wallet", () => {
+    assert.equal(
+      pathOwner({ localWallet: false, onMainnet: true, address: friendly(owner, false) }),
+      friendly(owner, false),
+    );
+    assert.equal(pathOwner({ localWallet: true, onMainnet: true, address: friendly(owner, false) }), FUNDED_WALLET_ADDRESS);
+    assert.equal(pathOwner({ localWallet: false, onMainnet: false, address: "" }), FUNDED_WALLET_ADDRESS);
+  });
+});
 
 describe("path defaults", () => {
   it("fills derived addresses, gas, uTON, and the listed proxy without clobbering edits", () => {
@@ -159,6 +170,24 @@ describe("path defaults", () => {
     const heldRedeem = held[2];
     assert.ok(heldRedeem);
     assert.equal(fieldValue(heldRedeem, "proxy_id"), "7");
+  });
+
+  it("keeps the minter out of the jetton wallet field", () => {
+    const skipped = applyPathDefaults(pathSteps(), {
+      owner: friendly(owner, false),
+      jettonWallet: utonMinter,
+    });
+    assert.equal(skipped[0]?.destination, "");
+
+    const mistaken = pathSteps().map((step) =>
+      step.id === "burn" ? { ...step, destination: utonMinter } : step,
+    );
+    const fixed = applyPathDefaults(mistaken, {
+      owner: friendly(owner, false),
+      jettonWallet: friendly(jetton),
+    });
+    assert.equal(fixed[0]?.destination, friendly(jetton));
+    assert.equal(fixed[1]?.destination, utonMinter);
   });
 });
 

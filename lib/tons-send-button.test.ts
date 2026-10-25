@@ -241,7 +241,7 @@ describe("tons send buttons", () => {
         onSend: () => undefined,
       }),
     );
-    assert.match(burn, /Calculated from the wallet you connect/);
+    assert.match(burn, /Calculated from the wallet that sends/);
     assert.match(burn, /uTON jetton wallet/);
     assert.doesNotMatch(burn, /Paste your uTON/);
 
