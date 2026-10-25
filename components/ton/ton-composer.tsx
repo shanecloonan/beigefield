@@ -26,6 +26,7 @@ import {
   emptyStep,
   insertTemplateDraft,
   isMainnetChain,
+  readFundedSendResult,
   readMaxMessages,
   scriptValueSummary,
   sendFailureMessage,
@@ -209,7 +210,8 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
         body: JSON.stringify(request),
       });
       const payload: unknown = await response.json().catch(() => null);
-      if (isFundedOk(payload)) {
+      const funded = readFundedSendResult(payload);
+      if (funded?.ok) {
         const first = request.messages[0]?.address ?? "";
         setNotice({
           tone: "good",
@@ -222,11 +224,10 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
         });
         return;
       }
-      if (isFundedRejected(payload)) {
-        setNotice({ tone: "bad", text: payload.message });
-        return;
-      }
-      setNotice({ tone: "bad", text: sendFailureMessage("ambiguous") });
+      setNotice({
+        tone: "bad",
+        text: funded?.text ?? sendFailureMessage("ambiguous"),
+      });
     } catch {
       setNotice({ tone: "bad", text: sendFailureMessage("ambiguous") });
     } finally {
@@ -512,22 +513,4 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
   );
 }
 
-function isFundedOk(payload: unknown): payload is { ok: true } {
-  return Boolean(payload && typeof payload === "object" && "ok" in payload && payload.ok === true);
-}
-
-function isFundedRejected(
-  payload: unknown,
-): payload is { ok: false; kind: "rejected"; message: string } {
-  return Boolean(
-    payload &&
-      typeof payload === "object" &&
-      "ok" in payload &&
-      payload.ok === false &&
-      "kind" in payload &&
-      payload.kind === "rejected" &&
-      "message" in payload &&
-      typeof payload.message === "string",
-  );
-}
 

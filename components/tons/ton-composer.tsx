@@ -32,6 +32,7 @@ import {
   connectFailureMessage,
   outgoingRequest,
   isMainnetChain,
+  readFundedSendResult,
   readMaxMessages,
   sendFailureMessage,
   type MainnetScriptRequest,
@@ -196,8 +197,8 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
           body: JSON.stringify(request),
         });
         const payload: unknown = await response.json().catch(() => null);
-        if (isFundedOk(payload)) return { ok: true };
-        if (isFundedRejected(payload)) return { ok: false, text: payload.message };
+        const funded = readFundedSendResult(payload);
+        if (funded) return funded;
         return { ok: false, text: sendFailureMessage("ambiguous") };
       } catch {
         return { ok: false, text: sendFailureMessage("ambiguous") };
@@ -745,25 +746,6 @@ function stalePathNotice(text: string): boolean {
   return (
     text.startsWith("Nothing was sent. Connect a mainnet wallet") ||
     text.includes("uTON jetton wallet is still empty")
-  );
-}
-
-function isFundedOk(payload: unknown): payload is { ok: true } {
-  return Boolean(payload && typeof payload === "object" && "ok" in payload && payload.ok === true);
-}
-
-function isFundedRejected(
-  payload: unknown,
-): payload is { ok: false; kind: "rejected"; message: string } {
-  return Boolean(
-    payload &&
-      typeof payload === "object" &&
-      "ok" in payload &&
-      payload.ok === false &&
-      "kind" in payload &&
-      payload.kind === "rejected" &&
-      "message" in payload &&
-      typeof payload.message === "string",
   );
 }
 

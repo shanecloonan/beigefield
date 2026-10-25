@@ -1,13 +1,27 @@
 /**
  * Signs with the desk wallet and broadcasts through Toncenter.
- * Reads retry once on a rate limit, then ask TonAPI. A broadcast is not retried.
+ * Reads retry once on a rate limit, then ask TonAPI.
+ * A lost broadcast is checked against the sequence number before anything is sent again.
+ * The same signed message may go to TonAPI once, and only when that number did not move.
  * TONCENTER_ENDPOINT and TONCENTER_API_KEY override the public endpoint when set.
  */
 import { Address, Cell } from "@ton/core";
 import { FUNDED_WALLET_ADDRESS, FUNDED_WALLET_MAX_MESSAGES } from "./funded-wallet-public";
 import { relaxedMessage, signFundedExternal } from "./funded-wallet";
 import type { OutgoingMessage } from "./ton-message";
-import { readAccountState, readSeqno, TON_NETWORK_WAIT, toncenterSend } from "./ton-rpc";
+import {
+  readAccountState,
+  readObservedSeqno,
+  readSeqno,
+  TON_NETWORK_WAIT,
+  tonapiSend,
+  toncenterSend,
+  type TonRpcDeps,
+} from "./ton-rpc";
+
+const UNCONFIRMED =
+  "The wallet did not confirm the message. Check the wallet before trying again, so it is not sent twice.";
+const SAFE_RETRY = "Nothing was sent. Safe to try again.";
 
 const TRANSFER_TTL_SECONDS = 600;
 
@@ -93,24 +107,48 @@ export async function sendFundedScript(
     };
   }
 
-  const sent = await toncenterSend(boc.toString("base64"), chain);
-  if (!sent.ok) {
-    if (!sent.network) {
-      return {
-        ok: false,
-        kind: "rejected",
-        message: "The network rejected the message. Nothing was sent.",
-      };
-    }
+  const bocBase64 = boc.toString("base64");
+  const sent = await toncenterSend(bocBase64, chain);
+  if (sent.ok) return { ok: true };
+  if (!sent.network) {
     return {
       ok: false,
-      kind: "ambiguous",
-      message:
-        "The wallet did not confirm the message. Check the wallet before trying again, so it is not sent twice.",
+      kind: "rejected",
+      message: "The network rejected the message. Nothing was sent.",
     };
   }
 
-  return { ok: true };
+  const landed = await broadcastLanded(accountState, seqno, chain);
+  if (landed === "yes") return { ok: true };
+  if (landed === "unknown") {
+    return { ok: false, kind: "ambiguous", message: UNCONFIRMED };
+  }
+
+  const fallback = await tonapiSend(bocBase64, chain);
+  if (fallback.ok) return { ok: true };
+  if (!fallback.network) {
+    return {
+      ok: false,
+      kind: "rejected",
+      message: "The network rejected the message. Nothing was sent.",
+    };
+  }
+  return { ok: false, kind: "rejected", message: SAFE_RETRY };
+}
+
+async function broadcastLanded(
+  accountState: "active" | "uninitialized" | "frozen",
+  seqno: number,
+  chain: TonRpcDeps,
+): Promise<"yes" | "no" | "unknown"> {
+  if (accountState !== "active") {
+    const state = await readAccountState(FUNDED_WALLET_ADDRESS, chain);
+    if (!state.ok) return "unknown";
+    return state.state === "uninitialized" ? "no" : "yes";
+  }
+  const observed = await readObservedSeqno(FUNDED_WALLET_ADDRESS, chain);
+  if (observed === null || observed < seqno) return "unknown";
+  return observed > seqno ? "yes" : "no";
 }
 
 function parseRequest(input: unknown): ParsedRequest {

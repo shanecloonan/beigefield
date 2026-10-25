@@ -387,6 +387,19 @@ export function classifySendError(error: unknown): SendFailureKind {
   return "ambiguous";
 }
 
+/** Reads a funded-send JSON body. Ambiguous and rejected replies both carry the text to show. */
+export function readFundedSendResult(
+  payload: unknown,
+): { ok: true } | { ok: false; text: string } | null {
+  if (!payload || typeof payload !== "object") return null;
+  const record = payload as Record<string, unknown>;
+  if (record.ok === true) return { ok: true };
+  if (record.ok !== false) return null;
+  if (record.kind !== "rejected" && record.kind !== "ambiguous") return null;
+  if (typeof record.message !== "string" || record.message.length === 0) return null;
+  return { ok: false, text: record.message };
+}
+
 export function sendFailureMessage(kind: SendFailureKind): string {
   switch (kind) {
     case "cancelled":
