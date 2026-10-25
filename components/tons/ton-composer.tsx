@@ -7,6 +7,7 @@ import {
   useTonConnectUI,
   useTonWallet,
 } from "@tonconnect/ui-react";
+import { AutomationGap } from "@/components/tons/automation-gap";
 import { BounceDesk } from "@/components/tons/bounce-desk";
 import { CopyButton } from "@/components/tons/copy-button";
 import { PayoutDesk } from "@/components/tons/payout-desk";
@@ -26,6 +27,7 @@ import {
   type ScriptStep,
   type StepErrors,
 } from "@/lib/ton-message";
+import { automationSource } from "@/lib/uton-automation";
 import { pathSource } from "@/lib/uton-path";
 import { utonTemplateBody, utonTemplateById } from "@/lib/uton-templates";
 import { utonMinter } from "@/lib/uton";
@@ -99,8 +101,10 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
       <h2 id="ton-message-title">Path</h2>
       <nav className="ton-contents" aria-label="Message steps">
         <a href="#burn-form">Step 1 · Burn</a>
+        <a href="#after-burn-1">After step 1 · afterBurn1</a>
         <a href="#notify-form">Step 2 · Notification</a>
         <a href="#bounce-form">Step 3 · on_bounce</a>
+        <a href="#queue-after-bounce">After step 3 · nextAfter</a>
         <a href="#redeem-form">Step 4 · Redeem burn</a>
         <a href="#redeem-notify-form">Step 5 · Redeem notification</a>
         <a href="#withdraw-form">Step 6 · Withdraw</a>
@@ -177,6 +181,13 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
           place={burnPlace}
           onChange={(next) => updateStep("burn", next)}
         />
+        <AutomationGap
+          id="after-burn-1"
+          titleId="after-burn-1-title"
+          kicker="After step 1"
+          title="afterBurn1"
+          sources={[automationSource.afterBurn1]}
+        />
         <LockedStep
           step={notification}
           index={1}
@@ -186,6 +197,13 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
           onChange={(next) => updateStep("notify", next)}
         />
         <BounceDesk />
+        <AutomationGap
+          id="queue-after-bounce"
+          titleId="queue-after-bounce-title"
+          kicker="After step 3"
+          title="nextAfter"
+          sources={[automationSource.queueAfterBounce]}
+        />
         <LockedStep
           step={steps.find((step) => step.id === "redeem-burn") ?? redeemBurnDraft("redeem-burn")}
           index={2}
