@@ -1,14 +1,14 @@
 /**
- * Signs with the desk wallet and broadcasts through Toncenter's public
- * mainnet JSON-RPC. That endpoint does not require an API key.
- * TONCENTER_ENDPOINT and TONCENTER_API_KEY override it when a host does.
+ * Signs with the desk wallet and broadcasts through Toncenter.
+ * Reads retry once on a rate limit, then ask TonAPI. A broadcast is not retried.
+ * TONCENTER_ENDPOINT and TONCENTER_API_KEY override the public endpoint when set.
  */
 import { Address, Cell } from "@ton/core";
 import { FUNDED_WALLET_ADDRESS, FUNDED_WALLET_MAX_MESSAGES } from "./funded-wallet-public";
 import { relaxedMessage, signFundedExternal } from "./funded-wallet";
 import type { OutgoingMessage } from "./ton-message";
+import { readAccountState, readSeqno, TON_NETWORK_WAIT, toncenterSend } from "./ton-rpc";
 
-const DEFAULT_ENDPOINT = "https://toncenter.com/api/v2/jsonRPC";
 const TRANSFER_TTL_SECONDS = 600;
 
 export type FundedSendResult =
@@ -20,10 +20,10 @@ export type FundedSendDeps = {
   nowSeconds?: number;
   endpoint?: string;
   apiKey?: string;
+  tonapi?: string;
+  sleep?: (ms: number) => Promise<void>;
 };
 
-type RpcOk = { ok: true; result: unknown };
-type RpcFail = { ok: false; network: boolean };
 type Rejected = { ok: false; kind: "rejected"; message: string };
 type ParsedRequest =
   | { ok: true; messages: ReturnType<typeof relaxedMessage>[] }
@@ -36,24 +36,26 @@ export async function sendFundedScript(
   const parsed = parseRequest(input);
   if (!parsed.ok) return parsed;
 
-  const fetchImpl = deps.fetchImpl ?? fetch;
-  const endpoint = deps.endpoint?.trim() || DEFAULT_ENDPOINT;
-  const apiKey = deps.apiKey?.trim() || undefined;
+  const chain = {
+    fetchImpl: deps.fetchImpl,
+    endpoint: deps.endpoint,
+    apiKey: deps.apiKey,
+    tonapi: deps.tonapi,
+    sleep: deps.sleep,
+  };
 
-  const state = await rpc(fetchImpl, endpoint, apiKey, "getAddressInformation", {
-    address: FUNDED_WALLET_ADDRESS,
-  });
+  const state = await readAccountState(FUNDED_WALLET_ADDRESS, chain);
   if (!state.ok) {
     return {
       ok: false,
       kind: state.network ? "ambiguous" : "rejected",
       message: state.network
-        ? "The network did not answer. Nothing was sent. Check the wallet before trying again."
+        ? `${TON_NETWORK_WAIT} Nothing was sent. Check the wallet before trying again.`
         : "The network refused the wallet lookup. Nothing was sent.",
     };
   }
 
-  const accountState = readState(state.result);
+  const accountState = state.state;
   if (accountState === "frozen") {
     return {
       ok: false,
@@ -61,34 +63,15 @@ export async function sendFundedScript(
       message: "This wallet is frozen. Nothing was sent.",
     };
   }
-  if (!accountState) {
-    return {
-      ok: false,
-      kind: "ambiguous",
-      message: "The wallet state could not be read. Nothing was sent.",
-    };
-  }
 
   let seqno = 0;
   if (accountState === "active") {
-    const method = await rpc(fetchImpl, endpoint, apiKey, "runGetMethod", {
-      address: FUNDED_WALLET_ADDRESS,
-      method: "seqno",
-      stack: [],
-    });
-    if (!method.ok) {
-      return {
-        ok: false,
-        kind: "rejected",
-        message: "The sequence number could not be read. Nothing was sent.",
-      };
-    }
-    const read = readSeqno(method.result);
+    const read = await readSeqno(FUNDED_WALLET_ADDRESS, chain);
     if (read === null) {
       return {
         ok: false,
         kind: "rejected",
-        message: "The sequence number could not be read. Nothing was sent.",
+        message: `The sequence number could not be read. ${TON_NETWORK_WAIT} Nothing was sent.`,
       };
     }
     seqno = read;
@@ -110,9 +93,7 @@ export async function sendFundedScript(
     };
   }
 
-  const sent = await rpc(fetchImpl, endpoint, apiKey, "sendBoc", {
-    boc: boc.toString("base64"),
-  });
+  const sent = await toncenterSend(boc.toString("base64"), chain);
   if (!sent.ok) {
     if (!sent.network) {
       return {
@@ -257,70 +238,3 @@ function sameAccount(left: string, right: string): boolean {
   }
 }
 
-async function rpc(
-  fetchImpl: typeof fetch,
-  endpoint: string,
-  apiKey: string | undefined,
-  method: string,
-  params: Record<string, unknown>,
-): Promise<RpcOk | RpcFail> {
-  const headers: Record<string, string> = { "content-type": "application/json" };
-  if (apiKey) headers["X-API-Key"] = apiKey;
-
-  let response: Response;
-  try {
-    response = await fetchImpl(endpoint, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ id: 1, jsonrpc: "2.0", method, params }),
-      signal: AbortSignal.timeout(20_000),
-    });
-  } catch {
-    return { ok: false, network: true };
-  }
-
-  let json: unknown;
-  try {
-    json = await response.json();
-  } catch {
-    return { ok: false, network: true };
-  }
-  if (!response.ok || !json || typeof json !== "object" || !("ok" in json)) {
-    return { ok: false, network: response.status >= 500 };
-  }
-  if (json.ok !== true) return { ok: false, network: false };
-  return { ok: true, result: "result" in json ? json.result : null };
-}
-
-function readState(result: unknown): "active" | "uninitialized" | "frozen" | null {
-  if (!result || typeof result !== "object" || !("state" in result)) return null;
-  const state = result.state;
-  if (state === "active" || state === "uninitialized" || state === "frozen") return state;
-  return null;
-}
-
-function readSeqno(result: unknown): number | null {
-  if (!result || typeof result !== "object" || !("exit_code" in result)) return null;
-  if (result.exit_code !== 0 || !("stack" in result) || !Array.isArray(result.stack)) return null;
-  const top = result.stack[0];
-  if (!Array.isArray(top)) return null;
-  return parseNum(top[1]);
-}
-
-function parseNum(value: unknown): number | null {
-  if (typeof value === "number" && Number.isInteger(value) && value >= 0 && value < 2 ** 32) {
-    return value;
-  }
-  if (typeof value === "string" && /^-?(0x)?[0-9a-fA-F]+$/.test(value)) {
-    try {
-      const parsed = BigInt(value);
-      if (parsed >= BigInt(0) && parsed < BigInt(2) ** BigInt(32)) return Number(parsed);
-    } catch {
-      return null;
-    }
-  }
-  if (value && typeof value === "object" && "number" in value) {
-    return parseNum(value.number);
-  }
-  return null;
-}
