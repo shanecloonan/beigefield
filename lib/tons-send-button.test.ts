@@ -71,7 +71,15 @@ describe("tons send buttons", () => {
   });
 
   it("renders the path Send buttons as enabled controls", () => {
-    const bounce = renderToStaticMarkup(h(BounceDesk));
+    const bounce = renderToStaticMarkup(
+      h(BounceDesk, {
+        sending: false,
+        sendLabel: "Send",
+        disabled: false,
+        notice: null,
+        onSend: () => undefined,
+      }),
+    );
     const payout = renderToStaticMarkup(h(PayoutDesk));
     const gap = renderToStaticMarkup(
       h(AutomationGap, {
@@ -88,5 +96,37 @@ describe("tons send buttons", () => {
       assert.equal(button.includes("disabled"), false);
       assert.equal(button.includes("aria-disabled"), false);
     }
+    assert.doesNotMatch(bounce, /on_bounce runs on the jetton wallet/);
+  });
+
+  it("shows bounce send progress and the broadcast result", () => {
+    const sending = renderToStaticMarkup(
+      h(BounceDesk, {
+        sending: true,
+        sendLabel: "Sending",
+        disabled: true,
+        notice: null,
+        onSend: () => undefined,
+      }),
+    );
+    const button = sendButton(sending, "Sending");
+    assert.match(button, /disabled/);
+    assert.match(button, /aria-busy="true"/);
+    assert.match(sending, /role="status"/);
+
+    const rejected = renderToStaticMarkup(
+      h(BounceDesk, {
+        sending: false,
+        sendLabel: "Send",
+        disabled: false,
+        notice: {
+          tone: "bad",
+          text: "The network rejected the message. Nothing was sent.",
+        },
+        onSend: () => undefined,
+      }),
+    );
+    assert.match(rejected, /The network rejected the message\. Nothing was sent\./);
+    assert.doesNotMatch(rejected, /on_bounce runs on the jetton wallet/);
   });
 });

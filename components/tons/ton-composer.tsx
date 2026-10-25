@@ -9,7 +9,7 @@ import {
   useTonWallet,
 } from "@tonconnect/ui-react";
 import { AutomationGap } from "@/components/tons/automation-gap";
-import { BounceDesk } from "@/components/tons/bounce-desk";
+import { BounceDesk, type BounceNotice } from "@/components/tons/bounce-desk";
 import { PayoutDesk } from "@/components/tons/payout-desk";
 import { ScriptStepCard, type StepPlace } from "@/components/tons/script-step";
 import {
@@ -63,7 +63,7 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     withdrawDraft("withdraw"),
   ]);
   const [attempted, setAttempted] = useState<Record<string, boolean>>({});
-  const [notice, setNotice] = useState<Notice>(null);
+  const [notice, setNotice] = useState<BounceNotice | null>(null);
   const [noticeStepId, setNoticeStepId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
@@ -213,11 +213,33 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
     void transmit(
       result.request,
       `Sent the ${sentName(step)} on mainnet. ${preview?.valueLabel ?? ""} to ${preview?.address ?? ""}.`.trim(),
-      step.id,
-    );
-  }
+    step.id,
+  );
+}
 
-  function resultFor(id: string) {
+function sendBounce() {
+  const step = steps.find((item) => item.id === "notify") ?? notificationDraft("notify");
+  setAttempted((current) => ({ ...current, [step.id]: true }));
+  const result = compileScript([step], {
+    fromRaw: localWallet ? fundedRaw : wallet?.account.address,
+  });
+  setNoticeStepId("bounce");
+  if (!result.ok || !result.request.messages[0]) {
+    setNotice({
+      tone: "bad",
+      text: "Nothing was sent. Complete the burn notification, then try again.",
+    });
+    return;
+  }
+  const preview = result.previews[0];
+  void transmit(
+    result.request,
+    `Sent the burn notification on mainnet. ${preview?.valueLabel ?? ""} to ${preview?.address ?? ""}.`.trim(),
+    "bounce",
+  );
+}
+
+function resultFor(id: string) {
     const index = steps.findIndex((step) => step.id === id);
     return compiled[index];
   }
@@ -297,7 +319,18 @@ function TonForm({ manifestUrl }: { manifestUrl: string }) {
           detail="Nothing was sent. afterBurn1 watches the path. It is not a wallet message."
         />
         {renderStep(notification, 1, notifyPlace)}
-        <BounceDesk />
+        <BounceDesk
+          sending={sendingId === "bounce"}
+          sendLabel={sendingId === "bounce" ? tonsInFlightLabel(localWallet) : "Send"}
+          disabled={tonsStepSendDisabled({
+            sending,
+            localWallet,
+            restored,
+            walletOnWrongChain: Boolean(wallet && !onMainnet),
+          })}
+          notice={noticeStepId === "bounce" ? notice : null}
+          onSend={sendBounce}
+        />
         <AutomationGap
           id="queue-after-bounce"
           titleId="queue-after-bounce-title"
