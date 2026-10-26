@@ -24,13 +24,13 @@ const executeMsg = {
 
 const handler = [
   "1. Read paused. Stop when paused is true (StdContractPaused).",
-  "2. Load the completed unbonding whose withdrawal_id equals withdrawal_request_id. The record holds id, withdrawal_id, address, amount, and timestamp.",
-  "3. No completed unbondings for this address → NoCompletedUnbondings. Unknown withdrawal_request_id → CompletedUnbondingNotFound.",
-  "4. Sender must equal the stored address, otherwise UnauthorizedWithdrawal.",
+  "2. Load withdrawal_to_completed_unbonding for the caller-supplied withdrawal_request_id, then the completed record: id, withdrawal_id, address, amount, timestamp.",
+  "3. A missing id is CompletedUnbondingNotFound.",
+  "4. Any withdrawal request id is accepted. The signer is not compared to the stored address.",
   "5. Remove the completed_unbondings record and the withdrawal_to_completed_unbonding link.",
   "6. Subtract amount from total_completed_unbonding_amount and unbonded_withdrawal_reserve.",
   "7. Decrement total_completed_unbonding_count.",
-  "8. Bank-send azig of the stored amount to the stored address.",
+  "8. Bank-send azig of the stored amount to the transaction signer.",
   "9. Emit wasm method withdraw_unbonded_by_id.",
 ].join("\n");
 

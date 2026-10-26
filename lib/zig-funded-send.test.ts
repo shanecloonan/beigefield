@@ -50,6 +50,25 @@ describe("zig funded send", () => {
     });
   });
 
+  it("forwards any withdrawal request id, including one from another wallet", async () => {
+    const compiled = compilePathRun({ id: 327, sender: desk });
+    assert.equal(compiled.ok, true);
+    if (!compiled.ok) throw new Error("compile");
+    const seen: unknown[] = [];
+    const result = await sendZigScript(
+      { messages: compiled.messages },
+      {
+        deskAddress: async () => desk,
+        execute: async (args) => {
+          seen.push(args.msg);
+          return { transactionHash: hash, height: 4 };
+        },
+      },
+    );
+    assert.deepEqual(result, { ok: true, txHash: hash, height: 4 });
+    assert.deepEqual(seen, [{ withdraw_unbonded_by_id: { withdrawal_request_id: 327 } }]);
+  });
+
   it("broadcasts one execute and returns the hash", async () => {
     const seen: Array<{ contract: string; msg: unknown; funds: readonly unknown[] }> = [];
     const result = await sendZigScript(request(desk), {

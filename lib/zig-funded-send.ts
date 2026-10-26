@@ -14,7 +14,6 @@ import {
   zigGasPrice,
 } from "@/lib/valdora";
 import type { ZigSendResult } from "@/lib/valdora-path-run";
-import { resolveWithdrawalRequestId } from "@/lib/valdora-query";
 import { ZigFundedKeyError, openZigFundedWallet } from "@/lib/zig-funded-wallet";
 
 const UNCONFIRMED =
@@ -76,13 +75,6 @@ export async function sendZigScript(input: unknown, deps: ZigSendDeps = {}): Pro
 }
 
 async function executeWithDesk(args: ZigExecuteArgs): Promise<ZigExecuteResult> {
-  const entered = messageId(args.msg);
-  if (entered === null) {
-    throw new Error("The withdrawal request id is missing. Nothing was sent.");
-  }
-  const resolved = await resolveWithdrawalRequestId(args.sender, entered);
-  if (!resolved.ok) throw new Error(resolved.message);
-
   const { wallet } = await openZigFundedWallet();
   const client = await SigningCosmWasmClient.connectWithSigner(ZIG_RPC, wallet, {
     gasPrice: GasPrice.fromString(zigGasPrice()),
@@ -95,7 +87,7 @@ async function executeWithDesk(args: ZigExecuteArgs): Promise<ZigExecuteResult> 
     const result = await client.execute(
       args.sender,
       args.contract,
-      withdrawByIdMsg(resolved.id),
+      args.msg,
       "auto",
       args.memo ?? "",
       [],

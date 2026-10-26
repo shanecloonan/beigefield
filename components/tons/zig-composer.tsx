@@ -210,7 +210,7 @@ export function PathCards() {
         kicker="CosmWasm"
         title="withdraw_unbonded_by_id"
         sources={[valdoraPathSource.execute]}
-        hint="One MsgExecuteContract. sender is the desk zig1 address. funds is an empty list. The field is withdrawal_request_id, the completed record's withdrawal_id."
+        hint="One MsgExecuteContract. sender is the desk zig1 address. funds is an empty list. withdrawal_request_id is any withdrawal request id."
       />
       <ReadOnlyCard
         id="handler"
