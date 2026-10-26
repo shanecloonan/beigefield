@@ -1,6 +1,6 @@
 export const site = {
   name: "Beigefield",
-  description: "Real Estate Holdings",
+  description: "Blockchain Research",
   url: "https://www.beigefield.com",
 } as const;
 

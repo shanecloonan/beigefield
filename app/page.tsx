@@ -10,7 +10,7 @@ export default function Home() {
       <main className="lockup">
         <h1>Beigefield</h1>
         <span className="rule" aria-hidden="true" />
-        <p>Real Estate Holdings</p>
+        <p>Blockchain Research</p>
       </main>
     </div>
   );
