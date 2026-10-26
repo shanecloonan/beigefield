@@ -23,15 +23,15 @@ const executeMsg = {
 };
 
 const handler = [
-  "1. Read paused. Stop when paused is true (StdContractPaused).",
-  "2. Load withdrawal_to_completed_unbonding for the caller-supplied withdrawal_request_id, then the completed record: id, withdrawal_id, address, amount, timestamp.",
-  "3. A missing id is CompletedUnbondingNotFound.",
-  "4. Any withdrawal request id is accepted. The signer is not compared to the stored address.",
-  "5. Remove the completed_unbondings record and the withdrawal_to_completed_unbonding link.",
-  "6. Subtract amount from total_completed_unbonding_amount and unbonded_withdrawal_reserve.",
-  "7. Decrement total_completed_unbonding_count.",
-  "8. Bank-send azig of the stored amount to the transaction signer.",
-  "9. Emit wasm method withdraw_unbonded_by_id.",
+  "1. Load withdrawal_to_completed_unbonding for the supplied id.",
+  "2. Load that completed record. A missing id is not found.",
+  "3. Do not compare the signer to the address on the record.",
+  "4. Decrement total_completed_unbonding_amount and total_completed_unbonding_count.",
+  "5. Remove the mapping entry and the completed-unbonding record.",
+  "6. Bank-send azig to the transaction signer.",
+  "7. Emit wasm attributes with sender set to the transaction signer.",
+  "The address-scoped error belongs to withdraw_unbonded, which takes no id.",
+  "A live by-id execute on code id 179 still returns No completed unbondings found for address for this desk, including 327. That simulation is rejected and nothing is broadcast.",
 ].join("\n");
 
 export const valdoraPathSource = {

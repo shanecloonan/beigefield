@@ -210,7 +210,7 @@ export function PathCards() {
         kicker="CosmWasm"
         title="withdraw_unbonded_by_id"
         sources={[valdoraPathSource.execute]}
-        hint="One MsgExecuteContract. sender is the desk zig1 address. funds is an empty list. withdrawal_request_id is any withdrawal request id."
+        hint="One MsgExecuteContract through CosmJS with automatic gas. sender is the desk zig1 address. funds is an empty list. The schema field is withdrawal_request_id. The key id fails schema parsing on code id 179."
       />
       <ReadOnlyCard
         id="handler"
