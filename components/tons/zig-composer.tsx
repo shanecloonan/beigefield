@@ -84,7 +84,7 @@ export function ZigComposer({ deskAddress }: { deskAddress: string }) {
       }
       const id = touchedRef.current ? pathIdRef.current : (defaults.suggested_id ?? pathIdRef.current);
       if (id === null) {
-        setNotice({ tone: "bad", text: "No completed-unbonding id. Nothing was sent." });
+        setNotice({ tone: "bad", text: "No withdrawal request id. Nothing was sent." });
         return;
       }
       const sender = defaults.owner && isZigAddress(defaults.owner) ? defaults.owner : address;
@@ -158,11 +158,11 @@ export function ZigComposer({ deskAddress }: { deskAddress: string }) {
         }}
       />
       <label className="ton-field">
-        <span>completed unbonding id</span>
+        <span>withdrawal request id</span>
         <input
           inputMode="numeric"
           autoComplete="off"
-          aria-label="completed unbonding id"
+          aria-label="withdrawal request id"
           value={pathIdText}
           onChange={(event) => {
             const raw = event.target.value;
@@ -210,7 +210,7 @@ export function PathCards() {
         kicker="CosmWasm"
         title="withdraw_unbonded_by_id"
         sources={[valdoraPathSource.execute]}
-        hint="One MsgExecuteContract. sender is the desk zig1 address. funds is an empty list. The id is the completed-unbonding id from the LCD or the field above."
+        hint="One MsgExecuteContract. sender is the desk zig1 address. funds is an empty list. The field is withdrawal_request_id, the completed record's withdrawal_id."
       />
       <ReadOnlyCard
         id="handler"

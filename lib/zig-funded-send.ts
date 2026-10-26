@@ -14,6 +14,7 @@ import {
   zigGasPrice,
 } from "@/lib/valdora";
 import type { ZigSendResult } from "@/lib/valdora-path-run";
+import { resolveWithdrawalRequestId } from "@/lib/valdora-query";
 import { ZigFundedKeyError, openZigFundedWallet } from "@/lib/zig-funded-wallet";
 
 const UNCONFIRMED =
@@ -24,7 +25,7 @@ const SENDER_MISMATCH = "This desk sends only from its own wallet. Nothing was s
 export type ZigExecuteArgs = {
   sender: string;
   contract: string;
-  msg: { withdraw_unbonded_by_id: { id: number } };
+  msg: ReturnType<typeof withdrawByIdMsg>;
   funds: readonly [];
   memo?: string;
 };
@@ -75,6 +76,13 @@ export async function sendZigScript(input: unknown, deps: ZigSendDeps = {}): Pro
 }
 
 async function executeWithDesk(args: ZigExecuteArgs): Promise<ZigExecuteResult> {
+  const entered = messageId(args.msg);
+  if (entered === null) {
+    throw new Error("The withdrawal request id is missing. Nothing was sent.");
+  }
+  const resolved = await resolveWithdrawalRequestId(args.sender, entered);
+  if (!resolved.ok) throw new Error(resolved.message);
+
   const { wallet } = await openZigFundedWallet();
   const client = await SigningCosmWasmClient.connectWithSigner(ZIG_RPC, wallet, {
     gasPrice: GasPrice.fromString(zigGasPrice()),
@@ -87,7 +95,7 @@ async function executeWithDesk(args: ZigExecuteArgs): Promise<ZigExecuteResult> 
     const result = await client.execute(
       args.sender,
       args.contract,
-      args.msg,
+      withdrawByIdMsg(resolved.id),
       "auto",
       args.memo ?? "",
       [],
@@ -103,7 +111,7 @@ type Parsed =
       ok: true;
       sender: string;
       contract: string;
-      msg: { withdraw_unbonded_by_id: { id: number } };
+      msg: ReturnType<typeof withdrawByIdMsg>;
       memo?: string;
     }
   | { ok: false; kind: "rejected"; message: string };
@@ -159,7 +167,7 @@ function parseRequest(input: unknown): Parsed {
     return {
       ok: false,
       kind: "rejected",
-      message: "The completed-unbonding id is missing. Nothing was sent.",
+      message: "The withdrawal request id is missing. Nothing was sent.",
     };
   }
   const expected = withdrawByIdMsg(id);
@@ -196,8 +204,8 @@ function messageId(msg: unknown): number | null {
   const inner = (msg as { withdraw_unbonded_by_id?: unknown }).withdraw_unbonded_by_id;
   if (!inner || typeof inner !== "object") return null;
   const keys = Object.keys(inner as object);
-  if (keys.length !== 1 || keys[0] !== "id") return null;
-  return readUnbondingId((inner as { id?: unknown }).id);
+  if (keys.length !== 1 || keys[0] !== "withdrawal_request_id") return null;
+  return readUnbondingId((inner as { withdrawal_request_id?: unknown }).withdrawal_request_id);
 }
 
 export function classifyBroadcastError(error: unknown): ZigSendResult {
@@ -219,7 +227,11 @@ export function classifyBroadcastError(error: unknown): ZigSendResult {
     const text = message.length > 0 && message.length < 400 ? message : "The network rejected the transaction. Nothing was sent.";
     return { ok: false, kind: "rejected", message: text };
   }
-  if (/insufficient|paused|account|signature|decoding|codespace/i.test(message)) {
+  if (
+    /insufficient|paused|account|signature|decoding|codespace|Query failed|failed to execute message|missing field|No completed unbondings|Completed unbonding not found|Unauthorized/i.test(
+      message,
+    )
+  ) {
     return {
       ok: false,
       kind: "rejected",

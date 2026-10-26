@@ -20,16 +20,92 @@ export type ZigPathDefaultsResult = ZigPathDefaultsOk | QueryFailure;
 const LCD_DOWN = "The LCD did not answer the staker query.";
 const LCD_SHAPE = "The staker query could not be read.";
 
+type CompletedRowIds = {
+  recordId: number | null;
+  requestId: number | null;
+  executable: number | null;
+};
+
+function completedRowIds(row: unknown): CompletedRowIds {
+  if (!row || typeof row !== "object") return { recordId: null, requestId: null, executable: null };
+  const record = row as { id?: unknown; withdrawal_id?: unknown };
+  const recordId = readUnbondingId(record.id);
+  const requestId = readUnbondingId(record.withdrawal_id);
+  return { recordId, requestId, executable: requestId ?? recordId };
+}
+
+/** The id the execute message must send: `withdrawal_id` when the row has one. */
 export function pickCompletedId(rows: unknown): number | null {
   if (!Array.isArray(rows)) return null;
   let best: number | null = null;
   for (const row of rows) {
-    if (!row || typeof row !== "object") continue;
-    const id = readUnbondingId((row as { id?: unknown }).id);
+    const id = completedRowIds(row).executable;
     if (id === null) continue;
     if (best === null || id > best) best = id;
   }
   return best;
+}
+
+/**
+ * Map a typed id onto the withdrawal request id the staker will accept.
+ * A completed-record `id` and a `withdrawal_id` both match; the returned value is `withdrawal_id`.
+ */
+export function matchWithdrawalRequestId(rows: unknown, entered: number): number | null {
+  if (!Array.isArray(rows)) return null;
+  const parsed = rows.map(completedRowIds).filter((row) => row.executable !== null);
+  const byRequest = parsed.find((row) => row.requestId === entered);
+  if (byRequest?.executable !== undefined && byRequest.executable !== null) return byRequest.executable;
+  const byRecord = parsed.find((row) => row.recordId === entered);
+  return byRecord?.executable ?? null;
+}
+
+export type ResolvedWithdrawal = { ok: true; id: number } | { ok: false; message: string };
+
+const LIST_LIMIT = 100;
+
+/** Reads this address's completed unbondings and refuses an id it does not own. */
+export async function resolveWithdrawalRequestId(
+  owner: string,
+  entered: number,
+  deps: Pick<ZigQueryDeps, "fetchImpl" | "lcd"> = {},
+): Promise<ResolvedWithdrawal> {
+  const lcd = (deps.lcd ?? ZIG_LCD).replace(/\/$/, "");
+  const listed = await smartQuery(
+    lcd,
+    { completed_unbondings: { address: owner, limit: LIST_LIMIT } },
+    deps.fetchImpl ?? fetch,
+  );
+  if (!listed.ok) return { ok: false, message: withNothingSent(listed.message) };
+  if (!listed.data || typeof listed.data !== "object") {
+    return { ok: false, message: withNothingSent(LCD_SHAPE) };
+  }
+  const rows = (listed.data as { completed_unbondings?: unknown }).completed_unbondings;
+  if (!Array.isArray(rows)) return { ok: false, message: withNothingSent(LCD_SHAPE) };
+  if (rows.length === 0) {
+    return {
+      ok: false,
+      message: `This desk has no completed unbondings, so ${entered} cannot be withdrawn from it. Nothing was sent.`,
+    };
+  }
+  const resolved = matchWithdrawalRequestId(rows, entered);
+  if (resolved === null && rows.length >= LIST_LIMIT) {
+    return {
+      ok: false,
+      message: "The completed-unbonding list for this desk is longer than the lookup. Nothing was sent.",
+    };
+  }
+  if (resolved === null) {
+    return {
+      ok: false,
+      message: `${entered} is not a completed unbonding for this desk. Nothing was sent.`,
+    };
+  }
+  return { ok: true, id: resolved };
+}
+
+function withNothingSent(message: string): string {
+  if (message.includes("Nothing was sent.")) return message;
+  return `${message.trim()} Nothing was sent.`;
 }
 
 export function parseDefaultId(value: string | null | undefined): number | null {

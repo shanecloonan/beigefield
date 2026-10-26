@@ -63,7 +63,7 @@ describe("zig funded send", () => {
     assert.deepEqual(seen, [
       {
         contract: VALDORA_STAKER,
-        msg: { withdraw_unbonded_by_id: { id: 12 } },
+        msg: { withdraw_unbonded_by_id: { withdrawal_request_id: 12 } },
         funds: [],
       },
     ]);
@@ -114,6 +114,25 @@ describe("zig funded send", () => {
     const check = classifyBroadcastError(new BroadcastTxError(11, "sdk", "insufficient funds"));
     assert.equal(check.ok, false);
     if (!check.ok) assert.equal(check.kind, "rejected");
+
+    const simulated = classifyBroadcastError(
+      new Error("Query failed with (6): missing field `withdrawal_request_id` at line 1 column 37"),
+    );
+    assert.equal(simulated.ok, false);
+    if (!simulated.ok) {
+      assert.equal(simulated.kind, "rejected");
+      assert.match(simulated.message, /Nothing was sent/);
+      assert.doesNotMatch(simulated.message, /did not confirm/);
+    }
+
+    const owned = classifyBroadcastError(
+      new Error("No completed unbondings found for address: zig1wtkwhteg7cyr0hafjr5q20f5uesrj0e8yfx2gm"),
+    );
+    assert.equal(owned.ok, false);
+    if (!owned.ok) {
+      assert.equal(owned.kind, "rejected");
+      assert.match(owned.message, /Nothing was sent/);
+    }
   });
 });
 

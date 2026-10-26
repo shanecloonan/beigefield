@@ -6,7 +6,7 @@ import Link from "next/link";
 
 const title = `withdraw_unbonded_by_id — ${site.name}`;
 const description =
-  "One MsgExecuteContract on the Valdora staker. The LCD lookup supplies a completed-unbonding id. The desk wallet signs it on ZIGChain.";
+  "One MsgExecuteContract on the Valdora staker. The LCD lookup supplies a withdrawal request id. The desk wallet signs it on ZIGChain.";
 
 export const metadata: Metadata = {
   title,

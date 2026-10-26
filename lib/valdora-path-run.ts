@@ -35,7 +35,7 @@ export type PathRunResult = PathRunOk | { ok: false; message: string };
 export function compilePathRun(input: PathRunInput): PathRunResult {
   const id = readUnbondingId(input.id);
   if (id === null) {
-    return { ok: false, message: "The completed-unbonding id is missing. Nothing was sent." };
+    return { ok: false, message: "The withdrawal request id is missing. Nothing was sent." };
   }
   const sender = input.sender?.trim?.() ?? "";
   if (!isZigAddress(sender)) {
@@ -61,7 +61,7 @@ export function compilePathRun(input: PathRunInput): PathRunResult {
   return {
     ok: true,
     messages: [message],
-    summary: `MsgExecuteContract withdraw_unbonded_by_id id ${id} on ${VALDORA_STAKER}`,
+    summary: `MsgExecuteContract withdraw_unbonded_by_id withdrawal_request_id ${id} on ${VALDORA_STAKER}`,
     preview: { contract: VALDORA_STAKER, msg, sender },
     ...(memo ? { memo } : {}),
   };

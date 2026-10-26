@@ -50,9 +50,9 @@ export function zigGasPrice(): string {
   return ZIG_MIN_GAS_PRICE;
 }
 
-/** Msg body for the path execute. Caller validates `id` first. */
+/** Msg body for the path execute. The contract field is `withdrawal_request_id`. */
 export function withdrawByIdMsg(id: number | string) {
-  return { withdraw_unbonded_by_id: { id: Number(id) } };
+  return { withdraw_unbonded_by_id: { withdrawal_request_id: Number(id) } };
 }
 
 export function readUnbondingId(id: unknown): number | null {

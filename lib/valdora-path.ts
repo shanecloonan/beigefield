@@ -17,17 +17,17 @@ const executeMsg = {
   value: {
     sender: "<desk zig1>",
     contract: "zig18nnde5tpn76xj3wm53n0tmuf3q06nruj3p6kdemcllzxqwzkpqzqk7ue55",
-    msg: { withdraw_unbonded_by_id: { id: 12 } },
+    msg: { withdraw_unbonded_by_id: { withdrawal_request_id: 12 } },
     funds: [],
   },
 };
 
 const handler = [
   "1. Read paused. Stop when paused is true (StdContractPaused).",
-  "2. Read completed_unbondings[id]: id, withdrawal_id, address, amount, timestamp.",
-  "3. Missing id → CompletedUnbondingNotFound.",
+  "2. Load the completed unbonding whose withdrawal_id equals withdrawal_request_id. The record holds id, withdrawal_id, address, amount, and timestamp.",
+  "3. No completed unbondings for this address → NoCompletedUnbondings. Unknown withdrawal_request_id → CompletedUnbondingNotFound.",
   "4. Sender must equal the stored address, otherwise UnauthorizedWithdrawal.",
-  "5. Remove completed_unbondings[id] and the withdrawal_to_completed_unbonding link.",
+  "5. Remove the completed_unbondings record and the withdrawal_to_completed_unbonding link.",
   "6. Subtract amount from total_completed_unbonding_amount and unbonded_withdrawal_reserve.",
   "7. Decrement total_completed_unbonding_count.",
   "8. Bank-send azig of the stored amount to the stored address.",

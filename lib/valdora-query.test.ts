@@ -3,9 +3,11 @@ import { describe, it } from "node:test";
 import { VALDORA_STAKER } from "./valdora";
 import {
   loadZigPathDefaults,
+  matchWithdrawalRequestId,
   parseDefaultId,
   pickCompletedId,
   pickCompletedIdFromTxs,
+  resolveWithdrawalRequestId,
 } from "./valdora-query";
 
 const desk = "zig1gy5zketezrfdea9g80we02663r2gjz3z0002kx";
@@ -48,6 +50,21 @@ const base = {
 describe("completed id pickers", () => {
   it("keeps the greatest completed id and ignores already executed withdraws", () => {
     assert.equal(pickCompletedId([{ id: 2 }, { id: 12 }, { id: -1 }, { id: "nope" }]), 12);
+    assert.equal(
+      pickCompletedId([
+        { id: 374, withdrawal_id: 373 },
+        { id: 2, withdrawal_id: 1 },
+      ]),
+      373,
+    );
+    assert.equal(
+      matchWithdrawalRequestId([{ id: 374, withdrawal_id: 373 }], 374),
+      373,
+    );
+    assert.equal(
+      matchWithdrawalRequestId([{ id: 374, withdrawal_id: 373 }], 373),
+      373,
+    );
     assert.equal(parseDefaultId(" 7 "), 7);
     assert.equal(parseDefaultId("1.5"), null);
     assert.equal(
@@ -78,6 +95,59 @@ describe("completed id pickers", () => {
   });
 });
 
+describe("resolveWithdrawalRequestId", () => {
+  it("uses withdrawal_id when the typed id is the completed record id", async () => {
+    const rows = {
+      completed_unbondings: {
+        address: desk,
+        completed_unbondings: [{ id: 374, withdrawal_id: 373, address: desk }],
+      },
+    };
+    const fromRecord = await resolveWithdrawalRequestId(desk, 374, { fetchImpl: lcd(rows) });
+    const fromRequest = await resolveWithdrawalRequestId(desk, 373, { fetchImpl: lcd(rows) });
+    assert.deepEqual(fromRecord, { ok: true, id: 373 });
+    assert.deepEqual(fromRequest, { ok: true, id: 373 });
+  });
+
+  it("refuses 327 when this desk has no completed unbonding for it", async () => {
+    const empty = await resolveWithdrawalRequestId(desk, 327, {
+      fetchImpl: lcd({
+        completed_unbondings: { address: desk, completed_unbondings: [] },
+      }),
+    });
+    assert.equal(empty.ok, false);
+    if (!empty.ok) {
+      assert.match(empty.message, /no completed unbondings/);
+      assert.match(empty.message, /327/);
+      assert.match(empty.message, /Nothing was sent/);
+    }
+
+    const otherId = await resolveWithdrawalRequestId(desk, 327, {
+      fetchImpl: lcd({
+        completed_unbondings: {
+          address: desk,
+          completed_unbondings: [{ id: 2, withdrawal_id: 1 }],
+        },
+      }),
+    });
+    assert.equal(otherId.ok, false);
+    if (!otherId.ok) {
+      assert.match(otherId.message, /327 is not a completed unbonding/);
+      assert.match(otherId.message, /Nothing was sent/);
+    }
+  });
+
+  it("reports an LCD failure without claiming the transaction was sent", async () => {
+    const down = await resolveWithdrawalRequestId(desk, 327, {
+      fetchImpl: async () => {
+        throw new Error("offline");
+      },
+    });
+    assert.equal(down.ok, false);
+    if (!down.ok) assert.match(down.message, /Nothing was sent/);
+  });
+});
+
 describe("loadZigPathDefaults", () => {
   it("suggests the owner's highest completed unbonding", async () => {
     const result = await loadZigPathDefaults(
@@ -101,7 +171,7 @@ describe("loadZigPathDefaults", () => {
     assert.equal(result.staker, VALDORA_STAKER);
     assert.equal(result.paused, false);
     assert.equal(result.total_count, 54);
-    assert.equal(result.suggested_id, 12);
+    assert.equal(result.suggested_id, 11);
     assert.equal(result.owner, desk);
     assert.equal(result.token_name, "stzig");
   });

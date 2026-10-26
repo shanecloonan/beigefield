@@ -17,11 +17,11 @@ describe("compilePathRun", () => {
     assert.deepEqual(message?.value, {
       sender: desk,
       contract: VALDORA_STAKER,
-      msg: { withdraw_unbonded_by_id: { id: 12 } },
+      msg: { withdraw_unbonded_by_id: { withdrawal_request_id: 12 } },
       funds: [],
     });
     assert.equal(compiled.preview.sender, desk);
-    assert.match(compiled.summary, /withdraw_unbonded_by_id id 12/);
+    assert.match(compiled.summary, /withdraw_unbonded_by_id withdrawal_request_id 12/);
   });
 
   it("rejects a missing or non-integer id and a bad sender", () => {
