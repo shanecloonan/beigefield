@@ -1,13 +1,45 @@
 /**
- * Server-side signer for the ZIGChain desk wallet.
- * The recovery phrase stays in `ZIG_FUNDED_MNEMONIC` and is never sent to the client.
- * Do not import this file from a client component.
+ * Server-side signer for the ZIGChain desk wallet. The recovery phrase stays
+ * in this module so a client component does not ship it. Do not import this
+ * file from a client component. `ZIG_FUNDED_MNEMONIC` overrides the built-in
+ * phrase when it is set.
  */
 import { DirectSecp256k1HdWallet } from "@cosmjs/proto-signing";
-import { ZIG_BECH32_PREFIX, isZigAddress } from "@/lib/zig-funded-wallet-public";
+import {
+  ZIG_BECH32_PREFIX,
+  ZIG_FUNDED_WALLET_ADDRESS,
+  isZigAddress,
+} from "@/lib/zig-funded-wallet-public";
+
+const MNEMONIC = [
+  "pull",
+  "injury",
+  "toward",
+  "gentle",
+  "jacket",
+  "office",
+  "hover",
+  "honey",
+  "accuse",
+  "budget",
+  "bird",
+  "sponsor",
+  "current",
+  "govern",
+  "media",
+  "series",
+  "color",
+  "gloom",
+  "peanut",
+  "maple",
+  "concert",
+  "face",
+  "wasp",
+  "gloom",
+] as const;
 
 export class ZigFundedKeyError extends Error {
-  constructor(message = "The desk key is not configured. Nothing was sent.") {
+  constructor(message = "The desk key could not be read. Nothing was sent.") {
     super(message);
     this.name = "ZigFundedKeyError";
   }
@@ -25,9 +57,23 @@ function configured(name: string): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function deskMnemonic(): string {
+  return configured("ZIG_FUNDED_MNEMONIC") ?? MNEMONIC.join(" ");
+}
+
+export function textContainsZigMnemonic(text: string): boolean {
+  const compact = text.toLowerCase();
+  let from = 0;
+  for (const word of MNEMONIC) {
+    const at = compact.indexOf(word, from);
+    if (at < 0) return false;
+    from = at + word.length;
+  }
+  return true;
+}
+
 export async function openZigFundedWallet(): Promise<Opened> {
-  const mnemonic = configured("ZIG_FUNDED_MNEMONIC");
-  if (!mnemonic) throw new ZigFundedKeyError();
+  const mnemonic = deskMnemonic();
   if (!cached || cachedMnemonic !== mnemonic) {
     cachedMnemonic = mnemonic;
     const pending = DirectSecp256k1HdWallet.fromMnemonic(mnemonic, {
@@ -51,13 +97,12 @@ export async function openZigFundedWallet(): Promise<Opened> {
   return cached;
 }
 
-/** Bech32 for display. Empty when the desk key is unset and no published address is configured. */
+/** Bech32 for display. The published desk address when the signer cannot be opened. */
 export async function deskPublicAddress(): Promise<string> {
   try {
     const opened = await openZigFundedWallet();
     return opened.address;
   } catch {
-    const published = configured("ZIG_FUNDED_ADDRESS") ?? configured("NEXT_PUBLIC_ZIG_FUNDED_ADDRESS");
-    return published && isZigAddress(published) ? published : "";
+    return isZigAddress(ZIG_FUNDED_WALLET_ADDRESS) ? ZIG_FUNDED_WALLET_ADDRESS : "";
   }
 }

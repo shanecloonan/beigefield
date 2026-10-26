@@ -1,6 +1,6 @@
 import "server-only";
 import { loadZigPathDefaults } from "@/lib/valdora-query";
-import { deskPublicAddress } from "@/lib/zig-funded-wallet";
+import { ZIG_FUNDED_WALLET_ADDRESS } from "@/lib/zig-funded-wallet-public";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
 async function respond(requested: string) {
   const trimmed = requested.trim();
-  const owner = trimmed || (await deskPublicAddress());
+  const owner = trimmed || ZIG_FUNDED_WALLET_ADDRESS;
   const result = await loadZigPathDefaults({ owner });
   return Response.json(result, { status: result.ok ? 200 : result.status });
 }

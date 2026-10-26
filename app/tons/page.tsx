@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ZigComposer } from "@/components/tons/zig-composer";
 import { site } from "@/lib/site";
-import { deskPublicAddress } from "@/lib/zig-funded-wallet";
+import { ZIG_FUNDED_WALLET_ADDRESS } from "@/lib/zig-funded-wallet-public";
 import Link from "next/link";
 
 const title = `withdraw_unbonded_by_id — ${site.name}`;
@@ -26,11 +26,7 @@ export const metadata: Metadata = {
   },
 };
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
-export default async function TonPage() {
-  const deskAddress = await deskPublicAddress();
+export default function TonPage() {
   return (
     <div className="page">
       <div className="frame" aria-hidden="true">
@@ -45,7 +41,7 @@ export default async function TonPage() {
         </Link>
         <p className="ton-kicker">Valdora staker · code 179</p>
         <h1>withdraw_unbonded_by_id</h1>
-        <ZigComposer deskAddress={deskAddress} />
+        <ZigComposer deskAddress={ZIG_FUNDED_WALLET_ADDRESS} />
       </main>
     </div>
   );

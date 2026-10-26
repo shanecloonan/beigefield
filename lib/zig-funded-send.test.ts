@@ -6,7 +6,13 @@ import { DirectSecp256k1HdWallet } from "@cosmjs/proto-signing";
 import { VALDORA_STAKER } from "./valdora";
 import { compilePathRun } from "./valdora-path-run";
 import { classifyBroadcastError, sendZigScript } from "./zig-funded-send";
-import { ZigFundedKeyError, openZigFundedWallet } from "./zig-funded-wallet";
+import { ZIG_FUNDED_WALLET_ADDRESS } from "./zig-funded-wallet-public";
+import {
+  ZigFundedKeyError,
+  deskPublicAddress,
+  openZigFundedWallet,
+  textContainsZigMnemonic,
+} from "./zig-funded-wallet";
 
 const desk = "zig1gy5zketezrfdea9g80we02663r2gjz3z0002kx";
 const other = "zig1wtwzsnt3u3zwytcgpgq8pj8yr5njjhcxj0nhwx";
@@ -112,7 +118,21 @@ describe("zig funded send", () => {
 });
 
 describe("zig funded wallet", () => {
-  it("derives a zig1 address from the desk phrase and keeps that phrase off the client", async () => {
+  it("derives the published desk address from the built-in phrase", async () => {
+    const previous = process.env.ZIG_FUNDED_MNEMONIC;
+    delete process.env.ZIG_FUNDED_MNEMONIC;
+    try {
+      const opened = await openZigFundedWallet();
+      assert.equal(opened.address, ZIG_FUNDED_WALLET_ADDRESS);
+      assert.equal(opened.address, "zig1wtkwhteg7cyr0hafjr5q20f5uesrj0e8yfx2gm");
+      assert.equal(await deskPublicAddress(), ZIG_FUNDED_WALLET_ADDRESS);
+    } finally {
+      if (previous === undefined) delete process.env.ZIG_FUNDED_MNEMONIC;
+      else process.env.ZIG_FUNDED_MNEMONIC = previous;
+    }
+  });
+
+  it("lets ZIG_FUNDED_MNEMONIC override the built-in phrase and rejects a bad override", async () => {
     const previous = process.env.ZIG_FUNDED_MNEMONIC;
     const generated = await DirectSecp256k1HdWallet.generate(12, { prefix: "zig" });
     process.env.ZIG_FUNDED_MNEMONIC = generated.mnemonic;
@@ -122,21 +142,17 @@ describe("zig funded wallet", () => {
       const [account] = await generated.getAccounts();
       assert.equal(first.address, account?.address);
       assert.equal(first.address, second.address);
-      assert.match(first.address, /^zig1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{38}$/);
+      assert.notEqual(first.address, ZIG_FUNDED_WALLET_ADDRESS);
+      process.env.ZIG_FUNDED_MNEMONIC = "not a desk phrase";
+      await assert.rejects(openZigFundedWallet(), ZigFundedKeyError);
+      assert.equal(await deskPublicAddress(), ZIG_FUNDED_WALLET_ADDRESS);
     } finally {
       if (previous === undefined) delete process.env.ZIG_FUNDED_MNEMONIC;
       else process.env.ZIG_FUNDED_MNEMONIC = previous;
     }
+  });
 
-    const saved = process.env.ZIG_FUNDED_MNEMONIC;
-    delete process.env.ZIG_FUNDED_MNEMONIC;
-    try {
-      await assert.rejects(openZigFundedWallet(), ZigFundedKeyError);
-    } finally {
-      if (saved === undefined) delete process.env.ZIG_FUNDED_MNEMONIC;
-      else process.env.ZIG_FUNDED_MNEMONIC = saved;
-    }
-
+  it("keeps the phrase out of the client modules", () => {
     for (const path of [
       new URL("./zig-funded-wallet-public.ts", import.meta.url),
       new URL("./valdora.ts", import.meta.url),
@@ -145,8 +161,12 @@ describe("zig funded wallet", () => {
       new URL("../components/tons/zig-composer.tsx", import.meta.url),
       new URL("../components/tons/wallet-desk.tsx", import.meta.url),
       new URL("../components/tons/path-run-bar.tsx", import.meta.url),
+      new URL("../app/tons/page.tsx", import.meta.url),
+      new URL("../app/api/zig/path-defaults/route.ts", import.meta.url),
+      new URL("../app/api/zig/send/route.ts", import.meta.url),
     ]) {
       const source = readFileSync(path, "utf8");
+      assert.equal(textContainsZigMnemonic(source), false);
       assert.equal(source.includes("ZIG_FUNDED_MNEMONIC"), false);
       assert.equal(source.includes('from "@/lib/zig-funded-wallet"'), false);
       assert.equal(source.includes('from "./zig-funded-wallet"'), false);
