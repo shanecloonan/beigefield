@@ -43,7 +43,8 @@ describe("katana authorized desk", () => {
       }),
     );
     assert.match(html, new RegExp(SOL_FUNDED_WALLET_ADDRESS));
-    assert.match(html, /associated token account/);
+    assert.match(html, /pays the network fee/);
+    assert.match(html, /does not have to be/);
     assert.match(html, /Disconnect/);
     assert.equal(html.includes("Signs on the server"), false);
     assert.match(button(html, "Disconnect"), /./);
@@ -53,9 +54,11 @@ describe("katana authorized desk", () => {
     const notes = renderToStaticMarkup(h(KatanaAuthorizedNotes));
     assert.match(notes, /Withdraw pending deposit/);
     assert.match(notes, /fee payer/);
+    assert.match(notes, /separately/);
     assert.match(notes, /claim_shares/);
     assert.match(notes, /DkguYGWhRE8qJ9voWNYZ8dJkGYr8ACUR8KXqDAyHpGx2/);
     assert.match(notes, /CPFuWtS7qNQt3RPnSt5opKph9JbqdW3LjxF1HEw3v1tP/);
+    assert.match(notes, /destination/);
     assert.match(notes, /associated token account/);
     assert.match(notes, /1349iiGjWC7ZTbu6otFmJwztms122jEEnShKgpVnNewy/);
     assert.equal(notes.includes("path"), false);

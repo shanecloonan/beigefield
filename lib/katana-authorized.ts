@@ -1,8 +1,8 @@
 /**
- * Authorized instantWithdraw: the connected wallet is the fee payer and
- * receives the vault underlying on its own ATA. userAuthority is not an
- * instruction signer. Safe to import from the /katana client. Do not use
- * this for a third-party or unbound destination.
+ * Authorized instantWithdraw: the connected wallet is only the fee payer.
+ * userAuthority (account 6 / PDA seed) and destination (account 4) are
+ * chosen separately. userAuthority is not an instruction signer. Safe to
+ * import from the /katana client.
  */
 import { PublicKey, TransactionInstruction } from "@solana/web3.js";
 import {
@@ -74,12 +74,12 @@ export function formatTokenAmount(amount: bigint, decimals: number): string {
 }
 
 export function authorizedPendingStatus(input: {
-  connectedOwner: string;
+  userAuthority: string;
   user: { owner: string; depositRound: bigint; depositAmount: bigint } | null;
   vaultRound: bigint;
 }): { kind: AuthorizedPendingKind; amount: bigint } {
   if (!input.user) return { kind: "no_account", amount: BigInt(0) };
-  if (input.user.owner !== input.connectedOwner) return { kind: "other_owner", amount: BigInt(0) };
+  if (input.user.owner !== input.userAuthority) return { kind: "other_owner", amount: BigInt(0) };
   if (input.user.depositAmount <= BigInt(0)) return { kind: "zero", amount: BigInt(0) };
   if (input.user.depositRound !== input.vaultRound) {
     return { kind: "stale_round", amount: input.user.depositAmount };
@@ -99,13 +99,13 @@ export function authorizedLookupNote(input: {
   let note: string;
   switch (input.kind) {
     case "no_account":
-      note = `Vault round ${input.vaultRound}. This wallet has no Katana user account on this vault.`;
+      note = `Vault round ${input.vaultRound}. This user authority has no Katana user account on this vault.`;
       break;
     case "other_owner":
-      note = `Vault round ${input.vaultRound}. This user account is not owned by the connected wallet.`;
+      note = `Vault round ${input.vaultRound}. This user account is not owned by the chosen user authority.`;
       break;
     case "zero":
-      note = `Vault round ${input.vaultRound}. There is no pending deposit on this vault for the connected wallet.`;
+      note = `Vault round ${input.vaultRound}. There is no pending deposit on this vault for this user authority.`;
       break;
     case "stale_round":
       note = `Vault round ${input.vaultRound}. Your pending amount is ${input.humanAmount} ${input.label} (${input.depositAmount} base units) from round ${input.depositRound ?? "—"}, so instantWithdraw is disabled. Use claim_shares or initiate_withdraw.`;
@@ -126,7 +126,7 @@ export function authorizedLookupFromSnapshot(snapshot: KatanaSnapshot, owner: st
       }
     : null;
   const pending = authorizedPendingStatus({
-    connectedOwner: owner,
+    userAuthority: owner,
     user,
     vaultRound: snapshot.decoded.round,
   });
@@ -272,54 +272,86 @@ export function readAuthorizedBlockhash(
   return { ok: false, message: record.message };
 }
 
-const DEST_MISMATCH = "The destination is not this wallet's token account. Nothing was sent.";
-const AUTHORITY_MISMATCH = "The connected wallet must be the depositor and the fee payer. Nothing was sent.";
+const DEST_MISMATCH = "The instruction destination does not match the chosen token account. Nothing was sent.";
+const AUTHORITY_MISMATCH = "The instruction userAuthority does not match the chosen authority. Nothing was sent.";
+const ACCOUNT_OWNER_MISMATCH = "This user account is not owned by the chosen user authority. Nothing was sent.";
 const STALE_ROUND = "This pending deposit is from an earlier vault round. Use claim_shares or initiate_withdraw. Nothing was sent.";
 const NO_PENDING = "No same-round pending deposit on this vault. Nothing was sent.";
 const BAD_AMOUNT = "The withdraw amount is missing or larger than the pending deposit. Nothing was sent.";
-const BAD_OWNER = "Connect a Solana wallet. Nothing was sent.";
+const BAD_FEE_PAYER = "Connect a Solana wallet. Nothing was sent.";
+const BAD_AUTHORITY = "Enter a user authority. Nothing was sent.";
+const BAD_DESTINATION = "Enter a destination token account. Nothing was sent.";
+const BAD_MINT = "The vault underlying mint could not be read. Nothing was sent.";
 const VAULT_PENDING = "The withdraw amount is above the vault's pending deposits. Nothing was sent.";
 
 export function assertAuthorizedWithdrawAccounts(
   ix: TransactionInstruction,
-  owner: PublicKey,
-  destinationAta: PublicKey,
+  userAuthority: PublicKey,
+  destination: PublicKey,
 ): { ok: true } | { ok: false; message: string } {
   const dest = ix.keys[4];
   const authority = ix.keys[6];
   if (!dest || !authority) {
     return { ok: false, message: AUTHORITY_MISMATCH };
   }
-  if (!dest.pubkey.equals(destinationAta) || dest.isSigner || !dest.isWritable) {
+  if (!dest.pubkey.equals(destination) || dest.isSigner || !dest.isWritable) {
     return { ok: false, message: DEST_MISMATCH };
   }
-  if (!authority.pubkey.equals(owner) || authority.isSigner || authority.isWritable) {
+  if (!authority.pubkey.equals(userAuthority) || authority.isSigner || authority.isWritable) {
     return { ok: false, message: AUTHORITY_MISMATCH };
   }
   return { ok: true };
 }
 
+function ataCreateIfKnown(
+  feePayer: PublicKey,
+  userAuthority: PublicKey,
+  mint: PublicKey,
+  destination: PublicKey,
+): TransactionInstruction | null {
+  const authorityAta = findAssociatedTokenAddress(userAuthority, mint);
+  if (destination.equals(authorityAta)) {
+    return createAtaIdempotent(feePayer, userAuthority, mint, destination);
+  }
+  const payerAta = findAssociatedTokenAddress(feePayer, mint);
+  if (destination.equals(payerAta)) {
+    return createAtaIdempotent(feePayer, feePayer, mint, destination);
+  }
+  return null;
+}
+
 export function buildAuthorizedInstantWithdraw(input: {
-  connectedOwner: string;
+  feePayer: string;
+  userAuthority: string;
+  destination: string;
   snapshot: AuthorizedWithdrawSnapshot;
   amount: string;
 }): BuiltInstructions {
-  if (!isSolAddress(input.connectedOwner)) {
-    return { ok: false, kind: "rejected", message: BAD_OWNER };
+  if (!isSolAddress(input.feePayer)) {
+    return { ok: false, kind: "rejected", message: BAD_FEE_PAYER };
   }
-  const owner = parseSolPubkey(input.connectedOwner);
-  if (!owner) {
-    return { ok: false, kind: "rejected", message: BAD_OWNER };
+  if (!isSolAddress(input.userAuthority)) {
+    return { ok: false, kind: "rejected", message: BAD_AUTHORITY };
+  }
+  if (!isSolAddress(input.destination)) {
+    return { ok: false, kind: "rejected", message: BAD_DESTINATION };
+  }
+  const feePayer = parseSolPubkey(input.feePayer);
+  const userAuthority = parseSolPubkey(input.userAuthority);
+  const destination = parseSolPubkey(input.destination);
+  if (!feePayer) {
+    return { ok: false, kind: "rejected", message: BAD_FEE_PAYER };
+  }
+  if (!userAuthority) {
+    return { ok: false, kind: "rejected", message: BAD_AUTHORITY };
+  }
+  if (!destination) {
+    return { ok: false, kind: "rejected", message: BAD_DESTINATION };
   }
 
   const mint = parseSolPubkey(input.snapshot.decoded.underlyingTokenMint);
   if (!mint) {
-    return { ok: false, kind: "rejected", message: DEST_MISMATCH };
-  }
-  const expectedAta = findAssociatedTokenAddress(owner, mint);
-  const destination = parseSolPubkey(input.snapshot.userUnderlyingAta);
-  if (!destination || !destination.equals(expectedAta)) {
-    return { ok: false, kind: "rejected", message: DEST_MISMATCH };
+    return { ok: false, kind: "rejected", message: BAD_MINT };
   }
 
   const user = input.snapshot.user
@@ -330,12 +362,12 @@ export function buildAuthorizedInstantWithdraw(input: {
       }
     : null;
   const pending = authorizedPendingStatus({
-    connectedOwner: owner.toBase58(),
+    userAuthority: userAuthority.toBase58(),
     user,
     vaultRound: asBigInt(input.snapshot.decoded.round),
   });
   if (pending.kind === "other_owner") {
-    return { ok: false, kind: "rejected", message: AUTHORITY_MISMATCH };
+    return { ok: false, kind: "rejected", message: ACCOUNT_OWNER_MISMATCH };
   }
   if (pending.kind === "stale_round") {
     return { ok: false, kind: "rejected", message: STALE_ROUND };
@@ -353,13 +385,18 @@ export function buildAuthorizedInstantWithdraw(input: {
     return { ok: false, kind: "rejected", message: VAULT_PENDING };
   }
 
-  const withdraw = instantWithdrawIx(input.snapshot, owner, amount);
-  const checked = assertAuthorizedWithdrawAccounts(withdraw, owner, expectedAta);
+  const withdraw = instantWithdrawIx(
+    { ...input.snapshot, userUnderlyingAta: destination.toBase58() },
+    userAuthority,
+    amount,
+  );
+  const checked = assertAuthorizedWithdrawAccounts(withdraw, userAuthority, destination);
   if (!checked.ok) return { ok: false, kind: "rejected", message: checked.message };
 
+  const createAta = ataCreateIfKnown(feePayer, userAuthority, mint, destination);
   return {
     ok: true,
-    instructions: [createAtaIdempotent(owner, owner, mint, expectedAta), withdraw],
+    instructions: createAta ? [createAta, withdraw] : [withdraw],
     summary: `instant_withdraw ${amount} on ${input.snapshot.vault.label}`,
   };
 }

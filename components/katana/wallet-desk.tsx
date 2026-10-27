@@ -60,8 +60,8 @@ export function KatanaWalletDesk({
       )}
       {address ? (
         <p className="ton-hint">
-          The connected wallet pays the network fee. Withdrawals go to this
-          wallet&apos;s associated token account.
+          The connected wallet pays the network fee. It does not have to be
+          the depositor or the destination.
         </p>
       ) : null}
       {notice ? <p className="ton-status">{notice}</p> : null}

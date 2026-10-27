@@ -31,6 +31,8 @@ export function KatanaComposer() {
   const [connecting, setConnecting] = useState(false);
   const [deskNotice, setDeskNotice] = useState<string | null>(null);
   const [state, setState] = useState(DEFAULT_KATANA_VAULT);
+  const [userAuthority, setUserAuthority] = useState("");
+  const [destination, setDestination] = useState("");
   const [amountText, setAmountText] = useState("");
   const [lookup, setLookup] = useState<KatanaAuthorizedLookupOk | null>(null);
   const [lookupNote, setLookupNote] = useState<string | null>(null);
@@ -40,29 +42,41 @@ export function KatanaComposer() {
   const amountRef = useRef(amountText);
   const stateRef = useRef(state);
   const addressRef = useRef(address);
+  const userAuthorityRef = useRef(userAuthority);
+  const destinationRef = useRef(destination);
   amountRef.current = amountText;
   stateRef.current = state;
   addressRef.current = address;
+  userAuthorityRef.current = userAuthority;
+  destinationRef.current = destination;
+
+  function applyConnectedKey(publicKey: { toBase58(): string } | null | undefined) {
+    const next = publicKey?.toBase58() ?? null;
+    const valid = next && isSolAddress(next) ? next : null;
+    setAddress(valid);
+    if (valid && !userAuthorityRef.current) {
+      setUserAuthority(valid);
+    }
+  }
 
   useEffect(() => {
     const provider = getSolanaProvider();
     if (!provider) return;
     let cancel = false;
 
-    function applyKey(publicKey: { toBase58(): string } | null | undefined) {
-      if (cancel) return;
-      const next = publicKey?.toBase58() ?? null;
-      setAddress(next && isSolAddress(next) ? next : null);
-      if (!next) setLookup(null);
-    }
-
     void provider.connect({ onlyIfTrusted: true }).then(
-      (result) => applyKey(result.publicKey),
+      (result) => {
+        if (!cancel) applyConnectedKey(result.publicKey);
+      },
       () => undefined,
     );
 
-    const onAccount = (publicKey?: { toBase58(): string } | null) => applyKey(publicKey ?? null);
-    const onDisconnect = () => applyKey(null);
+    const onAccount = (publicKey?: { toBase58(): string } | null) => {
+      if (!cancel) applyConnectedKey(publicKey ?? null);
+    };
+    const onDisconnect = () => {
+      if (!cancel) applyConnectedKey(null);
+    };
     provider.on?.("accountChanged", onAccount);
     provider.on?.("disconnect", onDisconnect);
     return () => {
@@ -75,15 +89,19 @@ export function KatanaComposer() {
   }, []);
 
   useEffect(() => {
-    if (!address) {
+    if (!isSolAddress(userAuthority)) {
       setLookup(null);
-      setLookupNote("Connect a Solana wallet to look up your pending deposit.");
+      setLookupNote(
+        userAuthority.trim()
+          ? "Enter a valid user authority."
+          : "Enter a user authority to look up the pending deposit.",
+      );
       setAmountText("");
       return;
     }
     let cancel = false;
     void (async () => {
-      const defaults = await fetchAuthorizedLookup(address, state);
+      const defaults = await fetchAuthorizedLookup(userAuthority, state);
       if (cancel) return;
       if (!defaults) {
         setLookup(null);
@@ -95,13 +113,14 @@ export function KatanaComposer() {
         setLookupNote(defaults.message);
         return;
       }
-      if (defaults.owner !== address) {
+      if (defaults.owner !== userAuthority) {
         setLookup(null);
-        setLookupNote("The lookup owner does not match the connected wallet.");
+        setLookupNote("The lookup user authority does not match.");
         return;
       }
       setLookup(defaults);
       setLookupNote(defaults.note);
+      setDestination(defaults.destination_ata);
       if (defaults.withdrawable) {
         setAmountText(defaults.deposit_amount);
       } else {
@@ -111,7 +130,7 @@ export function KatanaComposer() {
     return () => {
       cancel = true;
     };
-  }, [address, state]);
+  }, [userAuthority, state]);
 
   async function connectWallet() {
     const provider = getSolanaProvider();
@@ -124,12 +143,11 @@ export function KatanaComposer() {
     setNotice(null);
     try {
       const result = await provider.connect();
+      applyConnectedKey(result.publicKey);
       const next = result.publicKey.toBase58();
       if (!isSolAddress(next)) {
         setDeskNotice("The wallet did not return a Solana address.");
-        return;
       }
-      setAddress(next);
     } catch (error) {
       setDeskNotice(authorizedSendError(error));
     } finally {
@@ -145,7 +163,6 @@ export function KatanaComposer() {
       // The local session is cleared either way.
     }
     setAddress(null);
-    setLookup(null);
     setNotice(null);
     setDeskNotice(null);
   }
@@ -153,8 +170,18 @@ export function KatanaComposer() {
   async function runWithdraw() {
     if (sendingRef.current) return;
     const connected = addressRef.current;
+    const authority = userAuthorityRef.current;
+    const dest = destinationRef.current;
     if (!connected || !isSolAddress(connected)) {
       setNotice({ tone: "bad", text: "Connect a Solana wallet. Nothing was sent." });
+      return;
+    }
+    if (!isSolAddress(authority)) {
+      setNotice({ tone: "bad", text: "Enter a user authority. Nothing was sent." });
+      return;
+    }
+    if (!isSolAddress(dest)) {
+      setNotice({ tone: "bad", text: "Enter a destination token account. Nothing was sent." });
       return;
     }
     const provider = getSolanaProvider();
@@ -164,7 +191,7 @@ export function KatanaComposer() {
     }
     const providerKey = provider.publicKey?.toBase58() ?? "";
     if (providerKey !== connected) {
-      setNotice({ tone: "bad", text: "The connected wallet must be the depositor and the fee payer. Nothing was sent." });
+      setNotice({ tone: "bad", text: "The connected wallet must be the fee payer. Nothing was sent." });
       return;
     }
 
@@ -172,7 +199,7 @@ export function KatanaComposer() {
     setSending(true);
     setNotice(null);
     try {
-      const defaults = await fetchAuthorizedLookup(connected, stateRef.current);
+      const defaults = await fetchAuthorizedLookup(authority, stateRef.current);
       if (!defaults) {
         setNotice({ tone: "bad", text: "The RPC lookup did not answer. Nothing was sent." });
         return;
@@ -181,15 +208,17 @@ export function KatanaComposer() {
         setNotice({ tone: "bad", text: `${defaults.message} Nothing was sent.` });
         return;
       }
-      if (defaults.owner !== connected || defaults.user_owner !== connected) {
-        setNotice({ tone: "bad", text: "The connected wallet must be the depositor and the fee payer. Nothing was sent." });
+      if (defaults.owner !== authority) {
+        setNotice({ tone: "bad", text: "The lookup user authority does not match. Nothing was sent." });
         return;
       }
       setLookup(defaults);
       setLookupNote(defaults.note);
 
       const built = buildAuthorizedInstantWithdraw({
-        connectedOwner: connected,
+        feePayer: connected,
+        userAuthority: authority,
+        destination: dest,
         snapshot: snapshotFromAuthorizedLookup(defaults),
         amount: amountRef.current,
       });
@@ -208,13 +237,13 @@ export function KatanaComposer() {
         return;
       }
 
-      const owner = new PublicKey(connected);
+      const payer = new PublicKey(connected);
       const tx = new Transaction();
-      tx.feePayer = owner;
+      tx.feePayer = payer;
       tx.recentBlockhash = latest.blockhash;
       tx.add(...built.instructions);
-      if (!tx.feePayer.equals(owner)) {
-        setNotice({ tone: "bad", text: "The connected wallet must be the depositor and the fee payer. Nothing was sent." });
+      if (!tx.feePayer.equals(payer)) {
+        setNotice({ tone: "bad", text: "The connected wallet must be the fee payer. Nothing was sent." });
         return;
       }
 
@@ -251,7 +280,8 @@ export function KatanaComposer() {
     !lookup ||
     !lookup.withdrawable ||
     lookup.paused ||
-    lookup.owner !== address ||
+    !isSolAddress(userAuthority) ||
+    !isSolAddress(destination) ||
     !amountOk;
 
   return (
@@ -259,6 +289,8 @@ export function KatanaComposer() {
       <h2 id="ton-message-title">Your pending amount</h2>
       <nav className="ton-contents" aria-label="Withdraw">
         <a href="#wallet">Connected wallet</a>
+        <a href="#user-authority">User authority</a>
+        <a href="#destination">Destination</a>
         <a href="#withdraw">Withdraw pending deposit</a>
       </nav>
       <div id="wallet">
@@ -287,6 +319,32 @@ export function KatanaComposer() {
             </option>
           ))}
         </select>
+      </label>
+      <label className="ton-field" id="user-authority">
+        <span>User authority</span>
+        <input
+          autoComplete="off"
+          spellCheck={false}
+          aria-label="User authority"
+          value={userAuthority}
+          onChange={(event) => {
+            setUserAuthority(event.target.value.trim());
+            setNotice(null);
+          }}
+        />
+      </label>
+      <label className="ton-field" id="destination">
+        <span>Destination token account</span>
+        <input
+          autoComplete="off"
+          spellCheck={false}
+          aria-label="Destination token account"
+          value={destination}
+          onChange={(event) => {
+            setDestination(event.target.value.trim());
+            setNotice(null);
+          }}
+        />
       </label>
       {lookup ? <PendingFields lookup={lookup} /> : null}
       <label className="ton-field">
@@ -344,10 +402,10 @@ function PendingFields({ lookup }: { lookup: KatanaAuthorizedLookupOk }) {
         </dd>
       </div>
       <div>
-        <dt>Your token account</dt>
+        <dt>User account</dt>
         <dd>
-          <a href={solExplorerAccountUrl(lookup.destination_ata)} target="_blank" rel="noreferrer">
-            {lookup.destination_ata}
+          <a href={solExplorerAccountUrl(lookup.user_account)} target="_blank" rel="noreferrer">
+            {lookup.user_account}
           </a>
         </dd>
       </div>

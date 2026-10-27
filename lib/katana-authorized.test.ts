@@ -80,13 +80,22 @@ function withdrawIx(built: { ok: true; instructions: { programId: PublicKey; key
   return ix;
 }
 
+function withdrawInput(
+  patch: Partial<Parameters<typeof buildAuthorizedInstantWithdraw>[0]> = {},
+): Parameters<typeof buildAuthorizedInstantWithdraw>[0] {
+  return {
+    feePayer: owner.toBase58(),
+    userAuthority: owner.toBase58(),
+    destination: ownerAta.toBase58(),
+    snapshot: snapshot(),
+    amount: "99",
+    ...patch,
+  };
+}
+
 describe("authorized instantWithdraw constraints", () => {
-  it("wires userAuthority as a non-signer and destination as the connected wallet's ATA", () => {
-    const built = buildAuthorizedInstantWithdraw({
-      connectedOwner: owner.toBase58(),
-      snapshot: snapshot(),
-      amount: "99",
-    });
+  it("wires userAuthority as a non-signer and destination as the chosen token account", () => {
+    const built = buildAuthorizedInstantWithdraw(withdrawInput());
     assert.equal(built.ok, true);
     if (!built.ok) return;
     const ix = withdrawIx(built);
@@ -106,34 +115,50 @@ describe("authorized instantWithdraw constraints", () => {
     assert.equal(built.instructions[0]?.keys[2]?.pubkey.equals(owner), true);
   });
 
-  it("refuses a destination that is not the connected wallet's ATA", () => {
-    const built = buildAuthorizedInstantWithdraw({
-      connectedOwner: owner.toBase58(),
-      snapshot: snapshot({ userUnderlyingAta: other.toBase58() }),
-      amount: "99",
-    });
-    assert.equal(built.ok, false);
-    if (built.ok) return;
-    assert.match(built.message, /destination is not this wallet/);
+  it("accepts a destination that is not the fee payer's ATA", () => {
+    const built = buildAuthorizedInstantWithdraw(withdrawInput({ destination: other.toBase58() }));
+    assert.equal(built.ok, true);
+    if (!built.ok) return;
+    const ix = withdrawIx(built);
+    assert.equal(ix.keys[4]?.pubkey.toBase58(), other.toBase58());
+    assert.equal(ix.keys[6]?.pubkey.toBase58(), owner.toBase58());
+    assert.equal(built.instructions.length, 1);
+    assert.deepEqual(assertAuthorizedWithdrawAccounts(ix, owner, other), { ok: true });
   });
 
-  it("refuses when the user account owner is not the connected wallet", () => {
-    const built = buildAuthorizedInstantWithdraw({
-      connectedOwner: owner.toBase58(),
-      snapshot: snapshot({}, { owner: other.toBase58() }),
-      amount: "99",
-    });
+  it("accepts a user authority that is not the fee payer", () => {
+    const otherAta = findAssociatedTokenAddress(other, mint);
+    const built = buildAuthorizedInstantWithdraw(
+      withdrawInput({
+        userAuthority: other.toBase58(),
+        destination: otherAta.toBase58(),
+        snapshot: snapshot({}, { owner: other.toBase58() }),
+      }),
+    );
+    assert.equal(built.ok, true);
+    if (!built.ok) return;
+    const ix = withdrawIx(built);
+    assert.equal(ix.keys[4]?.pubkey.toBase58(), otherAta.toBase58());
+    assert.equal(ix.keys[6]?.pubkey.toBase58(), other.toBase58());
+    assert.equal(ix.keys[6]?.isSigner, false);
+    assert.equal(built.instructions[0]?.keys[0]?.pubkey.equals(owner), true);
+    assert.equal(built.instructions[0]?.keys[2]?.pubkey.equals(other), true);
+  });
+
+  it("refuses when the user account owner is not the chosen user authority", () => {
+    const built = buildAuthorizedInstantWithdraw(
+      withdrawInput({ snapshot: snapshot({}, { owner: other.toBase58() }) }),
+    );
     assert.equal(built.ok, false);
     if (built.ok) return;
-    assert.match(built.message, /fee payer/);
+    assert.match(built.message, /chosen user authority/);
+    assert.equal(built.message.includes("fee payer"), false);
   });
 
   it("refuses a stale-round pending deposit", () => {
-    const built = buildAuthorizedInstantWithdraw({
-      connectedOwner: owner.toBase58(),
-      snapshot: snapshot({}, { depositRound: BigInt(62) }),
-      amount: "99",
-    });
+    const built = buildAuthorizedInstantWithdraw(
+      withdrawInput({ snapshot: snapshot({}, { depositRound: BigInt(62) }) }),
+    );
     assert.equal(built.ok, false);
     if (built.ok) return;
     assert.match(built.message, /earlier vault round/);
@@ -141,33 +166,25 @@ describe("authorized instantWithdraw constraints", () => {
   });
 
   it("refuses an amount above the vault pending deposits", () => {
-    const built = buildAuthorizedInstantWithdraw({
-      connectedOwner: owner.toBase58(),
-      snapshot: snapshot({ decoded: { ...snapshot().decoded, totalPendingDeposits: BigInt(10) } }),
-      amount: "99",
-    });
+    const built = buildAuthorizedInstantWithdraw(
+      withdrawInput({
+        snapshot: snapshot({ decoded: { ...snapshot().decoded, totalPendingDeposits: BigInt(10) } }),
+      }),
+    );
     assert.equal(built.ok, false);
     if (built.ok) return;
     assert.match(built.message, /vault's pending deposits/);
   });
 
   it("refuses an amount above the pending deposit", () => {
-    const built = buildAuthorizedInstantWithdraw({
-      connectedOwner: owner.toBase58(),
-      snapshot: snapshot(),
-      amount: "100",
-    });
+    const built = buildAuthorizedInstantWithdraw(withdrawInput({ amount: "100" }));
     assert.equal(built.ok, false);
     if (built.ok) return;
     assert.match(built.message, /larger than the pending deposit/);
   });
 
   it("refuses a missing user account", () => {
-    const built = buildAuthorizedInstantWithdraw({
-      connectedOwner: owner.toBase58(),
-      snapshot: snapshot({ user: null }),
-      amount: "99",
-    });
+    const built = buildAuthorizedInstantWithdraw(withdrawInput({ snapshot: snapshot({ user: null }) }));
     assert.equal(built.ok, false);
     if (built.ok) return;
     assert.match(built.message, /same-round pending deposit/);
@@ -178,24 +195,24 @@ describe("authorized pending status and lookup", () => {
   it("treats same-round positive pending as withdrawable", () => {
     assert.deepEqual(
       authorizedPendingStatus({
-        connectedOwner: owner.toBase58(),
+        userAuthority: owner.toBase58(),
         user: { owner: owner.toBase58(), depositRound: BigInt(63), depositAmount: BigInt(5) },
         vaultRound: BigInt(63),
       }),
       { kind: "ready", amount: BigInt(5) },
     );
     assert.equal(authorizedPendingStatus({
-      connectedOwner: owner.toBase58(),
+      userAuthority: owner.toBase58(),
       user: null,
       vaultRound: BigInt(63),
     }).kind, "no_account");
     assert.equal(authorizedPendingStatus({
-      connectedOwner: owner.toBase58(),
+      userAuthority: owner.toBase58(),
       user: { owner: other.toBase58(), depositRound: BigInt(63), depositAmount: BigInt(5) },
       vaultRound: BigInt(63),
     }).kind, "other_owner");
     assert.equal(authorizedPendingStatus({
-      connectedOwner: owner.toBase58(),
+      userAuthority: owner.toBase58(),
       user: { owner: owner.toBase58(), depositRound: BigInt(61), depositAmount: BigInt(5) },
       vaultRound: BigInt(63),
     }).kind, "stale_round");
@@ -217,13 +234,20 @@ describe("authorized pending status and lookup", () => {
     assert.equal(stale.withdrawable, false);
     assert.equal(stale.pending_kind, "stale_round");
     assert.match(stale.note, /claim_shares or initiate_withdraw/);
+    const independent = authorizedLookupFromSnapshot(snapshot({}, { owner: other.toBase58() }), other.toBase58());
+    assert.equal(independent.withdrawable, true);
+    assert.equal(independent.owner, other.toBase58());
+    const missing = authorizedLookupFromSnapshot(snapshot({ user: null }), owner.toBase58());
+    assert.equal(missing.pending_kind, "no_account");
+    assert.match(missing.note, /user authority/);
+    assert.equal(missing.note.includes("connected wallet"), false);
   });
 
   it("reads lookup and blockhash replies", () => {
     const lookup = authorizedLookupFromSnapshot(snapshot(), owner.toBase58());
     assert.deepEqual(readAuthorizedLookup(lookup), lookup);
     assert.equal(readAuthorizedLookup(null), null);
-    assert.equal(readAuthorizedLookup({ ok: false, message: "Connect a Solana wallet." })?.ok, false);
+    assert.equal(readAuthorizedLookup({ ok: false, message: "Enter a user authority." })?.ok, false);
     assert.deepEqual(readAuthorizedBlockhash({ ok: true, blockhash: "abc", lastValidBlockHeight: 12 }), {
       ok: true,
       blockhash: "abc",
@@ -240,10 +264,10 @@ describe("authorized pending status and lookup", () => {
 });
 
 describe("authorized lookup route inputs", () => {
-  it("requires the connected owner and a listed vault without using the desk default", async () => {
+  it("requires a user authority and a listed vault without using the desk default", async () => {
     const missing = await loadKatanaAuthorizedLookup({ owner: "", state: DEFAULT_KATANA_VAULT });
     assert.equal(missing.ok, false);
-    if (!missing.ok) assert.match(missing.message, /Connect a Solana wallet/);
+    if (!missing.ok) assert.match(missing.message, /user authority/);
 
     const unlisted = await loadKatanaAuthorizedLookup({
       owner: SOL_FUNDED_WALLET_ADDRESS,

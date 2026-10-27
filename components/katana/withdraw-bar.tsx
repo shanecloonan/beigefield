@@ -28,8 +28,8 @@ export function WithdrawBar({
       <p className="ton-hint">
         Builds instantWithdraw (16-byte data, eight IDL accounts). The
         connected wallet is the fee payer; userAuthority is not an instruction
-        signer. Funds always go to this wallet&apos;s associated token account.
-        Only a same-round pending deposit can be withdrawn here. Locked capital,
+        signer. User authority and destination are chosen separately. Only a
+        same-round pending deposit can be withdrawn here. Locked capital,
         prior-round deposits, and vault shares need other instructions.
       </p>
       <button

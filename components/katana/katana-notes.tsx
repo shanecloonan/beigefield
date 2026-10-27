@@ -13,10 +13,11 @@ export function KatanaAuthorizedNotes() {
         and complete_withdraw.
       </p>
       <p>
-        The connected wallet is the fee payer. Tokens are sent only to this
-        wallet&apos;s associated token account for the vault&apos;s underlying
-        mint. That account is created in the same transaction if it is missing.
-        A third-party token account cannot be set as the destination.
+        The connected wallet is the fee payer. userAuthority is not an
+        instruction signer. Choose the user authority and the destination
+        token account separately. If the destination is that authority&apos;s
+        associated token account and it is missing, it is created in the same
+        transaction.
       </p>
       <dl className="ton-ref">
         <div>
