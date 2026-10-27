@@ -1,10 +1,9 @@
 "use client";
 
 import "@/lib/buffer-polyfill";
-import { PublicKey, Transaction } from "@solana/web3.js";
 import { useEffect, useRef, useState } from "react";
 import type { PathNotice } from "@/components/sol/path-run-bar";
-import { KatanaWalletDesk } from "@/components/katana/wallet-desk";
+import { KatanaWalletDesk, katanaInFlightLabel } from "@/components/katana/wallet-desk";
 import { WithdrawBar } from "@/components/katana/withdraw-bar";
 import {
   DEFAULT_KATANA_VAULT,
@@ -15,24 +14,23 @@ import {
   solExplorerTxUrl,
 } from "@/lib/katana";
 import {
-  authorizedSendError,
   buildAuthorizedInstantWithdraw,
   formatTokenAmount,
-  readAuthorizedBlockhash,
   readAuthorizedLookup,
   snapshotFromAuthorizedLookup,
   type KatanaAuthorizedLookupOk,
 } from "@/lib/katana-authorized";
-import { getSolanaProvider, readWalletSignature, type SolanaInjectedProvider } from "@/lib/sol-browser-wallet";
-import { isSolAddress } from "@/lib/sol-funded-wallet-public";
+import { readKatanaSendResult } from "@/lib/katana-path-run";
+import { isSolAddress, SOL_FUNDED_WALLET_ADDRESS } from "@/lib/sol-funded-wallet-public";
 
-export function KatanaComposer() {
-  const [address, setAddress] = useState<string | null>(null);
-  const [connecting, setConnecting] = useState(false);
+export function KatanaComposer({ deskAddress }: { deskAddress: string }) {
+  const initial = deskAddress.trim() || SOL_FUNDED_WALLET_ADDRESS;
+  const [localWallet, setLocalWallet] = useState(true);
+  const [address, setAddress] = useState(initial);
   const [deskNotice, setDeskNotice] = useState<string | null>(null);
   const [state, setState] = useState(DEFAULT_KATANA_VAULT);
   const [userAuthority, setUserAuthority] = useState("");
-  const [destination, setDestination] = useState("");
+  const [destination, setDestination] = useState(initial);
   const [amountText, setAmountText] = useState("");
   const [lookup, setLookup] = useState<KatanaAuthorizedLookupOk | null>(null);
   const [lookupNote, setLookupNote] = useState<string | null>(null);
@@ -49,44 +47,6 @@ export function KatanaComposer() {
   addressRef.current = address;
   userAuthorityRef.current = userAuthority;
   destinationRef.current = destination;
-
-  function applyConnectedKey(publicKey: { toBase58(): string } | null | undefined) {
-    const next = publicKey?.toBase58() ?? null;
-    const valid = next && isSolAddress(next) ? next : null;
-    setAddress(valid);
-    if (valid && !userAuthorityRef.current) {
-      setUserAuthority(valid);
-    }
-  }
-
-  useEffect(() => {
-    const provider = getSolanaProvider();
-    if (!provider) return;
-    let cancel = false;
-
-    void provider.connect({ onlyIfTrusted: true }).then(
-      (result) => {
-        if (!cancel) applyConnectedKey(result.publicKey);
-      },
-      () => undefined,
-    );
-
-    const onAccount = (publicKey?: { toBase58(): string } | null) => {
-      if (!cancel) applyConnectedKey(publicKey ?? null);
-    };
-    const onDisconnect = () => {
-      if (!cancel) applyConnectedKey(null);
-    };
-    provider.on?.("accountChanged", onAccount);
-    provider.on?.("disconnect", onDisconnect);
-    return () => {
-      cancel = true;
-      provider.off?.("accountChanged", onAccount);
-      provider.off?.("disconnect", onDisconnect);
-      provider.removeListener?.("accountChanged", onAccount);
-      provider.removeListener?.("disconnect", onDisconnect);
-    };
-  }, []);
 
   useEffect(() => {
     if (!isSolAddress(userAuthority)) {
@@ -120,7 +80,6 @@ export function KatanaComposer() {
       }
       setLookup(defaults);
       setLookupNote(defaults.note);
-      setDestination(defaults.destination_ata);
       if (defaults.withdrawable) {
         setAmountText(defaults.deposit_amount);
       } else {
@@ -130,50 +89,19 @@ export function KatanaComposer() {
     return () => {
       cancel = true;
     };
-  }, [userAuthority, state]);
-
-  async function connectWallet() {
-    const provider = getSolanaProvider();
-    if (!provider) {
-      setDeskNotice("Install a Solana browser wallet such as Phantom, then connect it here.");
-      return;
-    }
-    setConnecting(true);
-    setDeskNotice(null);
-    setNotice(null);
-    try {
-      const result = await provider.connect();
-      applyConnectedKey(result.publicKey);
-      const next = result.publicKey.toBase58();
-      if (!isSolAddress(next)) {
-        setDeskNotice("The wallet did not return a Solana address.");
-      }
-    } catch (error) {
-      setDeskNotice(authorizedSendError(error));
-    } finally {
-      setConnecting(false);
-    }
-  }
-
-  async function disconnectWallet() {
-    const provider = getSolanaProvider();
-    try {
-      await provider?.disconnect();
-    } catch {
-      // The local session is cleared either way.
-    }
-    setAddress(null);
-    setNotice(null);
-    setDeskNotice(null);
-  }
+  }, [localWallet, userAuthority, state]);
 
   async function runWithdraw() {
     if (sendingRef.current) return;
-    const connected = addressRef.current;
+    if (!localWallet) {
+      setNotice({ tone: "bad", text: "The desk wallet is the only signer. Nothing was sent." });
+      return;
+    }
+    const feePayer = addressRef.current;
     const authority = userAuthorityRef.current;
     const dest = destinationRef.current;
-    if (!connected || !isSolAddress(connected)) {
-      setNotice({ tone: "bad", text: "Connect a Solana wallet. Nothing was sent." });
+    if (!isSolAddress(feePayer)) {
+      setNotice({ tone: "bad", text: "The desk wallet is unset. Nothing was sent." });
       return;
     }
     if (!isSolAddress(authority)) {
@@ -182,16 +110,6 @@ export function KatanaComposer() {
     }
     if (!isSolAddress(dest)) {
       setNotice({ tone: "bad", text: "Enter a destination token account. Nothing was sent." });
-      return;
-    }
-    const provider = getSolanaProvider();
-    if (!provider) {
-      setNotice({ tone: "bad", text: "Install a Solana browser wallet such as Phantom. Nothing was sent." });
-      return;
-    }
-    const providerKey = provider.publicKey?.toBase58() ?? "";
-    if (providerKey !== connected) {
-      setNotice({ tone: "bad", text: "The connected wallet must be the fee payer. Nothing was sent." });
       return;
     }
 
@@ -216,7 +134,7 @@ export function KatanaComposer() {
       setLookupNote(defaults.note);
 
       const built = buildAuthorizedInstantWithdraw({
-        feePayer: connected,
+        feePayer,
         userAuthority: authority,
         destination: dest,
         snapshot: snapshotFromAuthorizedLookup(defaults),
@@ -227,42 +145,41 @@ export function KatanaComposer() {
         return;
       }
 
-      const latest = await fetchAuthorizedBlockhash();
-      if (!latest) {
-        setNotice({ tone: "bad", text: "The RPC did not return a recent blockhash. Nothing was sent." });
-        return;
-      }
-      if (!latest.ok) {
-        setNotice({ tone: "bad", text: `${latest.message} Nothing was sent.` });
-        return;
-      }
-
-      const payer = new PublicKey(connected);
-      const tx = new Transaction();
-      tx.feePayer = payer;
-      tx.recentBlockhash = latest.blockhash;
-      tx.add(...built.instructions);
-      if (!tx.feePayer.equals(payer)) {
-        setNotice({ tone: "bad", text: "The connected wallet must be the fee payer. Nothing was sent." });
-        return;
-      }
-
-      const signature = await signAndSend(provider, tx);
-      if (!signature) {
+      const response = await fetch("/api/katana/send", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sender: feePayer,
+          state: stateRef.current,
+          userAuthority: authority,
+          destination: dest,
+          amount: amountRef.current,
+        }),
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      const result = readKatanaSendResult(payload);
+      if (!result) {
         setNotice({
           tone: "bad",
           text: "The send reply could not be read. Check the account before trying again, so it is not sent twice.",
         });
         return;
       }
+      if (!result.ok) {
+        setNotice({ tone: "bad", text: result.text });
+        return;
+      }
       setNotice({
         tone: "good",
-        text: `Broadcast ${signature}.`,
-        href: solExplorerTxUrl(signature),
+        text: `Broadcast ${result.signature}.`,
+        href: solExplorerTxUrl(result.signature),
         hrefLabel: "View the transaction",
       });
-    } catch (error) {
-      setNotice({ tone: "bad", text: authorizedSendError(error) });
+    } catch {
+      setNotice({
+        tone: "bad",
+        text: "The send did not finish. Check the account before trying again, so it is not sent twice.",
+      });
     } finally {
       sendingRef.current = false;
       setSending(false);
@@ -275,8 +192,8 @@ export function KatanaComposer() {
     parsedAmount !== null && lookup?.withdrawable === true && parsedAmount <= pending;
   const runDisabled =
     sending ||
-    connecting ||
-    !address ||
+    !localWallet ||
+    !isSolAddress(address) ||
     !lookup ||
     !lookup.withdrawable ||
     lookup.paused ||
@@ -288,19 +205,27 @@ export function KatanaComposer() {
     <section className="ton-section" id="message" aria-labelledby="ton-message-title">
       <h2 id="ton-message-title">Your pending amount</h2>
       <nav className="ton-contents" aria-label="Withdraw">
-        <a href="#wallet">Connected wallet</a>
+        <a href="#wallet">Desk wallet</a>
         <a href="#user-authority">User authority</a>
         <a href="#destination">Destination</a>
         <a href="#withdraw">Withdraw pending deposit</a>
       </nav>
       <div id="wallet">
         <KatanaWalletDesk
+          localWallet={localWallet}
           address={address}
-          connecting={connecting}
           sending={sending}
           notice={deskNotice}
-          onConnect={() => void connectWallet()}
-          onDisconnect={() => void disconnectWallet()}
+          onUseFunded={() => {
+            setLocalWallet(true);
+            setAddress(initial);
+            setDestination(initial);
+            setDeskNotice(null);
+          }}
+          onDisconnect={() => {
+            setLocalWallet(false);
+            setDeskNotice("The desk wallet is the only signer.");
+          }}
         />
       </div>
       <label className="ton-field">
@@ -363,7 +288,7 @@ export function KatanaComposer() {
       </label>
       <WithdrawBar
         sending={sending}
-        label={sending ? "Sending" : "Withdraw pending deposit"}
+        label={sending ? katanaInFlightLabel() : "Withdraw pending deposit"}
         disabled={runDisabled}
         notice={notice}
         lookupNote={lookupNote}
@@ -428,21 +353,4 @@ async function fetchAuthorizedLookup(
   } catch {
     return null;
   }
-}
-
-async function fetchAuthorizedBlockhash() {
-  try {
-    const response = await fetch("/api/katana/blockhash", { method: "GET" });
-    const payload: unknown = await response.json().catch(() => null);
-    return readAuthorizedBlockhash(payload);
-  } catch {
-    return null;
-  }
-}
-
-async function signAndSend(provider: SolanaInjectedProvider, tx: Transaction): Promise<string | null> {
-  if (typeof provider.signAndSendTransaction !== "function") {
-    throw new Error("This wallet cannot send the transaction.");
-  }
-  return readWalletSignature(await provider.signAndSendTransaction(tx));
 }

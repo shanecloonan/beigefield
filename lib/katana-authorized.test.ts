@@ -115,6 +115,15 @@ describe("authorized instantWithdraw constraints", () => {
     assert.equal(built.instructions[0]?.keys[2]?.pubkey.equals(owner), true);
   });
 
+  it("resolves a destination that is the fee payer wallet to that wallet's ATA", () => {
+    const built = buildAuthorizedInstantWithdraw(withdrawInput({ destination: owner.toBase58() }));
+    assert.equal(built.ok, true);
+    if (!built.ok) return;
+    const ix = withdrawIx(built);
+    assert.equal(ix.keys[4]?.pubkey.toBase58(), ownerAta.toBase58());
+    assert.equal(built.instructions[0]?.keys[1]?.pubkey.equals(ownerAta), true);
+  });
+
   it("accepts a destination that is not the fee payer's ATA", () => {
     const built = buildAuthorizedInstantWithdraw(withdrawInput({ destination: other.toBase58() }));
     assert.equal(built.ok, true);

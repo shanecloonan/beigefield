@@ -13,11 +13,11 @@ export function KatanaAuthorizedNotes() {
         and complete_withdraw.
       </p>
       <p>
-        The connected wallet is the fee payer. userAuthority is not an
-        instruction signer. Choose the user authority and the destination
-        token account separately. If the destination is that authority&apos;s
-        associated token account and it is missing, it is created in the same
-        transaction.
+        The desk wallet is the fee payer and signs on the server.
+        userAuthority is not an instruction signer. Choose the user authority
+        and the destination token account separately. If the destination is
+        that authority&apos;s associated token account and it is missing, it
+        is created in the same transaction.
       </p>
       <dl className="ton-ref">
         <div>

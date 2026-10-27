@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { Keypair } from "@solana/web3.js";
+import { Keypair, PublicKey } from "@solana/web3.js";
 import bs58 from "bs58";
 import { DEFAULT_KATANA_VAULT, KATANA_STRUCTURED_PROGRAM, KATANA_VAULTS } from "./katana";
 import { compilePathRun } from "./katana-path-run";
-import { classifyBroadcastError, sendKatanaScript } from "./sol-funded-send";
+import { classifyBroadcastError, sendAuthorizedInstantWithdraw, sendKatanaScript } from "./sol-funded-send";
+import { findAssociatedTokenAddress } from "./katana-accounts";
 import { SOL_FUNDED_WALLET_ADDRESS } from "./sol-funded-wallet-public";
 import {
   SolFundedKeyError,
@@ -84,6 +85,7 @@ describe("sol funded wallet", () => {
       new URL("../app/katana/page.tsx", import.meta.url),
       new URL("../app/api/katana/lookup/route.ts", import.meta.url),
       new URL("../app/api/katana/blockhash/route.ts", import.meta.url),
+      new URL("../app/api/katana/send/route.ts", import.meta.url),
     ]) {
       const source = readFileSync(path, "utf8");
       assert.equal(textContainsSolSecret(source), false);
@@ -180,6 +182,63 @@ describe("sol funded send", () => {
     assert.deepEqual(seen, [SOL_FUNDED_WALLET_ADDRESS]);
   });
 
+  it("broadcasts authorized instant_withdraw only from the desk fee payer", async () => {
+    const ownerAta = findAssociatedTokenAddress(
+      new PublicKey(SOL_FUNDED_WALLET_ADDRESS),
+      new PublicKey("So11111111111111111111111111111111111111112"),
+    );
+    let feePayer = "";
+    const result = await sendAuthorizedInstantWithdraw(
+      {
+        sender: SOL_FUNDED_WALLET_ADDRESS,
+        state: DEFAULT_KATANA_VAULT,
+        userAuthority: SOL_FUNDED_WALLET_ADDRESS,
+        destination: SOL_FUNDED_WALLET_ADDRESS,
+        amount: "99",
+      },
+      {
+        deskAddress: async () => SOL_FUNDED_WALLET_ADDRESS,
+        load: async () => ({
+          ok: true,
+          snapshot: pendingUserSnapshot(SOL_FUNDED_WALLET_ADDRESS, ownerAta.toBase58()),
+        }),
+        execute: async (args) => {
+          feePayer = args.feePayer;
+          assert.ok(args.instructions.length >= 1);
+          return { signature: SIGNATURE };
+        },
+      },
+    );
+    assert.deepEqual(result, { ok: true, signature: SIGNATURE });
+    assert.equal(feePayer, SOL_FUNDED_WALLET_ADDRESS);
+  });
+
+  it("rejects an authorized withdraw whose fee payer is not the desk wallet", async () => {
+    let executed = 0;
+    const result = await sendAuthorizedInstantWithdraw(
+      {
+        sender: OTHER,
+        state: DEFAULT_KATANA_VAULT,
+        userAuthority: SOL_FUNDED_WALLET_ADDRESS,
+        destination: OTHER,
+        amount: "99",
+      },
+      {
+        deskAddress: async () => SOL_FUNDED_WALLET_ADDRESS,
+        execute: async () => {
+          executed += 1;
+          return { signature: SIGNATURE };
+        },
+      },
+    );
+    assert.equal(executed, 0);
+    assert.deepEqual(result, {
+      ok: false,
+      kind: "rejected",
+      message: "This desk sends only from its own wallet. Nothing was sent.",
+    });
+  });
+
   it("marks a lost broadcast as ambiguous and a simulation failure as rejected", () => {
     const timeout = classifyBroadcastError(new Error("Transaction was not confirmed in 30.00 seconds"));
     assert.equal(timeout.ok, false);
@@ -199,6 +258,23 @@ describe("sol funded send", () => {
     assert.equal(KATANA_STRUCTURED_PROGRAM, "1349iiGjWC7ZTbu6otFmJwztms122jEEnShKgpVnNewy");
   });
 });
+
+function pendingUserSnapshot(owner: string, userUnderlyingAta: string) {
+  const base = emptyUserSnapshot(owner);
+  return {
+    ...base,
+    decoded: {
+      ...base.decoded,
+      totalPendingDeposits: BigInt(99),
+    },
+    user: {
+      ...base.user,
+      depositRound: BigInt(63),
+      depositAmount: BigInt(99),
+    },
+    userUnderlyingAta,
+  };
+}
 
 function emptyUserSnapshot(owner: string) {
   const vault = KATANA_VAULTS[0];

@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { KatanaComposer } from "../components/katana/katana-composer";
 import { KatanaAuthorizedNotes } from "../components/katana/katana-notes";
-import { KatanaWalletDesk } from "../components/katana/wallet-desk";
+import { KatanaWalletDesk, katanaInFlightLabel } from "../components/katana/wallet-desk";
 import { WithdrawBar } from "../components/katana/withdraw-bar";
 import { SOL_FUNDED_WALLET_ADDRESS } from "./sol-funded-wallet-public";
 
@@ -13,47 +14,81 @@ function button(html: string, label: string): string {
   return match[0];
 }
 
-describe("katana authorized desk", () => {
-  it("asks the browser wallet to connect and does not mention a desk signer", () => {
-    const html = renderToStaticMarkup(
-      h(KatanaWalletDesk, {
-        address: null,
-        connecting: false,
-        sending: false,
-        notice: null,
-        onConnect: () => undefined,
-        onDisconnect: () => undefined,
-      }),
-    );
-    assert.match(html, /Connect wallet/);
-    assert.equal(html.includes("Use funded wallet"), false);
-    assert.equal(html.includes("desk"), false);
-    assert.equal(html.includes("Desk wallet"), false);
-  });
+function enabled(html: string, label: string) {
+  const control = button(html, label);
+  assert.equal(control.includes("disabled"), false);
+  assert.equal(control.includes("aria-disabled"), false);
+}
 
-  it("shows the connected wallet and requires that wallet to sign", () => {
-    const html = renderToStaticMarkup(
-      h(KatanaWalletDesk, {
-        address: SOL_FUNDED_WALLET_ADDRESS,
-        connecting: false,
-        sending: false,
-        notice: null,
-        onConnect: () => undefined,
-        onDisconnect: () => undefined,
-      }),
-    );
+function labels(html: string): string[] {
+  return [...html.matchAll(/<button\b[^>]*>([^<]*)<\/button>/g)].map((match) => match[1] ?? "");
+}
+
+function deskView(patch: Partial<Parameters<typeof KatanaWalletDesk>[0]> = {}): string {
+  return renderToStaticMarkup(
+    h(KatanaWalletDesk, {
+      localWallet: true,
+      address: SOL_FUNDED_WALLET_ADDRESS,
+      sending: false,
+      notice: null,
+      onUseFunded: () => undefined,
+      onDisconnect: () => undefined,
+      ...patch,
+    }),
+  );
+}
+
+describe("katana desk wallet", () => {
+  it("shows the desk signer on Solana", () => {
+    const html = deskView();
+    assert.match(html, /Desk wallet · Solana/);
     assert.match(html, new RegExp(SOL_FUNDED_WALLET_ADDRESS));
-    assert.match(html, /pays the network fee/);
-    assert.match(html, /does not have to be/);
-    assert.match(html, /Disconnect/);
-    assert.equal(html.includes("Signs on the server"), false);
-    assert.match(button(html, "Disconnect"), /./);
+    assert.match(html, /Signs on the server and broadcasts on Solana mainnet/);
+    enabled(html, "Disconnect");
+    assert.equal(html.includes("Connect wallet"), false);
+    assert.equal(html.includes("Use funded wallet"), false);
+    assert.match(html, new RegExp(`https://solscan.io/account/${SOL_FUNDED_WALLET_ADDRESS}`));
+    assert.equal(katanaInFlightLabel(), "Sending");
   });
 
+  it("holds disconnect while a send is in flight", () => {
+    const html = deskView({ sending: true });
+    assert.match(button(html, "Disconnect"), /disabled/);
+  });
+
+  it("offers the desk wallet again after disconnect and no other signer", () => {
+    const html = deskView({ localWallet: false, notice: "The desk wallet is the only signer." });
+    assert.match(html, /The desk wallet is the only signer/);
+    enabled(html, "Use funded wallet");
+    assert.equal(html.includes("Connect wallet"), false);
+    assert.equal(html.includes("Disconnect"), false);
+  });
+
+  it("autoconnects the desk wallet and fills only destination from that address", () => {
+    const page = renderToStaticMarkup(h(KatanaComposer, { deskAddress: SOL_FUNDED_WALLET_ADDRESS }));
+    assert.deepEqual(labels(page).sort(), ["Copy address", "Disconnect", "Withdraw pending deposit"]);
+    assert.match(button(page, "Withdraw pending deposit"), /disabled/);
+    assert.equal(page.includes("Connect wallet"), false);
+    assert.equal(page.includes("Connect a Solana browser wallet"), false);
+    assert.match(page, /Desk wallet · Solana/);
+    assert.match(page, new RegExp(SOL_FUNDED_WALLET_ADDRESS));
+    assert.match(
+      page,
+      new RegExp(`aria-label="Destination token account"[^>]*value="${SOL_FUNDED_WALLET_ADDRESS}"`),
+    );
+    assert.match(page, /aria-label="User authority"/);
+    const authority = page.match(/aria-label="User authority"[^>]*>/);
+    assert.ok(authority);
+    assert.equal(authority[0].includes(SOL_FUNDED_WALLET_ADDRESS), false);
+  });
+});
+
+describe("katana authorized desk", () => {
   it("states authorized withdraw copy without path or outsider language", () => {
     const notes = renderToStaticMarkup(h(KatanaAuthorizedNotes));
     assert.match(notes, /Withdraw pending deposit/);
-    assert.match(notes, /fee payer/);
+    assert.match(notes, /desk wallet is the fee payer/);
+    assert.match(notes, /signs on the server/);
     assert.match(notes, /separately/);
     assert.match(notes, /claim_shares/);
     assert.match(notes, /DkguYGWhRE8qJ9voWNYZ8dJkGYr8ACUR8KXqDAyHpGx2/);
@@ -76,6 +111,7 @@ describe("katana authorized desk", () => {
     );
     assert.match(bar, /Withdraw pending deposit/);
     assert.match(bar, /same-round pending deposit/);
+    assert.match(bar, /desk wallet is the fee payer/);
     assert.match(button(bar, "Withdraw pending deposit"), /disabled/);
   });
 });

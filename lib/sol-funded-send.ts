@@ -3,6 +3,11 @@
  * on Solana mainnet. Do not import this file from a client component.
  */
 import { Connection, Transaction, type TransactionInstruction } from "@solana/web3.js";
+import {
+  authorizedLookupFromSnapshot,
+  buildAuthorizedInstantWithdraw,
+  snapshotFromAuthorizedLookup,
+} from "@/lib/katana-authorized";
 import { compilePathRun, type KatanaSendResult } from "@/lib/katana-path-run";
 import { buildKatanaInstructions } from "@/lib/katana-ix";
 import { parseSolPubkey } from "@/lib/katana-accounts";
@@ -72,6 +77,104 @@ function parseRequest(input: unknown): Parsed {
     amount = parsed;
   }
   return { ok: true, sender: compiled.sender, state: compiled.state, action: compiled.action, amount };
+}
+
+type AuthorizedParsed =
+  | {
+      ok: true;
+      sender: string;
+      state: string;
+      userAuthority: string;
+      destination: string;
+      amount: string;
+    }
+  | { ok: false; kind: "rejected"; message: string };
+
+function parseAuthorizedRequest(input: unknown): AuthorizedParsed {
+  if (!input || typeof input !== "object") {
+    return { ok: false, kind: "rejected", message: REJECTED_READ };
+  }
+  const record = input as Record<string, unknown>;
+  if (typeof record.sender !== "string" || typeof record.state !== "string") {
+    return { ok: false, kind: "rejected", message: REJECTED_READ };
+  }
+  if (typeof record.userAuthority !== "string" || typeof record.destination !== "string") {
+    return { ok: false, kind: "rejected", message: REJECTED_READ };
+  }
+  if (!katanaVault(record.state)) {
+    return {
+      ok: false,
+      kind: "rejected",
+      message: "This path executes only a listed Katana vault. Nothing was sent.",
+    };
+  }
+  const amount =
+    typeof record.amount === "string"
+      ? record.amount
+      : record.amount === undefined
+        ? ""
+        : String(record.amount);
+  return {
+    ok: true,
+    sender: record.sender.trim(),
+    state: record.state.trim(),
+    userAuthority: record.userAuthority.trim(),
+    destination: record.destination.trim(),
+    amount,
+  };
+}
+
+export async function sendAuthorizedInstantWithdraw(
+  input: unknown,
+  deps: SolSendDeps = {},
+): Promise<KatanaSendResult> {
+  const parsed = parseAuthorizedRequest(input);
+  if (!parsed.ok) return parsed;
+
+  let desk: string;
+  try {
+    desk = deps.deskAddress ? await deps.deskAddress() : openSolFundedWallet().address;
+  } catch (error) {
+    if (error instanceof SolFundedKeyError) {
+      return { ok: false, kind: "rejected", message: error.message };
+    }
+    return { ok: false, kind: "rejected", message: "The desk key could not be read. Nothing was sent." };
+  }
+
+  if (parsed.sender !== desk) {
+    return { ok: false, kind: "rejected", message: SENDER_MISMATCH };
+  }
+
+  const loaded = await (deps.load ?? ((args: { owner: string; state: string }) => loadKatanaSnapshot(args, { rpc: deps.rpc })))({
+    owner: parsed.userAuthority,
+    state: parsed.state,
+  });
+  if (!loaded.ok) {
+    return { ok: false, kind: "rejected", message: `${loaded.message} Nothing was sent.` };
+  }
+
+  const lookup = authorizedLookupFromSnapshot(loaded.snapshot, parsed.userAuthority);
+  const built = buildAuthorizedInstantWithdraw({
+    feePayer: parsed.sender,
+    userAuthority: parsed.userAuthority,
+    destination: parsed.destination,
+    snapshot: snapshotFromAuthorizedLookup(lookup),
+    amount: parsed.amount,
+  });
+  if (!built.ok) return built;
+
+  try {
+    const result = await (deps.execute ?? executeWithDesk)({
+      instructions: built.instructions,
+      feePayer: parsed.sender,
+    });
+    if (typeof result.signature !== "string" || result.signature.length < 64) {
+      return { ok: false, kind: "ambiguous", message: UNCONFIRMED };
+    }
+    return { ok: true, signature: result.signature };
+  } catch (error) {
+    return classifyBroadcastError(error);
+  }
 }
 
 export async function sendKatanaScript(input: unknown, deps: SolSendDeps = {}): Promise<KatanaSendResult> {

@@ -385,15 +385,19 @@ export function buildAuthorizedInstantWithdraw(input: {
     return { ok: false, kind: "rejected", message: VAULT_PENDING };
   }
 
+  const resolvedDestination = destination.equals(feePayer)
+    ? findAssociatedTokenAddress(feePayer, mint)
+    : destination;
+
   const withdraw = instantWithdrawIx(
-    { ...input.snapshot, userUnderlyingAta: destination.toBase58() },
+    { ...input.snapshot, userUnderlyingAta: resolvedDestination.toBase58() },
     userAuthority,
     amount,
   );
-  const checked = assertAuthorizedWithdrawAccounts(withdraw, userAuthority, destination);
+  const checked = assertAuthorizedWithdrawAccounts(withdraw, userAuthority, resolvedDestination);
   if (!checked.ok) return { ok: false, kind: "rejected", message: checked.message };
 
-  const createAta = ataCreateIfKnown(feePayer, userAuthority, mint, destination);
+  const createAta = ataCreateIfKnown(feePayer, userAuthority, mint, resolvedDestination);
   return {
     ok: true,
     instructions: createAta ? [createAta, withdraw] : [withdraw],

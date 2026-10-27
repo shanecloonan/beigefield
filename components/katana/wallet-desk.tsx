@@ -3,65 +3,70 @@
 import { CopyButton } from "@/components/sol/copy-button";
 import { solExplorerAccountUrl } from "@/lib/katana";
 
+export function katanaInFlightLabel(): string {
+  return "Sending";
+}
+
 export function KatanaWalletDesk({
+  localWallet,
   address,
-  connecting,
   sending,
   notice,
-  onConnect,
+  onUseFunded,
   onDisconnect,
 }: {
-  address: string | null;
-  connecting: boolean;
+  localWallet: boolean;
+  address: string;
   sending: boolean;
   notice: string | null;
-  onConnect: () => void;
+  onUseFunded: () => void;
   onDisconnect: () => void;
 }) {
-  const busy = connecting || sending;
-
   return (
     <section className="ton-wallet" aria-live="polite">
-      {address ? (
+      {localWallet ? (
         <div className="ton-wallet-row">
           <div>
-            <p className="ton-kicker">Connected wallet · Solana</p>
-            <p className="ton-address">{address}</p>
-            <div className="ton-links">
-              <CopyButton value={address} label="Copy address" />
-              <a href={solExplorerAccountUrl(address)} target="_blank" rel="noreferrer">
-                Solscan
-              </a>
-            </div>
+            <p className="ton-kicker">Desk wallet · Solana</p>
+            <p className="ton-address">{address || "Desk address unset"}</p>
+            {address ? (
+              <div className="ton-links">
+                <CopyButton value={address} label="Copy address" />
+                <a href={solExplorerAccountUrl(address)} target="_blank" rel="noreferrer">
+                  Solscan
+                </a>
+              </div>
+            ) : null}
           </div>
           <button
             type="button"
             className="ton-button ton-button-quiet"
             onClick={onDisconnect}
-            disabled={busy}
+            disabled={sending}
           >
             Disconnect
           </button>
         </div>
       ) : (
         <div>
-          <p className="ton-status">Connect a Solana browser wallet to continue.</p>
+          <p className="ton-status">The desk wallet is the only signer.</p>
           <div className="ton-wallet-actions">
             <button
               type="button"
               className="ton-button ton-button-quiet"
-              onClick={onConnect}
-              disabled={busy}
+              onClick={onUseFunded}
+              disabled={sending}
             >
-              {connecting ? "Connecting" : "Connect wallet"}
+              Use funded wallet
             </button>
           </div>
         </div>
       )}
-      {address ? (
+      {localWallet ? (
         <p className="ton-hint">
-          The connected wallet pays the network fee. It does not have to be
-          the depositor or the destination.
+          Signs on the server and broadcasts on Solana mainnet. The desk
+          wallet pays the network fee. It does not have to be the depositor
+          or the destination.
         </p>
       ) : null}
       {notice ? <p className="ton-status">{notice}</p> : null}
