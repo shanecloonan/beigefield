@@ -11,10 +11,10 @@ export function KatanaAuthorizedNotes() {
         round. It does not move locked vault capital or share balances.
       </p>
       <p>
-        The connected wallet must sign as the depositor and pay the network
-        fee. Tokens are sent to this wallet&apos;s associated token account for
-        the vault&apos;s underlying mint. That account is created in the same
-        transaction if it is missing.
+        The connected wallet signs and pays the network fee. userAuthority
+        and destination can be set separately. Tokens go to destination.
+        That account is created in the same transaction if it is missing
+        and it is this userAuthority&apos;s associated token account.
       </p>
       <dl className="ton-ref">
         <div>

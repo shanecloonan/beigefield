@@ -81,9 +81,10 @@ function withdrawIx(built: { ok: true; instructions: { programId: PublicKey; key
 }
 
 describe("authorized instantWithdraw constraints", () => {
-  it("wires userAuthority as the connected owner signer and destination as that wallet's ATA", () => {
+  it("wires the chosen userAuthority and destination, defaulting destination to that wallet's ATA", () => {
     const built = buildAuthorizedInstantWithdraw({
-      connectedOwner: owner.toBase58(),
+      userAuthority: owner.toBase58(),
+      destination: ownerAta.toBase58(),
       snapshot: snapshot(),
       amount: "99",
     });
@@ -103,31 +104,52 @@ describe("authorized instantWithdraw constraints", () => {
     assert.equal(built.instructions[0]?.keys[2]?.pubkey.equals(owner), true);
   });
 
-  it("refuses a destination that is not the connected wallet's ATA", () => {
+  it("accepts a destination that is not the connected wallet's ATA", () => {
     const built = buildAuthorizedInstantWithdraw({
-      connectedOwner: owner.toBase58(),
-      snapshot: snapshot({ userUnderlyingAta: other.toBase58() }),
+      userAuthority: owner.toBase58(),
+      destination: other.toBase58(),
+      payer: owner.toBase58(),
+      snapshot: snapshot(),
       amount: "99",
     });
-    assert.equal(built.ok, false);
-    if (built.ok) return;
-    assert.match(built.message, /destination is not this wallet/);
+    assert.equal(built.ok, true);
+    if (!built.ok) return;
+    const ix = withdrawIx(built);
+    assert.equal(ix.keys[4]?.pubkey.toBase58(), other.toBase58());
+    assert.equal(ix.keys[6]?.pubkey.toBase58(), owner.toBase58());
+    assert.equal(built.instructions.length, 1);
   });
 
-  it("refuses when the user account owner is not the connected wallet", () => {
+  it("accepts a user account owner that is not the connected wallet", () => {
     const built = buildAuthorizedInstantWithdraw({
-      connectedOwner: owner.toBase58(),
+      userAuthority: owner.toBase58(),
+      destination: ownerAta.toBase58(),
+      payer: other.toBase58(),
       snapshot: snapshot({}, { owner: other.toBase58() }),
       amount: "99",
     });
+    assert.equal(built.ok, true);
+    if (!built.ok) return;
+    const ix = withdrawIx(built);
+    assert.equal(ix.keys[6]?.pubkey.toBase58(), owner.toBase58());
+  });
+
+  it("refuses a destination that is not a Solana address", () => {
+    const built = buildAuthorizedInstantWithdraw({
+      userAuthority: owner.toBase58(),
+      destination: "not-a-pubkey",
+      snapshot: snapshot(),
+      amount: "99",
+    });
     assert.equal(built.ok, false);
     if (built.ok) return;
-    assert.match(built.message, /must sign as the depositor/);
+    assert.match(built.message, /destination is not a Solana address/);
   });
 
   it("refuses a stale-round pending deposit", () => {
     const built = buildAuthorizedInstantWithdraw({
-      connectedOwner: owner.toBase58(),
+      userAuthority: owner.toBase58(),
+      destination: ownerAta.toBase58(),
       snapshot: snapshot({}, { depositRound: BigInt(62) }),
       amount: "99",
     });
@@ -138,7 +160,8 @@ describe("authorized instantWithdraw constraints", () => {
 
   it("refuses an amount above the pending deposit", () => {
     const built = buildAuthorizedInstantWithdraw({
-      connectedOwner: owner.toBase58(),
+      userAuthority: owner.toBase58(),
+      destination: ownerAta.toBase58(),
       snapshot: snapshot(),
       amount: "100",
     });
@@ -149,7 +172,8 @@ describe("authorized instantWithdraw constraints", () => {
 
   it("refuses a missing user account", () => {
     const built = buildAuthorizedInstantWithdraw({
-      connectedOwner: owner.toBase58(),
+      userAuthority: owner.toBase58(),
+      destination: ownerAta.toBase58(),
       snapshot: snapshot({ user: null }),
       amount: "99",
     });
@@ -163,24 +187,20 @@ describe("authorized pending status and lookup", () => {
   it("treats same-round positive pending as withdrawable", () => {
     assert.deepEqual(
       authorizedPendingStatus({
-        connectedOwner: owner.toBase58(),
         user: { owner: owner.toBase58(), depositRound: BigInt(63), depositAmount: BigInt(5) },
         vaultRound: BigInt(63),
       }),
       { kind: "ready", amount: BigInt(5) },
     );
     assert.equal(authorizedPendingStatus({
-      connectedOwner: owner.toBase58(),
       user: null,
       vaultRound: BigInt(63),
     }).kind, "no_account");
     assert.equal(authorizedPendingStatus({
-      connectedOwner: owner.toBase58(),
       user: { owner: other.toBase58(), depositRound: BigInt(63), depositAmount: BigInt(5) },
       vaultRound: BigInt(63),
-    }).kind, "other_owner");
+    }).kind, "ready");
     assert.equal(authorizedPendingStatus({
-      connectedOwner: owner.toBase58(),
       user: { owner: owner.toBase58(), depositRound: BigInt(61), depositAmount: BigInt(5) },
       vaultRound: BigInt(63),
     }).kind, "stale_round");
@@ -201,6 +221,9 @@ describe("authorized pending status and lookup", () => {
     assert.equal(stale.withdrawable, false);
     assert.equal(stale.pending_kind, "stale_round");
     assert.match(stale.note, /not withdrawable here/);
+    const redirected = authorizedLookupFromSnapshot(snapshot(), owner.toBase58(), other.toBase58());
+    assert.equal(redirected.destination_ata, other.toBase58());
+    assert.equal(redirected.withdrawable, true);
   });
 
   it("reads lookup and blockhash replies", () => {
@@ -224,10 +247,18 @@ describe("authorized pending status and lookup", () => {
 });
 
 describe("authorized lookup route inputs", () => {
-  it("requires the connected owner and a listed vault without using the desk default", async () => {
+  it("requires a Solana address and a listed vault without using the desk default", async () => {
     const missing = await loadKatanaAuthorizedLookup({ owner: "", state: DEFAULT_KATANA_VAULT });
     assert.equal(missing.ok, false);
-    if (!missing.ok) assert.match(missing.message, /Connect a Solana wallet/);
+    if (!missing.ok) assert.match(missing.message, /Enter a Solana address/);
+
+    const badDestination = await loadKatanaAuthorizedLookup({
+      owner: SOL_FUNDED_WALLET_ADDRESS,
+      state: DEFAULT_KATANA_VAULT,
+      destination: "not-a-pubkey",
+    });
+    assert.equal(badDestination.ok, false);
+    if (!badDestination.ok) assert.match(badDestination.message, /Enter a Solana address/);
 
     const unlisted = await loadKatanaAuthorizedLookup({
       owner: SOL_FUNDED_WALLET_ADDRESS,

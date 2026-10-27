@@ -6,7 +6,11 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  return respond(url.searchParams.get("owner") ?? "", url.searchParams.get("state") ?? "");
+  return respond(
+    url.searchParams.get("owner") ?? "",
+    url.searchParams.get("state") ?? "",
+    url.searchParams.get("destination") ?? "",
+  );
 }
 
 export async function POST(request: Request) {
@@ -16,16 +20,21 @@ export async function POST(request: Request) {
   } catch {
     return Response.json({ ok: false, message: "The lookup could not be read." }, { status: 400 });
   }
-  const record = body && typeof body === "object" ? (body as { owner?: unknown; state?: unknown }) : {};
+  const record =
+    body && typeof body === "object"
+      ? (body as { owner?: unknown; state?: unknown; destination?: unknown })
+      : {};
   const owner = typeof record.owner === "string" ? record.owner : "";
   const state = typeof record.state === "string" ? record.state : "";
-  return respond(owner, state);
+  const destination = typeof record.destination === "string" ? record.destination : "";
+  return respond(owner, state, destination);
 }
 
-async function respond(requestedOwner: string, requestedState: string) {
+async function respond(requestedOwner: string, requestedState: string, requestedDestination: string) {
   const result = await loadKatanaAuthorizedLookup({
     owner: requestedOwner,
     state: requestedState,
+    destination: requestedDestination,
   });
   return Response.json(result, { status: result.ok ? 200 : result.status });
 }

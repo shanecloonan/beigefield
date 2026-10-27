@@ -52,7 +52,8 @@ describe("katana authorized desk", () => {
   it("states authorized withdraw copy without path or outsider language", () => {
     const notes = renderToStaticMarkup(h(KatanaAuthorizedNotes));
     assert.match(notes, /Withdraw pending deposit/);
-    assert.match(notes, /connected wallet must sign/);
+    assert.match(notes, /userAuthority/);
+    assert.match(notes, /destination can be set separately/);
     assert.match(notes, /associated token account/);
     assert.match(notes, /1349iiGjWC7ZTbu6otFmJwztms122jEEnShKgpVnNewy/);
     assert.equal(notes.includes("path"), false);
@@ -64,7 +65,7 @@ describe("katana authorized desk", () => {
         label: "Withdraw pending deposit",
         disabled: true,
         notice: null,
-        lookupNote: "Vault round 63. This wallet has no Katana user account on this vault.",
+        lookupNote: "Vault round 63. This userAuthority has no Katana user account on this vault.",
         onRun: () => undefined,
       }),
     );

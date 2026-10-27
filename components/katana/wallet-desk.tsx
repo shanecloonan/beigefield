@@ -59,7 +59,7 @@ export function KatanaWalletDesk({
         </div>
       )}
       {address ? (
-        <p className="ton-hint">Connected wallet must sign. It is the fee payer and the destination owner.</p>
+        <p className="ton-hint">Connected wallet must sign. It is the fee payer.</p>
       ) : null}
       {notice ? <p className="ton-status">{notice}</p> : null}
     </section>

@@ -31,6 +31,8 @@ export function KatanaComposer() {
   const [connecting, setConnecting] = useState(false);
   const [deskNotice, setDeskNotice] = useState<string | null>(null);
   const [state, setState] = useState(DEFAULT_KATANA_VAULT);
+  const [userAuthority, setUserAuthority] = useState("");
+  const [destination, setDestination] = useState("");
   const [amountText, setAmountText] = useState("");
   const [lookup, setLookup] = useState<KatanaAuthorizedLookupOk | null>(null);
   const [lookupNote, setLookupNote] = useState<string | null>(null);
@@ -40,9 +42,15 @@ export function KatanaComposer() {
   const amountRef = useRef(amountText);
   const stateRef = useRef(state);
   const addressRef = useRef(address);
+  const userAuthorityRef = useRef(userAuthority);
+  const destinationRef = useRef(destination);
+  const authorityTouched = useRef(false);
+  const destinationTouched = useRef(false);
   amountRef.current = amountText;
   stateRef.current = state;
   addressRef.current = address;
+  userAuthorityRef.current = userAuthority;
+  destinationRef.current = destination;
 
   useEffect(() => {
     const provider = getSolanaProvider();
@@ -52,8 +60,14 @@ export function KatanaComposer() {
     function applyKey(publicKey: { toBase58(): string } | null | undefined) {
       if (cancel) return;
       const next = publicKey?.toBase58() ?? null;
-      setAddress(next && isSolAddress(next) ? next : null);
-      if (!next) setLookup(null);
+      const valid = next && isSolAddress(next) ? next : null;
+      setAddress(valid);
+      if (valid && !authorityTouched.current) setUserAuthority(valid);
+      if (!valid) {
+        setLookup(null);
+        if (!authorityTouched.current) setUserAuthority("");
+        if (!destinationTouched.current) setDestination("");
+      }
     }
 
     void provider.connect({ onlyIfTrusted: true }).then(
@@ -75,15 +89,17 @@ export function KatanaComposer() {
   }, []);
 
   useEffect(() => {
-    if (!address) {
+    const authority = userAuthority.trim();
+    if (!isSolAddress(authority)) {
       setLookup(null);
-      setLookupNote("Connect a Solana wallet to look up your pending deposit.");
+      setLookupNote("Enter a userAuthority to look up the pending deposit.");
       setAmountText("");
       return;
     }
     let cancel = false;
     void (async () => {
-      const defaults = await fetchAuthorizedLookup(address, state);
+      const dest = destinationTouched.current && isSolAddress(destinationRef.current) ? destinationRef.current : undefined;
+      const defaults = await fetchAuthorizedLookup(authority, state, dest);
       if (cancel) return;
       if (!defaults) {
         setLookup(null);
@@ -95,13 +111,9 @@ export function KatanaComposer() {
         setLookupNote(defaults.message);
         return;
       }
-      if (defaults.owner !== address) {
-        setLookup(null);
-        setLookupNote("The lookup owner does not match the connected wallet.");
-        return;
-      }
       setLookup(defaults);
       setLookupNote(defaults.note);
+      if (!destinationTouched.current) setDestination(defaults.destination_ata);
       if (defaults.withdrawable) {
         setAmountText(defaults.deposit_amount);
       } else {
@@ -111,7 +123,7 @@ export function KatanaComposer() {
     return () => {
       cancel = true;
     };
-  }, [address, state]);
+  }, [userAuthority, state]);
 
   async function connectWallet() {
     const provider = getSolanaProvider();
@@ -130,6 +142,7 @@ export function KatanaComposer() {
         return;
       }
       setAddress(next);
+      if (!authorityTouched.current) setUserAuthority(next);
     } catch (error) {
       setDeskNotice(authorizedSendError(error));
     } finally {
@@ -146,6 +159,8 @@ export function KatanaComposer() {
     }
     setAddress(null);
     setLookup(null);
+    if (!authorityTouched.current) setUserAuthority("");
+    if (!destinationTouched.current) setDestination("");
     setNotice(null);
     setDeskNotice(null);
   }
@@ -164,7 +179,17 @@ export function KatanaComposer() {
     }
     const providerKey = provider.publicKey?.toBase58() ?? "";
     if (providerKey !== connected) {
-      setNotice({ tone: "bad", text: "The connected wallet must sign as the depositor. Nothing was sent." });
+      setNotice({ tone: "bad", text: "The connected wallet changed. Nothing was sent." });
+      return;
+    }
+    const authority = userAuthorityRef.current.trim();
+    const dest = destinationRef.current.trim();
+    if (!isSolAddress(authority)) {
+      setNotice({ tone: "bad", text: "The userAuthority is not a Solana address. Nothing was sent." });
+      return;
+    }
+    if (!isSolAddress(dest)) {
+      setNotice({ tone: "bad", text: "The destination is not a Solana address. Nothing was sent." });
       return;
     }
 
@@ -172,7 +197,7 @@ export function KatanaComposer() {
     setSending(true);
     setNotice(null);
     try {
-      const defaults = await fetchAuthorizedLookup(connected, stateRef.current);
+      const defaults = await fetchAuthorizedLookup(authority, stateRef.current, dest);
       if (!defaults) {
         setNotice({ tone: "bad", text: "The RPC lookup did not answer. Nothing was sent." });
         return;
@@ -181,15 +206,13 @@ export function KatanaComposer() {
         setNotice({ tone: "bad", text: `${defaults.message} Nothing was sent.` });
         return;
       }
-      if (defaults.owner !== connected || defaults.user_owner !== connected) {
-        setNotice({ tone: "bad", text: "The connected wallet must sign as the depositor. Nothing was sent." });
-        return;
-      }
       setLookup(defaults);
       setLookupNote(defaults.note);
 
       const built = buildAuthorizedInstantWithdraw({
-        connectedOwner: connected,
+        userAuthority: authority,
+        destination: dest,
+        payer: connected,
         snapshot: snapshotFromAuthorizedLookup(defaults),
         amount: amountRef.current,
       });
@@ -208,15 +231,11 @@ export function KatanaComposer() {
         return;
       }
 
-      const owner = new PublicKey(connected);
+      const payer = new PublicKey(connected);
       const tx = new Transaction();
-      tx.feePayer = owner;
+      tx.feePayer = payer;
       tx.recentBlockhash = latest.blockhash;
       tx.add(...built.instructions);
-      if (!tx.feePayer.equals(owner)) {
-        setNotice({ tone: "bad", text: "The connected wallet must sign as the depositor. Nothing was sent." });
-        return;
-      }
 
       const signature = await signAndSend(provider, tx);
       if (!signature) {
@@ -251,7 +270,8 @@ export function KatanaComposer() {
     !lookup ||
     !lookup.withdrawable ||
     lookup.paused ||
-    lookup.owner !== address ||
+    !isSolAddress(userAuthority) ||
+    !isSolAddress(destination) ||
     !amountOk;
 
   return (
@@ -259,6 +279,7 @@ export function KatanaComposer() {
       <h2 id="ton-message-title">Your pending amount</h2>
       <nav className="ton-contents" aria-label="Withdraw">
         <a href="#wallet">Connected wallet</a>
+        <a href="#accounts">userAuthority and destination</a>
         <a href="#withdraw">Withdraw pending deposit</a>
       </nav>
       <div id="wallet">
@@ -288,7 +309,37 @@ export function KatanaComposer() {
           ))}
         </select>
       </label>
-      {lookup ? <PendingFields lookup={lookup} /> : null}
+      <div id="accounts">
+        <label className="ton-field">
+          <span>userAuthority</span>
+          <input
+            autoComplete="off"
+            spellCheck={false}
+            aria-label="userAuthority"
+            value={userAuthority}
+            onChange={(event) => {
+              authorityTouched.current = true;
+              setUserAuthority(event.target.value);
+              setNotice(null);
+            }}
+          />
+        </label>
+        <label className="ton-field">
+          <span>destination</span>
+          <input
+            autoComplete="off"
+            spellCheck={false}
+            aria-label="destination"
+            value={destination}
+            onChange={(event) => {
+              destinationTouched.current = true;
+              setDestination(event.target.value);
+              setNotice(null);
+            }}
+          />
+        </label>
+      </div>
+      {lookup ? <PendingFields lookup={lookup} destination={destination} /> : null}
       <label className="ton-field">
         <span>Your pending amount</span>
         <input
@@ -315,9 +366,16 @@ export function KatanaComposer() {
   );
 }
 
-function PendingFields({ lookup }: { lookup: KatanaAuthorizedLookupOk }) {
+function PendingFields({
+  lookup,
+  destination,
+}: {
+  lookup: KatanaAuthorizedLookupOk;
+  destination: string;
+}) {
   const pending = BigInt(lookup.deposit_amount);
   const human = formatTokenAmount(pending, lookup.decimals);
+  const tokenAccount = isSolAddress(destination) ? destination : lookup.destination_ata;
   return (
     <dl className="ton-preview-list">
       <div>
@@ -344,10 +402,10 @@ function PendingFields({ lookup }: { lookup: KatanaAuthorizedLookupOk }) {
         </dd>
       </div>
       <div>
-        <dt>Your token account</dt>
+        <dt>destination</dt>
         <dd>
-          <a href={solExplorerAccountUrl(lookup.destination_ata)} target="_blank" rel="noreferrer">
-            {lookup.destination_ata}
+          <a href={solExplorerAccountUrl(tokenAccount)} target="_blank" rel="noreferrer">
+            {tokenAccount}
           </a>
         </dd>
       </div>
@@ -358,12 +416,17 @@ function PendingFields({ lookup }: { lookup: KatanaAuthorizedLookupOk }) {
 async function fetchAuthorizedLookup(
   owner: string,
   state: string,
+  destination?: string,
 ): Promise<KatanaAuthorizedLookupOk | { ok: false; message: string } | null> {
   try {
     const response = await fetch("/api/katana/lookup", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ owner, state }),
+      body: JSON.stringify({
+        owner,
+        state,
+        ...(destination ? { destination } : {}),
+      }),
     });
     const payload: unknown = await response.json().catch(() => null);
     return readAuthorizedLookup(payload);

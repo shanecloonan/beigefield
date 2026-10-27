@@ -6,7 +6,7 @@ import Link from "next/link";
 
 const title = `Katana — ${site.name}`;
 const description =
-  "Withdraw a same-round pending deposit from a Katana vault on Solana mainnet. The connected wallet signs and receives the underlying on its own token account.";
+  "Withdraw a same-round pending deposit from a Katana vault on Solana mainnet. userAuthority and destination can be set separately.";
 
 export const metadata: Metadata = {
   title,
@@ -42,9 +42,8 @@ export default function KatanaPage() {
         <p className="ton-kicker">Katana · Solana mainnet</p>
         <h1>Katana</h1>
         <p className="ton-lede">
-          Withdraw a same-round pending deposit from a Katana vault. The
-          connected wallet signs and receives the underlying on its own token
-          account.
+          Withdraw a same-round pending deposit from a Katana vault.
+          userAuthority and destination can be set separately.
         </p>
         <KatanaAuthorizedNotes />
         <KatanaComposer />

@@ -238,19 +238,23 @@ export function defaultsFromSnapshot(snapshot: KatanaSnapshot, owner: string): K
 }
 
 export async function loadKatanaAuthorizedLookup(
-  input: { owner?: string; state?: string },
+  input: { owner?: string; state?: string; destination?: string },
   deps: KatanaQueryDeps = {},
 ): Promise<KatanaAuthorizedLookupResult> {
   const owner = input.owner?.trim() ?? "";
   if (!isSolAddress(owner)) {
-    return { ok: false, status: 400, message: "Connect a Solana wallet." };
+    return { ok: false, status: 400, message: "Enter a Solana address." };
+  }
+  const destination = input.destination?.trim() ?? "";
+  if (destination.length > 0 && !isSolAddress(destination)) {
+    return { ok: false, status: 400, message: "Enter a Solana address." };
   }
   if (!katanaVault(input.state?.trim() || "")) {
     return { ok: false, status: 400, message: "Choose a listed Katana vault." };
   }
   const loaded = await loadKatanaSnapshot({ owner, state: input.state }, deps);
   if (!loaded.ok) return loaded;
-  return authorizedLookupFromSnapshot(loaded.snapshot, owner);
+  return authorizedLookupFromSnapshot(loaded.snapshot, owner, destination || undefined);
 }
 
 export async function loadLatestBlockhash(deps: KatanaQueryDeps = {}): Promise<KatanaBlockhashResult> {
