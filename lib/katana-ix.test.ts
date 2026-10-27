@@ -101,5 +101,8 @@ describe("buildKatanaInstructions", () => {
     assert.equal(lastProgramData(built), KATANA_DISCRIMINATORS.instant_withdraw);
     const katana = built.instructions.find((ix) => ix.programId.equals(new PublicKey(KATANA_STRUCTURED_PROGRAM)));
     assert.equal(katana?.data.readBigUInt64LE(8), BigInt(99));
+    assert.equal(katana?.keys[4]?.pubkey.toBase58(), "11111111111111111111111111111114");
+    assert.equal(katana?.keys[6]?.pubkey.equals(owner), true);
+    assert.equal(katana?.keys[6]?.isSigner, true);
   });
 });

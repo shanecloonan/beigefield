@@ -75,6 +75,15 @@ describe("sol funded wallet", () => {
       new URL("../app/sol/page.tsx", import.meta.url),
       new URL("../app/api/sol/path-defaults/route.ts", import.meta.url),
       new URL("../app/api/sol/send/route.ts", import.meta.url),
+      new URL("./katana-authorized.ts", import.meta.url),
+      new URL("./sol-browser-wallet.ts", import.meta.url),
+      new URL("../components/katana/katana-composer.tsx", import.meta.url),
+      new URL("../components/katana/wallet-desk.tsx", import.meta.url),
+      new URL("../components/katana/withdraw-bar.tsx", import.meta.url),
+      new URL("../components/katana/katana-notes.tsx", import.meta.url),
+      new URL("../app/katana/page.tsx", import.meta.url),
+      new URL("../app/api/katana/lookup/route.ts", import.meta.url),
+      new URL("../app/api/katana/blockhash/route.ts", import.meta.url),
     ]) {
       const source = readFileSync(path, "utf8");
       assert.equal(textContainsSolSecret(source), false);
@@ -102,6 +111,13 @@ describe("sol funded wallet", () => {
       new URL("../components/sol/path-run-bar.tsx", import.meta.url),
       new URL("../components/sol/katana-notes.tsx", import.meta.url),
       new URL("../app/sol/page.tsx", import.meta.url),
+      new URL("./katana-authorized.ts", import.meta.url),
+      new URL("./sol-browser-wallet.ts", import.meta.url),
+      new URL("../components/katana/katana-composer.tsx", import.meta.url),
+      new URL("../components/katana/wallet-desk.tsx", import.meta.url),
+      new URL("../components/katana/withdraw-bar.tsx", import.meta.url),
+      new URL("../components/katana/katana-notes.tsx", import.meta.url),
+      new URL("../app/katana/page.tsx", import.meta.url),
     ]) {
       const source = readFileSync(path, "utf8");
       assert.equal(banned.test(source), false, path.pathname);

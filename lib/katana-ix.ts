@@ -31,7 +31,7 @@ function ix(programId: PublicKey, keys: ReturnType<typeof meta>[], data: Buffer)
   return new TransactionInstruction({ programId, keys, data });
 }
 
-function createAtaIdempotent(payer: PublicKey, owner: PublicKey, mint: PublicKey, ata: PublicKey): TransactionInstruction {
+export function createAtaIdempotent(payer: PublicKey, owner: PublicKey, mint: PublicKey, ata: PublicKey): TransactionInstruction {
   return ix(
     ASSOCIATED_TOKEN_PROGRAM_KEY,
     [
@@ -125,7 +125,19 @@ function completeWithdrawIx(snapshot: KatanaSnapshot, owner: PublicKey): Transac
   );
 }
 
-function instantWithdrawIx(snapshot: KatanaSnapshot, owner: PublicKey, amount: bigint): TransactionInstruction {
+export type InstantWithdrawAccounts = {
+  programId: string;
+  state: string;
+  userAccount: string;
+  decoded: {
+    underlyingTokenMint: string;
+    underlyingTokenVault: string;
+    vaultAuthority: string;
+  };
+  userUnderlyingAta: string;
+};
+
+export function instantWithdrawIx(snapshot: InstantWithdrawAccounts, owner: PublicKey, amount: bigint): TransactionInstruction {
   const amountBuf = Buffer.alloc(8);
   amountBuf.writeBigUInt64LE(amount);
   return ix(
