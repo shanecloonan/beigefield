@@ -243,7 +243,7 @@ export async function loadKatanaAuthorizedLookup(
 ): Promise<KatanaAuthorizedLookupResult> {
   const owner = input.owner?.trim() ?? "";
   if (!isSolAddress(owner)) {
-    return { ok: false, status: 400, message: "Connect a Solana wallet." };
+    return { ok: false, status: 400, message: "Enter a user authority." };
   }
   if (!katanaVault(input.state?.trim() || "")) {
     return { ok: false, status: 400, message: "Choose a listed Katana vault." };
