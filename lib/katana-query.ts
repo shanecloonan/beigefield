@@ -10,6 +10,7 @@ import {
   readTokenAmount,
   type KatanaSnapshot,
 } from "@/lib/katana-accounts";
+import { authorizedLookupFromSnapshot, type KatanaAuthorizedLookupOk } from "@/lib/katana-authorized";
 import { katanaProgramId, katanaVault } from "@/lib/katana";
 import { pathLookupNote, suggestKatanaAction, type KatanaPathDefaultsOk } from "@/lib/katana-path-run";
 import { SOL_FUNDED_WALLET_ADDRESS, isSolAddress } from "@/lib/sol-funded-wallet-public";
@@ -22,6 +23,10 @@ export type KatanaQueryDeps = {
 type QueryFailure = { ok: false; status: number; message: string };
 export type KatanaPathDefaultsResult = KatanaPathDefaultsOk | QueryFailure;
 export type KatanaSnapshotResult = { ok: true; snapshot: KatanaSnapshot } | QueryFailure;
+export type KatanaAuthorizedLookupResult = KatanaAuthorizedLookupOk | QueryFailure;
+export type KatanaBlockhashResult =
+  | { ok: true; blockhash: string; lastValidBlockHeight: number }
+  | QueryFailure;
 
 const RPC_DOWN = "The Solana RPC did not answer the Katana vault query.";
 const RPC_SHAPE = "The Katana vault account could not be read.";
@@ -230,6 +235,66 @@ export function defaultsFromSnapshot(snapshot: KatanaSnapshot, owner: string): K
     migrate_enabled: false,
     lamports: snapshot.lamports.toString(),
   };
+}
+
+export async function loadKatanaAuthorizedLookup(
+  input: { owner?: string; state?: string },
+  deps: KatanaQueryDeps = {},
+): Promise<KatanaAuthorizedLookupResult> {
+  const owner = input.owner?.trim() ?? "";
+  if (!isSolAddress(owner)) {
+    return { ok: false, status: 400, message: "Connect a Solana wallet." };
+  }
+  if (!katanaVault(input.state?.trim() || "")) {
+    return { ok: false, status: 400, message: "Choose a listed Katana vault." };
+  }
+  const loaded = await loadKatanaSnapshot({ owner, state: input.state }, deps);
+  if (!loaded.ok) return loaded;
+  return authorizedLookupFromSnapshot(loaded.snapshot, owner);
+}
+
+export async function loadLatestBlockhash(deps: KatanaQueryDeps = {}): Promise<KatanaBlockhashResult> {
+  const rpc = (deps.rpc ?? solanaRpc()).replace(/\/$/, "");
+  const fetchImpl = deps.fetchImpl ?? fetch;
+  let response: Response;
+  try {
+    response = await fetchImpl(rpc, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "getLatestBlockhash",
+        params: [{ commitment: "confirmed" }],
+      }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(12_000),
+    });
+  } catch {
+    return { ok: false, status: 502, message: "The Solana RPC did not answer the blockhash query." };
+  }
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    return { ok: false, status: 502, message: "The Solana RPC did not return a recent blockhash." };
+  }
+  if (!response.ok || !payload || typeof payload !== "object") {
+    return { ok: false, status: 502, message: "The Solana RPC did not answer the blockhash query." };
+  }
+  const result = (payload as { result?: { value?: unknown } }).result;
+  const value = result && typeof result === "object" ? (result as { value?: unknown }).value : null;
+  if (!value || typeof value !== "object") {
+    return { ok: false, status: 502, message: "The Solana RPC did not return a recent blockhash." };
+  }
+  const record = value as { blockhash?: unknown; lastValidBlockHeight?: unknown };
+  if (typeof record.blockhash !== "string" || record.blockhash.length === 0) {
+    return { ok: false, status: 502, message: "The Solana RPC did not return a recent blockhash." };
+  }
+  if (typeof record.lastValidBlockHeight !== "number" || !Number.isFinite(record.lastValidBlockHeight)) {
+    return { ok: false, status: 502, message: "The Solana RPC did not return a recent blockhash." };
+  }
+  return { ok: true, blockhash: record.blockhash, lastValidBlockHeight: record.lastValidBlockHeight };
 }
 
 export function snapshotLookupNote(snapshot: KatanaSnapshot): string {
