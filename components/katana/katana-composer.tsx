@@ -164,7 +164,7 @@ export function KatanaComposer() {
     }
     const providerKey = provider.publicKey?.toBase58() ?? "";
     if (providerKey !== connected) {
-      setNotice({ tone: "bad", text: "The connected wallet must sign as the depositor. Nothing was sent." });
+      setNotice({ tone: "bad", text: "The connected wallet must be the depositor and the fee payer. Nothing was sent." });
       return;
     }
 
@@ -182,7 +182,7 @@ export function KatanaComposer() {
         return;
       }
       if (defaults.owner !== connected || defaults.user_owner !== connected) {
-        setNotice({ tone: "bad", text: "The connected wallet must sign as the depositor. Nothing was sent." });
+        setNotice({ tone: "bad", text: "The connected wallet must be the depositor and the fee payer. Nothing was sent." });
         return;
       }
       setLookup(defaults);
@@ -214,7 +214,7 @@ export function KatanaComposer() {
       tx.recentBlockhash = latest.blockhash;
       tx.add(...built.instructions);
       if (!tx.feePayer.equals(owner)) {
-        setNotice({ tone: "bad", text: "The connected wallet must sign as the depositor. Nothing was sent." });
+        setNotice({ tone: "bad", text: "The connected wallet must be the depositor and the fee payer. Nothing was sent." });
         return;
       }
 

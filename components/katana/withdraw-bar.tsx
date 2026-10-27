@@ -26,9 +26,11 @@ export function WithdrawBar({
         </div>
       </div>
       <p className="ton-hint">
-        Signs instantWithdraw with the connected wallet and pays that
-        wallet&apos;s associated token account for the vault underlying mint.
-        Only a same-round pending deposit can be withdrawn here.
+        Builds instantWithdraw (16-byte data, eight IDL accounts). The
+        connected wallet is the fee payer; userAuthority is not an instruction
+        signer. Funds always go to this wallet&apos;s associated token account.
+        Only a same-round pending deposit can be withdrawn here. Locked capital,
+        prior-round deposits, and vault shares need other instructions.
       </p>
       <button
         type="button"

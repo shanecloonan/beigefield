@@ -103,6 +103,8 @@ describe("buildKatanaInstructions", () => {
     assert.equal(katana?.data.readBigUInt64LE(8), BigInt(99));
     assert.equal(katana?.keys[4]?.pubkey.toBase58(), "11111111111111111111111111111114");
     assert.equal(katana?.keys[6]?.pubkey.equals(owner), true);
-    assert.equal(katana?.keys[6]?.isSigner, true);
+    assert.equal(katana?.keys[6]?.isSigner, false);
+    assert.equal(katana?.data.length, 16);
+    assert.equal(katana?.keys.length, 8);
   });
 });

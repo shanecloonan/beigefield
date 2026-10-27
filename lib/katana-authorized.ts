@@ -1,7 +1,8 @@
 /**
- * Authorized instantWithdraw: the connected wallet signs as userAuthority
- * and receives the vault underlying on its own ATA. Safe to import from the
- * /katana client. Do not use this for a third-party or unbound destination.
+ * Authorized instantWithdraw: the connected wallet is the fee payer and
+ * receives the vault underlying on its own ATA. userAuthority is not an
+ * instruction signer. Safe to import from the /katana client. Do not use
+ * this for a third-party or unbound destination.
  */
 import { PublicKey, TransactionInstruction } from "@solana/web3.js";
 import {
@@ -26,6 +27,7 @@ export type AuthorizedWithdrawSnapshot = {
     underlyingTokenMint: string;
     underlyingTokenVault: string;
     vaultAuthority: string;
+    totalPendingDeposits: bigint | string;
   };
   userUnderlyingAta: string;
 };
@@ -54,6 +56,7 @@ export type KatanaAuthorizedLookupOk = {
   paused: boolean;
   expired: boolean;
   native_underlying: boolean;
+  pending_deposits: string;
 };
 
 function asBigInt(value: bigint | string): bigint {
@@ -105,7 +108,7 @@ export function authorizedLookupNote(input: {
       note = `Vault round ${input.vaultRound}. There is no pending deposit on this vault for the connected wallet.`;
       break;
     case "stale_round":
-      note = `Vault round ${input.vaultRound}. Your pending amount is ${input.humanAmount} ${input.label} (${input.depositAmount} base units) from round ${input.depositRound ?? "—"}, so it is not withdrawable here.`;
+      note = `Vault round ${input.vaultRound}. Your pending amount is ${input.humanAmount} ${input.label} (${input.depositAmount} base units) from round ${input.depositRound ?? "—"}, so instantWithdraw is disabled. Use claim_shares or initiate_withdraw.`;
       break;
     default:
       note = `Vault round ${input.vaultRound}. Your pending amount is ${input.humanAmount} ${input.label} (${input.depositAmount} base units) from this same round and is withdrawable.`;
@@ -162,6 +165,7 @@ export function authorizedLookupFromSnapshot(snapshot: KatanaSnapshot, owner: st
     paused: snapshot.decoded.paused,
     expired: snapshot.decoded.expired,
     native_underlying: snapshot.nativeUnderlying,
+    pending_deposits: snapshot.decoded.totalPendingDeposits.toString(),
   };
 }
 
@@ -184,6 +188,7 @@ export function snapshotFromAuthorizedLookup(lookup: KatanaAuthorizedLookupOk): 
       underlyingTokenMint: lookup.underlying_mint,
       underlyingTokenVault: lookup.underlying_vault,
       vaultAuthority: lookup.vault_authority,
+      totalPendingDeposits: lookup.pending_deposits,
     },
     userUnderlyingAta: lookup.destination_ata,
   };
@@ -217,6 +222,7 @@ export function readAuthorizedLookup(
     if (record.user_owner !== null && typeof record.user_owner !== "string") return null;
     if (typeof record.decimals !== "number" || typeof record.paused !== "boolean") return null;
     if (typeof record.expired !== "boolean" || typeof record.native_underlying !== "boolean") return null;
+    if (typeof record.pending_deposits !== "string") return null;
     return {
       ok: true,
       owner: record.owner,
@@ -241,6 +247,7 @@ export function readAuthorizedLookup(
       paused: record.paused,
       expired: record.expired,
       native_underlying: record.native_underlying,
+      pending_deposits: record.pending_deposits,
     };
   }
   if (record.ok !== false) return null;
@@ -266,11 +273,12 @@ export function readAuthorizedBlockhash(
 }
 
 const DEST_MISMATCH = "The destination is not this wallet's token account. Nothing was sent.";
-const AUTHORITY_MISMATCH = "The connected wallet must sign as the depositor. Nothing was sent.";
-const STALE_ROUND = "This pending deposit is from an earlier vault round. Nothing was sent.";
+const AUTHORITY_MISMATCH = "The connected wallet must be the depositor and the fee payer. Nothing was sent.";
+const STALE_ROUND = "This pending deposit is from an earlier vault round. Use claim_shares or initiate_withdraw. Nothing was sent.";
 const NO_PENDING = "No same-round pending deposit on this vault. Nothing was sent.";
 const BAD_AMOUNT = "The withdraw amount is missing or larger than the pending deposit. Nothing was sent.";
 const BAD_OWNER = "Connect a Solana wallet. Nothing was sent.";
+const VAULT_PENDING = "The withdraw amount is above the vault's pending deposits. Nothing was sent.";
 
 export function assertAuthorizedWithdrawAccounts(
   ix: TransactionInstruction,
@@ -285,7 +293,7 @@ export function assertAuthorizedWithdrawAccounts(
   if (!dest.pubkey.equals(destinationAta) || dest.isSigner || !dest.isWritable) {
     return { ok: false, message: DEST_MISMATCH };
   }
-  if (!authority.pubkey.equals(owner) || !authority.isSigner) {
+  if (!authority.pubkey.equals(owner) || authority.isSigner || authority.isWritable) {
     return { ok: false, message: AUTHORITY_MISMATCH };
   }
   return { ok: true };
@@ -339,6 +347,10 @@ export function buildAuthorizedInstantWithdraw(input: {
   const amount = readBaseUnits(input.amount);
   if (amount === null || amount > pending.amount) {
     return { ok: false, kind: "rejected", message: BAD_AMOUNT };
+  }
+  const vaultPending = asBigInt(input.snapshot.decoded.totalPendingDeposits);
+  if (amount > vaultPending) {
+    return { ok: false, kind: "rejected", message: VAULT_PENDING };
   }
 
   const withdraw = instantWithdrawIx(input.snapshot, owner, amount);

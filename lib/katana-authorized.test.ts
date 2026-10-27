@@ -35,7 +35,7 @@ function snapshot(patch: Partial<KatanaSnapshot> = {}, userPatch: Partial<NonNul
       vaultAuthority: "7wM6TyhDZMJSYojLbZWPcmkMu11xErKu6oeGJoHqtUgV",
       cap: BigInt(0),
       lockedAmount: BigInt(0),
-      totalPendingDeposits: BigInt(0),
+      totalPendingDeposits: BigInt(99),
       queuedWithdrawShares: BigInt(0),
       totalShares: BigInt(1),
       round: BigInt(63),
@@ -81,7 +81,7 @@ function withdrawIx(built: { ok: true; instructions: { programId: PublicKey; key
 }
 
 describe("authorized instantWithdraw constraints", () => {
-  it("wires userAuthority as the connected owner signer and destination as that wallet's ATA", () => {
+  it("wires userAuthority as a non-signer and destination as the connected wallet's ATA", () => {
     const built = buildAuthorizedInstantWithdraw({
       connectedOwner: owner.toBase58(),
       snapshot: snapshot(),
@@ -96,7 +96,10 @@ describe("authorized instantWithdraw constraints", () => {
     assert.equal(ix.keys[4]?.isSigner, false);
     assert.equal(ix.keys[4]?.isWritable, true);
     assert.equal(ix.keys[6]?.pubkey.toBase58(), owner.toBase58());
-    assert.equal(ix.keys[6]?.isSigner, true);
+    assert.equal(ix.keys[6]?.isSigner, false);
+    assert.equal(ix.keys[6]?.isWritable, false);
+    assert.equal(ix.data.length, 16);
+    assert.equal(ix.keys.length, 8);
     assert.deepEqual(assertAuthorizedWithdrawAccounts(ix, owner, ownerAta), { ok: true });
     assert.equal(built.instructions[0]?.keys[0]?.pubkey.equals(owner), true);
     assert.equal(built.instructions[0]?.keys[0]?.isSigner, true);
@@ -122,7 +125,7 @@ describe("authorized instantWithdraw constraints", () => {
     });
     assert.equal(built.ok, false);
     if (built.ok) return;
-    assert.match(built.message, /must sign as the depositor/);
+    assert.match(built.message, /fee payer/);
   });
 
   it("refuses a stale-round pending deposit", () => {
@@ -134,6 +137,18 @@ describe("authorized instantWithdraw constraints", () => {
     assert.equal(built.ok, false);
     if (built.ok) return;
     assert.match(built.message, /earlier vault round/);
+    assert.match(built.message, /claim_shares/);
+  });
+
+  it("refuses an amount above the vault pending deposits", () => {
+    const built = buildAuthorizedInstantWithdraw({
+      connectedOwner: owner.toBase58(),
+      snapshot: snapshot({ decoded: { ...snapshot().decoded, totalPendingDeposits: BigInt(10) } }),
+      amount: "99",
+    });
+    assert.equal(built.ok, false);
+    if (built.ok) return;
+    assert.match(built.message, /vault's pending deposits/);
   });
 
   it("refuses an amount above the pending deposit", () => {
@@ -193,6 +208,7 @@ describe("authorized pending status and lookup", () => {
     assert.equal(lookup.withdrawable, true);
     assert.equal(lookup.destination_ata, ownerAta.toBase58());
     assert.equal(lookup.pending_kind, "ready");
+    assert.equal(lookup.pending_deposits, "99");
     assert.match(lookup.note, /same round and is withdrawable/);
     const rebuilt = snapshotFromAuthorizedLookup(lookup);
     assert.equal(rebuilt.userUnderlyingAta, ownerAta.toBase58());
@@ -200,7 +216,7 @@ describe("authorized pending status and lookup", () => {
     const stale = authorizedLookupFromSnapshot(snapshot({}, { depositRound: BigInt(60) }), owner.toBase58());
     assert.equal(stale.withdrawable, false);
     assert.equal(stale.pending_kind, "stale_round");
-    assert.match(stale.note, /not withdrawable here/);
+    assert.match(stale.note, /claim_shares or initiate_withdraw/);
   });
 
   it("reads lookup and blockhash replies", () => {

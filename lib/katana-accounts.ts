@@ -134,6 +134,7 @@ export type DecodedState = {
 export type DecodedUser = {
   owner: string;
   depositRound: bigint;
+  /** `depositData.amount` is a u64 at account offset 0x38. */
   depositAmount: bigint;
   unredeemedShares: bigint;
   withdrawRound: bigint;
@@ -186,7 +187,7 @@ export function decodeUserAccount(data: Buffer): DecodedUser | null {
   return {
     owner: readPubkey(data, 8),
     depositRound: readU128(data, 40),
-    depositAmount: readU128(data, 56),
+    depositAmount: data.readBigUInt64LE(56),
     unredeemedShares: readU128(data, 72),
     withdrawRound: readU128(data, 88),
     withdrawShares: readU128(data, 104),

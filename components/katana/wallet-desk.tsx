@@ -59,7 +59,10 @@ export function KatanaWalletDesk({
         </div>
       )}
       {address ? (
-        <p className="ton-hint">Connected wallet must sign. It is the fee payer and the destination owner.</p>
+        <p className="ton-hint">
+          The connected wallet pays the network fee. Withdrawals go to this
+          wallet&apos;s associated token account.
+        </p>
       ) : null}
       {notice ? <p className="ton-status">{notice}</p> : null}
     </section>

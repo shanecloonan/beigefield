@@ -43,7 +43,7 @@ describe("katana authorized desk", () => {
       }),
     );
     assert.match(html, new RegExp(SOL_FUNDED_WALLET_ADDRESS));
-    assert.match(html, /Connected wallet must sign/);
+    assert.match(html, /associated token account/);
     assert.match(html, /Disconnect/);
     assert.equal(html.includes("Signs on the server"), false);
     assert.match(button(html, "Disconnect"), /./);
@@ -52,7 +52,10 @@ describe("katana authorized desk", () => {
   it("states authorized withdraw copy without path or outsider language", () => {
     const notes = renderToStaticMarkup(h(KatanaAuthorizedNotes));
     assert.match(notes, /Withdraw pending deposit/);
-    assert.match(notes, /connected wallet must sign/);
+    assert.match(notes, /fee payer/);
+    assert.match(notes, /claim_shares/);
+    assert.match(notes, /DkguYGWhRE8qJ9voWNYZ8dJkGYr8ACUR8KXqDAyHpGx2/);
+    assert.match(notes, /CPFuWtS7qNQt3RPnSt5opKph9JbqdW3LjxF1HEw3v1tP/);
     assert.match(notes, /associated token account/);
     assert.match(notes, /1349iiGjWC7ZTbu6otFmJwztms122jEEnShKgpVnNewy/);
     assert.equal(notes.includes("path"), false);

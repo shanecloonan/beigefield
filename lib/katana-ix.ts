@@ -149,7 +149,7 @@ export function instantWithdrawIx(snapshot: InstantWithdrawAccounts, owner: Publ
       meta(new PublicKey(snapshot.decoded.underlyingTokenVault), true),
       meta(new PublicKey(snapshot.userUnderlyingAta), true),
       meta(new PublicKey(snapshot.decoded.vaultAuthority), true),
-      meta(owner, false, true),
+      meta(owner, false, false),
       meta(TOKEN_PROGRAM_KEY, false),
     ],
     Buffer.concat([discriminator(KATANA_DISCRIMINATORS.instant_withdraw), amountBuf]),
