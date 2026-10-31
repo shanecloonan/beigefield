@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { CORPORA, CORPUS_IDS, corpusUrl, crossReference, triageScore } from "./corpora";
 import { ENGINE_IDS, ENGINES, PARSERS, engineCatalog, isEngineId } from "./engines";
 import { classifyFinding, dedupeFindings, makeFinding, sanitizeEvidence, sortFindings } from "./findings";
+import { finalizeFindings, parsePasted } from "./runtime";
 
 test("every engine has metadata + parser + fork url", () => {
   assert.equal(ENGINE_IDS.length, 8);
@@ -110,4 +111,38 @@ test("corpora: 8 forks, valid links, cross-reference + triage", () => {
   assert.ok(x.references.every((r) => r.url.startsWith("https://github.com/shanecloonan/")));
   const t = triageScore(x);
   assert.ok(t > 0 && t <= 100);
+});
+
+test("location-less findings with different evidence are not collapsed by dedupe", () => {
+  const a = makeFinding({ engine: "slither", rule: "r", title: "t", severity: "high", confidence: "high", evidence: "first issue" });
+  const b = makeFinding({ engine: "slither", rule: "r", title: "t", severity: "high", confidence: "high", evidence: "second issue" });
+  assert.notEqual(a.id, b.id);
+  assert.equal(dedupeFindings([a, b, a]).length, 2);
+});
+
+test("finalizeFindings orders by severity, then triage within a severity", () => {
+  const re = makeFinding({ engine: "slither", rule: "reentrancy-eth", title: "reentrancy", severity: "high", confidence: "medium", evidence: "x" });
+  const send = makeFinding({ engine: "slither", rule: "arbitrary-send-eth", title: "arbitrary send of eth", severity: "high", confidence: "high", evidence: "y" });
+  const low = makeFinding({ engine: "slither", rule: "naming", title: "naming", severity: "low", confidence: "high", evidence: "z" });
+  const out = finalizeFindings([low, re, send]);
+  assert.deepEqual(out.map((f) => f.severity), ["high", "high", "low"]);
+  assert.ok(out[0].triage >= out[1].triage);
+});
+
+test("parsePasted: auto-detects wrong engine, warns on garbage, counts severities", () => {
+  const slither = JSON.stringify({
+    success: true,
+    results: { detectors: [{ check: "reentrancy-eth", impact: "High", confidence: "Medium", description: "reentrancy in V.w()", elements: [] }] },
+  });
+  const ok = parsePasted("slither", slither);
+  assert.equal(ok.findings.length, 1);
+  assert.equal(ok.severity_counts.high, 1);
+  assert.equal(ok.warning, null);
+  const wrong = parsePasted("halmos", slither);
+  assert.equal(wrong.detected, true);
+  assert.equal(wrong.engine, "slither");
+  assert.ok(wrong.warning);
+  const junk = parsePasted("slither", "hello world");
+  assert.equal(junk.findings.length, 0);
+  assert.match(String(junk.warning), /not a clean result/);
 });

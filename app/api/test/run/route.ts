@@ -6,6 +6,7 @@
 
 import { NextResponse } from "next/server";
 import { capabilityNote, fixtureCatalog, pythonCapability, scannerCapabilities } from "@/lib/eth-scanner/capabilities";
+import { latestWrittenReceipt } from "@/lib/eth-scanner/local-store";
 import { runLaneA, scanInFlight } from "@/lib/eth-scanner/run-lane-a";
 
 export const runtime = "nodejs";
@@ -50,6 +51,7 @@ export async function POST(req: Request) {
     return json({ ok: false, error: "a Lane A scan is already running" }, 429);
   }
 
+  const started = Date.now();
   const out = await runLaneA({
     address: typeof address === "string" ? address : undefined,
     tvl: typeof tvl === "number" || typeof tvl === "string" ? Number(tvl) : undefined,
@@ -65,9 +67,16 @@ export async function POST(req: Request) {
           : 500;
     return json({ ...out, note: capabilityNote(out) }, status);
   }
+  // Serverless instances don't share /tmp, so a follow-up GET to
+  // /api/test/receipt can land on a cold instance with no work dir. Inline
+  // the receipt this run just wrote so the desk can always download it.
+  const written = latestWrittenReceipt(out.result.address);
   return json({
     ...out,
+    duration_ms: Date.now() - started,
     note: capabilityNote(out),
     receipt_url: `/api/test/receipt?address=${encodeURIComponent(out.result.address)}`,
+    receipt_markdown: written?.markdown ?? null,
+    receipt_filename: written?.filename ?? null,
   });
 }
