@@ -40,3 +40,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# eth-scanner local artifacts
+/eth-scanner/.runtime/
+/eth-scanner/work/
+/eth-scanner/research/fuzz/out/
+/eth-scanner/research/fuzz/cache/
+/eth-scanner/research/fuzz/crytic-export/
+/eth-scanner/research/fuzz/build/
+__pycache__/
