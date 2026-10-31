@@ -135,8 +135,14 @@ export function makeFinding(input: {
     contract: input.location?.contract ?? null,
     function: input.location?.function ?? null,
   };
+  const evidence = sanitizeEvidence(input.evidence);
+  const unlocated = !location.file && location.line == null && !location.function && !location.contract;
+  const idParts = [input.engine, input.rule, location.file ?? "-", location.line ?? "-", location.function ?? "-"];
+  // Location-less findings (e.g. Slither detectors with no elements) would all
+  // collide on "-:-:-" and be silently deduped; key them by evidence instead.
+  if (unlocated) idParts.push(shortHash(`${input.title} ${evidence}`));
   return {
-    id: [input.engine, input.rule, location.file ?? "-", location.line ?? "-", location.function ?? "-"].join(":"),
+    id: idParts.join(":"),
     engine: input.engine,
     rule: input.rule,
     title: sanitizeEvidence(input.title).slice(0, 200),
@@ -144,18 +150,45 @@ export function makeFinding(input: {
     confidence: normalizeConfidence(input.confidence),
     class: classifyFinding(input.classHint, input.rule, input.title),
     location,
-    evidence: sanitizeEvidence(input.evidence),
+    evidence,
     references: [],
     defensive_only: true,
   };
 }
 
-const SEVERITY_RANK: Record<Severity, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+/** FNV-1a → 8 hex chars. Stable, non-cryptographic; only for id disambiguation. */
+export function shortHash(s: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
 
-export function sortFindings(list: DeskFinding[]): DeskFinding[] {
+export const SEVERITY_RANK: Record<Severity, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+const CONFIDENCE_RANK: Record<Confidence, number> = { high: 0, medium: 1, low: 2 };
+
+/**
+ * Severity first, then triage score (desc) when present, then confidence,
+ * then engine/rule for a stable order. The table leads with triage, so rows
+ * within one severity tier must read top-down by triage.
+ */
+export function sortFindings<T extends DeskFinding & { triage?: number }>(list: T[]): T[] {
   return [...list].sort(
-    (a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] || a.engine.localeCompare(b.engine),
+    (a, b) =>
+      SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
+      (b.triage ?? 0) - (a.triage ?? 0) ||
+      CONFIDENCE_RANK[a.confidence] - CONFIDENCE_RANK[b.confidence] ||
+      a.engine.localeCompare(b.engine) ||
+      a.rule.localeCompare(b.rule),
   );
+}
+
+export function severityCounts(list: { severity: Severity }[]): Record<Severity, number> {
+  const out: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
+  for (const f of list) out[f.severity] += 1;
+  return out;
 }
 
 /** Drop duplicate ids (same engine/rule/location). */

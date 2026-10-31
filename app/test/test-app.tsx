@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import EnginesPanel from "./engines-panel";
 
 type Bucket =
@@ -36,6 +36,16 @@ type Feed = {
   results: { address: string; bucket: string; heat: number; notes: string | null; created_at: string }[];
   fixtures?: FixtureOpt[];
   note?: string;
+  ephemeral_store?: boolean;
+};
+
+/** A Lane A run kept client-side for this tab (serverless /tmp is per-instance). */
+type SessionRow = Target & {
+  key: string;
+  fixture: string | null;
+  receipt_markdown: string | null;
+  receipt_filename: string | null;
+  ran_at: number;
 };
 
 type RunResult = {
@@ -62,6 +72,9 @@ type RunResponse = {
   note?: string;
   result?: RunResult;
   receipt_url?: string;
+  receipt_markdown?: string | null;
+  receipt_filename?: string | null;
+  duration_ms?: number;
 };
 
 type Tab = "lane-a" | "research" | "engines";
@@ -100,6 +113,9 @@ type ResearchResponse = {
   note?: string;
   result?: ResearchResult;
   receipt_url?: string;
+  receipt_markdown?: string | null;
+  receipt_filename?: string | null;
+  duration_ms?: number;
 };
 
 type ResearchFeed = {
@@ -153,6 +169,48 @@ const BUCKET_META: Record<Bucket, { label: string; hint: string; cls: string }> 
   },
 };
 
+const SEV_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+const SEV_CLS: Record<string, string> = {
+  critical: "text-rose-200",
+  high: "text-rose-300",
+  medium: "text-amber-200",
+  low: "text-brand-200",
+  info: "text-brand-400",
+};
+
+export function downloadMarkdown(markdown: string, filename: string) {
+  const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename.endsWith(".md") ? filename : `${filename}.md`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Seconds since `active` flipped on; 0 when idle. */
+function useElapsed(active: boolean): number {
+  const [secs, setSecs] = useState(0);
+  const start = useRef(0);
+  useEffect(() => {
+    if (!active) return;
+    start.current = Date.now();
+    const id = setInterval(() => setSecs(Math.floor((Date.now() - start.current) / 1000)), 250);
+    return () => {
+      clearInterval(id);
+      setSecs(0);
+    };
+  }, [active]);
+  return active ? secs : 0;
+}
+
+function fmtMs(ms?: number): string | null {
+  if (ms == null || !Number.isFinite(ms)) return null;
+  return ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`;
+}
+
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 const DEMO_ADDRESS = "0x1111111111111111111111111111111111111111";
 
@@ -182,6 +240,8 @@ export default function TestApp() {
   const [lastResearch, setLastResearch] = useState<ResearchResponse | null>(null);
   const [researchFeed, setResearchFeed] = useState<ResearchFeed | null>(null);
   const [uploadedReceipt, setUploadedReceipt] = useState<ResearchResult | null>(null);
+  const [session, setSession] = useState<SessionRow[]>([]);
+  const elapsed = useElapsed(running);
 
   const load = useCallback(async () => {
     setError(null);
@@ -199,8 +259,23 @@ export default function TestApp() {
     void load();
   }, [load]);
 
+  // Serverless dry-run: each request may hit a fresh instance with an empty
+  // work dir, so the server table can't reflect the run you just did. Use the
+  // session queue there (and whenever the server has nothing to show).
+  const useSession = Boolean(feed?.ephemeral_store) || (feed?.targets?.length ?? 0) === 0;
+  const baseRows: (Target | SessionRow)[] = useMemo(() => {
+    if (!useSession) return feed?.targets ?? [];
+    return bucket === "all" ? session : session.filter((r) => r.bucket === bucket);
+  }, [useSession, feed, session, bucket]);
+  const counts = useMemo(() => {
+    if (!useSession) return feed?.counts ?? {};
+    const out: Record<string, number> = {};
+    for (const r of session) if (r.bucket) out[r.bucket] = (out[r.bucket] ?? 0) + 1;
+    return out;
+  }, [useSession, feed, session]);
+
   const shown = useMemo(() => {
-    const rows = feed?.targets ?? [];
+    const rows = baseRows;
     const needle = q.trim().toLowerCase();
     if (!needle) return rows;
     return rows.filter((t) =>
@@ -208,7 +283,7 @@ export default function TestApp() {
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(needle)),
     );
-  }, [feed, q]);
+  }, [baseRows, q]);
 
   const fixtures = feed?.fixtures ?? [];
   const dryRun = feed?.dry_run ?? true;
@@ -300,9 +375,28 @@ export default function TestApp() {
         return;
       }
       setLastRun(body);
-      if (body.result?.address) {
-        setAddress(body.result.address);
-        setSelected(body.result.address.toLowerCase());
+      if (body.result) {
+        const r = body.result;
+        const key = body.fixture ? `fixture:${body.fixture}` : r.address.toLowerCase();
+        const row: SessionRow = {
+          key,
+          fixture: body.fixture ?? null,
+          address: r.address,
+          bytecode_hash: null,
+          tvl_usd: null,
+          status: r.dropped ? `dropped${r.drop_reason ? ` · ${r.drop_reason}` : ""}` : "scanned",
+          src_confidence: r.src_confidence,
+          ir_confidence: r.ir_confidence,
+          heat: r.heat,
+          bucket: (r.bucket as Bucket | null) ?? null,
+          updated_at: new Date().toISOString(),
+          receipt_markdown: body.receipt_markdown ?? null,
+          receipt_filename: body.receipt_filename ?? null,
+          ran_at: Date.now(),
+        };
+        setSession((prev) => [row, ...prev.filter((p) => p.key !== key)]);
+        setSelected(key);
+        if (!body.fixture) setAddress(r.address);
       }
       await load();
     } catch (err) {
@@ -334,29 +428,15 @@ export default function TestApp() {
           No exploit payloads. Humans close BROKEN paths in prose.
         </p>
 
-        <div className="mt-4 flex flex-wrap gap-2 text-[10px] tracking-[0.12em] uppercase">
-          <span
-            className={`rounded-md border px-2 py-1 ${
-              dryRun ? "border-amber-800/80 text-amber-200" : "border-emerald-800 text-emerald-200"
-            }`}
-          >
-            Persist · {dryRun ? "dry-run (local work/)" : "live Supabase"}
-          </span>
-          <span
-            className={`rounded-md border px-2 py-1 ${
-              liveIngest ? "border-emerald-800 text-emerald-200" : "border-brand-700 text-brand-300"
-            }`}
-          >
-            Ingest · {liveIngest ? "Etherscan" : "stub / local fixture"}
-          </span>
-        </div>
-
-        {feed?.note && (
-          <p className="mt-3 text-xs text-brand-400 border border-brand-800/80 rounded-lg px-3 py-2 bg-brand-900/50">
-            {feed.note}
+        <DeskStatus feed={feed} />
+        {error && (
+          <p className="mt-4 text-sm text-rose-300">
+            Couldn&apos;t load the queue ({error}).{" "}
+            <button type="button" onClick={() => void load()} className="underline underline-offset-2 hover:text-rose-200">
+              Retry
+            </button>
           </p>
         )}
-        {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
 
         <div className="mt-8 flex gap-2" role="tablist" aria-label="Scanner mode">
           <button
@@ -447,38 +527,91 @@ export default function TestApp() {
               {running ? "Running…" : "Run"}
             </button>
           </div>
+          {fixtures.length > 0 && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="text-[10px] tracking-[0.14em] uppercase text-brand-500 mr-1">
+                {liveIngest ? "Or one-click fixture" : "One-click fixture"}
+              </span>
+              {fixtures.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  disabled={running}
+                  onClick={() => {
+                    setFixture(f.id);
+                    void runScan({ address: "", fixture: f.id });
+                  }}
+                  className={`rounded-md border px-2.5 py-1 text-[11px] transition-colors disabled:opacity-50 ${
+                    fixture === f.id
+                      ? "border-gold/60 text-gold bg-gold/10"
+                      : "border-brand-700 text-brand-300 hover:border-gold/40 hover:text-brand-100"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          )}
           <p className="mt-3 text-[11px] text-brand-500 leading-relaxed">
-            Primary control: Lane A only (S0–S6 cheap skim + gate). Click a table row to
-            scan that target. Without Etherscan keys, address-only runs use a low-confidence
-            stub unless you pick a local fixture. Receipt download stays Markdown.
+            Lane A only: S0–S6 cheap skim + gate. A fixture overrides the address field.{" "}
+            {liveIngest
+              ? "Address runs fetch verified source live."
+              : "Address-only runs have no bytecode without an Etherscan key, so they land in manual-review by design — use a fixture for a real pass."}{" "}
+            Receipts download as Markdown.
           </p>
         </form>
 
         {running && (
-          <p className="mt-4 text-xs text-gold/90 border border-gold/30 rounded-lg px-3 py-2 bg-gold/5">
-            Running Lane A{dryRun ? " dry-run" : liveIngest && !fixture ? " (live ingest)" : ""}
-            {address ? ` on ${address}` : fixture ? ` on fixture ${fixture}` : ""}
-            … ingest → IR → S0–S6. This can take up to a couple of minutes if Etherscan is live.
+          <div
+            role="status"
+            className="mt-4 text-xs text-gold/90 border border-gold/30 rounded-lg px-3 py-2 bg-gold/5 flex items-center gap-3"
+          >
+            <span className="inline-block h-2 w-2 rounded-full bg-gold animate-pulse" aria-hidden />
+            <span className="flex-1">
+              Lane A{dryRun ? " dry-run" : ""} on{" "}
+              {fixture ? `fixture ${fixtures.find((f) => f.id === fixture)?.label ?? fixture}` : address || "—"}
+              {" · "}ingest → IR → S0–S6
+              {fixture
+                ? " · fixtures usually finish in about a second"
+                : liveIngest
+                  ? " · live Etherscan ingest can take a minute or two"
+                  : " · stub ingest (no key)"}
+            </span>
+            <span className="tabular-nums text-gold/70">{elapsed}s</span>
+          </div>
+        )}
+        {runError && (
+          <p className="mt-4 text-sm text-rose-300 border border-rose-900/60 rounded-lg px-3 py-2 bg-rose-950/20">
+            {runError}
+            {/python|runtime|unavailable|not importable/i.test(runError) &&
+              " — the scanner's Python runtime isn't available on this host. Run it locally: npm run dev, or the eth-scanner CLI."}
           </p>
         )}
-        {runError && <p className="mt-4 text-sm text-rose-300">{runError}</p>}
         {lastRun?.ok && lastRun.result && (
           <div className="mt-4 rounded-lg border border-brand-700/80 bg-brand-900/50 px-4 py-3 text-xs">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <p className="text-[10px] tracking-[0.14em] uppercase text-gold/80 font-semibold">
                 Last run · Lane A{lastRun.dry_run ? " · dry-run" : ""}
                 {lastRun.fixture ? ` · fixture ${lastRun.fixture}` : ""}
+                {fmtMs(lastRun.duration_ms) ? ` · ${fmtMs(lastRun.duration_ms)}` : ""}
               </p>
-              {lastRun.receipt_url && (
-                <a
-                  href={lastRun.receipt_url}
-                  className="text-[11px] tracking-[0.08em] uppercase font-semibold text-gold hover:text-gold/80"
-                >
-                  Download .md
-                </a>
-              )}
+              <ReceiptLink
+                markdown={lastRun.receipt_markdown}
+                filename={lastRun.receipt_filename}
+                url={lastRun.receipt_url}
+              />
             </div>
-            <p className="mt-2 font-mono text-[11px] text-brand-200">{lastRun.result.address}</p>
+            <p className="mt-2 font-mono text-[11px] text-brand-200">
+              {lastRun.result.address}
+              {lastRun.fixture && (
+                <span className="ml-2 font-sans text-brand-500">placeholder address for a local fixture</span>
+              )}
+            </p>
+            {lastRun.result.bucket && BUCKET_META[lastRun.result.bucket as Bucket] && (
+              <p className={`mt-2 inline-block rounded-md border px-2 py-0.5 text-[10px] tracking-[0.12em] uppercase ${BUCKET_META[lastRun.result.bucket as Bucket].cls}`}>
+                {BUCKET_META[lastRun.result.bucket as Bucket].label} · {BUCKET_META[lastRun.result.bucket as Bucket].hint}
+              </p>
+            )}
             <p className="mt-2 text-brand-200">
               Bucket <span className="text-brand-50">{lastRun.result.bucket ?? "—"}</span>
               {" · "}heat {lastRun.result.heat ?? 0}
@@ -499,8 +632,18 @@ export default function TestApp() {
                   Pick a local fixture or set keys for live ingest.
                 </p>
               )}
-            {lastRun.result.notes[0] && (
-              <p className="mt-2 text-brand-400 leading-relaxed">{lastRun.result.notes[0]}</p>
+            {lastRun.result.value_movers?.length > 0 && (
+              <p className="mt-2 text-brand-300">
+                Value movers:{" "}
+                <span className="font-mono text-[11px] text-brand-100">{lastRun.result.value_movers.join(", ")}</span>
+              </p>
+            )}
+            {lastRun.result.notes.length > 0 && (
+              <ul className="mt-2 text-brand-400 leading-relaxed list-disc pl-4 space-y-0.5">
+                {lastRun.result.notes.map((n, i) => (
+                  <li key={i}>{n}</li>
+                ))}
+              </ul>
             )}
           </div>
         )}
@@ -508,7 +651,7 @@ export default function TestApp() {
         <div className="mt-8 grid grid-cols-2 sm:grid-cols-5 gap-2">
           {(Object.keys(BUCKET_META) as Bucket[]).map((b) => {
             const meta = BUCKET_META[b];
-            const n = feed?.counts?.[b] ?? 0;
+            const n = counts[b] ?? 0;
             const active = bucket === b;
             return (
               <button
@@ -536,7 +679,19 @@ export default function TestApp() {
           <button type="button" onClick={() => void load()} disabled={running} className={btnSecondary}>
             Refresh
           </button>
+          {session.length > 0 && useSession && (
+            <button type="button" onClick={() => setSession([])} disabled={running} className={btnSecondary}>
+              Clear session
+            </button>
+          )}
         </div>
+        {useSession && session.length > 0 && (
+          <p className="mt-2 text-[11px] text-brand-500">
+            Session queue: runs from this tab, kept in your browser
+            {feed?.ephemeral_store ? " (serverless dry-run storage isn't shared across requests)" : ""}. Receipts
+            download from the run itself.
+          </p>
+        )}
 
         <div className="mt-6 overflow-x-auto border border-brand-800/80 rounded-lg">
           <table className="w-full text-left text-xs">
@@ -554,43 +709,82 @@ export default function TestApp() {
             <tbody>
               {shown.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center text-brand-500">
-                    No targets in this view. Enter an address and click{" "}
-                    <span className="text-gold">Run</span>
-                    {liveIngest ? "." : ", or run a local fixture."} Dry-run writes{" "}
-                    <code className="text-brand-300">eth-scanner/work/</code>
-                    {!liveIngest && (
+                  <td colSpan={7} className="px-3 py-10 text-center text-brand-500">
+                    {!feed && !error ? (
+                      "Loading queue…"
+                    ) : bucket !== "all" || q.trim() ? (
                       <>
-                        {" "}
+                        Nothing matches this filter.{" "}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBucket("all");
+                            setQ("");
+                          }}
+                          className="text-gold hover:text-gold/80 underline-offset-2 hover:underline"
+                        >
+                          Show all
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="block text-brand-300 mb-2">Queue is empty.</span>
+                        Enter an address and click <span className="text-gold">Run</span>, or{" "}
                         <button
                           type="button"
                           disabled={running}
                           onClick={() => {
-                            setAddress(DEMO_ADDRESS);
                             setFixture("gated_vault");
                             void runScan({ address: DEMO_ADDRESS, fixture: "gated_vault" });
                           }}
                           className="text-gold hover:text-gold/80 underline-offset-2 hover:underline disabled:opacity-50"
                         >
-                          Run gated-vault fixture
-                        </button>
+                          run the gated-vault fixture
+                        </button>{" "}
+                        to see a full Lane A pass.
                       </>
                     )}
                   </td>
                 </tr>
               )}
               {shown.map((t) => {
-                const active = selected === t.address.toLowerCase();
+                const srow = "key" in t ? (t as SessionRow) : null;
+                const rowKey = srow?.key ?? t.address.toLowerCase();
+                const active = selected === rowKey || selected === t.address.toLowerCase();
+                const fxLabel = srow?.fixture ? fixtures.find((f) => f.id === srow.fixture)?.label ?? srow.fixture : null;
                 return (
                   <tr
-                    key={t.address}
-                    onClick={() => selectTarget(t.address)}
+                    key={rowKey}
+                    onClick={() => {
+                      if (srow?.fixture) {
+                        setFixture(srow.fixture);
+                        setSelected(rowKey);
+                        setRunError(null);
+                      } else selectTarget(t.address);
+                    }}
+                    title={srow?.fixture ? "Select this fixture (Run to re-scan)" : "Select this address (Run to re-scan)"}
                     className={`border-t border-brand-800/70 cursor-pointer ${
                       active ? "bg-gold/10" : "hover:bg-brand-900/40"
                     }`}
                   >
-                    <td className="px-3 py-2 font-mono text-[11px] text-brand-200">{t.address}</td>
-                    <td className="px-3 py-2 text-brand-100">{t.bucket ?? "—"}</td>
+                    <td className="px-3 py-2 font-mono text-[11px] text-brand-200">
+                      {fxLabel ? (
+                        <span className="font-sans text-brand-100">
+                          {fxLabel} <span className="text-brand-500 text-[10px] uppercase tracking-wider">fixture</span>
+                        </span>
+                      ) : (
+                        t.address
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {t.bucket && BUCKET_META[t.bucket] ? (
+                        <span className={`rounded border px-1.5 py-0.5 text-[10px] uppercase tracking-wider ${BUCKET_META[t.bucket].cls}`}>
+                          {BUCKET_META[t.bucket].label}
+                        </span>
+                      ) : (
+                        <span className="text-brand-100">{t.bucket ?? "—"}</span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 tabular-nums">{t.heat ?? 0}</td>
                     <td className="px-3 py-2">
                       {t.src_confidence ?? "—"} / {t.ir_confidence ?? "—"}
@@ -598,12 +792,11 @@ export default function TestApp() {
                     <td className="px-3 py-2 tabular-nums">{t.tvl_usd ?? "—"}</td>
                     <td className="px-3 py-2 text-brand-400">{t.status ?? "—"}</td>
                     <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                      <a
-                        href={`/api/test/receipt?address=${encodeURIComponent(t.address)}`}
-                        className="text-[11px] tracking-[0.08em] uppercase font-semibold text-gold hover:text-gold/80"
-                      >
-                        Download .md
-                      </a>
+                      <ReceiptLink
+                        markdown={srow?.receipt_markdown}
+                        filename={srow?.receipt_filename}
+                        url={srow?.fixture ? null : `/api/test/receipt?address=${encodeURIComponent(t.address)}`}
+                      />
                     </td>
                   </tr>
                 );
@@ -646,6 +839,81 @@ export default function TestApp() {
   );
 }
 
+function ReceiptLink({
+  markdown,
+  filename,
+  url,
+}: {
+  markdown?: string | null;
+  filename?: string | null;
+  url?: string | null;
+}) {
+  const cls = "text-[11px] tracking-[0.08em] uppercase font-semibold text-gold hover:text-gold/80";
+  if (markdown) {
+    return (
+      <button type="button" className={cls} onClick={() => downloadMarkdown(markdown, filename || "receipt.md")}>
+        Download .md
+      </button>
+    );
+  }
+  if (url) {
+    return (
+      <a href={url} className={cls}>
+        Download .md
+      </a>
+    );
+  }
+  return <span className="text-brand-600 text-[11px]">—</span>;
+}
+
+/** Compact mode banner: what's live, what's offline, and what that means for a run. */
+function DeskStatus({ feed }: { feed: Feed | null }) {
+  if (!feed) {
+    return <p className="mt-4 text-[11px] text-brand-500">Checking desk capabilities…</p>;
+  }
+  const dry = feed.dry_run;
+  const live = Boolean(feed.live_ingest);
+  const offline = !live;
+  const chip = (on: boolean) =>
+    `rounded-md border px-2 py-1 ${on ? "border-emerald-800 text-emerald-200" : "border-amber-800/80 text-amber-200"}`;
+  return (
+    <div className="mt-4">
+      <div className="flex flex-wrap gap-2 text-[10px] tracking-[0.12em] uppercase">
+        <span className={chip(!dry)}>Persist · {dry ? "dry-run" : "live Supabase"}</span>
+        <span className={chip(live)}>Ingest · {live ? "Etherscan live" : "offline (fixtures)"}</span>
+      </div>
+      <div
+        className={`mt-3 rounded-lg border px-3 py-2.5 text-xs leading-relaxed ${
+          offline ? "border-amber-800/50 bg-amber-950/10 text-brand-300" : "border-brand-800/80 bg-brand-900/50 text-brand-400"
+        }`}
+      >
+        {offline ? (
+          <>
+            <span className="text-amber-200 font-semibold">Offline desk.</span> No Etherscan key on this
+            deployment, so address scans have no verified source and land in{" "}
+            <span className="text-rose-200">manual-review</span> on purpose (a missing input is never a silent
+            no). Local fixtures run the full S0–S6 path on real Solidity — pick one below.
+          </>
+        ) : (
+          <>
+            <span className="text-emerald-200 font-semibold">Live ingest.</span> Address scans fetch verified
+            source and bytecode from Etherscan.
+          </>
+        )}{" "}
+        {dry
+          ? "Results aren't persisted: they stay in this browser tab, and receipts download straight from each run."
+          : "Results persist to Supabase."}
+        {feed.note && (
+          <details className="mt-1.5 text-[11px] text-brand-500">
+            <summary className="cursor-pointer select-none hover:text-brand-300">Details</summary>
+            <p className="mt-1">{feed.note}</p>
+          </details>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ResearchPanel({
   fixtures,
   address,
@@ -678,6 +946,8 @@ function ResearchPanel({
   const shown = last?.result || uploaded;
   const latest = feed?.latest;
   const pythonMissing = Boolean(error && /python|unavailable|not importable/i.test(error));
+  const elapsed = useElapsed(running);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   return (
     <div className="mt-8">
@@ -686,11 +956,6 @@ function ResearchPanel({
         rows with <span className="text-brand-200">defensive_only=true</span>. Optional
         forge / echidna / slither / halmos / hevm skip when missing. Lane A remains the gate.
       </p>
-      {feed?.note && (
-        <p className="mt-3 text-xs text-brand-400 border border-brand-800/80 rounded-lg px-3 py-2 bg-brand-900/50">
-          {feed.note}
-        </p>
-      )}
       {pythonMissing && (
         <p className="mt-3 text-xs text-amber-200/90 border border-amber-800/70 rounded-lg px-3 py-2">
           Live research run needs a local Python runtime. Show the last receipt or upload a
@@ -753,10 +1018,14 @@ function ResearchPanel({
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
+                setUploadError(null);
                 const reader = new FileReader();
                 reader.onload = () => {
                   try {
                     const parsed = JSON.parse(String(reader.result || "")) as Record<string, unknown>;
+                    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || (!parsed.address && !Array.isArray(parsed.findings))) {
+                      throw new Error("not a research receipt");
+                    }
                     const findings = Array.isArray(parsed.findings) ? parsed.findings : [];
                     setUploaded({
                       address: String(parsed.address || ""),
@@ -791,6 +1060,7 @@ function ResearchPanel({
                     });
                   } catch {
                     setUploaded(null);
+                    setUploadError(`${file.name} isn't a research receipt JSON (expected address + findings).`);
                   }
                 };
                 reader.readAsText(file);
@@ -805,18 +1075,34 @@ function ResearchPanel({
       </form>
 
       {running && (
-        <p className="mt-4 text-xs text-gold/90 border border-gold/30 rounded-lg px-3 py-2 bg-gold/5">
-          Running research dry-run{address ? ` on ${address}` : fixture ? ` on fixture ${fixture}` : ""}
-          … Lane A gate → IR → L2/L3 → fuzz/symbolic (skip if tools missing).
-        </p>
+        <div
+          role="status"
+          className="mt-4 text-xs text-gold/90 border border-gold/30 rounded-lg px-3 py-2 bg-gold/5 flex items-center gap-3"
+        >
+          <span className="inline-block h-2 w-2 rounded-full bg-gold animate-pulse" aria-hidden />
+          <span className="flex-1">
+            Research dry-run{fixture ? ` on fixture ${fixture}` : address ? ` on ${address}` : ""} · Lane A gate → IR →
+            L2/L3 → fuzz/symbolic (missing tools are skipped and listed)
+          </span>
+          <span className="tabular-nums text-gold/70">{elapsed}s</span>
+        </div>
       )}
       {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
+      {uploadError && <p className="mt-4 text-sm text-rose-300">{uploadError}</p>}
+      {!running && !shown && !latest && !error && (
+        <p className="mt-4 text-xs text-brand-500 border border-dashed border-brand-800 rounded-lg px-3 py-6 text-center">
+          No research receipt yet. Run a fixture dry-run above, or upload a research JSON you downloaded earlier.
+        </p>
+      )}
 
       {(shown || latest) && (
         <ResearchSummary
           result={shown}
           latest={shown ? null : latest}
           receiptUrl={last?.receipt_url || latest?.receipt_url || null}
+          receiptMarkdown={shown === last?.result ? last?.receipt_markdown ?? null : null}
+          receiptFilename={shown === last?.result ? last?.receipt_filename ?? null : null}
+          durationMs={shown === last?.result ? last?.duration_ms : undefined}
           fixture={last?.fixture}
         />
       )}
@@ -833,11 +1119,17 @@ function ResearchSummary({
   result,
   latest,
   receiptUrl,
+  receiptMarkdown,
+  receiptFilename,
+  durationMs,
   fixture,
 }: {
   result: ResearchResult | null;
   latest: ResearchFeed["latest"] | null | undefined;
   receiptUrl: string | null;
+  receiptMarkdown?: string | null;
+  receiptFilename?: string | null;
+  durationMs?: number;
   fixture?: string | null;
 }) {
   const address = result?.address || latest?.address || "";
@@ -847,7 +1139,14 @@ function ResearchSummary({
   const scope = result?.scope || latest?.scope;
   const layers = result?.layers_run || latest?.layers_run || [];
   const skips = result?.layers_skipped || latest?.layers_skipped || [];
-  const findings = result?.findings || latest?.findings || [];
+  const findings = [...(result?.findings || latest?.findings || [])].sort(
+    (a, b) => (SEV_RANK[a.severity] ?? 9) - (SEV_RANK[b.severity] ?? 9) || a.layer.localeCompare(b.layer),
+  );
+  const sevCounts = findings.reduce<Record<string, number>>((acc, f) => {
+    acc[f.severity] = (acc[f.severity] ?? 0) + 1;
+    return acc;
+  }, {});
+  const [open, setOpen] = useState<string | null>(null);
 
   return (
     <div className="mt-4 rounded-lg border border-brand-700/80 bg-brand-900/50 px-4 py-3 text-xs">
@@ -856,15 +1155,9 @@ function ResearchSummary({
           Research receipt · dry-run
           {fixture ? ` · fixture ${fixture}` : ""}
           {latest?.stack_version ? ` · v${latest.stack_version}` : ""}
+          {fmtMs(durationMs) ? ` · ${fmtMs(durationMs)}` : ""}
         </p>
-        {receiptUrl && (
-          <a
-            href={receiptUrl}
-            className="text-[11px] tracking-[0.08em] uppercase font-semibold text-gold hover:text-gold/80"
-          >
-            Download .md
-          </a>
-        )}
+        <ReceiptLink markdown={receiptMarkdown} filename={receiptFilename} url={receiptMarkdown ? null : receiptUrl} />
       </div>
       <p className="mt-2 font-mono text-[11px] text-brand-200">{address || "—"}</p>
       <p className="mt-2 text-brand-200">
@@ -877,13 +1170,27 @@ function ResearchSummary({
         Layers ran: {layers.length ? layers.join(", ") : "—"}
       </p>
       {skips.length > 0 && (
-        <ul className="mt-2 text-brand-400 space-y-1">
-          {skips.slice(0, 8).map((s, i) => (
-            <li key={`${s.layer}-${i}`}>
-              skip {s.layer}: {s.reason}
-            </li>
+        <details className="mt-2 text-brand-400">
+          <summary className="cursor-pointer select-none hover:text-brand-200">
+            {skips.length} layer step{skips.length === 1 ? "" : "s"} skipped (tools not on this host)
+          </summary>
+          <ul className="mt-1 space-y-1 pl-3">
+            {skips.map((s, i) => (
+              <li key={`${s.layer}-${i}`}>
+                <span className="text-brand-300">{s.layer}</span> — {s.reason}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {findings.length > 0 && (
+        <p className="mt-3 flex flex-wrap gap-3 text-[10px] uppercase tracking-[0.12em]">
+          {["critical", "high", "medium", "low", "info"].filter((k) => sevCounts[k]).map((k) => (
+            <span key={k} className={SEV_CLS[k]}>
+              {sevCounts[k]} {k}
+            </span>
           ))}
-        </ul>
+        </p>
       )}
       <div className="mt-4 overflow-x-auto">
         <table className="w-full text-left">
@@ -899,18 +1206,36 @@ function ResearchSummary({
           <tbody>
             {findings.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-3 text-brand-500">No findings in this receipt.</td>
+                <td colSpan={5} className="py-3 text-brand-500">
+                  No findings in this receipt. That is not a verdict of safety.
+                </td>
               </tr>
             )}
-            {findings.map((f) => (
-              <tr key={f.id} className="border-t border-brand-800/70">
-                <td className="pr-3 py-1.5 font-mono text-[10px] text-brand-300">{f.id}</td>
-                <td className="pr-3 py-1.5">{f.layer}</td>
-                <td className="pr-3 py-1.5">{f.severity}</td>
-                <td className="pr-3 py-1.5 text-brand-300">{f.detector}</td>
-                <td className="py-1.5 text-brand-100">{f.title}</td>
-              </tr>
-            ))}
+            {findings.map((f, i) => {
+              const k = `${f.id}-${i}`;
+              const isOpen = open === k;
+              return (
+                <tr
+                  key={k}
+                  className="border-t border-brand-800/70 align-top cursor-pointer hover:bg-brand-900/40"
+                  onClick={() => setOpen(isOpen ? null : k)}
+                  aria-expanded={isOpen}
+                >
+                  <td className="pr-3 py-1.5 font-mono text-[10px] text-brand-300">{f.id}</td>
+                  <td className="pr-3 py-1.5">{f.layer}</td>
+                  <td className={`pr-3 py-1.5 uppercase ${SEV_CLS[f.severity] ?? ""}`}>{f.severity}</td>
+                  <td className="pr-3 py-1.5 text-brand-300">{f.detector || "—"}</td>
+                  <td className="py-1.5 text-brand-100">
+                    {f.title}
+                    {f.evidence && (
+                      <span className={`block mt-0.5 text-brand-400 ${isOpen ? "whitespace-pre-wrap" : "truncate max-w-[460px]"}`}>
+                        {f.evidence}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

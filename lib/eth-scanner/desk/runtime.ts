@@ -17,7 +17,7 @@ import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import { crossReference, triageScore } from "./corpora";
 import { ENGINE_IDS, ENGINES, PARSERS, type EngineId, type EngineMeta } from "./engines";
-import { dedupeFindings, sortFindings, type DeskFinding } from "./findings";
+import { dedupeFindings, severityCounts, sortFindings, type DeskFinding, type Severity } from "./findings";
 
 export type EngineStatus = "installed" | "missing" | "stub";
 
@@ -365,9 +365,17 @@ export type DeskRunResult = {
   target: { fixture: string | null; harness: boolean };
   runs: EngineRun[];
   findings: (DeskFinding & { triage: number })[];
+  severity_counts: Record<Severity, number>;
+  duration_ms: number;
 };
 
+/** Dedupe → cross-reference → triage → rank (severity, then triage desc). */
+export function finalizeFindings(list: DeskFinding[]): (DeskFinding & { triage: number })[] {
+  return sortFindings(crossReference(dedupeFindings(list)).map((f) => ({ ...f, triage: triageScore(f) })));
+}
+
 export async function runDesk(input: DeskRunInput): Promise<DeskRunResult | { ok: false; error: string }> {
+  const t0 = Date.now();
   const fixture = input.fixture == null || input.fixture === "" ? null : String(input.fixture);
   const sourceFile = fixture ? resolveSourceFixture(fixture) : null;
   if (fixture && !sourceFile) return { ok: false, error: "unknown fixture" };
@@ -376,7 +384,15 @@ export async function runDesk(input: DeskRunInput): Promise<DeskRunResult | { ok
   const requested = Array.isArray(input.engines)
     ? input.engines.filter((x): x is EngineId => typeof x === "string" && (ENGINE_IDS as readonly string[]).includes(x))
     : statuses.filter((s) => s.status === "installed").map((s) => s.id);
-  if (!requested.length) return { ok: false, error: "no engines selected (or none installed here)" };
+  if (!requested.length) {
+    const installed = statuses.filter((s) => s.status === "installed").length;
+    return {
+      ok: false,
+      error: installed
+        ? "no engines selected — tick at least one installed engine"
+        : "no engines are installed on this host — run one on a worker and paste its output instead",
+    };
+  }
 
   const runs: EngineRun[] = [];
   let findings: DeskFinding[] = [];
@@ -413,18 +429,75 @@ export async function runDesk(input: DeskRunInput): Promise<DeskRunResult | { ok
     }
   }
 
-  const final = crossReference(sortFindings(dedupeFindings(findings))).map((f) => ({ ...f, triage: triageScore(f) }));
-  return { ok: true, target: { fixture, harness: requested.some((id) => ENGINES[id].target === "harness") }, runs, findings: final };
+  const final = finalizeFindings(findings);
+  return {
+    ok: true,
+    target: { fixture, harness: requested.some((id) => ENGINES[id].target === "harness") },
+    runs,
+    findings: final,
+    severity_counts: severityCounts(final),
+    duration_ms: Date.now() - t0,
+  };
 }
 
 const MAX_PASTE = 2 * 1024 * 1024;
 
-/** Normalize output produced elsewhere (e.g. a local slither --json run). */
-export function parsePasted(engine: EngineId, text: string) {
+/** What each parser expects, for empty-result hints. */
+export const PASTE_FORMAT: Record<EngineId, string> = {
+  slither: "Slither JSON (slither . --json -)",
+  aderyn: "Aderyn JSON report (aderyn . -o report.json)",
+  achecker: "AChecker text output",
+  echidna: "Echidna text output (property failed / passing lines)",
+  medusa: "Medusa text output",
+  mythril: "Mythril JSON (myth analyze -o json)",
+  ityfuzz: "ityfuzz text output",
+  halmos: "Halmos text output ([FAIL] / [PASS] lines)",
+};
+
+export type PasteResult = {
+  ok: true;
+  engine: EngineId;
+  requested_engine: EngineId;
+  detected: boolean;
+  findings: (DeskFinding & { triage: number })[];
+  severity_counts: Record<Severity, number>;
+  warning: string | null;
+};
+
+/**
+ * Normalize output produced elsewhere (e.g. a local slither --json run).
+ * If the chosen parser recognizes nothing, try the others so a mis-picked
+ * engine in the dropdown still normalizes — and say so instead of silently
+ * returning an empty (and misleadingly "clean") table.
+ */
+export function parsePasted(engine: EngineId, text: string): PasteResult {
   const clipped = text.length > MAX_PASTE ? text.slice(0, MAX_PASTE) : text;
-  const findings = crossReference(sortFindings(dedupeFindings(PARSERS[engine](clipped)))).map((f) => ({
-    ...f,
-    triage: triageScore(f),
-  }));
-  return { ok: true as const, engine, findings };
+  let used: EngineId = engine;
+  let raw = PARSERS[engine](clipped);
+  let warning: string | null = null;
+  if (!raw.length && clipped.trim()) {
+    for (const id of ENGINE_IDS) {
+      if (id === engine) continue;
+      const alt = PARSERS[id](clipped);
+      if (alt.length) {
+        used = id;
+        raw = alt;
+        warning = `Nothing parsed as ${ENGINES[engine].name}; this looks like ${ENGINES[id].name} output, so it was normalized as ${ENGINES[id].name}.`;
+        break;
+      }
+    }
+    if (!raw.length) {
+      warning = `No findings recognized. Expected ${PASTE_FORMAT[engine]}. An unparsed paste is not a clean result.`;
+    }
+  }
+  const findings = finalizeFindings(raw);
+  return {
+    ok: true,
+    engine: used,
+    requested_engine: engine,
+    detected: used !== engine,
+    findings,
+    severity_counts: severityCounts(findings),
+    warning,
+  };
 }

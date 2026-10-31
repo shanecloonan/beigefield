@@ -49,6 +49,9 @@ export async function GET(req: Request) {
       ok: true,
       ...caps,
       dry_run: true,
+      // Vercel instances don't share /tmp: the table can't be trusted to
+      // survive between requests, so the client keeps a session queue.
+      ephemeral_store: Boolean(process.env.VERCEL),
       buckets: BUCKETS,
       counts,
       targets: filtered.slice(0, limit),
@@ -112,6 +115,7 @@ export async function GET(req: Request) {
     ok: true,
     ...caps,
     dry_run: false,
+    ephemeral_store: false,
     buckets: BUCKETS,
     counts,
     targets,

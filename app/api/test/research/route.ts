@@ -79,6 +79,7 @@ export async function POST(req: Request) {
     return json({ ok: false, error: "a scan is already running" }, 429);
   }
 
+  const started = Date.now();
   const out = await runResearch({
     address: typeof address === "string" ? address : undefined,
     fixture: typeof fixture === "string" ? fixture : undefined,
@@ -93,9 +94,14 @@ export async function POST(req: Request) {
           : 500;
     return json({ ...out, note: capabilityNote(out) }, status);
   }
+  // Inline the receipt (see /api/test/run): serverless instances don't share /tmp.
+  const written = latestResearchReceipt(out.result.address);
   return json({
     ...out,
+    duration_ms: Date.now() - started,
     note: capabilityNote(out),
     receipt_url: `/api/test/receipt?address=${encodeURIComponent(out.result.address)}&kind=research`,
+    receipt_markdown: written?.markdown ?? null,
+    receipt_filename: written?.filename ?? null,
   });
 }
