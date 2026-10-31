@@ -1,14 +1,18 @@
 /**
  * Honest /test capability flags. Never include secret values.
- * Live persist needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY. Live ingest needs
- * ETHERSCAN_API_KEYS. Nothing is hardcoded: unset env degrades to dry-run / fixtures.
+ * Live persist needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (env only; unset → dry-run).
+ * Live ingest uses ETHERSCAN_API_KEYS when set; otherwise a built-in free-tier test key
+ * so /test can fetch verified source.
  */
 
 import { pythonRuntimeStatus, type PythonRuntimeStatus } from "./python-runtime";
 
-/** Comma-separated keys from env only. Never log this value. */
+/** Free-tier fallback already used locally. Env still wins. Never log this value. */
+export const TEST_ETHERSCAN_FALLBACK_KEY = "MB89VXUF27QJHA7QYJMPE9W55UGYZNV39C";
+
 export function etherscanApiKeys(): string {
-  return (process.env.ETHERSCAN_API_KEYS || "").trim();
+  const fromEnv = (process.env.ETHERSCAN_API_KEYS || "").trim();
+  return fromEnv || TEST_ETHERSCAN_FALLBACK_KEY;
 }
 
 /**
