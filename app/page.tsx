@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <div className="page">
@@ -11,6 +13,9 @@ export default function Home() {
         <h1>Beigefield</h1>
         <span className="rule" aria-hidden="true" />
         <p>Blockchain Research</p>
+        <nav className="lockup-nav" aria-label="Tools">
+          <Link href="/test">Scanner</Link>
+        </nav>
       </main>
     </div>
   );
