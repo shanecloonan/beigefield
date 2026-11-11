@@ -2,6 +2,18 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  DEFAULT_LOOP_GAP_MS,
+  MAX_LOOP_GAP_MS,
+  MIN_LOOP_GAP_MS,
+  RANDOM_HISTORY_CAP,
+  SESSION_ROW_CAP,
+  clampLoopGapMs,
+  isEtherscanRateLimit,
+  pushCapped,
+  runContinuousRandom,
+  type RandomLoopSample,
+} from "@/lib/eth-scanner/random-loop";
 import EnginesPanel from "./engines-panel";
 
 type Bucket =
@@ -77,9 +89,20 @@ type RunResponse = {
   duration_ms?: number;
 };
 
+type LoopState = "idle" | "running" | "stopping" | "paused";
+
+type LoopHistoryRow = {
+  key: string;
+  address: string;
+  contract_name: string | null;
+  bucket: string | null;
+  heat: number | null;
+};
+
 type RandomSample = {
   ok: boolean;
   error?: string;
+  kind?: string;
   address?: string;
   contract_name?: string | null;
   compiler?: string | null;
@@ -242,11 +265,21 @@ export default function TestApp() {
   const [address, setAddress] = useState("");
   const [fixture, setFixture] = useState("");
   const [running, setRunning] = useState(false);
-  const [phase, setPhase] = useState<"sample" | "scan" | null>(null);
+  const [phase, setPhase] = useState<"sample" | "scan" | "wait" | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [lastRun, setLastRun] = useState<RunResponse | null>(null);
   const [randomPick, setRandomPick] = useState<RandomSample | null>(null);
+  const [loopState, setLoopState] = useState<LoopState>("idle");
+  const [loopCount, setLoopCount] = useState(0);
+  const [loopMessage, setLoopMessage] = useState<string | null>(null);
+  const [loopHistory, setLoopHistory] = useState<LoopHistoryRow[]>([]);
+  const [waitLeft, setWaitLeft] = useState<number | null>(null);
+  const [gapSec, setGapSec] = useState(DEFAULT_LOOP_GAP_MS / 1000);
   const busy = useRef(false);
+  const loopActive = useRef(false);
+  const stopRef = useRef(false);
+  const gapRef = useRef(DEFAULT_LOOP_GAP_MS / 1000);
+  const pickRef = useRef<RandomSample | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("lane-a");
   const [researchFixture, setResearchFixture] = useState("erc4626_vault");
@@ -365,10 +398,10 @@ export default function TestApp() {
 
   const runScan = useCallback(async (
     override?: { address?: string; fixture?: string },
-    opts?: { locked?: boolean },
-  ) => {
+    opts?: { locked?: boolean; keepPrevious?: boolean },
+  ): Promise<RunResponse | null> => {
     if (!opts?.locked) {
-      if (busy.current) return;
+      if (busy.current || loopActive.current) return null;
       busy.current = true;
       setRandomPick(null);
       setPhase("scan");
@@ -381,11 +414,11 @@ export default function TestApp() {
         busy.current = false;
         setPhase(null);
       }
-      return;
+      return null;
     }
     setRunning(true);
     setRunError(null);
-    setLastRun(null);
+    if (!opts?.keepPrevious) setLastRun(null);
     if (addr) setSelected(addr.toLowerCase());
     try {
       const res = await fetch("/api/test/run", {
@@ -401,7 +434,7 @@ export default function TestApp() {
       if (!body.ok) {
         setRunError(body.error || `HTTP ${res.status}`);
         setLastRun(body);
-        return;
+        return body;
       }
       setLastRun(body);
       if (body.result) {
@@ -423,13 +456,16 @@ export default function TestApp() {
           receipt_filename: body.receipt_filename ?? null,
           ran_at: Date.now(),
         };
-        setSession((prev) => [row, ...prev.filter((p) => p.key !== key)]);
+        setSession((prev) => pushCapped(prev.filter((p) => p.key !== key), row, SESSION_ROW_CAP));
         setSelected(key);
         if (!body.fixture) setAddress(r.address);
       }
       await load();
+      return body;
     } catch (err) {
-      setRunError(err instanceof Error ? err.message : "Run failed");
+      const message = err instanceof Error ? err.message : "Run failed";
+      setRunError(message);
+      return { ok: false, error: message };
     } finally {
       setRunning(false);
       if (!opts?.locked) {
@@ -439,14 +475,11 @@ export default function TestApp() {
     }
   }, [address, fixture, load]);
 
-  const pullRandom = useCallback(async () => {
-    if (busy.current) return;
-    busy.current = true;
-    setRunning(true);
+  const sampleForLoop = useCallback(async (): Promise<RandomLoopSample> => {
+    if (stopRef.current) return { ok: false, kind: "pause", error: "Stopped." };
     setPhase("sample");
-    setRunError(null);
-    setLastRun(null);
-    setRandomPick(null);
+    setRunning(true);
+    setWaitLeft(null);
     setFixture("");
     try {
       const res = await fetch("/api/test/random", { method: "POST", cache: "no-store" });
@@ -454,26 +487,108 @@ export default function TestApp() {
       try {
         body = (await res.json()) as RandomSample;
       } catch {
-        setRunError(`Couldn't read the contract sample (HTTP ${res.status}). Nothing was scanned.`);
-        return;
+        return { ok: false, kind: "pause", error: `Couldn't read the contract sample (HTTP ${res.status}).` };
       }
       if (!res.ok || !body.ok || !body.address || !ADDRESS_RE.test(body.address)) {
-        setRunError(body.error || `Couldn't pick a verified contract (HTTP ${res.status}). Nothing was scanned.`);
-        return;
+        const error = body.error || `Couldn't pick a verified contract (HTTP ${res.status}).`;
+        const rateLimited = res.status === 429 || body.kind === "rate_limit" || isEtherscanRateLimit(error);
+        if (rateLimited) return { ok: false, kind: "rate_limit", error };
+        if (res.status === 404 || body.kind === "none") return { ok: false, kind: "retry", error };
+        return { ok: false, kind: "pause", error };
       }
+      pickRef.current = body;
+      setRandomPick(body);
       setAddress(body.address);
       setSelected(body.address.toLowerCase());
-      setRandomPick(body);
-      setPhase("scan");
-      await runScan({ address: body.address, fixture: "" }, { locked: true });
+      return { ok: true, address: body.address };
     } catch (err) {
-      setRunError(err instanceof Error ? err.message : "Couldn't reach Etherscan. Nothing was scanned.");
+      const message = err instanceof Error ? err.message : "Couldn't reach Etherscan.";
+      if (isEtherscanRateLimit(message)) return { ok: false, kind: "rate_limit", error: message };
+      return { ok: false, kind: "pause", error: message };
+    }
+  }, []);
+
+  const scanForLoop = useCallback(async (addr: string) => {
+    const picked = pickRef.current;
+    const body = await runScan({ address: addr, fixture: "" }, { locked: true, keepPrevious: true });
+    if (!body) return { ok: false, error: "The scan did not start." };
+    const noteText = [
+      body.error || "",
+      body.result?.drop_reason || "",
+      ...(body.result?.notes || []),
+    ].join("\n");
+    const rateLimited = isEtherscanRateLimit(noteText);
+    if (body.ok && body.result) {
+      setLoopHistory((prev) => pushCapped(prev, {
+        key: `${body.result!.address}:${Date.now()}`,
+        address: body.result!.address,
+        contract_name: picked?.contract_name ?? null,
+        bucket: body.result!.bucket,
+        heat: body.result!.heat,
+      }, RANDOM_HISTORY_CAP));
+    }
+    if (!body.ok) return { ok: false, rateLimited, error: body.error || "The scan failed." };
+    if (rateLimited) {
+      return { ok: true, rateLimited: true, error: "Etherscan rate limit during Lane A ingest. Paused so the loop does not keep calling." };
+    }
+    return { ok: true };
+  }, [runScan]);
+
+  const startLoop = useCallback(async () => {
+    if (loopActive.current || busy.current) return;
+    loopActive.current = true;
+    stopRef.current = false;
+    setLoopState("running");
+    setLoopMessage(null);
+    setRunError(null);
+    setWaitLeft(null);
+    try {
+      const outcome = await runContinuousRandom({
+        gapMs: () => clampLoopGapMs(gapRef.current * 1000),
+        stop: () => stopRef.current,
+        sample: sampleForLoop,
+        scan: scanForLoop,
+        sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+        onScanned: () => setLoopCount((count) => count + 1),
+        onWaitTick: (remainingMs) => {
+          setPhase("wait");
+          setWaitLeft(Math.ceil(remainingMs / 1000));
+        },
+      });
+      if (outcome.reason === "stopped") {
+        setLoopState("idle");
+        setLoopMessage("Stopped. The next contract waits until you press Start.");
+      } else {
+        setLoopState("paused");
+        setLoopMessage(outcome.message);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "The continuous run stopped.";
+      setLoopMessage(message);
+      setLoopState("paused");
+      setRunError(message);
     } finally {
+      loopActive.current = false;
+      stopRef.current = false;
       busy.current = false;
       setRunning(false);
       setPhase(null);
+      setWaitLeft(null);
     }
-  }, [runScan]);
+  }, [sampleForLoop, scanForLoop]);
+
+  const stopLoop = useCallback(() => {
+    if (!loopActive.current) return;
+    stopRef.current = true;
+    setLoopState("stopping");
+    setWaitLeft(null);
+  }, []);
+
+  useEffect(() => () => {
+    stopRef.current = true;
+  }, []);
+
+  const loopBusy = loopState === "running" || loopState === "stopping";
 
   return (
     <main className="min-h-screen bg-brand-950 text-brand-100">
@@ -555,6 +670,7 @@ export default function TestApp() {
           className="mt-8 rounded-lg border border-brand-800/80 bg-brand-900/30 p-4"
           onSubmit={(e) => {
             e.preventDefault();
+            if (loopBusy) return;
             void runScan();
           }}
         >
@@ -592,22 +708,50 @@ export default function TestApp() {
                 ))}
               </select>
             </label>
-            <button type="submit" disabled={running} className={btnPrimary} aria-busy={running}>
-              {running && phase !== "sample" ? "Running…" : "Run"}
+            <button type="submit" disabled={running || loopBusy} className={btnPrimary} aria-busy={running && !loopBusy}>
+              {running && phase === "scan" && !loopBusy ? "Running…" : "Run"}
             </button>
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <button
               type="button"
-              disabled={running}
-              onClick={() => void pullRandom()}
-              className={btnSecondary}
-              aria-busy={running && phase === "sample"}
+              disabled={loopBusy || running}
+              onClick={() => void startLoop()}
+              className={btnPrimary}
             >
-              {running && phase === "sample" ? "Choosing…" : running ? "Running…" : "Scan a random contract"}
+              {loopState === "paused" ? "Resume" : "Start"}
             </button>
+            <button
+              type="button"
+              disabled={!loopBusy}
+              onClick={stopLoop}
+              className={btnSecondary}
+            >
+              {loopState === "stopping" ? "Stopping…" : "Stop"}
+            </button>
+            <label className="flex items-center gap-2 text-[11px] text-brand-400">
+              <span className="tracking-[0.12em] uppercase text-brand-500">Seconds between scans</span>
+              <input
+                type="number"
+                min={MIN_LOOP_GAP_MS / 1000}
+                max={MAX_LOOP_GAP_MS / 1000}
+                step={1}
+                value={gapSec}
+                disabled={loopBusy}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  if (!Number.isFinite(n)) return;
+                  const next = Math.min(MAX_LOOP_GAP_MS / 1000, Math.max(MIN_LOOP_GAP_MS / 1000, Math.round(n)));
+                  gapRef.current = next;
+                  setGapSec(next);
+                }}
+                className={`w-16 font-mono text-[13px] ${inputCls}`}
+              />
+            </label>
             <span className="text-[11px] text-brand-500 leading-relaxed">
-              One click picks one verified contract and runs Lane A once. Nothing repeats until you click again.
+              Start keeps sampling a verified contract and running Lane A, one at a time.
+              Stop finishes the scan in progress and does not start another.
+              {loopCount > 0 ? ` ${loopCount} scanned this session.` : ""}
             </span>
           </div>
           {fixtures.length > 0 && (
@@ -619,7 +763,7 @@ export default function TestApp() {
                 <button
                   key={f.id}
                   type="button"
-                  disabled={running}
+                  disabled={running || loopBusy}
                   onClick={() => {
                     setFixture(f.id);
                     void runScan({ address: "", fixture: f.id });
@@ -637,7 +781,7 @@ export default function TestApp() {
           )}
           <p className="mt-3 text-[11px] text-brand-500 leading-relaxed">
             Lane A only: S0–S6 cheap skim + gate. A fixture overrides the address field.
-            Random samples a contract that emitted a Transfer in one recent block, then keeps it only if Etherscan has verified source.{" "}
+            Continuous mode samples a contract that emitted a Transfer in one recent block, keeps it when Etherscan has verified source, then waits before the next one.{" "}
             {liveIngest
               ? "Address runs fetch verified source live."
               : "Address-only runs have no bytecode without an Etherscan key, so they land in manual-review by design — use a fixture for a real pass."}{" "}
@@ -645,19 +789,27 @@ export default function TestApp() {
           </p>
         </form>
 
-        {running && (
+        {(running || loopBusy || phase === "wait") && (
           <div
             role="status"
             className="mt-4 text-xs text-gold/90 border border-gold/30 rounded-lg px-3 py-2 bg-gold/5 flex items-center gap-3"
           >
             <span className="inline-block h-2 w-2 rounded-full bg-gold animate-pulse" aria-hidden />
             <span className="flex-1">
-              {phase === "sample" ? (
-                "Choosing one verified contract from Etherscan — one click, one scan"
+              {loopState === "stopping" ? (
+                running
+                  ? `Stopping after this scan. ${loopCount} scanned this session.`
+                  : `Stopping. ${loopCount} scanned this session. No further scan will start.`
+              ) : phase === "wait" ? (
+                `Next scan in ${waitLeft ?? gapSec}s. ${loopCount} scanned this session. Waiting so the free-tier key stays under 3 calls per second.`
+              ) : phase === "sample" ? (
+                `Choosing the next verified contract. ${loopCount} scanned this session.`
               ) : (
                 <>
                   Lane A{dryRun ? " dry-run" : ""} on{" "}
                   {fixture ? `fixture ${fixtures.find((f) => f.id === fixture)?.label ?? fixture}` : address || "—"}
+                  {loopBusy && randomPick?.contract_name ? ` (${randomPick.contract_name})` : ""}
+                  {loopBusy ? ` · ${loopCount} scanned this session` : ""}
                   {" · "}ingest → IR → S0–S6
                   {fixture
                     ? " · fixtures usually finish in about a second"
@@ -667,8 +819,18 @@ export default function TestApp() {
                 </>
               )}
             </span>
-            <span className="tabular-nums text-gold/70">{elapsed}s</span>
+            {phase !== "wait" && <span className="tabular-nums text-gold/70">{elapsed}s</span>}
           </div>
+        )}
+        {loopMessage && !running && (
+          <p className={`mt-4 text-sm rounded-lg px-3 py-2 border ${
+            loopState === "paused"
+              ? "text-amber-200 border-amber-900/60 bg-amber-950/20"
+              : "text-brand-300 border-brand-800 bg-brand-900/40"
+          }`}>
+            {loopMessage}
+            {loopCount > 0 ? ` ${loopCount} scanned this session.` : ""}
+          </p>
         )}
         {runError && (
           <p className="mt-4 text-sm text-rose-300 border border-rose-900/60 rounded-lg px-3 py-2 bg-rose-950/20">
@@ -689,16 +851,6 @@ export default function TestApp() {
                 {fmtMs(lastRun.duration_ms) ? ` · ${fmtMs(lastRun.duration_ms)}` : ""}
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                {randomPick?.address && lastRun.result.address.toLowerCase() === randomPick.address.toLowerCase() && (
-                  <button
-                    type="button"
-                    disabled={running}
-                    onClick={() => void pullRandom()}
-                    className={btnSecondary}
-                  >
-                    Run another
-                  </button>
-                )}
                 <ReceiptLink
                   markdown={lastRun.receipt_markdown}
                   filename={lastRun.receipt_filename}
@@ -760,6 +912,23 @@ export default function TestApp() {
             {randomPick?.note && lastRun.result.address.toLowerCase() === randomPick.address?.toLowerCase() && (
               <p className="mt-2 text-brand-500 leading-relaxed">{randomPick.note}</p>
             )}
+          </div>
+        )}
+
+        {loopHistory.length > 0 && (
+          <div className="mt-4 rounded-lg border border-brand-800/80 bg-brand-900/20 px-4 py-3">
+            <p className="text-[10px] tracking-[0.14em] uppercase text-brand-500">
+              Latest {loopHistory.length} of {loopCount} continuous scans
+            </p>
+            <ul className="mt-2 max-h-56 overflow-y-auto divide-y divide-brand-800/70">
+              {loopHistory.map((row) => (
+                <li key={row.key} className="py-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-[11px]">
+                  <span className="text-brand-200">{row.contract_name || "Contract"}</span>
+                  <span className="font-mono text-brand-400">{row.address}</span>
+                  <span className="text-brand-500">{row.bucket || "—"}{row.heat != null ? ` · heat ${row.heat}` : ""}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
