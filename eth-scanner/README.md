@@ -227,6 +227,7 @@ python -m eth_scanner lane-a --address 0x… --source path/to.sol --dry-run --no
 Triage at **`/test`** (noindex, not in public nav).
 
 - **Run** (primary) posts to `POST /api/test/run` with `{ address, fixture? }` and executes `python -m eth_scanner lane-a` for that target (system Python locally; portable CPython on Vercel Node serverless). Progress and the last bucket/heat/confidence show on the page; the table refreshes from `GET /api/test`.
+- **Scan a random contract** (Lane A tab) POSTs once to `/api/test/random`, which asks Etherscan for one verified mainnet address, then feeds that address to the same `POST /api/test/run` path. **Run another** repeats that pair of requests. Nothing runs on a timer. Etherscan v2 has no list-verified-contracts action and internal-tx listing is API Pro, so the sample is a random recent block's ERC-20/721 `Transfer` emitters kept only when `getsourcecode` shows verified source — not a uniform draw over every verified contract. Free-tier rate limits (about 3 calls/second, 100,000/day on the shared fallback key) return a message instead of a scan. Dry-run vs live persist is unchanged.
 - Click a table row to load that address into the Run field.
 - Optional **local fixture** uses a whitelisted file under `eth-scanner/tests/fixtures/` (`--source`). No arbitrary paths.
 - Each row still has **Download .md** → `GET /api/test/receipt?address=0x…` (`text/markdown` attachment).
