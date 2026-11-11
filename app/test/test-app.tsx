@@ -77,6 +77,19 @@ type RunResponse = {
   duration_ms?: number;
 };
 
+type RandomSample = {
+  ok: boolean;
+  error?: string;
+  address?: string;
+  contract_name?: string | null;
+  compiler?: string | null;
+  block_number?: number;
+  strategy?: string;
+  source_checks?: number;
+  blocks_tried?: number;
+  note?: string;
+};
+
 type Tab = "lane-a" | "research" | "engines";
 
 type ResearchFinding = {
@@ -229,8 +242,11 @@ export default function TestApp() {
   const [address, setAddress] = useState("");
   const [fixture, setFixture] = useState("");
   const [running, setRunning] = useState(false);
+  const [phase, setPhase] = useState<"sample" | "scan" | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [lastRun, setLastRun] = useState<RunResponse | null>(null);
+  const [randomPick, setRandomPick] = useState<RandomSample | null>(null);
+  const busy = useRef(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("lane-a");
   const [researchFixture, setResearchFixture] = useState("erc4626_vault");
@@ -347,11 +363,24 @@ export default function TestApp() {
     }
   }, [researchAddress, researchFixture, loadResearch]);
 
-  const runScan = useCallback(async (override?: { address?: string; fixture?: string }) => {
+  const runScan = useCallback(async (
+    override?: { address?: string; fixture?: string },
+    opts?: { locked?: boolean },
+  ) => {
+    if (!opts?.locked) {
+      if (busy.current) return;
+      busy.current = true;
+      setRandomPick(null);
+      setPhase("scan");
+    }
     const addr = (override?.address ?? address).trim();
     const fx = override?.fixture ?? fixture;
     if (!fx && !ADDRESS_RE.test(addr)) {
       setRunError("Enter a 0x address (40 hex chars) or pick a local fixture.");
+      if (!opts?.locked) {
+        busy.current = false;
+        setPhase(null);
+      }
       return;
     }
     setRunning(true);
@@ -403,8 +432,48 @@ export default function TestApp() {
       setRunError(err instanceof Error ? err.message : "Run failed");
     } finally {
       setRunning(false);
+      if (!opts?.locked) {
+        busy.current = false;
+        setPhase(null);
+      }
     }
   }, [address, fixture, load]);
+
+  const pullRandom = useCallback(async () => {
+    if (busy.current) return;
+    busy.current = true;
+    setRunning(true);
+    setPhase("sample");
+    setRunError(null);
+    setLastRun(null);
+    setRandomPick(null);
+    setFixture("");
+    try {
+      const res = await fetch("/api/test/random", { method: "POST", cache: "no-store" });
+      let body: RandomSample;
+      try {
+        body = (await res.json()) as RandomSample;
+      } catch {
+        setRunError(`Couldn't read the contract sample (HTTP ${res.status}). Nothing was scanned.`);
+        return;
+      }
+      if (!res.ok || !body.ok || !body.address || !ADDRESS_RE.test(body.address)) {
+        setRunError(body.error || `Couldn't pick a verified contract (HTTP ${res.status}). Nothing was scanned.`);
+        return;
+      }
+      setAddress(body.address);
+      setSelected(body.address.toLowerCase());
+      setRandomPick(body);
+      setPhase("scan");
+      await runScan({ address: body.address, fixture: "" }, { locked: true });
+    } catch (err) {
+      setRunError(err instanceof Error ? err.message : "Couldn't reach Etherscan. Nothing was scanned.");
+    } finally {
+      busy.current = false;
+      setRunning(false);
+      setPhase(null);
+    }
+  }, [runScan]);
 
   return (
     <main className="min-h-screen bg-brand-950 text-brand-100">
@@ -524,8 +593,22 @@ export default function TestApp() {
               </select>
             </label>
             <button type="submit" disabled={running} className={btnPrimary} aria-busy={running}>
-              {running ? "Running…" : "Run"}
+              {running && phase !== "sample" ? "Running…" : "Run"}
             </button>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={running}
+              onClick={() => void pullRandom()}
+              className={btnSecondary}
+              aria-busy={running && phase === "sample"}
+            >
+              {running && phase === "sample" ? "Choosing…" : running ? "Running…" : "Scan a random contract"}
+            </button>
+            <span className="text-[11px] text-brand-500 leading-relaxed">
+              One click picks one verified contract and runs Lane A once. Nothing repeats until you click again.
+            </span>
           </div>
           {fixtures.length > 0 && (
             <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -553,7 +636,8 @@ export default function TestApp() {
             </div>
           )}
           <p className="mt-3 text-[11px] text-brand-500 leading-relaxed">
-            Lane A only: S0–S6 cheap skim + gate. A fixture overrides the address field.{" "}
+            Lane A only: S0–S6 cheap skim + gate. A fixture overrides the address field.
+            Random samples a contract that emitted a Transfer in one recent block, then keeps it only if Etherscan has verified source.{" "}
             {liveIngest
               ? "Address runs fetch verified source live."
               : "Address-only runs have no bytecode without an Etherscan key, so they land in manual-review by design — use a fixture for a real pass."}{" "}
@@ -568,14 +652,20 @@ export default function TestApp() {
           >
             <span className="inline-block h-2 w-2 rounded-full bg-gold animate-pulse" aria-hidden />
             <span className="flex-1">
-              Lane A{dryRun ? " dry-run" : ""} on{" "}
-              {fixture ? `fixture ${fixtures.find((f) => f.id === fixture)?.label ?? fixture}` : address || "—"}
-              {" · "}ingest → IR → S0–S6
-              {fixture
-                ? " · fixtures usually finish in about a second"
-                : liveIngest
-                  ? " · live Etherscan ingest can take a minute or two"
-                  : " · stub ingest (no key)"}
+              {phase === "sample" ? (
+                "Choosing one verified contract from Etherscan — one click, one scan"
+              ) : (
+                <>
+                  Lane A{dryRun ? " dry-run" : ""} on{" "}
+                  {fixture ? `fixture ${fixtures.find((f) => f.id === fixture)?.label ?? fixture}` : address || "—"}
+                  {" · "}ingest → IR → S0–S6
+                  {fixture
+                    ? " · fixtures usually finish in about a second"
+                    : liveIngest
+                      ? " · live Etherscan ingest can take a minute or two"
+                      : " · stub ingest (no key)"}
+                </>
+              )}
             </span>
             <span className="tabular-nums text-gold/70">{elapsed}s</span>
           </div>
@@ -593,13 +683,28 @@ export default function TestApp() {
               <p className="text-[10px] tracking-[0.14em] uppercase text-gold/80 font-semibold">
                 Last run · Lane A{lastRun.dry_run ? " · dry-run" : ""}
                 {lastRun.fixture ? ` · fixture ${lastRun.fixture}` : ""}
+                {randomPick?.address && lastRun.result.address.toLowerCase() === randomPick.address.toLowerCase()
+                  ? " · random contract"
+                  : ""}
                 {fmtMs(lastRun.duration_ms) ? ` · ${fmtMs(lastRun.duration_ms)}` : ""}
               </p>
-              <ReceiptLink
-                markdown={lastRun.receipt_markdown}
-                filename={lastRun.receipt_filename}
-                url={lastRun.receipt_url}
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                {randomPick?.address && lastRun.result.address.toLowerCase() === randomPick.address.toLowerCase() && (
+                  <button
+                    type="button"
+                    disabled={running}
+                    onClick={() => void pullRandom()}
+                    className={btnSecondary}
+                  >
+                    Run another
+                  </button>
+                )}
+                <ReceiptLink
+                  markdown={lastRun.receipt_markdown}
+                  filename={lastRun.receipt_filename}
+                  url={lastRun.receipt_url}
+                />
+              </div>
             </div>
             <p className="mt-2 font-mono text-[11px] text-brand-200">
               {lastRun.result.address}
@@ -638,12 +743,22 @@ export default function TestApp() {
                 <span className="font-mono text-[11px] text-brand-100">{lastRun.result.value_movers.join(", ")}</span>
               </p>
             )}
+            {randomPick?.address && lastRun.result.address.toLowerCase() === randomPick.address.toLowerCase() && (
+              <p className="mt-2 text-brand-300">
+                {randomPick.contract_name || "Verified contract"}
+                {randomPick.compiler ? ` · ${randomPick.compiler}` : ""}
+                {randomPick.block_number != null ? ` · Transfer logs in block ${randomPick.block_number}` : ""}
+              </p>
+            )}
             {lastRun.result.notes.length > 0 && (
               <ul className="mt-2 text-brand-400 leading-relaxed list-disc pl-4 space-y-0.5">
                 {lastRun.result.notes.map((n, i) => (
                   <li key={i}>{n}</li>
                 ))}
               </ul>
+            )}
+            {randomPick?.note && lastRun.result.address.toLowerCase() === randomPick.address?.toLowerCase() && (
+              <p className="mt-2 text-brand-500 leading-relaxed">{randomPick.note}</p>
             )}
           </div>
         )}
