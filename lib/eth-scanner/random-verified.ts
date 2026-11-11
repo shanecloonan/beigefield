@@ -22,7 +22,7 @@ const CHAIN_ID = "1";
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 const RATE_RE =
-  /rate limit|max rate|too many requests|max calls per|rate limiter|community free api limit|daily limit reached/i;
+  /rate limit|rate-limit|max rate|too many requests|max calls per|rate limiter|community free api limit|daily limit reached/i;
 
 export const SAMPLE_STRATEGY = "transfer-log-sample";
 
