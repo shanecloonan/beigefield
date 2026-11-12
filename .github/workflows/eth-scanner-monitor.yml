@@ -1,10 +1,25 @@
-# Seed recent deployments + upgrade / funds-delta watch (free-tier, hourly).
+# Seed recent deployments + upgrade / funds-delta watch (free-tier).
+# Default: every 20 minutes, discover up to 100 creates, scan 40 with Lane A.
 name: eth-scanner-monitor
 
 on:
   schedule:
-    - cron: "47 * * * *"
+    # Every 20 minutes — Alchemy + Etherscan keys support this cadence.
+    - cron: "*/20 * * * *"
   workflow_dispatch:
+    inputs:
+      limit:
+        description: "Discovery / watchlist limit (creates to seed)"
+        required: false
+        default: "100"
+      scan:
+        description: "Lane A scans after seeding (claim pending)"
+        required: false
+        default: "40"
+      lookback_hours:
+        description: "Lookback window for recent contract creates"
+        required: false
+        default: "48"
 
 permissions:
   contents: read
@@ -16,7 +31,7 @@ concurrency:
 jobs:
   monitor:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -32,17 +47,32 @@ jobs:
           ETH_SCANNER_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           ETH_RPC_URL: ${{ secrets.ETH_RPC_URL }}
           ETHERSCAN_API_KEYS: ${{ secrets.ETHERSCAN_API_KEYS }}
+          INPUT_LIMIT: ${{ github.event.inputs.limit || '100' }}
+          INPUT_SCAN: ${{ github.event.inputs.scan || '40' }}
+          INPUT_LOOKBACK: ${{ github.event.inputs.lookback_hours || '48' }}
         run: |
           set -euo pipefail
           if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
             echo "Missing Actions secrets SUPABASE_URL / SUPABASE_SECRET_KEY — skip."
             exit 0
           fi
-          # Default source: recent mainnet creates (public RPC fallback if ETH_RPC_URL unset).
-          # Prefer verified when ETHERSCAN_API_KEYS is set; otherwise keep creates unverified.
+          if [ -z "${ETH_RPC_URL:-}" ]; then
+            echo "WARN: ETH_RPC_URL unset — falling back to public RPCs (rate-limited)."
+          fi
+          if [ -z "${ETHERSCAN_API_KEYS:-}" ]; then
+            echo "WARN: ETHERSCAN_API_KEYS unset — verified-source filter disabled."
+          else
+            echo "Etherscan verified filter: ON (prefer_verified auto)"
+          fi
+          LIMIT="${INPUT_LIMIT}"
+          SCAN="${INPUT_SCAN}"
+          LOOKBACK="${INPUT_LOOKBACK}"
+          echo "monitor params limit=${LIMIT} scan=${SCAN} lookback_hours=${LOOKBACK}"
+          # Prefer verified when ETHERSCAN_API_KEYS is set (default in discover).
+          # Logs creates_found / verified_kept / unverified_skipped / scanned on stderr.
           python -m eth_scanner monitor \
-            --limit 30 \
-            --lookback-hours 48 \
-            --scan 8 \
+            --limit "${LIMIT}" \
+            --lookback-hours "${LOOKBACK}" \
+            --scan "${SCAN}" \
             --json \
             --persist

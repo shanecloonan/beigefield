@@ -134,11 +134,16 @@ def main(argv: list[str] | None = None) -> int:
         "monitor",
         help="Seed recent deployments + upgrade/funds-delta watch (read-only)",
     )
-    mon.add_argument("--limit", type=int, default=40)
+    mon.add_argument("--limit", type=int, default=100)
     mon.add_argument("--persist", action="store_true", help="write alerts to eth_scan_alerts when remote store")
     mon.add_argument("--no-discover", action="store_true", help="skip recent-deploy seeding (legacy watchlist only)")
     mon.add_argument("--lookback-hours", type=int, default=48)
     mon.add_argument("--scan", type=int, default=0, help="after seeding, claim+run lane-a on N pending targets")
+    mon.add_argument(
+        "--allow-unverified",
+        action="store_true",
+        help="keep unverified creates even when ETHERSCAN_API_KEYS is set",
+    )
     mon.add_argument("--json", action="store_true")
     mon.add_argument("--dry-run", action="store_true")
 
@@ -147,8 +152,8 @@ def main(argv: list[str] | None = None) -> int:
         help="Seed queue from recent mainnet contract creations (read-only)",
     )
     disc.add_argument("--lookback-hours", type=int, default=48)
-    disc.add_argument("--max-blocks", type=int, default=80)
-    disc.add_argument("--max-results", type=int, default=30)
+    disc.add_argument("--max-blocks", type=int, default=200)
+    disc.add_argument("--max-results", type=int, default=100)
     disc.add_argument("--enqueue", action="store_true", help="upsert discoveries as pending targets")
     disc.add_argument("--allow-unverified", action="store_true", help="keep creates even when not verified")
     disc.add_argument("--json", action="store_true")
@@ -266,42 +271,66 @@ def main(argv: list[str] | None = None) -> int:
         keys = ",".join(getattr(settings, "etherscan_api_keys", None) or []) or (
             os.environ.get("ETHERSCAN_API_KEYS") or ""
         )
+        prefer_verified: Optional[bool] = False if args.allow_unverified else None
         if args.enqueue:
-            rows = seed_recent_deployments(
+            rows, stats = seed_recent_deployments(
                 store,
                 rpc_url=getattr(settings, "eth_rpc_url", "") or "",
                 etherscan_keys=keys,
                 lookback_hours=int(args.lookback_hours),
                 max_blocks=int(args.max_blocks),
                 max_results=int(args.max_results),
-                prefer_verified=not bool(args.allow_unverified),
+                prefer_verified=prefer_verified,
             )
         else:
-            rows = discover_recent_deployments(
+            rows, stats = discover_recent_deployments(
                 rpc_url=getattr(settings, "eth_rpc_url", "") or "",
-                etherscan_keys=os.environ.get("ETHERSCAN_API_KEYS") or "",
+                etherscan_keys=keys or (os.environ.get("ETHERSCAN_API_KEYS") or ""),
                 lookback_hours=int(args.lookback_hours),
                 max_blocks=int(args.max_blocks),
                 max_results=int(args.max_results),
-                prefer_verified=not bool(args.allow_unverified),
+                prefer_verified=prefer_verified,
             )
-        payload = [r.to_dict() for r in rows]
+        payload = {
+            "stats": stats.to_dict(),
+            "enqueued": bool(args.enqueue),
+            "contracts": [r.to_dict() for r in rows],
+        }
+        # Always log summary counts (even with --json on stderr).
+        print(
+            "discovery creates_found=%d verified_kept=%d unverified_skipped=%d "
+            "known_safe_skipped=%d prefer_verified=%s keys=%s kept=%d"
+            % (
+                stats.creates_found,
+                stats.verified_kept,
+                stats.unverified_skipped,
+                stats.known_safe_skipped,
+                stats.prefer_verified,
+                stats.keys_configured,
+                len(rows),
+            ),
+            file=sys.stderr,
+        )
         if args.json:
             print(json.dumps(payload, indent=2))
         else:
-            print("discovered=%d enqueue=%s" % (len(payload), bool(args.enqueue)))
-            for r in payload[:20]:
-                print("%s block=%s name=%s" % (r["address"], r["deployed_block"], r.get("contract_name") or "—"))
+            print("discovered=%d enqueue=%s" % (len(rows), bool(args.enqueue)))
+            for r in payload["contracts"][:20]:
+                print("%s block=%s verified=%s name=%s" % (
+                    r["address"], r["deployed_block"], r.get("verified"), r.get("contract_name") or "—",
+                ))
         return 0
 
     if args.cmd == "monitor":
         from eth_scanner.monitor.watch import scan_watchlist
-        alerts = scan_watchlist(
+        prefer_verified = False if args.allow_unverified else None
+        alerts, disc_stats, discovered = scan_watchlist(
             store,
             rpc_url=getattr(settings, "eth_rpc_url", "") or "",
             limit=int(args.limit),
             seed_discoveries=not bool(args.no_discover),
             lookback_hours=int(args.lookback_hours),
+            prefer_verified=prefer_verified,
         )
         scan_results: list[dict[str, Any]] = []
         if int(args.scan or 0) > 0:
@@ -331,11 +360,44 @@ def main(argv: list[str] | None = None) -> int:
                 persist_fn([a.to_dict() for a in alerts])
             else:
                 print("monitor: store cannot persist alerts", file=sys.stderr)
-        payload = {"alerts": [a.to_dict() for a in alerts], "scans": scan_results}
+        summary = {
+            "creates_found": disc_stats.creates_found,
+            "verified_kept": disc_stats.verified_kept,
+            "unverified_skipped": disc_stats.unverified_skipped,
+            "known_safe_skipped": disc_stats.known_safe_skipped,
+            "prefer_verified": disc_stats.prefer_verified,
+            "keys_configured": disc_stats.keys_configured,
+            "discovered_enqueued": len(discovered),
+            "scanned": len(scan_results),
+            "alerts": len(alerts),
+        }
+        # Human-readable counts always on stderr for Actions logs.
+        print(
+            "monitor creates_found=%(creates_found)d verified_kept=%(verified_kept)d "
+            "unverified_skipped=%(unverified_skipped)d discovered_enqueued=%(discovered_enqueued)d "
+            "scanned=%(scanned)d prefer_verified=%(prefer_verified)s keys=%(keys_configured)s"
+            % summary,
+            file=sys.stderr,
+        )
+        payload = {
+            "summary": summary,
+            "discovery_stats": disc_stats.to_dict(),
+            "alerts": [a.to_dict() for a in alerts],
+            "scans": scan_results,
+        }
         if args.json:
             print(json.dumps(payload, indent=2))
         else:
-            print("alerts=%d scans=%d" % (len(alerts), len(scan_results)))
+            print(
+                "alerts=%d scans=%d creates_found=%d verified_kept=%d unverified_skipped=%d"
+                % (
+                    len(alerts),
+                    len(scan_results),
+                    disc_stats.creates_found,
+                    disc_stats.verified_kept,
+                    disc_stats.unverified_skipped,
+                )
+            )
             for a in alerts:
                 print("%s %s %s" % (a.kind, a.address, a.detail))
             for s in scan_results:
