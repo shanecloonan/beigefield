@@ -1,0 +1,38 @@
+# Phase D — fail CI if labeled-benchmark precision regresses.
+name: eth-scanner-benchmark
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install eth-scanner (no engines)
+        run: python -m pip install -e ./eth-scanner
+      - name: Evaluate labeled benchmark (offline predictions = cool)
+        run: |
+          python - <<'PY'
+          from eth_scanner.benchmark.eval import evaluate_labeled_benchmark, load_labeled
+          data = load_labeled()
+          # Offline gate: curated safe set must not be treated as hot by default policy.
+          preds = {str(e["address"]).lower(): "lane-a-cool" for e in data["entries"]}
+          report = evaluate_labeled_benchmark(preds)
+          print(report.to_dict())
+          if not report.passes_baseline:
+              raise SystemExit("precision/FP baseline failed")
+          PY
+      - name: Unit tests for benchmark module
+        run: |
+          cd eth-scanner && PYTHONPATH=src python -m unittest tests.test_benchmark -q

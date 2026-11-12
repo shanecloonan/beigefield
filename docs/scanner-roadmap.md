@@ -119,10 +119,11 @@ Build a contract graph from verified source + on-chain reads:
 
 ### Phase D — Known-good / known-bad knowledge
 
-- Curated audited fingerprints (bytecode + AST hashes) → score zero on standard surfaces
+- Curated audited fingerprints (bytecode + AST hashes) → score zero on standard surfaces (`known_safe.py` + `benchmarks/labeled.json`)
 - Labeled benchmark from public post-mortems (read-only; **no PoC code**)
 - `/test` benchmark panel: precision, recall, false-positive rate
-- CI fails if precision regresses below baseline
+- CI: `.github/workflows/eth-scanner-benchmark.yml` fails if precision/FP baseline regresses
+- Code: `eth_scanner/benchmark/`, `lib/eth-scanner/benchmark.ts`
 
 ### Phase E — AI-assisted triage (optional)
 

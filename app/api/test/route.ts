@@ -5,6 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { evaluateLabeledBenchmark } from "@/lib/eth-scanner/benchmark";
 import { capabilityNote, fixtureCatalog, pythonCapability, researchFixtureCatalog, scannerCapabilities } from "@/lib/eth-scanner/capabilities";
 import { listResearchReceipts, loadDryRunStore } from "@/lib/eth-scanner/local-store";
 import { loadTestScanHistory } from "@/lib/eth-scanner/persist-test-results";
@@ -112,6 +113,12 @@ export async function GET(req: Request) {
     if (t.bucket && counts[t.bucket] != null) counts[t.bucket] += 1;
   }
 
+  const pred: Record<string, string | null | undefined> = {};
+  for (const t of targets) {
+    if (t.address) pred[String(t.address).toLowerCase()] = t.bucket;
+  }
+  const benchmark = evaluateLabeledBenchmark(pred);
+
   return NextResponse.json({
     ok: true,
     ...caps,
@@ -123,6 +130,7 @@ export async function GET(req: Request) {
     results: resultsRes.data ?? [],
     history: { runs: history.runs, findings: history.findings, error: history.error },
     precision: precisionRes.error ? null : precisionRes.data,
+    benchmark,
     fixtures,
     research_fixtures: researchFixtureCatalog(),
     research_receipts: listResearchReceipts(12),
