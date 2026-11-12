@@ -211,6 +211,10 @@ def run_advanced_engines(
         "mythril_ms": report.mythril_ms,
         "total_ms": int((time.monotonic() - t0) * 1000),
         "cache_hit": report.cache_hit,
+        "ran_slither": report.ran_slither,
+        "ran_mythril": report.ran_mythril,
+        "slither_status": report.slither_status,
+        "mythril_status": report.mythril_status,
         "leads": len(report.leads),
         "confirmed": report.confirmed_count,
     }

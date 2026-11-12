@@ -53,8 +53,28 @@ jobs:
           cache: pip
       - name: Install scanner + engines
         run: |
+          set -euo pipefail
           python -m pip install -e ./eth-scanner
-          python -m pip install "slither-analyzer>=0.10.0" "mythril>=0.24.0" || true
+          python -m pip install solc-select
+          solc-select install 0.8.20 || true
+          solc-select use 0.8.20 || true
+          # Slither + Mythril conflict on eth-hash/web3 — install separately.
+          python -m pip install "slither-analyzer>=0.10.0" || true
+          python -m venv /tmp/mythril-venv
+          /tmp/mythril-venv/bin/pip install -q --upgrade pip
+          /tmp/mythril-venv/bin/pip install -q "mythril>=0.24.0" || true
+          if [ -x /tmp/mythril-venv/bin/myth ]; then
+            export ETH_SCANNER_MYTHRIL_BIN=/tmp/mythril-venv/bin/myth
+            echo "ETH_SCANNER_MYTHRIL_BIN=/tmp/mythril-venv/bin/myth" >> "$GITHUB_ENV"
+          elif [ -x /tmp/mythril-venv/bin/mythril ]; then
+            export ETH_SCANNER_MYTHRIL_BIN=/tmp/mythril-venv/bin/mythril
+            echo "ETH_SCANNER_MYTHRIL_BIN=/tmp/mythril-venv/bin/mythril" >> "$GITHUB_ENV"
+          fi
+          command -v slither && slither --version | head -1 || echo "slither missing"
+          python - <<'PY'
+          from eth_scanner.deep.runners import engine_availability
+          print("engine_availability=", engine_availability())
+          PY
 
       - name: Run backfill chunk
         env:

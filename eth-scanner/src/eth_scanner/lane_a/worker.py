@@ -388,6 +388,11 @@ def claim_and_drain(
                     "contract_class": result.contract_class,
                     "known_safe": result.known_safe,
                     "deployed_block": row.get("deployed_block"),
+                    "heat_breakdown": dict(result.heat_breakdown or {}),
+                    "engine_leads": list(result.engine_leads or []),
+                    "confirmed_findings": list(result.confirmed_findings or []),
+                    "engine_timing": dict(result.engine_timing or {}),
+                    "notes": list(result.notes or [])[:12],
                 }
             except Exception as exc:  # noqa: BLE001 — keep draining siblings
                 return addr, {"address": addr, "error": str(exc)[:200], "deployed_block": row.get("deployed_block")}
