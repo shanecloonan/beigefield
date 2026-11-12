@@ -25,6 +25,40 @@ def _worker_id() -> str:
     return "deep-%s-%s" % (socket.gethostname()[:24], os.getpid())
 
 
+def _optional_explanations(
+    findings: list[Any],
+    address: str,
+    contract_name: Optional[str],
+    row: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Phase E: explain up to 3 non-generic agreed findings when an LLM key exists."""
+    try:
+        from eth_scanner.triage_ai.explain import explain_finding, llm_configured
+    except Exception:  # noqa: BLE001
+        return []
+    if not llm_configured():
+        return []
+    out: list[dict[str, Any]] = []
+    candidates = [
+        f for f in findings
+        if not getattr(f, "generic", False) and int(getattr(f, "agreement_count", 1) or 1) >= 1
+    ][:3]
+    for f in candidates:
+        payload = f.to_dict() if hasattr(f, "to_dict") else dict(f)
+        note = explain_finding(
+            payload,
+            context={
+                "address": address,
+                "contract_name": contract_name,
+                "funds_usd": row.get("funds_usd"),
+                "bucket": row.get("bucket"),
+                "known_safe": row.get("known_safe"),
+            },
+        )
+        out.append({"finding_id": payload.get("id"), **note})
+    return out
+
+
 def _fetch_source(address: str, settings: Settings) -> tuple[Optional[str], Optional[str], list[str]]:
     """Return (source_text, contract_name, notes)."""
     notes: list[str] = []
@@ -142,6 +176,7 @@ def run_deep_one(
         "fork_properties": fork_props,
         "protocol_graph": protocol_graph,
         "protocol_risks": protocol_risks,
+        "triage_explanations": _optional_explanations(findings, addr, contract_name, row),
         "engine_runs": [
             {
                 "engine": r.engine,

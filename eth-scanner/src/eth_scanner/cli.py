@@ -120,6 +120,15 @@ def main(argv: list[str] | None = None) -> int:
     pg.add_argument("--json", action="store_true")
     pg.add_argument("--dry-run", action="store_true")
 
+    ai = sub.add_parser(
+        "explain",
+        help="Phase E optional LLM triage note (skipped without API key; never adds heat)",
+    )
+    ai.add_argument("--finding-json", required=True, help="path to a finding JSON object")
+    ai.add_argument("--address", default="")
+    ai.add_argument("--json", action="store_true")
+    ai.add_argument("--dry-run", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -215,6 +224,16 @@ def main(argv: list[str] | None = None) -> int:
             for f in risks.get("factors") or []:
                 print("- %s (L=%s): %s" % (f.get("id"), f.get("likelihood"), f.get("detail")))
         return 0
+
+    if args.cmd == "explain":
+        from eth_scanner.triage_ai.explain import explain_finding
+        finding = json.loads(Path(args.finding_json).read_text(encoding="utf-8"))
+        out = explain_finding(finding, context={"address": args.address})
+        if args.json:
+            print(json.dumps(out, indent=2))
+        else:
+            print("%s: %s" % (out.get("status"), out.get("explanation")))
+        return 0 if out.get("status") in {"ok", "skipped"} else 1
 
     if args.cmd == "enqueue":
         from eth_scanner.types import Target
