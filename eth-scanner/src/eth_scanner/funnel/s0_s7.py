@@ -256,6 +256,23 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
         )
 
     if scope.demoted:
+        demoted_safe, demoted_safe_reasons = is_known_safe(
+            address=ctx.target.address,
+            contract_name=(ctx.artifact.contract_name if ctx.artifact else None),
+            source=source,
+            implementation=(ctx.artifact.implementation if ctx.artifact else None),
+        )
+        if demoted_safe:
+            notes.append(
+                "known-safe surface (%s) — demoted class stays cool"
+                % ",".join(demoted_safe_reasons[:4])
+            )
+        heat_demoted, heat_bd_demoted = evidence_heat(
+            funds_usd=funds_usd,
+            invariant_results=[],
+            privileged_callable=False,
+            eoa_admin=False,
+        )
         traces.append(_trace(
             "S4", "lane-a-cool",
             "no funds-at-risk surface — demoted from the main Lane A path",
@@ -264,11 +281,12 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
             signals=scope.signals,
             erc20_standard=erc20_leads,
             movers=movers,
+            known_safe=demoted_safe,
         ))
         traces.append(_trace("S5", "skip", "out-of-scope class — not competing for Lane B"))
         traces.append(_trace("S6", "lane-a-cool", "cool-archive (funds heat ranks; pattern leads add zero)"))
         return _done(
-            "lane-a-cool", traces, src_conf, ir_conf, heat, notes,
+            "lane-a-cool", traces, src_conf, ir_conf, heat_demoted, notes,
             extra=(
                 "Demoted %s from the main scan lane. Lane A only keeps venues that "
                 "hold or account third-party value (vault/staking/lending/pool/bridge/maker). "
@@ -280,6 +298,9 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
             movers=movers,
             scope=scope,
             funds_usd=funds_usd,
+            heat_breakdown=heat_bd_demoted,
+            known_safe=demoted_safe,
+            contract_name=(ctx.artifact.contract_name if ctx.artifact else None),
         )
 
     if not movers:
