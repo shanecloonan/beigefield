@@ -76,6 +76,10 @@ describe("persist payload mappers", () => {
         contract_class: "vault",
         scope: "in-scope",
         notes: ["ok"],
+        funds_usd: 4200,
+        funds_breakdown: [{ symbol: "USDC", usd: 4200, kind: "erc20" }],
+        funds_status: "ok",
+        funds_checked_at: "2026-01-01T00:00:00Z",
       },
       fixture: "gated_vault",
       duration_ms: 12,
@@ -85,6 +89,36 @@ describe("persist payload mappers", () => {
     const b = buildDedupeKey(input);
     assert.equal(a, b);
     assert.match(a, /^[a-f0-9]{64}$/);
+    assert.equal(input.funds_usd, 4200);
+    assert.equal(input.tvl_usd, 4200);
+    assert.equal(input.money_at_risk_usd, 4200);
+    assert.equal(input.funds_status, "ok");
+  });
+
+  it("maps funds-floor drops into persist rows", () => {
+    const input = laneAPersistInput({
+      result: {
+        address: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        bucket: "lane-a-cool",
+        dropped: true,
+        drop_reason: "below funds floor ($0 < $2,000)",
+        heat: 0,
+        src_confidence: "low",
+        ir_confidence: "low",
+        value_movers: [],
+        contract_class: null,
+        scope: null,
+        notes: ["Source fetch and analysis skipped — below live funds floor."],
+        funds_usd: 0,
+        funds_breakdown: [],
+        funds_status: "ok",
+        funds_checked_at: "2026-01-01T00:00:00Z",
+      },
+    });
+    assert.equal(input.dropped, true);
+    assert.match(input.drop_reason || "", /below funds floor/);
+    assert.equal(input.funds_usd, 0);
+    assert.equal(input.status, "dropped");
   });
 
   it("maps research findings into persist rows", () => {

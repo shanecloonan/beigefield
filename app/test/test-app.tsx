@@ -23,6 +23,14 @@ type Bucket =
   | "human-no-candidate"
   | "human-yes-candidate";
 
+type FundsAsset = {
+  symbol: string;
+  usd?: number;
+  amount?: number;
+  kind?: string;
+  address?: string | null;
+};
+
 type Target = {
   address: string;
   bytecode_hash: string | null;
@@ -33,6 +41,10 @@ type Target = {
   heat: number | null;
   bucket: Bucket | null;
   updated_at: string | null;
+  funds_usd?: number | string | null;
+  funds_breakdown?: FundsAsset[] | null;
+  funds_status?: string | null;
+  funds_checked_at?: string | null;
 };
 
 type FixtureOpt = { id: string; label: string };
@@ -99,6 +111,10 @@ type RunResult = {
   contract_class: string | null;
   scope: string | null;
   notes: string[];
+  funds_usd?: number | null;
+  funds_breakdown?: FundsAsset[];
+  funds_status?: string | null;
+  funds_checked_at?: string | null;
 };
 
 type PersistInfo = {
@@ -133,6 +149,10 @@ type LoopHistoryRow = {
   contract_name: string | null;
   bucket: string | null;
   heat: number | null;
+  funds_usd?: number | null;
+  funds_status?: string | null;
+  dropped?: boolean;
+  drop_reason?: string | null;
 };
 
 type RandomSample = {
@@ -482,13 +502,17 @@ export default function TestApp() {
           fixture: body.fixture ?? null,
           address: r.address,
           bytecode_hash: null,
-          tvl_usd: null,
+          tvl_usd: r.funds_usd ?? null,
           status: r.dropped ? `dropped${r.drop_reason ? ` · ${r.drop_reason}` : ""}` : "scanned",
           src_confidence: r.src_confidence,
           ir_confidence: r.ir_confidence,
           heat: r.heat,
           bucket: (r.bucket as Bucket | null) ?? null,
           updated_at: new Date().toISOString(),
+          funds_usd: r.funds_usd ?? null,
+          funds_breakdown: r.funds_breakdown ?? null,
+          funds_status: r.funds_status ?? null,
+          funds_checked_at: r.funds_checked_at ?? null,
           receipt_markdown: body.receipt_markdown ?? null,
           receipt_filename: body.receipt_filename ?? null,
           ran_at: Date.now(),
@@ -562,6 +586,10 @@ export default function TestApp() {
         contract_name: picked?.contract_name ?? null,
         bucket: body.result!.bucket,
         heat: body.result!.heat,
+        funds_usd: body.result!.funds_usd ?? null,
+        funds_status: body.result!.funds_status ?? null,
+        dropped: body.result!.dropped,
+        drop_reason: body.result!.drop_reason,
       }, RANDOM_HISTORY_CAP));
     }
     if (!body.ok) return { ok: false, rateLimited, error: body.error || "The scan failed." };
@@ -926,6 +954,30 @@ export default function TestApp() {
                   Pick a local fixture or set keys for live ingest.
                 </p>
               )}
+            {(lastRun.result.funds_usd != null || lastRun.result.funds_status) && (
+              <div className="mt-2 text-brand-300">
+                <p>
+                  Funds{" "}
+                  <span className="text-brand-100 font-mono">
+                    {lastRun.result.funds_usd != null
+                      ? `$${Number(lastRun.result.funds_usd).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+                      : "—"}
+                  </span>
+                  {lastRun.result.funds_status ? ` · ${lastRun.result.funds_status}` : ""}
+                </p>
+                {(lastRun.result.funds_breakdown?.length ?? 0) > 0 && (
+                  <ul className="mt-1 text-[11px] text-brand-400 list-disc pl-4 space-y-0.5">
+                    {lastRun.result.funds_breakdown!.slice(0, 8).map((a, i) => (
+                      <li key={`${a.symbol}-${i}`}>
+                        {a.symbol}
+                        {a.kind ? ` (${a.kind})` : ""}
+                        {a.usd != null ? ` · $${Number(a.usd).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
             {lastRun.result.value_movers?.length > 0 && (
               <p className="mt-2 text-brand-300">
                 Value movers:{" "}
@@ -972,6 +1024,16 @@ export default function TestApp() {
                   <span className="text-brand-200">{row.contract_name || "Contract"}</span>
                   <span className="font-mono text-brand-400">{row.address}</span>
                   <span className="text-brand-500">{row.bucket || "—"}{row.heat != null ? ` · heat ${row.heat}` : ""}</span>
+                  <span className="text-brand-400 tabular-nums">
+                    {row.funds_usd != null
+                      ? `$${Number(row.funds_usd).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                      : row.funds_status || "funds —"}
+                  </span>
+                  {row.dropped && row.drop_reason ? (
+                    <span className="text-amber-500/90 truncate max-w-[28rem]" title={row.drop_reason}>
+                      {row.drop_reason}
+                    </span>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -1119,7 +1181,10 @@ export default function TestApp() {
                     <td className="px-3 py-2">
                       {t.src_confidence ?? "—"} / {t.ir_confidence ?? "—"}
                     </td>
-                    <td className="px-3 py-2 tabular-nums">{t.tvl_usd ?? "—"}</td>
+                    <td className="px-3 py-2 tabular-nums" title={Array.isArray(t.funds_breakdown) ? t.funds_breakdown.map((a) => `${a.symbol}: $${a.usd ?? 0}`).join(" · ") : undefined}>
+                      {t.funds_usd ?? t.tvl_usd ?? "—"}
+                      {t.funds_status ? <span className="block text-[10px] text-brand-500">{t.funds_status}</span> : null}
+                    </td>
                     <td className="px-3 py-2 text-brand-400">{t.status ?? "—"}</td>
                     <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                       <ReceiptLink

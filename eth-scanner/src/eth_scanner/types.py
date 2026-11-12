@@ -42,6 +42,8 @@ BUCKETS: tuple[Bucket, ...] = (
 # §6.0 heat ranking only — never used to auto-dismiss.
 DEFAULT_HEAT_THRESHOLD = 3
 DEFAULT_TVL_FLOOR_USD = 10_000.0
+# Live funds floor (native + major ERC-20s / vault AUM) checked before ingest.
+DEFAULT_MIN_FUNDS_USD = 2_000.0
 MAX_HEAT = 12
 # Free-tier Etherscan starves under ~0.25s; verified iteration-2 used ~0.4s.
 DEFAULT_ETHERSCAN_INTERVAL_S = 0.4
@@ -73,6 +75,11 @@ class Target:
     # Rate-limit / proxy-impl fetch failure — NOT a confirmed empty EOA.
     ingest_incomplete: bool = False
     ingest_incomplete_reason: Optional[str] = None
+    # Live funds probe (first step). Manual TVL override still wins when set.
+    funds_usd: Optional[float] = None
+    funds_breakdown: list[dict[str, Any]] = field(default_factory=list)
+    funds_status: Optional[str] = None  # ok | unknown | skipped | override
+    funds_checked_at: Optional[str] = None
 
 
 @dataclass
@@ -168,6 +175,10 @@ class FunnelResult:
     contract_class: str = "unknown"
     scope: str = "unknown"
     scope_signals: list[str] = field(default_factory=list)
+    funds_usd: Optional[float] = None
+    funds_breakdown: list[dict[str, Any]] = field(default_factory=list)
+    funds_status: Optional[str] = None
+    funds_checked_at: Optional[str] = None
 
     def to_dict(self) -> dict[str, Any]:
         return to_plain(self)

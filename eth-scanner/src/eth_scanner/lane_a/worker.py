@@ -22,10 +22,16 @@ from eth_scanner.ingest.etherscan import (
     has_runtime_code,
     parse_source_result,
 )
+from eth_scanner.ingest.funds import (
+    DEFAULT_MIN_FUNDS_USD,
+    FundsSnapshot,
+    format_funds_floor_reason,
+    probe_contract_funds,
+)
 from eth_scanner.ingest.unpack import materialize_source, select_ir_artifact
 from eth_scanner.ir.normalize import normalize
 from eth_scanner.store.supabase import ScanStore, artifact_payload, normalize_address, open_store
-from eth_scanner.types import FunnelResult, SourceArtifact, Target, to_plain
+from eth_scanner.types import FunnelResult, SourceArtifact, StageTrace, Target, to_plain
 
 
 def run_one(
@@ -42,6 +48,35 @@ def run_one(
     store = store or open_store(settings)
     addr = normalize_address(address)
     closed = store.closed_no_hashes()
+    min_funds = float(getattr(settings, "min_funds_usd", DEFAULT_MIN_FUNDS_USD) or DEFAULT_MIN_FUNDS_USD)
+
+    # --- Funds floor FIRST (before source fetch / analysis) ----------------
+    # Local fixtures skip the live probe. Manual --tvl override wins.
+    funds = _resolve_funds(
+        addr,
+        settings=settings,
+        tvl_usd=tvl_usd,
+        local_source=bool(source_path or source_text),
+        min_funds=min_funds,
+    )
+    if funds.status == "ok" and funds.total_usd is not None and funds.total_usd < min_funds:
+        reason = format_funds_floor_reason(funds.total_usd, min_funds)
+        result = _funds_floor_drop(addr, funds, reason, min_funds)
+        target = Target(
+            address=addr,
+            tvl_usd=funds.total_usd,
+            status="skipped",
+            has_code=True,
+            funds_usd=funds.total_usd,
+            funds_breakdown=list(funds.to_dict().get("breakdown") or []),
+            funds_status=funds.status,
+            funds_checked_at=funds.checked_at,
+        )
+        store.upsert_target(target)
+        store.save_result(addr, result)
+        return result
+
+    effective_tvl = tvl_usd if tvl_usd is not None else funds.total_usd
 
     artifact, code, src_dir, incomplete, incomplete_reason = _ingest(
         addr,
@@ -53,18 +88,22 @@ def run_one(
     code_hash = fingerprint_bytecode(code) if code else _source_fingerprint(artifact.content)
     has_code = has_runtime_code(code) if code else bool(artifact.content)
     if incomplete and not has_code:
-        # Rate-limit starvation is not a confirmed EOA — S0 must keep the row.
+        # Rate-limit starvation is not a confirmed empty EOA — S0 must keep the row.
         has_code = True
     target = Target(
         address=addr,
         bytecode_hash=code_hash or None,
         bytecode=code or None,
-        tvl_usd=tvl_usd,
+        tvl_usd=effective_tvl,
         status="running",
         has_code=has_code,
         prior_closed_no=bool(code_hash and code_hash in closed),
         ingest_incomplete=incomplete,
         ingest_incomplete_reason=incomplete_reason,
+        funds_usd=funds.total_usd if funds.status in {"ok", "override"} else None,
+        funds_breakdown=list(funds.to_dict().get("breakdown") or []),
+        funds_status=funds.status,
+        funds_checked_at=funds.checked_at,
     )
     store.upsert_target(target)
     store.save_artifact(addr, artifact.kind, artifact_payload(artifact), artifact.src_confidence)
@@ -79,8 +118,95 @@ def run_one(
         source_text=artifact.content,
         config=FunnelConfig(heat_threshold=settings.heat_threshold, tvl_floor_usd=settings.tvl_floor_usd),
     ))
+    # Prepend funds stage so receipts / Supabase show the floor check first.
+    result.stage_trace = [_funds_trace(funds, min_funds), *list(result.stage_trace or [])]
+    result.funds_usd = target.funds_usd
+    result.funds_breakdown = list(target.funds_breakdown or [])
+    result.funds_status = target.funds_status
+    result.funds_checked_at = target.funds_checked_at
+    if funds.status == "unknown":
+        result.notes = list(result.notes or []) + list(funds.notes or ["funds lookup unknown — continued"])
     store.save_result(addr, result)
     return result
+
+
+def _resolve_funds(
+    address: str,
+    *,
+    settings: Settings,
+    tvl_usd: Optional[float],
+    local_source: bool,
+    min_funds: float,
+) -> FundsSnapshot:
+    if tvl_usd is not None:
+        return FundsSnapshot(
+            status="override",
+            total_usd=float(tvl_usd),
+            breakdown=[],
+            checked_at=None,
+            notes=["manual TVL override — live funds probe skipped for floor math"],
+        )
+    if local_source:
+        return FundsSnapshot(
+            status="skipped",
+            total_usd=None,
+            breakdown=[],
+            notes=["local fixture/source — live funds floor skipped"],
+        )
+    return probe_contract_funds(
+        address,
+        rpc_url=settings.eth_rpc_url or "",
+        min_funds_usd=min_funds,
+    )
+
+
+def _funds_trace(funds: FundsSnapshot, min_funds: float) -> StageTrace:
+    decision = "keep"
+    reason = "funds ok"
+    if funds.status == "override":
+        decision, reason = "keep", "manual TVL override"
+    elif funds.status == "skipped":
+        decision, reason = "skip", "local source — funds floor not applied"
+    elif funds.status == "unknown":
+        decision, reason = "unknown", funds.error or "funds lookup failed — continue"
+    elif funds.total_usd is not None and funds.total_usd < min_funds:
+        decision, reason = "drop", format_funds_floor_reason(funds.total_usd, min_funds)
+    elif funds.status == "ok":
+        decision, reason = "keep", "funds >= floor ($%s)" % ("{:,.0f}".format(min_funds))
+    return StageTrace(
+        stage="funds",
+        decision=decision,
+        reason=reason,
+        extras={
+            "funds_usd": funds.total_usd,
+            "funds_status": funds.status,
+            "min_funds_usd": min_funds,
+            "breakdown": funds.to_dict().get("breakdown") or [],
+            "checked_at": funds.checked_at,
+            "rpc": funds.to_dict().get("rpc_url"),
+        },
+    )
+
+
+def _funds_floor_drop(address: str, funds: FundsSnapshot, reason: str, min_funds: float) -> FunnelResult:
+    return FunnelResult(
+        bucket="lane-a-cool",
+        dropped=True,
+        drop_reason=reason,
+        heat=0,
+        src_confidence="low",
+        ir_confidence="low",
+        stage_trace=[_funds_trace(funds, min_funds)],
+        notes=[
+            "Lane A is noise-kill + ranking, not a verdict.",
+            reason,
+            "Source fetch and analysis skipped — below live funds floor.",
+        ],
+        funds_usd=funds.total_usd,
+        funds_breakdown=list(funds.to_dict().get("breakdown") or []),
+        funds_status=funds.status,
+        funds_checked_at=funds.checked_at,
+    )
 
 
 def run_batch(

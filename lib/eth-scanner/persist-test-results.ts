@@ -71,6 +71,10 @@ export type PersistRunInput = {
   chain?: string;
   tvl_usd?: number | null;
   money_at_risk_usd?: number | null;
+  funds_usd?: number | null;
+  funds_breakdown?: unknown;
+  funds_status?: string | null;
+  funds_checked_at?: string | null;
   bucket?: string | null;
   heat?: number | null;
   status?: string | null;
@@ -188,6 +192,10 @@ export async function persistTestScanRun(
     bytecode_hash: input.bytecode_hash ?? null,
     tvl_usd: input.tvl_usd ?? null,
     money_at_risk_usd: input.money_at_risk_usd ?? input.tvl_usd ?? null,
+    funds_usd: input.funds_usd ?? input.tvl_usd ?? null,
+    funds_breakdown: asJson(input.funds_breakdown ?? []) ?? [],
+    funds_status: input.funds_status ?? null,
+    funds_checked_at: input.funds_checked_at ?? null,
     bucket: input.bucket ?? null,
     heat: input.heat ?? null,
     status: input.status ?? (input.dropped ? "dropped" : input.error ? "error" : "done"),
@@ -392,7 +400,7 @@ export async function loadTestScanHistory(
     let runsQ = sb
       .from("test_scan_runs")
       .select(
-        "id,dedupe_key,kind,chain,address,fixture,contract_name,tvl_usd,money_at_risk_usd,bucket,heat,status,dropped,drop_reason,src_confidence,ir_confidence,contract_class,scope,findings_count,severity_counts,duration_ms,receipt_filename,error,created_at,finished_at",
+        "id,dedupe_key,kind,chain,address,fixture,contract_name,tvl_usd,money_at_risk_usd,funds_usd,funds_breakdown,funds_status,funds_checked_at,bucket,heat,status,dropped,drop_reason,src_confidence,ir_confidence,contract_class,scope,findings_count,severity_counts,duration_ms,receipt_filename,error,created_at,finished_at",
       )
       .order("created_at", { ascending: false })
       .limit(limit);
@@ -454,6 +462,11 @@ export function laneAPersistInput(body: {
     contract_class?: string | null;
     scope?: string | null;
     notes?: string[];
+    funds_usd?: number | null;
+    funds_breakdown?: unknown;
+    funds_status?: string | null;
+    funds_checked_at?: string | null;
+    stage_trace?: unknown;
   };
   fixture?: string | null;
   dry_run?: boolean;
@@ -465,12 +478,17 @@ export function laneAPersistInput(body: {
   tvl?: number | null;
 }): PersistRunInput {
   const r = body.result;
+  const funds = r.funds_usd ?? body.tvl ?? null;
   return {
     kind: "lane-a",
     address: r.address,
     fixture: body.fixture ?? null,
-    tvl_usd: body.tvl ?? null,
-    money_at_risk_usd: body.tvl ?? null,
+    tvl_usd: funds,
+    money_at_risk_usd: funds,
+    funds_usd: funds,
+    funds_breakdown: r.funds_breakdown ?? [],
+    funds_status: r.funds_status ?? null,
+    funds_checked_at: r.funds_checked_at ?? null,
     bucket: r.bucket,
     heat: r.heat,
     status: r.dropped ? "dropped" : "done",
@@ -481,6 +499,7 @@ export function laneAPersistInput(body: {
     contract_class: r.contract_class ?? null,
     scope: r.scope ?? null,
     value_movers: r.value_movers ?? [],
+    stage_trace: r.stage_trace ?? [],
     notes: r.notes ?? [],
     receipt_filename: body.receipt_filename ?? null,
     receipt_markdown: body.receipt_markdown ?? null,
