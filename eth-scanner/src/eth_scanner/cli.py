@@ -129,6 +129,15 @@ def main(argv: list[str] | None = None) -> int:
     ai.add_argument("--json", action="store_true")
     ai.add_argument("--dry-run", action="store_true")
 
+    mon = sub.add_parser(
+        "monitor",
+        help="Phase F upgrade/funds-delta watchlist (read-only; deduped alerts)",
+    )
+    mon.add_argument("--limit", type=int, default=40)
+    mon.add_argument("--persist", action="store_true", help="write alerts to eth_scan_alerts when remote store")
+    mon.add_argument("--json", action="store_true")
+    mon.add_argument("--dry-run", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -234,6 +243,28 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print("%s: %s" % (out.get("status"), out.get("explanation")))
         return 0 if out.get("status") in {"ok", "skipped"} else 1
+
+    if args.cmd == "monitor":
+        from eth_scanner.monitor.watch import scan_watchlist
+        alerts = scan_watchlist(
+            store,
+            rpc_url=getattr(settings, "eth_rpc_url", "") or "",
+            limit=int(args.limit),
+        )
+        if args.persist:
+            persist_fn = getattr(store, "save_alerts", None)
+            if callable(persist_fn):
+                persist_fn([a.to_dict() for a in alerts])
+            else:
+                print("monitor: store cannot persist alerts", file=sys.stderr)
+        payload = [a.to_dict() for a in alerts]
+        if args.json:
+            print(json.dumps(payload, indent=2))
+        else:
+            print("alerts=%d" % len(payload))
+            for a in payload:
+                print("%s %s %s" % (a["kind"], a["address"], a["detail"]))
+        return 0
 
     if args.cmd == "enqueue":
         from eth_scanner.types import Target

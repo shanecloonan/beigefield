@@ -75,7 +75,7 @@ export async function GET(req: Request) {
     targetsQuery = targetsQuery.eq("bucket", bucket);
   }
 
-  const [targetsRes, resultsRes, precisionRes] = await Promise.all([
+  const [targetsRes, resultsRes, precisionRes, alertsRes] = await Promise.all([
     targetsQuery,
     sb
       .from("eth_scan_results")
@@ -83,6 +83,7 @@ export async function GET(req: Request) {
       .order("created_at", { ascending: false })
       .limit(limit),
     sb.from("test_scan_precision").select("*").maybeSingle(),
+    sb.from("eth_scan_alerts").select("id,address,kind,fingerprint,detail,funds_usd,created_at").order("created_at", { ascending: false }).limit(20),
   ]);
 
   if (targetsRes.error || resultsRes.error) {
@@ -131,6 +132,7 @@ export async function GET(req: Request) {
     history: { runs: history.runs, findings: history.findings, error: history.error },
     precision: precisionRes.error ? null : precisionRes.data,
     benchmark,
+    alerts: alertsRes.error ? [] : alertsRes.data ?? [],
     fixtures,
     research_fixtures: researchFixtureCatalog(),
     research_receipts: listResearchReceipts(12),
