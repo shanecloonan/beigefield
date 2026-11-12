@@ -140,6 +140,157 @@ def probe_contract_funds(
     )
 
 
+def probe_funds_batch(
+    addresses: list[str],
+    *,
+    rpc_url: str = "",
+    timeout_s: float = 20.0,
+    batch_size: int = 40,
+) -> dict[str, FundsSnapshot]:
+    """Cheap floor probe for many addresses: native ETH + major ERC-20s only.
+
+    Packs Multicall3 getEthBalance + balanceOf(majors) per address (no vault
+    getters). Used by the 30d backfill before full Lane A.
+    """
+    out: dict[str, FundsSnapshot] = {}
+    addrs = [_norm_addr(a) for a in addresses if a]
+    if not addrs:
+        return out
+    checked = _now()
+    rpcs = resolve_rpc_urls(rpc_url)
+    if not rpcs:
+        for a in addrs:
+            out[a] = FundsSnapshot(
+                status="unknown", total_usd=None, checked_at=checked,
+                error="no RPC", notes=["funds batch: no RPC"],
+            )
+        return out
+
+    eth_price = 0.0
+    try:
+        eth_price = _eth_price()
+    except Exception:  # noqa: BLE001
+        eth_price = 0.0
+    token_prices: dict[str, float] = {}
+    for symbol, token, hint, _dec in MAJOR_TOKENS:
+        try:
+            if symbol in STABLE_SYMBOLS:
+                token_prices[token] = 1.0
+            else:
+                token_prices[token] = _price_for_hint(hint, symbol)
+        except Exception:  # noqa: BLE001
+            token_prices[token] = 0.0
+
+    for i in range(0, len(addrs), max(1, batch_size)):
+        chunk = addrs[i : i + batch_size]
+        snap_map: Optional[dict[str, FundsSnapshot]] = None
+        last_err = ""
+        for rpc in rpcs:
+            try:
+                snap_map = _probe_batch_via_rpc(
+                    chunk, rpc, timeout_s=timeout_s,
+                    eth_price=eth_price, token_prices=token_prices, checked_at=checked,
+                )
+                break
+            except Exception as exc:  # noqa: BLE001
+                last_err = str(exc)
+                continue
+        if snap_map is None:
+            for a in chunk:
+                out[a] = FundsSnapshot(
+                    status="unknown", total_usd=None, checked_at=checked,
+                    error=last_err or "funds batch failed",
+                    notes=["funds batch failed — treat as unknown"],
+                )
+        else:
+            out.update(snap_map)
+        time.sleep(0.05)
+    return out
+
+
+def _price_for_hint(hint: str, symbol: str) -> float:
+    if symbol in STABLE_SYMBOLS:
+        return 1.0
+    if hint == "ethereum":
+        return _eth_price()
+    # Reuse llama/coingecko path via existing helpers when possible.
+    try:
+        if hint in {"usd-coin", "tether", "dai", "ethena-usde"}:
+            return 1.0
+        # Map common hints to coingecko ids already used elsewhere.
+        cg = {
+            "wrapped-bitcoin": "wrapped-bitcoin",
+            "staked-ether": "staked-ether",
+            "wrapped-steth": "wrapped-steth",
+        }.get(hint, hint)
+        p = _fetch_coingecko(cg)
+        return float(p or 0.0)
+    except Exception:  # noqa: BLE001
+        return 0.0
+
+
+def _probe_batch_via_rpc(
+    addresses: list[str],
+    rpc: str,
+    *,
+    timeout_s: float,
+    eth_price: float,
+    token_prices: dict[str, float],
+    checked_at: str,
+) -> dict[str, FundsSnapshot]:
+    mc_calls: list[tuple[str, bool, bytes]] = []
+    # Per address: getEthBalance + balanceOf each major.
+    for addr in addresses:
+        mc_calls.append((MULTICALL3, True, bytes.fromhex(GET_ETH_BALANCE_SELECTOR) + _pad_addr(addr)))
+        for _symbol, token, _hint, _decimals in MAJOR_TOKENS:
+            mc_calls.append((token, True, bytes.fromhex(BALANCE_OF_SELECTOR) + _pad_addr(addr)))
+
+    raw = _rpc_call(
+        rpc,
+        "eth_call",
+        [{"to": MULTICALL3, "data": "0x" + _encode_aggregate3(mc_calls).hex()}, "latest"],
+        timeout_s,
+    )
+    decoded = _decode_aggregate3(raw)
+    per = 1 + len(MAJOR_TOKENS)
+    if len(decoded) != len(addresses) * per:
+        raise RuntimeError("batch multicall length mismatch")
+
+    out: dict[str, FundsSnapshot] = {}
+    for i, addr in enumerate(addresses):
+        base = i * per
+        assets: list[FundsAsset] = []
+        ok, ret = decoded[base]
+        if ok and ret:
+            wei = int.from_bytes(ret[-32:] if len(ret) >= 32 else ret, "big")
+            eth_amt = wei / 1e18
+            if eth_amt > 0 and eth_price > 0:
+                assets.append(FundsAsset("ETH", None, wei, 18, eth_amt, eth_price, eth_amt * eth_price, "native"))
+        for j, (symbol, token_addr, _hint, known_dec) in enumerate(MAJOR_TOKENS):
+            ok, ret = decoded[base + 1 + j]
+            if not ok or not ret:
+                continue
+            raw_bal = int.from_bytes(ret[-32:] if len(ret) >= 32 else ret, "big")
+            if raw_bal <= 0:
+                continue
+            dec = known_dec if known_dec is not None else 18
+            amt = raw_bal / (10 ** dec)
+            price = float(token_prices.get(token_addr) or (1.0 if symbol in STABLE_SYMBOLS else 0.0))
+            if price <= 0:
+                continue
+            assets.append(FundsAsset(symbol, token_addr, raw_bal, dec, amt, price, amt * price, "erc20"))
+        total = sum(a.usd for a in assets) if assets else 0.0
+        out[addr] = FundsSnapshot(
+            status="ok",
+            total_usd=float(total),
+            breakdown=assets,
+            checked_at=checked_at,
+            rpc_url=rpc,
+            notes=["cheap batch floor (ETH+majors)"],
+        )
+    return out
+
+
 def _probe_via_rpc(address: str, rpc: str, *, timeout_s: float) -> FundsSnapshot:
     # One Multicall3 aggregate3: native via getEthBalance + balanceOf for majors
     # + asset()/totalAssets()/token()/underlying() on the target itself.

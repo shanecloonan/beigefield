@@ -182,6 +182,21 @@ def main(argv: list[str] | None = None) -> int:
     disc.add_argument("--json", action="store_true")
     disc.add_argument("--dry-run", action="store_true")
 
+    bf = sub.add_parser(
+        "backfill",
+        help="Checkpointed 30d mainnet create backfill (funds floor then Lane A)",
+    )
+    bf.add_argument("--id", default="mainnet-30d", help="backfill cursor id")
+    bf.add_argument("--lookback-days", type=float, default=30.0)
+    bf.add_argument("--chunk-blocks", type=int, default=2000)
+    bf.add_argument("--workers", type=int, default=8)
+    bf.add_argument("--deadline-minutes", type=float, default=40.0)
+    bf.add_argument("--max-full-scans", type=int, default=200, help="Lane A cap per job")
+    bf.add_argument("--min-funds-usd", type=float, default=2000.0)
+    bf.add_argument("--reset", action="store_true", help="reinitialize cursor for lookback window")
+    bf.add_argument("--json", action="store_true")
+    bf.add_argument("--dry-run", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -287,6 +302,40 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print("%s: %s" % (out.get("status"), out.get("explanation")))
         return 0 if out.get("status") in {"ok", "skipped"} else 1
+
+    if args.cmd == "backfill":
+        from eth_scanner.backfill.runner import run_backfill_job
+        progress = run_backfill_job(
+            settings=settings,
+            store=store,
+            backfill_id=str(args.id),
+            lookback_days=float(args.lookback_days),
+            chunk_blocks=int(args.chunk_blocks),
+            workers=int(args.workers),
+            deadline_minutes=float(args.deadline_minutes),
+            min_funds_usd=float(args.min_funds_usd),
+            max_full_scans=int(args.max_full_scans),
+            reset=bool(args.reset),
+        )
+        print(
+            "backfill status=%(status)s cursor=%(cursor_block)d end=%(end_block)d "
+            "covered=%(blocks_covered_this_job)d remaining=%(blocks_remaining)d "
+            "discovered=%(discovered_this_job)d funds_ge_floor=%(funds_ge_floor_this_job)d "
+            "scanned=%(fully_scanned_this_job)d heat_gt0=%(heat_positive_this_job)d "
+            "duration_s=%(duration_s)s eta_hours=%(eta_hours)s source=%(source)s"
+            % {**progress.to_dict(), "eta_hours": progress.eta_hours},
+            file=sys.stderr,
+        )
+        if args.json:
+            print(json.dumps(progress.to_dict(), indent=2))
+        else:
+            print(progress.message or progress.status)
+            for sample in progress.heat_positive_samples[:10]:
+                print(
+                    "heat>0 %s heat=%s class=%s funds=%s"
+                    % (sample.get("address"), sample.get("heat"), sample.get("contract_class"), sample.get("funds_usd"))
+                )
+        return 0 if progress.status in {"running", "done", "noop"} else 1
 
     if args.cmd == "discover":
         from eth_scanner.monitor.watch import seed_recent_deployments
