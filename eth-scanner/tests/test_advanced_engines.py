@@ -118,5 +118,46 @@ class PipelineGating(unittest.TestCase):
         self.assertEqual(heat, 0)
 
 
+class MonitorEngineRollup(unittest.TestCase):
+    def test_aggregate_counts_from_drain_rows(self):
+        from eth_scanner.cli import _aggregate_engine_stats
+
+        rows = [
+            {
+                "address": "0x1",
+                "heat": 0,
+                "engine_leads": [{"id": "a"}],
+                "confirmed_findings": [],
+                "engine_timing": {
+                    "ran_slither": True,
+                    "slither_status": "ok",
+                    "slither_ms": 12,
+                    "ran_mythril": False,
+                    "mythril_status": "skipped",
+                },
+            },
+            {
+                "address": "0x2",
+                "heat": 40,
+                "engine_leads": [{"id": "b"}, {"id": "c"}],
+                "confirmed_findings": [{"lead_id": "b", "confirmed": True}],
+                "engine_timing": {
+                    "ran_slither": True,
+                    "slither_status": "ok",
+                    "slither_ms": 40,
+                    "ran_mythril": True,
+                    "mythril_status": "ok",
+                    "mythril_ms": 90,
+                },
+            },
+        ]
+        stats = _aggregate_engine_stats(rows)
+        self.assertEqual(stats["slither_run"], 2)
+        self.assertEqual(stats["mythril_run"], 1)
+        self.assertEqual(stats["leads"], 3)
+        self.assertEqual(stats["confirmed"], 1)
+        self.assertEqual(stats["heat_gt0"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

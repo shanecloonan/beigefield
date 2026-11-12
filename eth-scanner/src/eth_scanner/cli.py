@@ -21,6 +21,57 @@ from eth_scanner.store.supabase import normalize_address, open_store
 from eth_scanner.types import FunnelResult, to_plain
 
 
+def _aggregate_engine_stats(scan_results: list[dict[str, Any]]) -> dict[str, Any]:
+    """Roll up Slither/Mythril/lead/confirmed counts from drain rows."""
+    slither_run = 0
+    mythril_run = 0
+    leads = 0
+    confirmed = 0
+    heat_gt0 = 0
+    timing_rows: list[dict[str, Any]] = []
+    for row in scan_results:
+        if int(row.get("heat") or 0) > 0:
+            heat_gt0 += 1
+        hb = dict(row.get("heat_breakdown") or {})
+        et = dict(row.get("engine_timing") or hb.get("engine_timing") or {})
+        status_sl = str(et.get("slither_status") or "")
+        status_my = str(et.get("mythril_status") or "")
+        if et.get("ran_slither") or status_sl in {"ok", "error"}:
+            slither_run += 1
+        if et.get("ran_mythril") or status_my in {"ok", "error"}:
+            mythril_run += 1
+        n_leads = len(row.get("engine_leads") or [])
+        if not n_leads:
+            n_leads = int(hb.get("engine_leads") or et.get("leads") or 0)
+        leads += n_leads
+        n_conf = len(row.get("confirmed_findings") or [])
+        if not n_conf:
+            n_conf = int(hb.get("engine_confirmed") or et.get("confirmed") or 0)
+        confirmed += n_conf
+        if et or n_leads or n_conf:
+            timing_rows.append({
+                "address": row.get("address"),
+                "slither_ms": et.get("slither_ms"),
+                "mythril_ms": et.get("mythril_ms"),
+                "total_ms": et.get("total_ms"),
+                "slither_status": status_sl or None,
+                "mythril_status": status_my or None,
+                "leads": n_leads,
+                "confirmed": n_conf,
+                "funds_usd": row.get("funds_usd"),
+                "heat": row.get("heat"),
+                "contract_class": row.get("contract_class"),
+            })
+    return {
+        "slither_run": slither_run,
+        "mythril_run": mythril_run,
+        "leads": leads,
+        "confirmed": confirmed,
+        "heat_gt0": heat_gt0,
+        "engine_timing_rows": timing_rows,
+    }
+
+
 def _add_receipt_flags(sp: argparse.ArgumentParser) -> None:
     sp.add_argument(
         "--receipt",
@@ -427,6 +478,7 @@ def main(argv: list[str] | None = None) -> int:
                 persist_fn([a.to_dict() for a in alerts])
             else:
                 print("monitor: store cannot persist alerts", file=sys.stderr)
+        engine_stats = _aggregate_engine_stats(scan_results)
         summary = {
             "creates_found": disc_stats.creates_found,
             "verified_kept": disc_stats.verified_kept,
@@ -439,13 +491,16 @@ def main(argv: list[str] | None = None) -> int:
             "alerts": len(alerts),
             "workers": workers,
             "duration_s": duration_s,
+            **engine_stats,
         }
         # Human-readable counts always on stderr for Actions logs.
         print(
             "monitor creates_found=%(creates_found)d verified_kept=%(verified_kept)d "
             "unverified_skipped=%(unverified_skipped)d discovered_enqueued=%(discovered_enqueued)d "
             "scanned=%(scanned)d workers=%(workers)d duration_s=%(duration_s)s "
-            "prefer_verified=%(prefer_verified)s keys=%(keys_configured)s"
+            "prefer_verified=%(prefer_verified)s keys=%(keys_configured)s "
+            "slither_run=%(slither_run)d mythril_run=%(mythril_run)d "
+            "leads=%(leads)d confirmed=%(confirmed)d heat_gt0=%(heat_gt0)d"
             % summary,
             file=sys.stderr,
         )
