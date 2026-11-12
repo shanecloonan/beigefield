@@ -305,7 +305,6 @@ def main(argv: list[str] | None = None) -> int:
         )
         scan_results: list[dict[str, Any]] = []
         if int(args.scan or 0) > 0:
-            from eth_scanner.lane_a import worker as lane_a
             claimed = store.claim_pending(int(args.scan), settings.worker_id)
             for row in claimed:
                 addr = str(row.get("address") or "")
