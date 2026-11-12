@@ -115,6 +115,7 @@ Build a contract graph from verified source + on-chain reads:
 - Proxies / implementations, oracles, tokens held, external calls, roles / admins / timelocks / multisigs
 - Risk factors: oracle (spot / manipulable / stale), upgrade/admin (EOA, no timelock, uninitialized impl), dependency (known-incident protocols)
 - Score: funds-at-risk × likelihood; feeds heat only through the evidence gate
+- Code: `eth_scanner/protocol_graph/`, CLI `protocol-graph`, migration `20261112194500_protocol_graph.sql`
 
 ### Phase D — Known-good / known-bad knowledge
 

@@ -219,6 +219,8 @@ class MemoryStore:
         engine_findings: Optional[list[Any]] = None,
         engine_agreement: Optional[dict[str, Any]] = None,
         fork_properties: Optional[list[Any]] = None,
+        protocol_graph: Optional[dict[str, Any]] = None,
+        protocol_risks: Optional[dict[str, Any]] = None,
     ) -> None:
         addr = normalize_address(address)
         tgt = self.targets.setdefault(addr, {"address": addr, "created_at": _now()})
@@ -231,6 +233,10 @@ class MemoryStore:
             tgt["engine_agreement"] = dict(engine_agreement)
         if fork_properties is not None:
             tgt["fork_properties"] = list(fork_properties)
+        if protocol_graph is not None:
+            tgt["protocol_graph"] = dict(protocol_graph)
+        if protocol_risks is not None:
+            tgt["protocol_risks"] = dict(protocol_risks)
         tgt["updated_at"] = _now()
         self._flush()
 
@@ -450,6 +456,8 @@ class SupabaseStore:
         engine_findings: Optional[list[Any]] = None,
         engine_agreement: Optional[dict[str, Any]] = None,
         fork_properties: Optional[list[Any]] = None,
+        protocol_graph: Optional[dict[str, Any]] = None,
+        protocol_risks: Optional[dict[str, Any]] = None,
     ) -> None:
         addr = normalize_address(address)
         patch: dict[str, Any] = {"deep_status": deep_status}
@@ -461,13 +469,22 @@ class SupabaseStore:
             patch["engine_agreement"] = dict(engine_agreement)
         if fork_properties is not None:
             patch["fork_properties"] = list(fork_properties)
+        if protocol_graph is not None:
+            patch["protocol_graph"] = dict(protocol_graph)
+        if protocol_risks is not None:
+            patch["protocol_risks"] = dict(protocol_risks)
         try:
             self._req("PATCH", "eth_scan_targets", patch, query={"address": "eq.%s" % addr})
         except Exception:  # noqa: BLE001
             # Soft-fail when migration not applied yet.
             pass
         # Always keep a result-side copy when possible.
-        if engine_findings is not None or engine_agreement is not None or fork_properties is not None:
+        if (
+            engine_findings is not None
+            or engine_agreement is not None
+            or fork_properties is not None
+            or protocol_graph is not None
+        ):
             body: dict[str, Any] = {"address": addr}
             if engine_findings is not None:
                 body["engine_findings"] = list(engine_findings)
@@ -475,12 +492,16 @@ class SupabaseStore:
                 body["engine_agreement"] = dict(engine_agreement)
             if fork_properties is not None:
                 body["fork_properties"] = list(fork_properties)
+            if protocol_graph is not None:
+                body["protocol_graph"] = dict(protocol_graph)
+            if protocol_risks is not None:
+                body["protocol_risks"] = dict(protocol_risks)
             try:
                 # Append a thin results row so /test history can show engine output.
                 body["bucket"] = (self.get_target(addr) or {}).get("bucket") or "manual-review"
                 body["heat"] = (self.get_target(addr) or {}).get("heat") or 0
-                body["stage_trace"] = [{"stage": "deep-A", "decision": deep_status}]
-                body["notes"] = "phase-A/B deep engines + fork properties"
+                body["stage_trace"] = [{"stage": "deep-A/B/C", "decision": deep_status}]
+                body["notes"] = "phase-A/B/C deep engines + fork properties + protocol graph"
                 self._req("POST", "eth_scan_results", body, prefer="return=minimal")
             except Exception:  # noqa: BLE001
                 pass

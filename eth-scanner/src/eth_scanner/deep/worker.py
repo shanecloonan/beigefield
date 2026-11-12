@@ -88,9 +88,12 @@ def run_deep_one(
     findings, runs = run_all_engines(source, engines=engines, timeout_s=timeout_s)
     summary = agreement_summary(findings)
     fork_props: list[dict[str, Any]] = []
+    protocol_graph: dict[str, Any] = {}
+    protocol_risks: dict[str, Any] = {}
+    row = store.get_target(addr) or {}
+    klass = str(row.get("contract_class") or "unknown")
     try:
         from eth_scanner.fork_props.runner import run_fork_properties
-        klass = str((store.get_target(addr) or {}).get("contract_class") or "unknown")
         fork_props = [
             r.to_dict()
             for r in run_fork_properties(
@@ -104,6 +107,29 @@ def run_deep_one(
         notes.append("phase-B eth_call fork properties=%d" % len(fork_props))
     except Exception as exc:  # noqa: BLE001
         notes.append("phase-B fork properties skipped: %s" % str(exc)[:160])
+    try:
+        from eth_scanner.protocol_graph.builder import build_protocol_graph
+        from eth_scanner.protocol_graph.risk import score_graph_risks
+        graph = build_protocol_graph(
+            addr,
+            source=source or "",
+            contract_name=contract_name,
+            funds_breakdown=list(row.get("funds_breakdown") or []),
+            rpc_url=getattr(settings, "eth_rpc_url", "") or "",
+            contract_class=klass,
+        )
+        protocol_graph = graph.to_dict()
+        protocol_risks = score_graph_risks(
+            graph,
+            funds_usd=row.get("funds_usd"),
+            source=source or "",
+        )
+        notes.append(
+            "phase-C graph nodes=%d risks=%d"
+            % (len(graph.nodes), len(protocol_risks.get("factors") or []))
+        )
+    except Exception as exc:  # noqa: BLE001
+        notes.append("phase-C protocol graph skipped: %s" % str(exc)[:160])
     report = {
         "address": addr,
         "status": "done",
@@ -114,6 +140,8 @@ def run_deep_one(
         "agreement": summary,
         "heat_eligible_clusters": heat_eligible_clusters(summary),
         "fork_properties": fork_props,
+        "protocol_graph": protocol_graph,
+        "protocol_risks": protocol_risks,
         "engine_runs": [
             {
                 "engine": r.engine,
@@ -219,6 +247,8 @@ def _persist_deep(
             engine_findings=report.get("findings") or [],
             engine_agreement=report.get("agreement") or {},
             fork_properties=report.get("fork_properties") or [],
+            protocol_graph=report.get("protocol_graph") or {},
+            protocol_risks=report.get("protocol_risks") or {},
         )
         return
     # Memory / older stores: best-effort target touch.
