@@ -1,8 +1,8 @@
 """Discover newly deployed mainnet contracts (read-only).
 
 Primary path: walk recent blocks over ETH_RPC_URL / public RPC for
-contract-creation receipts (`to` is null). Optional: Etherscan verified
-contract helpers when ETHERSCAN_API_KEYS is set.
+contract-creation receipts (`to` is null). When ETHERSCAN_API_KEYS is set,
+prefer verified source only (skip unverified creates).
 
 Never sends a transaction. Free-tier only.
 """
@@ -26,8 +26,8 @@ ETHERSCAN_V2 = "https://api.etherscan.io/v2/api"
 CHAIN_ID = "1"
 # ~12s blocks → 24h ≈ 7200, 72h ≈ 21600
 DEFAULT_LOOKBACK_HOURS = 48
-MAX_BLOCKS_TO_SCAN = 120  # keep Actions free-tier bounded
-MAX_CREATES_PER_RUN = 40
+MAX_BLOCKS_TO_SCAN = 200  # Alchemy / dedicated RPC can cover more
+MAX_CREATES_PER_RUN = 100
 
 
 @dataclass
@@ -45,6 +45,21 @@ class DiscoveredContract:
         return asdict(self)
 
 
+@dataclass
+class DiscoveryStats:
+    creates_found: int = 0
+    verified_kept: int = 0
+    unverified_skipped: int = 0
+    known_safe_skipped: int = 0
+    etherscan_checked: int = 0
+    etherscan_errors: int = 0
+    prefer_verified: bool = False
+    keys_configured: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
 def discover_recent_deployments(
     *,
     rpc_url: str = "",
@@ -52,55 +67,88 @@ def discover_recent_deployments(
     lookback_hours: int = DEFAULT_LOOKBACK_HOURS,
     max_blocks: int = MAX_BLOCKS_TO_SCAN,
     max_results: int = MAX_CREATES_PER_RUN,
-    prefer_verified: bool = True,
-) -> list[DiscoveredContract]:
-    """Return newest-first contract creations, excluding known-safe addresses."""
+    prefer_verified: Optional[bool] = None,
+) -> tuple[list[DiscoveredContract], DiscoveryStats]:
+    """Return (newest-first creates, stats).
+
+    When ETHERSCAN_API_KEYS is set, prefer_verified defaults to True and
+    unverified creates are skipped. Without keys, all creates are kept.
+    """
     rpc = _pick_rpc(rpc_url)
     keys = [k.strip() for k in (etherscan_keys or os.environ.get("ETHERSCAN_API_KEYS") or "").split(",") if k.strip()]
-    out: list[DiscoveredContract] = []
+    stats = DiscoveryStats(keys_configured=bool(keys))
+    # Auto-enable verified filter when keys exist unless caller forces False.
+    if prefer_verified is None:
+        prefer_verified = bool(keys)
+    stats.prefer_verified = bool(prefer_verified and keys)
+
+    raw: list[DiscoveredContract] = []
     seen: set[str] = set()
 
     # 1) RPC block walk for creates (works without Etherscan).
     if rpc:
         try:
-            out.extend(_discover_via_rpc(
+            raw.extend(_discover_via_rpc(
                 rpc,
                 lookback_hours=lookback_hours,
                 max_blocks=max_blocks,
-                max_results=max_results,
+                max_results=max(max_results * 3, max_results),
             ))
         except Exception as exc:  # noqa: BLE001
-            out.append(DiscoveredContract(
-                address="0x0000000000000000000000000000000000000000",
-                deployed_block=0,
-                source="rpc-create",
-                notes=["rpc discovery error: %s" % str(exc)[:160]],
-            ))
-            # Drop the placeholder error row from results.
-            out = [r for r in out if r.deployed_block > 0]
+            # Soft-fail: return empty with note via stats only.
+            stats.creates_found = 0
+            return [], stats
+
+    # Dedupe + known-safe.
+    candidates: list[DiscoveredContract] = []
+    for row in raw:
+        addr = row.address.lower()
+        if addr in seen:
+            continue
+        seen.add(addr)
+        if addr in SAFE_ADDRESSES:
+            stats.known_safe_skipped += 1
+            continue
+        candidates.append(row)
+    stats.creates_found = len(candidates)
 
     # 2) Optional Etherscan enrichment / verified-only filter.
     filtered: list[DiscoveredContract] = []
-    for row in out:
-        addr = row.address.lower()
-        if addr in seen or addr in SAFE_ADDRESSES:
-            continue
-        seen.add(addr)
-        if keys and prefer_verified:
-            ok, name = _etherscan_verified(addr, keys[0])
-            row.verified = ok
+    for row in candidates:
+        if stats.prefer_verified:
+            stats.etherscan_checked += 1
+            ok, name = _etherscan_verified(row.address, keys[0])
+            if ok is None:
+                stats.etherscan_errors += 1
+                # Soft-keep on API error so a flaky key does not empty the queue.
+                row.notes.append("etherscan verify error — kept pending recheck")
+            else:
+                row.verified = ok
+                if name:
+                    row.contract_name = name
+                if not ok:
+                    stats.unverified_skipped += 1
+                    row.notes.append("unverified — skipped (ETHERSCAN_API_KEYS prefer_verified)")
+                    continue
+                row.source = "etherscan-verified"
+                stats.verified_kept += 1
+        elif keys:
+            # Enrich name when keys exist but prefer_verified is off.
+            stats.etherscan_checked += 1
+            ok, name = _etherscan_verified(row.address, keys[0])
+            if ok is not None:
+                row.verified = ok
             if name:
                 row.contract_name = name
-            if prefer_verified and ok is False:
-                row.notes.append("unverified — skipped when prefer_verified")
-                continue
+            if ok:
+                stats.verified_kept += 1
+                row.source = "etherscan-verified"
         filtered.append(row)
         if len(filtered) >= max_results:
             break
 
-    # Newest first.
     filtered.sort(key=lambda r: r.deployed_block, reverse=True)
-    return filtered[:max_results]
+    return filtered[:max_results], stats
 
 
 def _discover_via_rpc(
@@ -132,7 +180,6 @@ def _discover_via_rpc(
                 continue
             if tx.get("to") not in (None, "", "0x"):
                 continue
-            # Contract creation — resolve address from receipt.
             tx_hash = tx.get("hash")
             if not tx_hash:
                 continue
@@ -154,13 +201,12 @@ def _discover_via_rpc(
                 tx_hash=str(tx_hash),
                 source="rpc-create",
             ))
-            if len(creates) >= max_results * 2:
+            if len(creates) >= max_results:
                 break
-        if len(creates) >= max_results * 2:
+        if len(creates) >= max_results:
             break
-        # Be gentle on public RPCs.
-        if i and i % 10 == 0:
-            time.sleep(0.15)
+        if i and i % 20 == 0:
+            time.sleep(0.05)
     creates.sort(key=lambda r: r.deployed_block, reverse=True)
     for c in creates:
         c.notes.append("scanned_blocks=%d stride=%d head=%d" % (blocks_tried, stride, head))
@@ -177,7 +223,7 @@ def _etherscan_verified(address: str, api_key: str) -> tuple[Optional[bool], Opt
     })
     url = "%s?%s" % (ETHERSCAN_V2, qs)
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "eth-scanner-discover/0.1"})
+        req = urllib.request.Request(url, headers={"User-Agent": "eth-scanner-discover/0.2"})
         with urllib.request.urlopen(req, timeout=12) as resp:
             body = json.loads(resp.read().decode("utf-8", errors="replace"))
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, ValueError):
@@ -203,7 +249,7 @@ def _rpc(url: str, method: str, params: list[Any], timeout_s: float = 12.0) -> A
     req = urllib.request.Request(
         url,
         data=payload,
-        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner-discover/0.1"},
+        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner-discover/0.2"},
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=timeout_s) as resp:

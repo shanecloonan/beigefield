@@ -13,7 +13,11 @@ import urllib.request
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional
 
-from eth_scanner.discover.recent import DiscoveredContract, discover_recent_deployments
+from eth_scanner.discover.recent import (
+    DiscoveredContract,
+    DiscoveryStats,
+    discover_recent_deployments,
+)
 from eth_scanner.ingest.funds import probe_contract_funds
 from eth_scanner.store.supabase import ScanStore, normalize_address
 from eth_scanner.types import Target
@@ -73,12 +77,12 @@ def seed_recent_deployments(
     rpc_url: str = "",
     etherscan_keys: str = "",
     lookback_hours: int = 48,
-    max_blocks: int = 80,
-    max_results: int = 30,
-    prefer_verified: bool = True,
-) -> list[DiscoveredContract]:
+    max_blocks: int = 200,
+    max_results: int = 100,
+    prefer_verified: Optional[bool] = None,
+) -> tuple[list[DiscoveredContract], DiscoveryStats]:
     """Discover recent creates and upsert them as pending targets (newest first)."""
-    found = discover_recent_deployments(
+    found, stats = discover_recent_deployments(
         rpc_url=rpc_url,
         etherscan_keys=etherscan_keys,
         lookback_hours=lookback_hours,
@@ -95,7 +99,7 @@ def seed_recent_deployments(
             deployed_at=row.deployed_at,
             discovery_source=row.source,
         ))
-    return found
+    return found, stats
 
 
 def scan_watchlist(
@@ -104,23 +108,30 @@ def scan_watchlist(
     rpc_url: str = "",
     min_funds_usd: float = 2_000.0,
     funds_delta_ratio: float = 0.25,
-    limit: int = 40,
+    limit: int = 100,
     seed_discoveries: bool = True,
     lookback_hours: int = 48,
-) -> list[MonitorAlert]:
-    """Seed recent deployments (default), then compare stored targets for upgrades/TVL."""
+    prefer_verified: Optional[bool] = None,
+) -> tuple[list[MonitorAlert], DiscoveryStats, list[DiscoveredContract]]:
+    """Seed recent deployments (default), then compare stored targets for upgrades/TVL.
+
+    Returns (alerts, discovery_stats, discovered_rows).
+    """
     rpc = (rpc_url or os.environ.get("ETH_RPC_URL") or "").strip()
     alerts: list[MonitorAlert] = []
     seen = set()
+    stats = DiscoveryStats()
+    found: list[DiscoveredContract] = []
 
     if seed_discoveries:
         try:
-            found = seed_recent_deployments(
+            found, stats = seed_recent_deployments(
                 store,
                 rpc_url=rpc,
                 etherscan_keys=os.environ.get("ETHERSCAN_API_KEYS") or "",
                 lookback_hours=lookback_hours,
-                max_results=min(30, limit),
+                max_results=max(limit, 1),
+                prefer_verified=prefer_verified,
             )
             for row in found:
                 fp = _fp(row.address, "discover", row.deployed_block)
@@ -131,8 +142,8 @@ def scan_watchlist(
                     address=row.address,
                     kind="discovery",
                     fingerprint=fp,
-                    detail="recent deploy block=%s source=%s name=%s"
-                    % (row.deployed_block, row.source, row.contract_name or "—"),
+                    detail="recent deploy block=%s source=%s verified=%s name=%s"
+                    % (row.deployed_block, row.source, row.verified, row.contract_name or "—"),
                     previous=None,
                     current=row.deployed_block,
                 ))
@@ -203,4 +214,4 @@ def scan_watchlist(
                             current=cur,
                             funds_usd=cur,
                         ))
-    return alerts
+    return alerts, stats, found
