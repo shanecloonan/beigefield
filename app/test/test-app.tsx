@@ -37,6 +37,32 @@ type Target = {
 
 type FixtureOpt = { id: string; label: string };
 
+type HistoryRun = {
+  id: string;
+  kind: string;
+  address: string | null;
+  fixture: string | null;
+  bucket: string | null;
+  heat: number | null;
+  status: string | null;
+  findings_count: number | null;
+  tvl_usd?: number | null;
+  money_at_risk_usd?: number | null;
+  duration_ms?: number | null;
+  created_at: string;
+};
+
+type HistoryFinding = {
+  id: string;
+  run_id: string;
+  finding_key: string;
+  title: string;
+  severity: string | null;
+  triage_status: string;
+  funds_at_risk_class?: string | null;
+  address?: string | null;
+};
+
 type Feed = {
   ok: boolean;
   dry_run: boolean;
@@ -46,6 +72,7 @@ type Feed = {
   counts: Record<string, number>;
   targets: Target[];
   results: { address: string; bucket: string; heat: number; notes: string | null; created_at: string }[];
+  history?: { runs: HistoryRun[]; findings: HistoryFinding[]; error?: string };
   fixtures?: FixtureOpt[];
   note?: string;
   ephemeral_store?: boolean;
@@ -74,6 +101,14 @@ type RunResult = {
   notes: string[];
 };
 
+type PersistInfo = {
+  ok: boolean;
+  skipped?: boolean;
+  error?: string;
+  run_id?: string;
+  findings_count?: number;
+};
+
 type RunResponse = {
   ok: boolean;
   error?: string;
@@ -87,6 +122,7 @@ type RunResponse = {
   receipt_markdown?: string | null;
   receipt_filename?: string | null;
   duration_ms?: number;
+  persist?: PersistInfo;
 };
 
 type LoopState = "idle" | "running" | "stopping" | "paused";
@@ -152,6 +188,7 @@ type ResearchResponse = {
   receipt_markdown?: string | null;
   receipt_filename?: string | null;
   duration_ms?: number;
+  persist?: PersistInfo;
 };
 
 type ResearchFeed = {
@@ -909,6 +946,15 @@ export default function TestApp() {
                 ))}
               </ul>
             )}
+            {lastRun.persist && (
+              <p className="mt-2 text-[11px] text-brand-500">
+                {lastRun.persist.ok
+                  ? `Saved detailed run to Supabase (${lastRun.persist.run_id?.slice(0, 8)}…).`
+                  : lastRun.persist.skipped
+                    ? "Detailed Supabase persist skipped (credentials unset)."
+                    : `Detailed Supabase persist soft-failed: ${lastRun.persist.error || "unknown"} (desk still works).`}
+              </p>
+            )}
             {randomPick?.note && lastRun.result.address.toLowerCase() === randomPick.address?.toLowerCase() && (
               <p className="mt-2 text-brand-500 leading-relaxed">{randomPick.note}</p>
             )}
@@ -1089,6 +1135,52 @@ export default function TestApp() {
           </table>
         </div>
 
+        {(feed?.history?.runs?.length ?? 0) > 0 && (
+          <div className="mt-10">
+            <h2 className="text-[11px] tracking-[0.2em] uppercase text-gold/80 font-semibold mb-3">
+              Supabase history · last {feed!.history!.runs.length} detailed runs
+            </h2>
+            {feed?.history?.error && (
+              <p className="mb-2 text-[11px] text-amber-200">{feed.history.error}</p>
+            )}
+            <div className="overflow-x-auto border border-brand-800/80 rounded-lg">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-brand-900/80 text-brand-400 tracking-[0.12em] uppercase">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">When</th>
+                    <th className="px-3 py-2 font-medium">Kind</th>
+                    <th className="px-3 py-2 font-medium">Address / fixture</th>
+                    <th className="px-3 py-2 font-medium">Bucket / status</th>
+                    <th className="px-3 py-2 font-medium">Findings</th>
+                    <th className="px-3 py-2 font-medium">TVL / risk</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {feed!.history!.runs.map((r) => (
+                    <tr key={r.id} className="border-t border-brand-800/60">
+                      <td className="px-3 py-2 text-brand-400 whitespace-nowrap">
+                        {r.created_at ? new Date(r.created_at).toLocaleString() : "—"}
+                      </td>
+                      <td className="px-3 py-2 text-brand-200">{r.kind}</td>
+                      <td className="px-3 py-2 font-mono text-[11px] text-brand-100">
+                        {r.address || r.fixture || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-brand-300">
+                        {r.bucket || r.status || "—"}
+                        {r.heat != null ? ` · heat ${r.heat}` : ""}
+                      </td>
+                      <td className="px-3 py-2 tabular-nums">{r.findings_count ?? 0}</td>
+                      <td className="px-3 py-2 tabular-nums text-brand-400">
+                        {r.money_at_risk_usd ?? r.tvl_usd ?? "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         <p className="mt-8 text-[11px] text-brand-600 leading-relaxed max-w-2xl">
           Buckets are ranking outputs from §6.0, not disclosure.{" "}
           {bucket !== "all" ? BUCKET_META[bucket].hint + " " : ""}
@@ -1185,8 +1277,8 @@ function DeskStatus({ feed }: { feed: Feed | null }) {
           </>
         )}{" "}
         {dry
-          ? "Results aren't persisted: they stay in this browser tab, and receipts download straight from each run."
-          : "Results persist to Supabase."}
+          ? "Legacy eth_scan_* queue is dry-run; detailed test_scan_* rows still soft-fail persist when a service/secret key is present."
+          : "Results persist to Supabase (eth_scan_* queue + detailed test_scan_* runs/findings/triage)."}
         {feed.note && (
           <details className="mt-1.5 text-[11px] text-brand-500">
             <summary className="cursor-pointer select-none hover:text-brand-300">Details</summary>
@@ -1389,6 +1481,15 @@ function ResearchPanel({
           durationMs={shown === last?.result ? last?.duration_ms : undefined}
           fixture={last?.fixture}
         />
+      )}
+      {last?.persist && (
+        <p className="mt-3 text-[11px] text-brand-500">
+          {last.persist.ok
+            ? `Saved detailed research run to Supabase (${last.persist.run_id?.slice(0, 8)}… · ${last.persist.findings_count ?? 0} findings).`
+            : last.persist.skipped
+              ? "Detailed Supabase persist skipped (credentials unset)."
+              : `Detailed Supabase persist soft-failed: ${last.persist.error || "unknown"} (desk still works).`}
+        </p>
       )}
 
       <p className="mt-8 text-[11px] text-brand-600 leading-relaxed max-w-2xl">

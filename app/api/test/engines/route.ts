@@ -10,6 +10,7 @@ import { corpusCatalog, ACCEPTANCE_PRIORS } from "@/lib/eth-scanner/desk/corpora
 import { engineCatalog, isEngineId } from "@/lib/eth-scanner/desk/engines";
 import { FUNDS_AT_RISK_CLASSES } from "@/lib/eth-scanner/desk/findings";
 import { engineStatuses, parsePasted, runDesk, sourceFixtureCatalog } from "@/lib/eth-scanner/desk/runtime";
+import { enginesPersistInput, persistTestScanRun } from "@/lib/eth-scanner/persist-test-results";
 import { acquireScan, releaseScan, scanInFlight } from "@/lib/eth-scanner/scan-lock";
 
 export const runtime = "nodejs";
@@ -64,13 +65,61 @@ export async function POST(req: Request) {
   // Paste mode: normalize engine output produced on another machine.
   if (typeof body.output === "string") {
     if (!isEngineId(body.engine)) return json({ ok: false, error: "unknown engine" }, 400);
-    return json(parsePasted(body.engine, body.output));
+    const pasted = parsePasted(body.engine, body.output);
+    if (pasted.ok) {
+      const persisted = await persistTestScanRun(
+        enginesPersistInput({
+          mode: "engines-paste",
+          engine: typeof body.engine === "string" ? body.engine : null,
+          findings: pasted.findings,
+          severity_counts: pasted.severity_counts,
+          warning: pasted.warning,
+          raw: pasted,
+        }),
+      );
+      return json({
+        ...pasted,
+        persist: persisted.ok
+          ? {
+              ok: true,
+              run_id: persisted.run_id,
+              findings_count: persisted.findings_count,
+              finding_ids: persisted.finding_ids,
+            }
+          : { ok: false, skipped: persisted.skipped ?? false, error: persisted.error },
+      });
+    }
+    return json(pasted);
   }
 
   if (!acquireScan()) return json({ ok: false, error: "a scan is already running" }, 429);
   try {
     const out = await runDesk({ engines: body.engines, fixture: body.fixture });
-    return json(out, out.ok ? 200 : 400);
+    if (out.ok) {
+      const persisted = await persistTestScanRun(
+        enginesPersistInput({
+          mode: "engines",
+          fixture: typeof body.fixture === "string" ? body.fixture : null,
+          findings: out.findings,
+          runs: out.runs,
+          severity_counts: out.severity_counts,
+          duration_ms: out.duration_ms,
+          raw: out,
+        }),
+      );
+      return json({
+        ...out,
+        persist: persisted.ok
+          ? {
+              ok: true,
+              run_id: persisted.run_id,
+              findings_count: persisted.findings_count,
+              finding_ids: persisted.finding_ids,
+            }
+          : { ok: false, skipped: persisted.skipped ?? false, error: persisted.error },
+      });
+    }
+    return json(out, 400);
   } finally {
     releaseScan();
   }

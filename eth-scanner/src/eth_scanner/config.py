@@ -81,10 +81,16 @@ def load_settings() -> Settings:
     url = (
         os.environ.get("ETH_SCANNER_SUPABASE_URL")
         or os.environ.get("SUPABASE_URL")
+        or os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
         or DEFAULT_SUPABASE_URL
     )
+    service_key = (
+        os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        or os.environ.get("SUPABASE_SECRET_KEY")
+        or ""
+    )
     work = Path(os.environ.get("ETH_SCANNER_WORK_DIR") or DEFAULT_WORK_DIR)
-    dry = _env_bool("ETH_SCANNER_DRY_RUN") or not bool(os.environ.get("SUPABASE_SERVICE_ROLE_KEY"))
+    dry = _env_bool("ETH_SCANNER_DRY_RUN") or not bool(service_key)
     try:
         heat = int(os.environ.get("ETH_SCANNER_HEAT_THRESHOLD") or DEFAULT_HEAT_THRESHOLD)
     except ValueError:
@@ -101,7 +107,7 @@ def load_settings() -> Settings:
     return Settings(
         etherscan_api_keys=_etherscan_keys(),
         supabase_url=url.rstrip("/"),
-        supabase_service_role_key=os.environ.get("SUPABASE_SERVICE_ROLE_KEY", ""),
+        supabase_service_role_key=service_key,
         eth_rpc_url=os.environ.get("ETH_RPC_URL", ""),
         dry_run=dry,
         work_dir=work,

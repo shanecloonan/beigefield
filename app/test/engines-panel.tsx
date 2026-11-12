@@ -47,6 +47,15 @@ type Finding = {
   triage: number;
 };
 
+type PersistInfo = {
+  ok: boolean;
+  skipped?: boolean;
+  error?: string;
+  run_id?: string;
+  findings_count?: number;
+  finding_ids?: { finding_key: string; id: string }[];
+};
+
 type PasteResponse = {
   ok: boolean;
   error?: string;
@@ -57,7 +66,20 @@ type PasteResponse = {
   findings?: Finding[];
   runs?: EngineRun[];
   duration_ms?: number;
+  persist?: PersistInfo;
 };
+
+const TRIAGE_STATUSES = [
+  "open",
+  "reviewing",
+  "confirmed",
+  "dismissed",
+  "false_positive",
+  "human_yes",
+  "human_no",
+] as const;
+
+type TriageStatus = (typeof TRIAGE_STATUSES)[number];
 
 type EngineRun = {
   engine: string;
@@ -219,6 +241,11 @@ export default function EnginesPanel() {
   const [paste, setPaste] = useState("");
   const [classFilter, setClassFilter] = useState("all");
   const [sevFilter, setSevFilter] = useState("all");
+  const [persistInfo, setPersistInfo] = useState<PersistInfo | null>(null);
+  const [dbIds, setDbIds] = useState<Record<string, string>>({});
+  const [triageStatus, setTriageStatus] = useState<Record<string, TriageStatus>>({});
+  const [triageBusy, setTriageBusy] = useState<string | null>(null);
+  const [triageErr, setTriageErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoadErr(null);
@@ -255,6 +282,16 @@ export default function EnginesPanel() {
       setRuns(j.runs ?? null);
       setClassFilter("all");
       setSevFilter("all");
+      setPersistInfo(j.persist ?? null);
+      const ids: Record<string, string> = {};
+      const statuses: Record<string, TriageStatus> = {};
+      for (const row of j.persist?.finding_ids ?? []) {
+        ids[row.finding_key] = row.id;
+        statuses[row.finding_key] = "open";
+      }
+      setDbIds(ids);
+      setTriageStatus(statuses);
+      setTriageErr(null);
       setMeta({
         source:
           kind === "paste"
@@ -267,6 +304,30 @@ export default function EnginesPanel() {
       setErr(e instanceof Error ? e.message : "request failed");
     } finally {
       setRunning(null);
+    }
+  }
+
+  async function setFindingTriage(findingKey: string, to_status: TriageStatus) {
+    const finding_id = dbIds[findingKey];
+    if (!finding_id) return;
+    setTriageBusy(findingKey);
+    setTriageErr(null);
+    try {
+      const r = await fetch("/api/test/triage", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ finding_id, to_status, actor: "desk" }),
+      });
+      const j = (await r.json().catch(() => ({ ok: false, error: `HTTP ${r.status}` }))) as {
+        ok: boolean;
+        error?: string;
+      };
+      if (!j.ok) throw new Error(j.error || `HTTP ${r.status}`);
+      setTriageStatus((prev) => ({ ...prev, [findingKey]: to_status }));
+    } catch (e) {
+      setTriageErr(e instanceof Error ? e.message : "triage update failed");
+    } finally {
+      setTriageBusy(null);
     }
   }
 
@@ -557,6 +618,17 @@ export default function EnginesPanel() {
         </div>
       )}
 
+      {persistInfo && (
+        <p className="text-[11px] text-brand-500">
+          {persistInfo.ok
+            ? `Saved to Supabase · run ${persistInfo.run_id?.slice(0, 8)}… · ${persistInfo.findings_count ?? 0} findings`
+            : persistInfo.skipped
+              ? "Supabase persist skipped (credentials unset)."
+              : `Supabase persist soft-failed: ${persistInfo.error || "unknown"} (desk still works).`}
+        </p>
+      )}
+      {triageErr && <p className="text-xs text-rose-300">{triageErr}</p>}
+
       {findings && (
         <div>
           <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
@@ -643,7 +715,8 @@ export default function EnginesPanel() {
               <table className="w-full text-xs">
                 <thead className="bg-brand-900/60 text-brand-400 text-left">
                   <tr>
-                    <th className="px-3 py-2" title="severity × confidence × Sherlock acceptance prior">Triage</th>
+                    <th className="px-3 py-2" title="severity × confidence × Sherlock acceptance prior">Score</th>
+                    <th className="px-3 py-2">Status</th>
                     <th className="px-3 py-2">Severity</th>
                     <th className="px-3 py-2">Class</th>
                     <th className="px-3 py-2">Engine · rule</th>
@@ -655,6 +728,25 @@ export default function EnginesPanel() {
                   {visible.map((f) => (
                     <tr key={f.id} className="border-t border-brand-800/60 align-top">
                       <td className="px-3 py-2 font-mono text-brand-100">{f.triage}</td>
+                      <td className="px-3 py-2">
+                        {dbIds[f.id] ? (
+                          <select
+                            aria-label={`Triage status for ${f.rule}`}
+                            className="rounded border border-brand-700 bg-brand-950 px-1.5 py-1 text-[10px] text-brand-100"
+                            value={triageStatus[f.id] ?? "open"}
+                            disabled={triageBusy === f.id}
+                            onChange={(e) => void setFindingTriage(f.id, e.target.value as TriageStatus)}
+                          >
+                            {TRIAGE_STATUSES.map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-brand-600">—</span>
+                        )}
+                      </td>
                       <td className={`px-3 py-2 uppercase ${SEV_STYLE[f.severity] ?? ""}`}>
                         {f.severity}
                         <span className="block text-[10px] text-brand-500 normal-case">{f.confidence} conf.</span>

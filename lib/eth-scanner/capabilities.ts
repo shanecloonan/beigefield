@@ -1,11 +1,12 @@
 /**
  * Honest /test capability flags. Never include secret values.
- * Live persist needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (env only; unset → dry-run).
+ * Live persist needs a Supabase URL + service/secret key (env only; unset → dry-run).
  * Live ingest uses ETHERSCAN_API_KEYS when set; otherwise a built-in free-tier test key
  * so /test can fetch verified source.
  */
 
 import { pythonRuntimeStatus, type PythonRuntimeStatus } from "./python-runtime";
+import { resolveServiceSupabaseEnv, serviceSupabaseConfigured } from "./service-supabase";
 
 /** Free-tier fallback already used locally. Env still wins. Never log this value. */
 export const TEST_ETHERSCAN_FALLBACK_KEY = "MB89VXUF27QJHA7QYJMPE9W55UGYZNV39C";
@@ -17,11 +18,16 @@ export function etherscanApiKeys(): string {
 
 /**
  * Scanner Supabase project URL from env only (no baked-in project).
- * Deliberately ignores NEXT_PUBLIC_SUPABASE_URL so the site's public project
- * is never written to by accident.
+ * Prefers ETH_SCANNER_SUPABASE_URL, then SUPABASE_URL, then NEXT_PUBLIC_SUPABASE_URL
+ * (Vercel Supabase integration).
  */
 export function supabaseUrl(): string {
-  return (process.env.ETH_SCANNER_SUPABASE_URL || process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
+  return resolveServiceSupabaseEnv().url;
+}
+
+/** Service-role / secret key for server-side writes. Never expose to the client. */
+export function supabaseServiceKey(): string {
+  return resolveServiceSupabaseEnv().key;
 }
 
 export const LANE_A_FIXTURES = {
@@ -52,8 +58,7 @@ function envOn(name: string): boolean {
 }
 
 export function scannerCapabilities(): ScannerCapabilities {
-  const persistRemote =
-    Boolean(supabaseUrl()) && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) && !envOn("ETH_SCANNER_DRY_RUN");
+  const persistRemote = serviceSupabaseConfigured() && !envOn("ETH_SCANNER_DRY_RUN");
   const liveIngest = Boolean(etherscanApiKeys());
   return {
     persist_remote: persistRemote,
@@ -68,8 +73,8 @@ export function pythonCapability(): PythonRuntimeStatus {
 
 export function capabilityNote(caps: ScannerCapabilities): string {
   const persist = caps.persist_remote
-    ? "Persist: live Supabase (service role set)."
-    : "Persist: dry-run — SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY unset (or ETH_SCANNER_DRY_RUN=1). Results write eth-scanner/work/.";
+    ? "Persist: live Supabase (service/secret key set)."
+    : "Persist: dry-run — Supabase URL + SUPABASE_SERVICE_ROLE_KEY/SUPABASE_SECRET_KEY unset (or ETH_SCANNER_DRY_RUN=1). Results write eth-scanner/work/; detailed /test rows still attempt soft-fail persist when keys appear.";
   const ingest = caps.live_ingest
     ? "Ingest: live verified-source fetch available."
     : "Ingest: no Etherscan key — Lane A uses a low-confidence decompile stub (usually manual-review) unless you pick a local fixture.";

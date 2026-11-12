@@ -74,7 +74,7 @@ a temp workdir and a hard timeout, and only run against whitelisted fixtures or 
 | Var | Needed | Purpose |
 | --- | --- | --- |
 | `ETHERSCAN_API_KEYS` | for live ingest | Comma-separated Etherscan keys. Unset → built-in free-tier test key. |
-| `ETH_SCANNER_SUPABASE_URL` (or `SUPABASE_URL`) + `SUPABASE_SERVICE_ROLE_KEY` | optional | Live persist to the `eth_scan_*` queue (`eth-scanner/supabase/migrations/`). Unset → dry-run. `NEXT_PUBLIC_SUPABASE_URL` is never used by the scanner. |
+| `ETH_SCANNER_SUPABASE_URL` / `SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_SECRET_KEY` | optional | Live persist. Detailed `/test` rows go to `test_scan_*` (`supabase/migrations/*_test_results.sql`); Lane A also uses `eth_scan_*` when present. Unset → dry-run; detailed persist soft-fails. |
 | `ETH_RPC_URL` | optional | Read-only RPC for proxy / storage checks. |
 | `ETH_SCANNER_DRY_RUN` | optional | `1` forces local dry-run even with Supabase set. |
 | `ETH_SCANNER_PYTHON`, `ETH_SCANNER_WORK_DIR` | local only | Interpreter / work dir override. |

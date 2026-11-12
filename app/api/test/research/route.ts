@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { capabilityNote, pythonCapability, researchFixtureCatalog, scannerCapabilities } from "@/lib/eth-scanner/capabilities";
 import { latestResearchReceipt, listResearchReceipts } from "@/lib/eth-scanner/local-store";
+import { persistTestScanRun, researchPersistInput } from "@/lib/eth-scanner/persist-test-results";
 import { runResearch } from "@/lib/eth-scanner/run-research";
 import { scanInFlight } from "@/lib/eth-scanner/scan-lock";
 
@@ -96,12 +97,25 @@ export async function POST(req: Request) {
   }
   // Inline the receipt (see /api/test/run): serverless instances don't share /tmp.
   const written = latestResearchReceipt(out.result.address);
-  return json({
+  const duration_ms = Date.now() - started;
+  const payload = {
     ...out,
-    duration_ms: Date.now() - started,
+    duration_ms,
     note: capabilityNote(out),
     receipt_url: `/api/test/receipt?address=${encodeURIComponent(out.result.address)}&kind=research`,
     receipt_markdown: written?.markdown ?? null,
     receipt_filename: written?.filename ?? null,
+  };
+  const persisted = await persistTestScanRun(researchPersistInput(payload));
+  return json({
+    ...payload,
+    persist: persisted.ok
+      ? {
+          ok: true,
+          run_id: persisted.run_id,
+          findings_count: persisted.findings_count,
+          finding_ids: persisted.finding_ids,
+        }
+      : { ok: false, skipped: persisted.skipped ?? false, error: persisted.error },
   });
 }
