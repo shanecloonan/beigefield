@@ -131,6 +131,8 @@ Build a contract graph from verified source + on-chain reads:
 - Explains why a finding is / isn't real in plain language
 - Ranks and explains only — **never adds heat alone**
 - Learns weights from saved triage verdicts (`test_triage_events.verdict_kind`)
+- Code: `eth_scanner/triage_ai/`, CLI `explain`; optional env `OPENAI_API_KEY` / `ETH_SCANNER_LLM_API_KEY` (not required)
+- Deep worker attaches up to 3 explanations when a key exists
 
 ### Phase F — Monitoring
 
