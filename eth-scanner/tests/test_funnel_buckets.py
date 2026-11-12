@@ -22,9 +22,15 @@ ADDR = "0x" + "11" * 20
 
 
 def _target(**kw) -> Target:
-    base = dict(address=ADDR, has_code=True, tvl_usd=0.0)
+    base = dict(address=ADDR, has_code=True, tvl_usd=0.0, funds_usd=0.0)
     base.update(kw)
     return Target(**base)
+
+
+def _cfg(**kw) -> FunnelConfig:
+    base = dict(skip_live_invariants=True, min_funds_usd=2_000.0)
+    base.update(kw)
+    return FunnelConfig(**base)
 
 
 def _art(conf="high", kind="source", content="pragma solidity ^0.8.20;\ncontract C {}") -> SourceArtifact:
@@ -92,124 +98,171 @@ class S0Intake(unittest.TestCase):
             target=_target(bytecode_hash="abc", prior_verdict="needs-look"),
             artifact=_art(),
             ir=_ir(movers=[_mover()]),
+            config=_cfg(),
+            invariant_results=[{"id": "ok", "name": "ok", "status": "held", "evidence": "ok"}],
         ))
         self.assertFalse(r.dropped)
 
 
 class ManualReviewOnWeakIR(unittest.TestCase):
-    def test_low_ir_manual_review(self):
+    def test_low_ir_manual_review_when_funded(self):
         r = run_lane_a(FunnelContext(
-            target=_target(),
+            target=_target(funds_usd=50_000, tvl_usd=50_000),
             artifact=_art("high"),
             ir=_ir("low", movers=[_mover()]),
+            config=_cfg(),
         ))
         self.assertEqual(r.bucket, "manual-review")
         self.assertFalse(r.dropped)
-        self.assertTrue(any(t.stage == "S2" and t.decision == "manual-review" for t in r.stage_trace))
+        self.assertTrue(any(t.stage == "S2" and t.reason == "analysis failed" for t in r.stage_trace))
 
-    def test_failed_ir_manual_review(self):
+    def test_failed_ir_manual_review_when_funded(self):
         r = run_lane_a(FunnelContext(
-            target=_target(),
+            target=_target(funds_usd=50_000, tvl_usd=50_000),
             artifact=_art("high"),
             ir=_ir("med", lift_failed=True, movers=[_mover()]),
+            config=_cfg(),
         ))
         self.assertEqual(r.bucket, "manual-review")
 
-    def test_missing_ir_manual_review(self):
-        r = run_lane_a(FunnelContext(target=_target(), artifact=_art("high"), ir=None))
-        self.assertEqual(r.bucket, "manual-review")
-
-    def test_low_src_manual_review_even_if_ir_med(self):
+    def test_missing_ir_manual_review_when_funded(self):
         r = run_lane_a(FunnelContext(
-            target=_target(),
-            artifact=_art("low", kind="decompile"),
-            ir=_ir("med", movers=[_mover()], src="low"),
+            target=_target(funds_usd=50_000, tvl_usd=50_000),
+            artifact=_art("high"),
+            ir=None,
+            config=_cfg(),
         ))
         self.assertEqual(r.bucket, "manual-review")
 
-    def test_ambiguous_auth_manual_review(self):
+    def test_low_ir_cools_when_unfunded(self):
         r = run_lane_a(FunnelContext(
-            target=_target(),
+            target=_target(funds_usd=0, tvl_usd=0),
+            artifact=_art("high"),
+            ir=_ir("low", movers=[_mover()]),
+            config=_cfg(),
+        ))
+        self.assertEqual(r.bucket, "lane-a-cool")
+
+    def test_ambiguous_auth_manual_review_when_funded(self):
+        r = run_lane_a(FunnelContext(
+            target=_target(funds_usd=50_000, tvl_usd=50_000),
             artifact=_art("high"),
             ir=_ir("high", movers=[_mover(auth="AMBIGUOUS")]),
+            config=_cfg(),
         ))
         self.assertEqual(r.bucket, "manual-review")
 
     def test_self_scoped_is_weak_not_manual_review(self):
         r = run_lane_a(FunnelContext(
-            target=_target(),
+            target=_target(funds_usd=50_000, tvl_usd=50_000),
             artifact=_art("high"),
             ir=_ir("high", movers=[_mover(auth="SELF-SCOPED?")]),
+            config=_cfg(),
         ))
         self.assertNotEqual(r.bucket, "manual-review")
         self.assertIn(r.bucket, {"lane-a-cool", "lane-b-queue"})
 
     def test_ingest_incomplete_empty_eoa_not_dropped(self):
-        t = _target(has_code=False)
+        t = _target(has_code=False, funds_usd=50_000, tvl_usd=50_000)
         t.ingest_incomplete = True
         t.ingest_incomplete_reason = "etherscan rate-limited"
-        r = run_lane_a(FunnelContext(target=t, artifact=_art("low", kind="decompile", content=""), ir=None))
+        r = run_lane_a(FunnelContext(
+            target=t,
+            artifact=_art("low", kind="decompile", content=""),
+            ir=None,
+            config=_cfg(),
+        ))
         self.assertFalse(r.dropped)
         self.assertEqual(r.bucket, "manual-review")
 
 
 class LaneARouting(unittest.TestCase):
     def test_no_movers_high_ir_verified_human_no_candidate(self):
-        r = run_lane_a(FunnelContext(target=_target(), artifact=_art("high"), ir=_ir("high", movers=[])))
+        r = run_lane_a(FunnelContext(
+            target=_target(), artifact=_art("high"), ir=_ir("high", movers=[]), config=_cfg(),
+        ))
         self.assertEqual(r.bucket, "human-no-candidate")
 
     def test_no_movers_med_ir_is_cool_not_a_close(self):
-        r = run_lane_a(FunnelContext(target=_target(), artifact=_art("high"), ir=_ir("med", movers=[])))
+        r = run_lane_a(FunnelContext(
+            target=_target(), artifact=_art("high"), ir=_ir("med", movers=[]), config=_cfg(),
+        ))
         self.assertEqual(r.bucket, "lane-a-cool")
 
     def test_strong_auth_high_ir_cool(self):
         r = run_lane_a(FunnelContext(
-            target=_target(tvl_usd=0),
+            target=_target(tvl_usd=0, funds_usd=0),
             artifact=_art("high"),
             ir=_ir("high", movers=[_mover(auth="PRESENT")]),
+            config=_cfg(),
         ))
         self.assertEqual(r.bucket, "lane-a-cool")
 
-    def test_missing_auth_high_ir_promotes_lane_b(self):
+    def test_missing_auth_alone_does_not_promote(self):
+        """Pattern/auth leads add zero heat — need failed invariant evidence."""
         r = run_lane_a(FunnelContext(
-            target=_target(tvl_usd=0),
+            target=_target(tvl_usd=50_000, funds_usd=50_000),
             artifact=_art("high"),
             ir=_ir("high", movers=[_mover(auth="MISSING"), _mover(name="sweep", auth="WEAK")]),
+            config=_cfg(),
+            invariant_results=[{"id": "x", "name": "x", "status": "held", "evidence": "ok"}],
+        ))
+        self.assertEqual(r.bucket, "lane-a-cool")
+        self.assertGreater(r.heat, 0)  # funds heat only
+
+    def test_failed_invariant_promotes_lane_b(self):
+        r = run_lane_a(FunnelContext(
+            target=_target(tvl_usd=50_000, funds_usd=50_000),
+            artifact=_art("high"),
+            ir=_ir("high", movers=[_mover(auth="PRESENT")]),
+            config=_cfg(),
+            invariant_results=[{
+                "id": "erc4626-solvency",
+                "name": "convertToAssets <= totalAssets",
+                "status": "failed",
+                "evidence": "converted > totalAssets",
+            }],
         ))
         self.assertEqual(r.bucket, "lane-b-queue")
         self.assertGreaterEqual(r.heat, 3)
 
-    def test_high_tvl_promotes_even_if_gated(self):
+    def test_high_tvl_alone_does_not_promote(self):
         r = run_lane_a(FunnelContext(
-            target=_target(tvl_usd=50_000),
+            target=_target(tvl_usd=50_000, funds_usd=50_000),
             artifact=_art("high"),
             ir=_ir("high", movers=[_mover(auth="PRESENT")]),
+            config=_cfg(),
+            invariant_results=[{"id": "ok", "name": "ok", "status": "held", "evidence": "ok"}],
         ))
-        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(r.bucket, "lane-a-cool")
 
-    def test_weird_bridge_promotes(self):
+    def test_weird_bridge_does_not_promote(self):
         r = run_lane_a(FunnelContext(
-            target=_target(tvl_usd=0),
+            target=_target(tvl_usd=50_000, funds_usd=50_000),
             artifact=_art("high"),
             ir=_ir("high", movers=[_mover(auth="PRESENT")], weird=["bridge-mint-release"]),
+            config=_cfg(),
+            invariant_results=[{"id": "ok", "name": "ok", "status": "held", "evidence": "ok"}],
         ))
-        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(r.bucket, "lane-a-cool")
 
     def test_mixed_ambiguous_and_weak_does_not_force_manual_review(self):
         r = run_lane_a(FunnelContext(
-            target=_target(tvl_usd=0),
+            target=_target(tvl_usd=50_000, funds_usd=50_000),
             artifact=_art("high"),
             ir=_ir("high", movers=[
                 _mover(name="borrow", auth="WEAK"),
                 _mover(name="repay", auth="AMBIGUOUS"),
             ]),
+            config=_cfg(),
+            invariant_results=[{"id": "ok", "name": "ok", "status": "held", "evidence": "ok"}],
         ))
         self.assertNotEqual(r.bucket, "manual-review")
         self.assertNotEqual(r.bucket, "human-yes-candidate")
 
-    def test_in_scope_family_without_movers_promotes(self):
+    def test_in_scope_family_without_movers_cools_without_evidence(self):
         r = run_lane_a(FunnelContext(
-            target=_target(tvl_usd=0),
+            target=_target(tvl_usd=50_000, funds_usd=50_000),
             artifact=_art("high"),
             ir=IRDocument(
                 functions=[],
@@ -221,8 +274,10 @@ class LaneARouting(unittest.TestCase):
                 scope="in-scope",
                 scope_signals=["bridge-surface"],
             ),
+            config=_cfg(),
+            invariant_results=[{"id": "ok", "name": "ok", "status": "held", "evidence": "ok"}],
         ))
-        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(r.bucket, "lane-a-cool")
         self.assertNotEqual(r.bucket, "human-no-candidate")
 
     def test_passthrough_router_not_promoted_by_tvl(self):
@@ -232,10 +287,11 @@ class LaneARouting(unittest.TestCase):
         d = classify_scope(source=src, functions=ir.functions)
         self.assertEqual(d.scope, "demoted-passthrough")
         r = run_lane_a(FunnelContext(
-            target=_target(tvl_usd=9_999_999),
+            target=_target(tvl_usd=9_999_999, funds_usd=9_999_999),
             artifact=_art("high", content=src),
             ir=ir,
             source_text=src,
+            config=_cfg(),
         ))
         self.assertEqual(r.bucket, "lane-a-cool")
         self.assertEqual(r.scope, "demoted-passthrough")
@@ -248,7 +304,13 @@ class LaneARouting(unittest.TestCase):
             _ir("low", movers=[_mover()]),
         ]
         for ir in cases:
-            r = run_lane_a(FunnelContext(target=_target(tvl_usd=9_999_999), artifact=_art("high"), ir=ir))
+            r = run_lane_a(FunnelContext(
+                target=_target(tvl_usd=9_999_999, funds_usd=9_999_999),
+                artifact=_art("high"),
+                ir=ir,
+                config=_cfg(),
+                invariant_results=[{"id": "ok", "name": "ok", "status": "held", "evidence": "ok"}],
+            ))
             self.assertNotEqual(r.bucket, "human-yes-candidate")
 
 

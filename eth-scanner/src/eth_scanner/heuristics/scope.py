@@ -47,14 +47,19 @@ TOKEN_ADMIN_NAMES = frozenset({
     "rescueerc20", "rescuetoken", "recovererc20", "recovertoken",
     "updaterescuer", "updateblacklister", "updatepauser", "removeminter",
     "cancelauthorization",
-    "mintto", "mintbatch", "burnfrom", "burnbatch",
+    "mintto", "mintbatch", "burnfrom", "burnbatch", "burnfor",
+    # ERC-677 / similar token-only transfer hooks — not custody.
+    "transferandcall", "transferandcallwithcallback",
     # Reserve RToken (`issueTo` / `redeemTo` / `melt`) — token, not a hold.
     # Basket sits on BackingManager / Folio; monetizeDonations forwards dust.
     "issueto", "redeemto", "redeemcustom", "melt", "monetizedonations",
     # Mantle mETH / similar LST receipts — admin, not custody.
     "forcemint", "forceburn",
-    # Frax frxETH permissioned mint — receipt token, not a hold.
+    # Frax frxETH / FrxUSD permissioned mint — receipt token, not a hold.
     "minter_mint", "minter_burn_from",
+    # Standard NFT surface — token-only, not third-party money at rest.
+    "safetransferfrom", "setapprovalforall", "tokenuri", "ownerof",
+    "safebatchtransferfrom", "balanceofbatch", "uri",
 })
 # Prefixes must stay tight. `mint` as a prefix demoted Pendle `mintPyFromSy`
 # as token-admin. Exact mint/burn stay in TOKEN_ADMIN_NAMES.
@@ -412,11 +417,20 @@ def classify_scope(
                 signals=["imported-erc20-on-passthrough"] + pass_signals,
                 promote=False,
             )
-        # Prefer false keep — may be an unnamed vault.
+        # Fallback token→custody only with proof of third-party money at rest:
+        # per-user deposit/stake mappings or holdings of other assets.
+        if _third_party_funds_at_rest(src, names, custody, contract_name):
+            return ScopeDecision(
+                contract_class="custody",
+                scope="in-scope",
+                signals=["erc20-plus-custody:%s" % ",".join(custody[:8]), "funds-at-rest"],
+                promote=False,
+            )
+        klass = "wrap-token" if (wrap or wrap_only) else "token"
         return ScopeDecision(
-            contract_class="custody",
-            scope="in-scope",
-            signals=["erc20-plus-custody:%s" % ",".join(custody[:8])],
+            contract_class=klass,
+            scope="demoted-token",
+            signals=["erc20-no-funds-at-rest:%s" % ",".join(custody[:8])],
             promote=False,
         )
 
@@ -540,6 +554,49 @@ def _is_token_admin(name: str) -> bool:
     if n in TOKEN_ADMIN_NAMES or n in DSS_TOKEN_ALIASES:
         return True
     return any(n.startswith(p) for p in TOKEN_ADMIN_PREFIXES)
+
+
+_FUNDS_AT_REST_RX = re.compile(
+    r"\bmapping\s*\([^)]*(?:address|user|account)[^)]*\)\s*(?:private|internal|public)?\s*"
+    r"(?:balances|deposits|stakes|shares|positions|collateral|borrowBalance|userInfo)\b|"
+    r"\b(?:deposits|stakes|shares|positions|userInfo|collateral)\s*\[[^\]]+\]|"
+    r"\btotalAssets\s*\(|\btotalStaked\s*\(|\btotalDeposits\s*\(|\btotalBorrow\s*\(|"
+    r"\bunderlying\s*\(|\basset\s*\(|\bstakingToken\s*\(|\brewardToken\s*\(",
+    re.I,
+)
+_HOLD_OTHER_ASSET_RX = re.compile(
+    r"\bIERC20\b|\bSafeERC20\b|\.balanceOf\s*\(\s*address\s*\(\s*this\s*\)|"
+    r"safeTransfer(From)?\s*\(|\btransferFrom\s*\([^)]*address\s*\(\s*this",
+    re.I,
+)
+
+
+def _third_party_funds_at_rest(
+    src: str,
+    names: set[str],
+    custody: list[str],
+    focus: Optional[str] = None,
+) -> bool:
+    """Proof that this contract holds/accounts third-party money at rest.
+
+    Required before the ERC-20 + non-admin-mover fallback can promote to
+    custody. Without this, LINK/SAND/HEX-style tokens with mint/burn helpers
+    false-kept as custody.
+    """
+    movers = {str(n).lower() for n in (custody or []) if n}
+    # Explicit venue verbs on this contract.
+    venue = movers & {
+        "deposit", "stake", "lock", "supply", "borrow", "mintshares",
+        "joinswap", "joinpool", "addliquidity", "enter", "bond",
+    }
+    if venue and (_FUNDS_AT_REST_RX.search(src) or _HOLD_OTHER_ASSET_RX.search(src)):
+        return True
+    if _FUNDS_AT_REST_RX.search(src) and _HOLD_OTHER_ASSET_RX.search(src):
+        return True
+    probe = _this_or_names(src, names, focus) if focus else names
+    if probe & {"totalassets", "totalstaked", "totaldeposits", "converttoassets", "previewredeem"}:
+        return True
+    return False
 
 
 def _collect_names(src: str, fns: list[Any], extra: Optional[Iterable[str]]) -> set[str]:

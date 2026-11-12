@@ -236,6 +236,10 @@ def _print_results(results, settings, paths: Optional[list[Optional[Path]]] = No
             "funds_breakdown": getattr(res, "funds_breakdown", None) or [],
             "funds_status": getattr(res, "funds_status", None),
             "funds_checked_at": getattr(res, "funds_checked_at", None),
+            "invariant_results": getattr(res, "invariant_results", None) or [],
+            "heat_breakdown": getattr(res, "heat_breakdown", None) or {},
+            "known_safe": bool(getattr(res, "known_safe", False)),
+            "contract_name": getattr(res, "contract_name", None),
             "receipt_path": str(path) if path else None,
         })
     print(json.dumps(payload, indent=2))

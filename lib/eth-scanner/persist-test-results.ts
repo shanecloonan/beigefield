@@ -75,6 +75,9 @@ export type PersistRunInput = {
   funds_breakdown?: unknown;
   funds_status?: string | null;
   funds_checked_at?: string | null;
+  invariant_results?: unknown;
+  heat_breakdown?: unknown;
+  known_safe?: boolean | null;
   bucket?: string | null;
   heat?: number | null;
   status?: string | null;
@@ -196,6 +199,9 @@ export async function persistTestScanRun(
     funds_breakdown: asJson(input.funds_breakdown ?? []) ?? [],
     funds_status: input.funds_status ?? null,
     funds_checked_at: input.funds_checked_at ?? null,
+    invariant_results: asJson(input.invariant_results ?? []) ?? [],
+    heat_breakdown: asJson(input.heat_breakdown ?? {}) ?? {},
+    known_safe: Boolean(input.known_safe),
     bucket: input.bucket ?? null,
     heat: input.heat ?? null,
     status: input.status ?? (input.dropped ? "dropped" : input.error ? "error" : "done"),
@@ -351,7 +357,16 @@ export async function updateFindingTriage(input: {
       return { ok: false, error: updErr.message };
     }
 
-    if (input.note || input.actor) {
+    const verdict_kind =
+      input.to_status === "human_yes" || input.to_status === "confirmed"
+        ? "true"
+        : input.to_status === "human_no" || input.to_status === "false_positive" || input.to_status === "dismissed"
+          ? "false_positive"
+          : input.to_status === "reviewing"
+            ? "needs_info"
+            : null;
+
+    {
       const { error: evErr } = await sb.from("test_triage_events").insert({
         finding_id: existing.id,
         run_id: existing.run_id,
@@ -359,9 +374,10 @@ export async function updateFindingTriage(input: {
         to_status: input.to_status,
         actor: input.actor || "desk",
         note: input.note || null,
+        verdict_kind,
         raw: { source: "api" },
       });
-      if (evErr) logPersistError("insert triage event note", evErr.message);
+      if (evErr) logPersistError("insert triage event", evErr.message);
     }
 
     return { ok: true, finding_id: existing.id, from_status, to_status: input.to_status };
@@ -467,6 +483,12 @@ export function laneAPersistInput(body: {
     funds_status?: string | null;
     funds_checked_at?: string | null;
     stage_trace?: unknown;
+    invariant_results?: unknown;
+    heat_breakdown?: unknown;
+    known_safe?: boolean;
+    contract_name?: string | null;
+    pattern_leads?: unknown;
+    hypotheses?: unknown;
   };
   fixture?: string | null;
   dry_run?: boolean;
@@ -483,12 +505,16 @@ export function laneAPersistInput(body: {
     kind: "lane-a",
     address: r.address,
     fixture: body.fixture ?? null,
+    contract_name: r.contract_name ?? null,
     tvl_usd: funds,
     money_at_risk_usd: funds,
     funds_usd: funds,
     funds_breakdown: r.funds_breakdown ?? [],
     funds_status: r.funds_status ?? null,
     funds_checked_at: r.funds_checked_at ?? null,
+    invariant_results: r.invariant_results ?? [],
+    heat_breakdown: r.heat_breakdown ?? {},
+    known_safe: Boolean(r.known_safe),
     bucket: r.bucket,
     heat: r.heat,
     status: r.dropped ? "dropped" : "done",
@@ -500,6 +526,8 @@ export function laneAPersistInput(body: {
     scope: r.scope ?? null,
     value_movers: r.value_movers ?? [],
     stage_trace: r.stage_trace ?? [],
+    pattern_leads: r.pattern_leads ?? [],
+    hypotheses: r.hypotheses ?? [],
     notes: r.notes ?? [],
     receipt_filename: body.receipt_filename ?? null,
     receipt_markdown: body.receipt_markdown ?? null,
@@ -509,6 +537,8 @@ export function laneAPersistInput(body: {
     persist_remote: body.persist_remote ?? null,
     findings: [],
     raw: body,
+    // Same address re-scan updates the prior lane-a row (history via triage events).
+    dedupe_key: `lane-a:${(r.address || "").toLowerCase()}`,
   };
 }
 

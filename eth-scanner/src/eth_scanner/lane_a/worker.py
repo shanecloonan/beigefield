@@ -116,7 +116,12 @@ def run_one(
         artifact=artifact,
         ir=ir,
         source_text=artifact.content,
-        config=FunnelConfig(heat_threshold=settings.heat_threshold, tvl_floor_usd=settings.tvl_floor_usd),
+        rpc_url=settings.eth_rpc_url or "",
+        config=FunnelConfig(
+            heat_threshold=settings.heat_threshold,
+            tvl_floor_usd=settings.tvl_floor_usd,
+            min_funds_usd=float(getattr(settings, "min_funds_usd", min_funds) or min_funds),
+        ),
     ))
     # Prepend funds stage so receipts / Supabase show the floor check first.
     result.stage_trace = [_funds_trace(funds, min_funds), *list(result.stage_trace or [])]
@@ -124,6 +129,7 @@ def run_one(
     result.funds_breakdown = list(target.funds_breakdown or [])
     result.funds_status = target.funds_status
     result.funds_checked_at = target.funds_checked_at
+    result.contract_name = artifact.contract_name
     if funds.status == "unknown":
         result.notes = list(result.notes or []) + list(funds.notes or ["funds lookup unknown — continued"])
     store.save_result(addr, result)

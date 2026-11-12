@@ -179,6 +179,11 @@ class FunnelResult:
     funds_breakdown: list[dict[str, Any]] = field(default_factory=list)
     funds_status: Optional[str] = None
     funds_checked_at: Optional[str] = None
+    # Evidence-based ranking (pattern leads never contribute heat).
+    invariant_results: list[dict[str, Any]] = field(default_factory=list)
+    heat_breakdown: dict[str, Any] = field(default_factory=dict)
+    known_safe: bool = False
+    contract_name: Optional[str] = None
 
     def to_dict(self) -> dict[str, Any]:
         return to_plain(self)

@@ -75,6 +75,15 @@ type HistoryFinding = {
   address?: string | null;
 };
 
+type PrecisionStats = {
+  flagged?: number | null;
+  confirmed_true?: number | null;
+  confirmed_false?: number | null;
+  needs_info?: number | null;
+  open_flags?: number | null;
+  precision?: number | null;
+};
+
 type Feed = {
   ok: boolean;
   dry_run: boolean;
@@ -85,6 +94,7 @@ type Feed = {
   targets: Target[];
   results: { address: string; bucket: string; heat: number; notes: string | null; created_at: string }[];
   history?: { runs: HistoryRun[]; findings: HistoryFinding[]; error?: string };
+  precision?: PrecisionStats | null;
   fixtures?: FixtureOpt[];
   note?: string;
   ephemeral_store?: boolean;
@@ -1060,6 +1070,21 @@ export default function TestApp() {
             );
           })}
         </div>
+
+        {feed?.precision && (
+          <div className="mt-4 rounded-lg border border-brand-800/80 bg-brand-900/20 px-4 py-3 text-[11px] text-brand-300">
+            <p className="text-[10px] tracking-[0.14em] uppercase text-brand-500">Triage precision</p>
+            <p className="mt-1 tabular-nums text-brand-100">
+              flags {feed.precision.flagged ?? 0}
+              {" · "}true {feed.precision.confirmed_true ?? 0}
+              {" · "}false {feed.precision.confirmed_false ?? 0}
+              {" · "}open {feed.precision.open_flags ?? 0}
+              {feed.precision.precision != null
+                ? ` · precision ${(Number(feed.precision.precision) * 100).toFixed(1)}%`
+                : " · precision —"}
+            </p>
+          </div>
+        )}
 
         <div className="mt-6 flex flex-col sm:flex-row gap-3 sm:items-center">
           <input

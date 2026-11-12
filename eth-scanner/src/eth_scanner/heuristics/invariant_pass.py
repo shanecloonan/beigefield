@@ -16,7 +16,7 @@ import json
 import os
 import re
 import sys
-from typing import Any
+from typing import Any, Optional
 
 # Do not skip `lib/`: Etherscan/Sourcify standard-json often stores the
 # implementation under lib/<pkg>/... (Aave V3 PoolInstance). Skipping it
@@ -335,17 +335,44 @@ def classify_auth(
     ctx: str,
     a_hits: list[str],
     exposed: bool,
+    *,
+    callee_bodies: Optional[dict[str, str]] = None,
 ) -> str:
     """Cheap I1 bind class. Clear cases → PRESENT / WEAK / MISSING.
 
-    True ambiguity is rare and reserved for unreadable surfaces. Self-scoped
-    user ops (Aave withdraw, router exactInput) are WEAK, not AMBIGUOUS —
-    that keeps V2/V3 and similar families in the same bucket.
+    Follows one level of internal helpers (_spendAllowance, _isApprovedOrOwner,
+    _burn, only* modifiers) so ERC-20 / NFT standards are not MISSING.
+    Initializer-guarded and fixed-recipient transfers count as protected.
     """
     lname = (name or "").lower()
     header = header or ""
     body = body or ""
     ctx = ctx or ""
+    # Fold one level of common internal callees into the auth context.
+    if callee_bodies:
+        for m in re.finditer(
+            r"\b(_spendAllowance|_isApprovedOrOwner|_burn|_burnFrom|_approve|"
+            r"_transfer|_checkOwner|_checkRole|_msgSender|_authorizeUpgrade|"
+            r"_requireSynced|_authorize)\s*\(",
+            body,
+        ):
+            cal = m.group(1)
+            if cal in callee_bodies:
+                ctx += "\n" + callee_bodies[cal]
+                body += "\n" + callee_bodies[cal]
+
+    if re.search(r"\binitializer\b|\breinitializer\b", header + " " + ctx):
+        return "PRESENT"
+    # Fixed-recipient transfer (hard-coded address / immutable recipient).
+    if re.search(
+        r"\.transfer\s*\(\s*(?:payable\s*)?(?:address\s*\(\s*)?0x[a-fA-F0-9]{40}",
+        body,
+    ) or re.search(
+        r"\.transfer\s*\(\s*(?:payable\s*)?(?:[A-Z][A-Z0-9_]+|recipient|TREASURY|FEE_RECIPIENT)\b",
+        body,
+    ):
+        if not re.search(r"\.transfer\s*\(\s*(?:payable\s*)?msg\.sender", body):
+            return "PRESENT"
 
     if re.search(
         r"\bauth\b|\brequiresAuth\b|\bonlyOwner\b|\bonlyRole\b|"
@@ -364,8 +391,10 @@ def classify_auth(
         return "PRESENT"
     if re.search(r"CallbackValidation\.verifyCallback|verifyCallback\s*\(", ctx):
         return "PRESENT"
-    if re.search(r"_checkOwner|_checkRole|hasRole\s*\(", ctx):
+    if re.search(r"_checkOwner|_checkRole|hasRole\s*\(|_isApprovedOrOwner\s*\(", ctx):
         return "PRESENT"
+    if re.search(r"_spendAllowance\s*\(", ctx):
+        return "WEAK"
     if re.search(r"IUniswapV3Pool\s*\(\s*msg\.sender|msg\.sender\s*==\s*\w*(pool|factory|vault)", ctx, re.I):
         return "PRESENT"
 
@@ -421,7 +450,16 @@ def analyse_source(src: str, rel: str, lang: str) -> dict[str, Any]:
         file=rel, lang=lang, fund_movers=[], accounting=[], external_calls=[],
         functions=0, function_names=[],
     )
-    for fn in functions(src, clean, lang):
+    parsed = list(functions(src, clean, lang))
+    # One-level internal callee bodies for auth follow-through.
+    callee_bodies = {
+        (fn["name"] or ""): (fn.get("body") or "")
+        for fn in parsed
+        if (fn.get("vis") or "") in ("internal", "private", "")
+        and (fn.get("name") or "").startswith("_")
+    }
+    seen_movers: set[str] = set()
+    for fn in parsed:
         res["functions"] += 1
         res["function_names"].append(fn["name"])
         body = fn["body"]
@@ -432,6 +470,11 @@ def analyse_source(src: str, rel: str, lang: str) -> dict[str, Any]:
         f_hits = hits(fund_p, body)
         name_hit = name_is_fund_mover(fn["name"]) or lname in {n.lower() for n in CALLBACK_NAMES}
         if f_hits or name_hit:
+            # Dedupe by function name — inherited/flatten duplicates inflate heat.
+            key = (fn["name"] or "").lower()
+            if key in seen_movers:
+                continue
+            seen_movers.add(key)
             ctx = fn["header"] + body
             if lang == "solidity":
                 for mname, mbody in mods.items():
@@ -439,7 +482,10 @@ def analyse_source(src: str, rel: str, lang: str) -> dict[str, Any]:
                         ctx += mbody
             a_hits = hits(auth_p, ctx)
             exposed = fn["vis"] in ("external", "public")
-            strength = classify_auth(fn["name"], fn["header"], body, ctx, a_hits, exposed)
+            strength = classify_auth(
+                fn["name"], fn["header"], body, ctx, a_hits, exposed,
+                callee_bodies=callee_bodies,
+            )
             signals = f_hits or ["(name only: %s)" % fn["name"]]
             role = _classify_mover(fn["name"], body, signals)
             if role == "wrap-unwrap" and strength in (
