@@ -139,6 +139,9 @@ type RunResult = {
   funds_breakdown?: FundsAsset[];
   funds_status?: string | null;
   funds_checked_at?: string | null;
+  known_safe?: boolean;
+  deployed_block?: number | null;
+  deployed_at?: string | null;
 };
 
 type PersistInfo = {
@@ -961,9 +964,11 @@ export default function TestApp() {
             <p className="mt-2 text-brand-200">
               Bucket <span className="text-brand-50">{lastRun.result.bucket ?? "—"}</span>
               {" · "}heat {lastRun.result.heat ?? 0}
+              <span className="text-brand-500"> (evidence only)</span>
               {" · "}src/IR {lastRun.result.src_confidence ?? "—"} / {lastRun.result.ir_confidence ?? "—"}
               {lastRun.result.scope ? ` · scope ${lastRun.result.scope}` : ""}
               {lastRun.result.contract_class ? ` · ${lastRun.result.contract_class}` : ""}
+              {lastRun.result.known_safe ? " · known-safe" : ""}
             </p>
             {lastRun.result.dropped && (
               <p className="mt-1 text-brand-400">

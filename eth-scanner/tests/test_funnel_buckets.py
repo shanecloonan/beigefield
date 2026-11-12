@@ -208,7 +208,8 @@ class LaneARouting(unittest.TestCase):
             invariant_results=[{"id": "x", "name": "x", "status": "held", "evidence": "ok"}],
         ))
         self.assertEqual(r.bucket, "lane-a-cool")
-        self.assertGreater(r.heat, 0)  # funds heat only
+        self.assertEqual(r.heat, 0)  # funds alone never make heat
+        self.assertGreater((r.heat_breakdown or {}).get("funds_rank", 0), 0)
 
     def test_failed_invariant_promotes_lane_b(self):
         r = run_lane_a(FunnelContext(

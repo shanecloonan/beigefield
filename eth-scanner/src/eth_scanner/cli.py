@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, Optional
@@ -131,12 +132,27 @@ def main(argv: list[str] | None = None) -> int:
 
     mon = sub.add_parser(
         "monitor",
-        help="Phase F upgrade/funds-delta watchlist (read-only; deduped alerts)",
+        help="Seed recent deployments + upgrade/funds-delta watch (read-only)",
     )
     mon.add_argument("--limit", type=int, default=40)
     mon.add_argument("--persist", action="store_true", help="write alerts to eth_scan_alerts when remote store")
+    mon.add_argument("--no-discover", action="store_true", help="skip recent-deploy seeding (legacy watchlist only)")
+    mon.add_argument("--lookback-hours", type=int, default=48)
+    mon.add_argument("--scan", type=int, default=0, help="after seeding, claim+run lane-a on N pending targets")
     mon.add_argument("--json", action="store_true")
     mon.add_argument("--dry-run", action="store_true")
+
+    disc = sub.add_parser(
+        "discover",
+        help="Seed queue from recent mainnet contract creations (read-only)",
+    )
+    disc.add_argument("--lookback-hours", type=int, default=48)
+    disc.add_argument("--max-blocks", type=int, default=80)
+    disc.add_argument("--max-results", type=int, default=30)
+    disc.add_argument("--enqueue", action="store_true", help="upsert discoveries as pending targets")
+    disc.add_argument("--allow-unverified", action="store_true", help="keep creates even when not verified")
+    disc.add_argument("--json", action="store_true")
+    disc.add_argument("--dry-run", action="store_true")
 
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
@@ -244,26 +260,90 @@ def main(argv: list[str] | None = None) -> int:
             print("%s: %s" % (out.get("status"), out.get("explanation")))
         return 0 if out.get("status") in {"ok", "skipped"} else 1
 
+    if args.cmd == "discover":
+        from eth_scanner.monitor.watch import seed_recent_deployments
+        from eth_scanner.discover.recent import discover_recent_deployments
+        keys = ",".join(getattr(settings, "etherscan_api_keys", None) or []) or (
+            os.environ.get("ETHERSCAN_API_KEYS") or ""
+        )
+        if args.enqueue:
+            rows = seed_recent_deployments(
+                store,
+                rpc_url=getattr(settings, "eth_rpc_url", "") or "",
+                etherscan_keys=keys,
+                lookback_hours=int(args.lookback_hours),
+                max_blocks=int(args.max_blocks),
+                max_results=int(args.max_results),
+                prefer_verified=not bool(args.allow_unverified),
+            )
+        else:
+            rows = discover_recent_deployments(
+                rpc_url=getattr(settings, "eth_rpc_url", "") or "",
+                etherscan_keys=os.environ.get("ETHERSCAN_API_KEYS") or "",
+                lookback_hours=int(args.lookback_hours),
+                max_blocks=int(args.max_blocks),
+                max_results=int(args.max_results),
+                prefer_verified=not bool(args.allow_unverified),
+            )
+        payload = [r.to_dict() for r in rows]
+        if args.json:
+            print(json.dumps(payload, indent=2))
+        else:
+            print("discovered=%d enqueue=%s" % (len(payload), bool(args.enqueue)))
+            for r in payload[:20]:
+                print("%s block=%s name=%s" % (r["address"], r["deployed_block"], r.get("contract_name") or "—"))
+        return 0
+
     if args.cmd == "monitor":
         from eth_scanner.monitor.watch import scan_watchlist
         alerts = scan_watchlist(
             store,
             rpc_url=getattr(settings, "eth_rpc_url", "") or "",
             limit=int(args.limit),
+            seed_discoveries=not bool(args.no_discover),
+            lookback_hours=int(args.lookback_hours),
         )
+        scan_results: list[dict[str, Any]] = []
+        if int(args.scan or 0) > 0:
+            from eth_scanner.lane_a import worker as lane_a
+            claimed = store.claim_pending(int(args.scan), settings.worker_id)
+            for row in claimed:
+                addr = str(row.get("address") or "")
+                if not addr:
+                    continue
+                try:
+                    fr = lane_a.run_one(addr, settings=settings, store=store)
+                    scan_results.append({
+                        "address": addr,
+                        "bucket": fr.bucket,
+                        "heat": fr.heat,
+                        "dropped": fr.dropped,
+                        "drop_reason": fr.drop_reason,
+                        "funds_usd": fr.funds_usd,
+                        "contract_class": fr.contract_class,
+                        "known_safe": fr.known_safe,
+                        "deployed_block": row.get("deployed_block"),
+                    })
+                except Exception as exc:  # noqa: BLE001
+                    scan_results.append({"address": addr, "error": str(exc)[:200]})
         if args.persist:
             persist_fn = getattr(store, "save_alerts", None)
             if callable(persist_fn):
                 persist_fn([a.to_dict() for a in alerts])
             else:
                 print("monitor: store cannot persist alerts", file=sys.stderr)
-        payload = [a.to_dict() for a in alerts]
+        payload = {"alerts": [a.to_dict() for a in alerts], "scans": scan_results}
         if args.json:
             print(json.dumps(payload, indent=2))
         else:
-            print("alerts=%d" % len(payload))
-            for a in payload:
-                print("%s %s %s" % (a["kind"], a["address"], a["detail"]))
+            print("alerts=%d scans=%d" % (len(alerts), len(scan_results)))
+            for a in alerts:
+                print("%s %s %s" % (a.kind, a.address, a.detail))
+            for s in scan_results:
+                print(
+                    "scan %s bucket=%s heat=%s drop=%s funds=%s"
+                    % (s.get("address"), s.get("bucket"), s.get("heat"), s.get("drop_reason"), s.get("funds_usd"))
+                )
         return 0
 
     if args.cmd == "enqueue":
