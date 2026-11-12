@@ -50,6 +50,7 @@ class MemoryStore:
         self.artifacts: list[dict[str, Any]] = []
         self.results: list[dict[str, Any]] = []
         self.alerts: list[dict[str, Any]] = []
+        self.backfills: dict[str, dict[str, Any]] = {}
         if work_dir:
             work_dir.mkdir(parents=True, exist_ok=True)
             self._load()
@@ -301,6 +302,25 @@ class MemoryStore:
             return None
         return self.work_dir / "dry-run-store.json"
 
+    def get_backfill(self, backfill_id: str) -> Optional[dict[str, Any]]:
+        row = self.backfills.get(backfill_id)
+        return dict(row) if row else None
+
+    def upsert_backfill(self, row: dict[str, Any]) -> dict[str, Any]:
+        bid = str(row.get("id") or "").strip()
+        if not bid:
+            raise ValueError("backfill id required")
+        prev = self.backfills.get(bid, {})
+        merged = dict(prev)
+        merged.update({k: v for k, v in row.items() if v is not None})
+        merged["id"] = bid
+        merged["updated_at"] = _now()
+        if "created_at" not in merged:
+            merged["created_at"] = prev.get("created_at") or _now()
+        self.backfills[bid] = merged
+        self._flush()
+        return dict(merged)
+
     def _load(self) -> None:
         p = self._path()
         if not p or not p.exists():
@@ -313,6 +333,7 @@ class MemoryStore:
         self.artifacts = list(data.get("artifacts", []))
         self.results = list(data.get("results", []))
         self.alerts = list(data.get("alerts", []))
+        self.backfills = {r["id"]: r for r in data.get("backfills", []) if r.get("id")}
 
     def _flush(self) -> None:
         p = self._path()
@@ -323,6 +344,7 @@ class MemoryStore:
             "artifacts": self.artifacts,
             "results": self.results,
             "alerts": self.alerts,
+            "backfills": list(self.backfills.values()),
         }, indent=2), encoding="utf-8")
 
 
@@ -608,6 +630,25 @@ class SupabaseStore:
             })
         except Exception:  # noqa: BLE001
             return []
+
+    def get_backfill(self, backfill_id: str) -> Optional[dict[str, Any]]:
+        rows = self._req("GET", "eth_scan_backfill", query={"id": "eq.%s" % backfill_id, "limit": "1"})
+        return rows[0] if rows else None
+
+    def upsert_backfill(self, row: dict[str, Any]) -> dict[str, Any]:
+        bid = str(row.get("id") or "").strip()
+        if not bid:
+            raise ValueError("backfill id required")
+        body = dict(row)
+        body["id"] = bid
+        body["updated_at"] = _now()
+        self._req(
+            "POST",
+            "eth_scan_backfill",
+            body,
+            prefer="return=representation,resolution=merge-duplicates",
+        )
+        return body
 
     def _mark_running(self, rows: list[dict[str, Any]], worker_id: str) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []

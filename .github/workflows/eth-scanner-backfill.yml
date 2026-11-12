@@ -1,0 +1,91 @@
+# One-time / resumable 30-day mainnet create backfill.
+# Efficient create discovery (Alchemy trace_filter → asset transfers → small receipt walk),
+# cheap $2k Multicall3 funds floor, then parallel Lane A for funded contracts.
+# Cron every 15 minutes until the cursor reaches head (then no-op).
+name: eth-scanner-backfill
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      lookback_days:
+        description: "Lookback window in days (initial cursor)"
+        required: false
+        default: "30"
+      chunk_blocks:
+        description: "Blocks per discovery chunk"
+        required: false
+        default: "2000"
+      workers:
+        description: "Parallel Lane A workers"
+        required: false
+        default: "8"
+      deadline_minutes:
+        description: "Stop new work after N minutes"
+        required: false
+        default: "40"
+      max_full_scans:
+        description: "Max full Lane A scans this job"
+        required: false
+        default: "200"
+      reset:
+        description: "Reinitialize cursor (true/false)"
+        required: false
+        default: "false"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eth-scanner-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install scanner
+        run: python -m pip install -e ./eth-scanner
+      - name: Run backfill chunk
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          ETH_SCANNER_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          ETH_RPC_URL: ${{ secrets.ETH_RPC_URL }}
+          ETHERSCAN_API_KEYS: ${{ secrets.ETHERSCAN_API_KEYS }}
+          INPUT_LOOKBACK: ${{ github.event.inputs.lookback_days || '30' }}
+          INPUT_CHUNK: ${{ github.event.inputs.chunk_blocks || '2000' }}
+          INPUT_WORKERS: ${{ github.event.inputs.workers || '8' }}
+          INPUT_DEADLINE: ${{ github.event.inputs.deadline_minutes || '40' }}
+          INPUT_MAX_SCANS: ${{ github.event.inputs.max_full_scans || '200' }}
+          INPUT_RESET: ${{ github.event.inputs.reset || 'false' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
+            echo "Missing Actions secrets SUPABASE_URL / SUPABASE_SECRET_KEY — skip."
+            exit 0
+          fi
+          if [ -z "${ETH_RPC_URL:-}" ]; then
+            echo "WARN: ETH_RPC_URL unset — backfill needs Alchemy for trace_filter."
+          fi
+          RESET_FLAG=""
+          case "${INPUT_RESET}" in
+            true|TRUE|yes|YES|1) RESET_FLAG="--reset" ;;
+          esac
+          echo "backfill params lookback_days=${INPUT_LOOKBACK} chunk_blocks=${INPUT_CHUNK} workers=${INPUT_WORKERS} deadline_minutes=${INPUT_DEADLINE} max_full_scans=${INPUT_MAX_SCANS} reset=${INPUT_RESET}"
+          python -m eth_scanner backfill \
+            --id mainnet-30d \
+            --lookback-days "${INPUT_LOOKBACK}" \
+            --chunk-blocks "${INPUT_CHUNK}" \
+            --workers "${INPUT_WORKERS}" \
+            --deadline-minutes "${INPUT_DEADLINE}" \
+            --max-full-scans "${INPUT_MAX_SCANS}" \
+            ${RESET_FLAG} \
+            --json
