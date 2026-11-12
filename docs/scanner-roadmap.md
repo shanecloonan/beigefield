@@ -101,8 +101,11 @@ Each phase ships as its **own PR → merge to `main` → confirm Vercel → repo
 
 Per-class invariant suites (ERC-4626, staking, lending/CDP, AMM/LP, bridges/escrow, vesting, governance/timelock) as **read-only** fork tests:
 
-- `anvil --fork-url` + Foundry invariant fuzz **or** Echidna/Medusa against **live mainnet state**
-- Output only: invariant name, `held` / `violated`, minimized **evidence summary** (which state values broke the property), severity
+- Live `eth_call` property catalog (`eth_scanner/fork_props`) against current mainnet state
+- Optional Foundry defensive mock suite (`research/fuzz`) when `forge` is installed; counterexample traces elided
+- Output only: invariant name, `held` / `violated` / `unknown`, minimized **evidence summary** (state values), severity
+- CLI: `python -m eth_scanner fork-props --address 0x… --class vault [--forge]`
+- Migration: `20261112193000_fork_properties.sql`
 - **Do not** store or emit a runnable attack sequence — prose + state values only
 
 ### Phase C — Protocol context graph

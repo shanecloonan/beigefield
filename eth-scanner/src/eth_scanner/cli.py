@@ -98,6 +98,17 @@ def main(argv: list[str] | None = None) -> int:
     deep.add_argument("--json", action="store_true", help="print JSON report(s)")
     deep.add_argument("--dry-run", action="store_true")
 
+    fp = sub.add_parser(
+        "fork-props",
+        help="Phase B read-only fork/eth_call properties (held|violated; no attack sequences)",
+    )
+    fp.add_argument("--address", required=True, help="0x…")
+    fp.add_argument("--class", dest="contract_class", default="vault", help="contract class")
+    fp.add_argument("--forge", action="store_true", help="also run defensive Foundry mock suite if forge is installed")
+    fp.add_argument("--timeout", type=int, default=60)
+    fp.add_argument("--json", action="store_true")
+    fp.add_argument("--dry-run", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -150,6 +161,23 @@ def main(argv: list[str] | None = None) -> int:
                         (rep.get("agreement") or {}).get("multi_engine_clusters"),
                     )
                 )
+        return 0
+
+    if args.cmd == "fork-props":
+        from eth_scanner.fork_props.runner import run_fork_properties
+        rows = run_fork_properties(
+            args.address,
+            contract_class=str(args.contract_class or "vault"),
+            rpc_url=getattr(settings, "eth_rpc_url", "") or "",
+            run_forge=bool(args.forge),
+            timeout_s=float(args.timeout),
+        )
+        payload = [r.to_dict() for r in rows]
+        if args.json:
+            print(json.dumps(payload, indent=2))
+        else:
+            for r in payload:
+                print("%s %s %s — %s" % (r["status"], r["id"], r["severity"], r["evidence"][:120]))
         return 0
 
     if args.cmd == "enqueue":

@@ -218,6 +218,7 @@ class MemoryStore:
         contract_name: Optional[str] = None,
         engine_findings: Optional[list[Any]] = None,
         engine_agreement: Optional[dict[str, Any]] = None,
+        fork_properties: Optional[list[Any]] = None,
     ) -> None:
         addr = normalize_address(address)
         tgt = self.targets.setdefault(addr, {"address": addr, "created_at": _now()})
@@ -228,6 +229,8 @@ class MemoryStore:
             tgt["engine_findings"] = list(engine_findings)
         if engine_agreement is not None:
             tgt["engine_agreement"] = dict(engine_agreement)
+        if fork_properties is not None:
+            tgt["fork_properties"] = list(fork_properties)
         tgt["updated_at"] = _now()
         self._flush()
 
@@ -446,6 +449,7 @@ class SupabaseStore:
         contract_name: Optional[str] = None,
         engine_findings: Optional[list[Any]] = None,
         engine_agreement: Optional[dict[str, Any]] = None,
+        fork_properties: Optional[list[Any]] = None,
     ) -> None:
         addr = normalize_address(address)
         patch: dict[str, Any] = {"deep_status": deep_status}
@@ -455,24 +459,28 @@ class SupabaseStore:
             patch["engine_findings"] = list(engine_findings)
         if engine_agreement is not None:
             patch["engine_agreement"] = dict(engine_agreement)
+        if fork_properties is not None:
+            patch["fork_properties"] = list(fork_properties)
         try:
             self._req("PATCH", "eth_scan_targets", patch, query={"address": "eq.%s" % addr})
         except Exception:  # noqa: BLE001
             # Soft-fail when migration not applied yet.
             pass
         # Always keep a result-side copy when possible.
-        if engine_findings is not None or engine_agreement is not None:
+        if engine_findings is not None or engine_agreement is not None or fork_properties is not None:
             body: dict[str, Any] = {"address": addr}
             if engine_findings is not None:
                 body["engine_findings"] = list(engine_findings)
             if engine_agreement is not None:
                 body["engine_agreement"] = dict(engine_agreement)
+            if fork_properties is not None:
+                body["fork_properties"] = list(fork_properties)
             try:
                 # Append a thin results row so /test history can show engine output.
                 body["bucket"] = (self.get_target(addr) or {}).get("bucket") or "manual-review"
                 body["heat"] = (self.get_target(addr) or {}).get("heat") or 0
                 body["stage_trace"] = [{"stage": "deep-A", "decision": deep_status}]
-                body["notes"] = "phase-A deep engines"
+                body["notes"] = "phase-A/B deep engines + fork properties"
                 self._req("POST", "eth_scan_results", body, prefer="return=minimal")
             except Exception:  # noqa: BLE001
                 pass
