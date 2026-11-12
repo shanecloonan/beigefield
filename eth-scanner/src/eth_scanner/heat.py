@@ -7,8 +7,9 @@ Heat comes only from evidence:
   (a) invariant checks that actually fail (held/unknown → 0)
   (b) privileged function callable by an outsider
   (c) single-EOA admin over eoa_admin_min_usd
+  (d) Slither/Mythril/clone leads ONLY when a read-only corroboration confirms
 
-Never a verdict. Never auto-yes.
+Slither/Mythril hits alone are leads (0 heat). Never a verdict. Never auto-yes.
 """
 
 from __future__ import annotations
@@ -34,6 +35,9 @@ class HeatWeights:
     # EOA admin/owner/upgrader on a contract holding >= eoa_admin_min_usd
     eoa_admin: int = 3
     eoa_admin_min_usd: float = 100_000.0
+    # per corroborated engine/clone lead (Slither-only → 0)
+    corroborated_lead: int = 3
+    corroborated_lead_cap: int = 6
     # absolute heat ceiling
     max_heat: int = 12
     # lane-b still needs funds >= floor (from settings); this is the promote bar
@@ -68,6 +72,8 @@ def load_heat_weights() -> HeatWeights:
         privileged_callable=_i("ETH_SCANNER_HEAT_PRIVILEGED_CALLABLE", _DEFAULT.privileged_callable),
         eoa_admin=_i("ETH_SCANNER_HEAT_EOA_ADMIN", _DEFAULT.eoa_admin),
         eoa_admin_min_usd=_f("ETH_SCANNER_HEAT_EOA_ADMIN_MIN_USD", _DEFAULT.eoa_admin_min_usd),
+        corroborated_lead=_i("ETH_SCANNER_HEAT_CORROBORATED_LEAD", _DEFAULT.corroborated_lead),
+        corroborated_lead_cap=_i("ETH_SCANNER_HEAT_CORROBORATED_LEAD_CAP", _DEFAULT.corroborated_lead_cap),
         max_heat=_i("ETH_SCANNER_HEAT_MAX", _DEFAULT.max_heat),
         min_funds_for_lane_b=_f("ETH_SCANNER_MIN_FUNDS_USD", _DEFAULT.min_funds_for_lane_b),
     )
@@ -96,12 +102,23 @@ def invariant_heat(
     return min(w.failed_invariant_cap, n_failed * w.failed_invariant)
 
 
+def corroborated_heat(
+    confirmed: list[dict[str, Any]],
+    weights: Optional[HeatWeights] = None,
+) -> int:
+    """Only *confirmed* engine/clone corroborations add heat. Leads alone → 0."""
+    w = weights or load_heat_weights()
+    n = sum(1 for c in confirmed if c.get("confirmed"))
+    return min(w.corroborated_lead_cap, n * w.corroborated_lead)
+
+
 def evidence_heat(
     *,
     funds_usd: Optional[float],
     invariant_results: list[dict[str, Any]],
     privileged_callable: bool = False,
     eoa_admin: bool = False,
+    corroborated: Optional[list[dict[str, Any]]] = None,
     weights: Optional[HeatWeights] = None,
 ) -> tuple[int, dict[str, Any]]:
     """Compose heat from evidence only. Funds are ranking metadata, not heat."""
@@ -112,7 +129,8 @@ def evidence_heat(
     eoa = 0
     if eoa_admin and funds_usd is not None and funds_usd >= w.eoa_admin_min_usd:
         eoa = w.eoa_admin
-    total = min(w.max_heat, inv + priv + eoa)
+    corr = corroborated_heat(list(corroborated or []), w)
+    total = min(w.max_heat, inv + priv + eoa + corr)
     breakdown = {
         # "funds" kept for UI sort; explicitly not part of total heat.
         "funds": rank,
@@ -121,6 +139,7 @@ def evidence_heat(
         "invariants_failed": inv,
         "privileged_callable": priv,
         "eoa_admin": eoa,
+        "corroborated_leads": corr,
         "total": total,
         "weights": w.to_dict(),
     }
@@ -133,6 +152,7 @@ def should_promote_lane_b(
     invariant_results: list[dict[str, Any]],
     privileged_callable: bool = False,
     eoa_admin: bool = False,
+    corroborated: Optional[list[dict[str, Any]]] = None,
     weights: Optional[HeatWeights] = None,
 ) -> tuple[bool, str]:
     """lane-b-queue only with funds floor + real evidence."""
@@ -149,4 +169,7 @@ def should_promote_lane_b(
         return True, "EOA admin/upgrader on contract holding >= $%s" % (
             "{:,.0f}".format(w.eoa_admin_min_usd)
         )
-    return False, "no failed invariant / privileged / EOA-admin evidence"
+    confirmed = [c for c in (corroborated or []) if c.get("confirmed")]
+    if confirmed:
+        return True, "corroborated engine lead: %s" % (confirmed[0].get("lead_id") or "lead")
+    return False, "no failed invariant / privileged / EOA-admin / corroborated evidence"

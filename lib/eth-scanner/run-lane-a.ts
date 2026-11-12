@@ -28,7 +28,7 @@ import {
 
 export const ETH_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 export const FIXTURE_PLACEHOLDER = "0x1111111111111111111111111111111111111111";
-const SCAN_TIMEOUT_MS = 120_000;
+const SCAN_TIMEOUT_MS = 240_000;
 const SECRET_VALUE =
   /(?:eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)|(?:sk[_-][A-Za-z0-9]{16,})|(?:Bearer\s+[A-Za-z0-9._\-]+)/gi;
 const SECRET_PAIR =
@@ -73,6 +73,9 @@ export type LaneAResult = {
   stage_trace: unknown[];
   pattern_leads: unknown[];
   hypotheses: unknown[];
+  engine_leads: unknown[];
+  confirmed_findings: unknown[];
+  engine_timing: Record<string, unknown>;
 };
 
 export type LaneARunOk = {
@@ -211,6 +214,25 @@ function shapeResult(row: Record<string, unknown>, address: string): LaneAResult
     stage_trace: Array.isArray(row.stage_trace) ? row.stage_trace : [],
     pattern_leads: Array.isArray(row.pattern_leads) ? row.pattern_leads : [],
     hypotheses: Array.isArray(row.hypotheses) ? row.hypotheses : [],
+    engine_leads: Array.isArray(row.engine_leads)
+      ? row.engine_leads
+      : Array.isArray(row.engine_findings)
+        ? row.engine_findings
+        : [],
+    confirmed_findings: Array.isArray(row.confirmed_findings)
+      ? row.confirmed_findings
+      : Array.isArray((row.heat_breakdown as { confirmed_findings?: unknown } | undefined)?.confirmed_findings)
+        ? ((row.heat_breakdown as { confirmed_findings: unknown[] }).confirmed_findings)
+        : [],
+    engine_timing:
+      row.engine_timing && typeof row.engine_timing === "object" && !Array.isArray(row.engine_timing)
+        ? (row.engine_timing as Record<string, unknown>)
+        : row.heat_breakdown &&
+            typeof row.heat_breakdown === "object" &&
+            (row.heat_breakdown as { engine_timing?: unknown }).engine_timing &&
+            typeof (row.heat_breakdown as { engine_timing: unknown }).engine_timing === "object"
+          ? ((row.heat_breakdown as { engine_timing: Record<string, unknown> }).engine_timing)
+          : {},
   };
 }
 

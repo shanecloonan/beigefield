@@ -47,8 +47,11 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - name: Install scanner
-        run: python -m pip install -e ./eth-scanner
+      - name: Install scanner + engines
+        run: |
+          python -m pip install -e ./eth-scanner
+          python -m pip install "slither-analyzer>=0.10.0" "mythril>=0.24.0" || true
+
       - name: Discover + scan recent deployments
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
