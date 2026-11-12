@@ -190,6 +190,47 @@ class MemoryStore:
         self._flush()
         return claimed
 
+    def claim_deep(self, limit: int, worker_id: str) -> list[dict[str, Any]]:
+        """Claim lane-b / manual-review rows that still need Phase A deep engines."""
+        claimed: list[dict[str, Any]] = []
+        now = _now()
+        for row in self.targets.values():
+            if row.get("bucket") not in {"lane-b-queue", "manual-review"}:
+                continue
+            if row.get("deep_status") in {"done", "running"}:
+                continue
+            if row.get("status") == "running" and row.get("claimed_by") not in {None, worker_id}:
+                continue
+            row["deep_status"] = "running"
+            row["claimed_by"] = worker_id
+            row["claimed_at"] = now
+            claimed.append(dict(row))
+            if len(claimed) >= limit:
+                break
+        self._flush()
+        return claimed
+
+    def patch_deep_status(
+        self,
+        address: str,
+        *,
+        deep_status: str,
+        contract_name: Optional[str] = None,
+        engine_findings: Optional[list[Any]] = None,
+        engine_agreement: Optional[dict[str, Any]] = None,
+    ) -> None:
+        addr = normalize_address(address)
+        tgt = self.targets.setdefault(addr, {"address": addr, "created_at": _now()})
+        tgt["deep_status"] = deep_status
+        if contract_name:
+            tgt["contract_name"] = contract_name
+        if engine_findings is not None:
+            tgt["engine_findings"] = list(engine_findings)
+        if engine_agreement is not None:
+            tgt["engine_agreement"] = dict(engine_agreement)
+        tgt["updated_at"] = _now()
+        self._flush()
+
     def list_targets(self, bucket: Optional[str] = None, limit: int = 200) -> list[dict[str, Any]]:
         rows = list(self.targets.values())
         if bucket:
@@ -359,6 +400,82 @@ class SupabaseStore:
             "limit": str(limit),
         })
         return self._mark_running(rows, worker_id)
+
+    def claim_deep(self, limit: int, worker_id: str) -> list[dict[str, Any]]:
+        # Prefer never-deep-scanned lane-b / manual-review rows.
+        rows = self._req("GET", "eth_scan_targets", query={
+            "bucket": "in.(lane-b-queue,manual-review)",
+            "or": "(deep_status.is.null,deep_status.eq.pending,deep_status.eq.error)",
+            "order": "updated_at.asc",
+            "limit": str(max(limit * 3, limit)),
+        })
+        if not isinstance(rows, list):
+            rows = []
+        # Fall back if the deep_status column is not migrated yet.
+        if not rows:
+            rows = self._req("GET", "eth_scan_targets", query={
+                "bucket": "in.(lane-b-queue,manual-review)",
+                "order": "updated_at.asc",
+                "limit": str(limit),
+            })
+        picked = (rows or [])[:limit]
+        now = _now()
+        out: list[dict[str, Any]] = []
+        for row in picked:
+            try:
+                self._req("PATCH", "eth_scan_targets", {
+                    "deep_status": "running",
+                    "claimed_by": worker_id,
+                    "claimed_at": now,
+                }, query={"address": "eq.%s" % row["address"]})
+            except Exception:  # noqa: BLE001
+                # Column may be missing — still return the claim for local processing.
+                pass
+            row = dict(row)
+            row["deep_status"] = "running"
+            row["claimed_by"] = worker_id
+            row["claimed_at"] = now
+            out.append(row)
+        return out
+
+    def patch_deep_status(
+        self,
+        address: str,
+        *,
+        deep_status: str,
+        contract_name: Optional[str] = None,
+        engine_findings: Optional[list[Any]] = None,
+        engine_agreement: Optional[dict[str, Any]] = None,
+    ) -> None:
+        addr = normalize_address(address)
+        patch: dict[str, Any] = {"deep_status": deep_status}
+        if contract_name:
+            patch["contract_name"] = contract_name
+        if engine_findings is not None:
+            patch["engine_findings"] = list(engine_findings)
+        if engine_agreement is not None:
+            patch["engine_agreement"] = dict(engine_agreement)
+        try:
+            self._req("PATCH", "eth_scan_targets", patch, query={"address": "eq.%s" % addr})
+        except Exception:  # noqa: BLE001
+            # Soft-fail when migration not applied yet.
+            pass
+        # Always keep a result-side copy when possible.
+        if engine_findings is not None or engine_agreement is not None:
+            body: dict[str, Any] = {"address": addr}
+            if engine_findings is not None:
+                body["engine_findings"] = list(engine_findings)
+            if engine_agreement is not None:
+                body["engine_agreement"] = dict(engine_agreement)
+            try:
+                # Append a thin results row so /test history can show engine output.
+                body["bucket"] = (self.get_target(addr) or {}).get("bucket") or "manual-review"
+                body["heat"] = (self.get_target(addr) or {}).get("heat") or 0
+                body["stage_trace"] = [{"stage": "deep-A", "decision": deep_status}]
+                body["notes"] = "phase-A deep engines"
+                self._req("POST", "eth_scan_results", body, prefer="return=minimal")
+            except Exception:  # noqa: BLE001
+                pass
 
     def list_targets(self, bucket: Optional[str] = None, limit: int = 200) -> list[dict[str, Any]]:
         q: dict[str, str] = {"order": "updated_at.desc", "limit": str(limit)}

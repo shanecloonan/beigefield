@@ -82,6 +82,22 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("surface", help="run invariant_pass heuristics (passthrough)")
     sub.add_parser("research", help="Phase 2 research audit stack (defensive; see eth_scanner.research)")
 
+    deep = sub.add_parser(
+        "deep",
+        help="Phase A deep engines (Slither/Aderyn/Mythril|Halmos) on lane-b-queue",
+    )
+    deep.add_argument("--address", action="append", default=[], help="0x… (repeatable)")
+    deep.add_argument("--source", help="local Solidity file (skips Etherscan)")
+    deep.add_argument("--claim", type=int, default=0, help="claim N lane-b / manual-review rows")
+    deep.add_argument(
+        "--engines",
+        default="slither,aderyn,mythril,halmos",
+        help="comma list of engines to attempt",
+    )
+    deep.add_argument("--timeout", type=int, default=90, help="per-engine timeout seconds")
+    deep.add_argument("--json", action="store_true", help="print JSON report(s)")
+    deep.add_argument("--dry-run", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -93,6 +109,48 @@ def main(argv: list[str] | None = None) -> int:
     if getattr(args, "dry_run", False):
         settings.dry_run = True
     store = open_store(settings)
+
+    if args.cmd == "deep":
+        from eth_scanner.deep.worker import run_deep_claim, run_deep_one
+        engines = [e.strip() for e in str(args.engines or "").split(",") if e.strip()]
+        reports: list[dict[str, Any]] = []
+        source_text: Optional[str] = None
+        if args.source:
+            source_text = Path(args.source).read_text(encoding="utf-8", errors="replace")
+        if args.claim and args.claim > 0:
+            reports.extend(run_deep_claim(
+                limit=int(args.claim),
+                settings=settings,
+                store=store,
+                engines=engines,
+                timeout_s=int(args.timeout),
+            ))
+        for raw in args.address:
+            reports.append(run_deep_one(
+                raw,
+                settings=settings,
+                store=store,
+                source_text=source_text,
+                engines=engines,
+                timeout_s=int(args.timeout),
+            ))
+        if not reports:
+            print("deep: pass --claim N and/or --address 0x…", file=sys.stderr)
+            return 2
+        if args.json:
+            print(json.dumps(reports if len(reports) > 1 else reports[0], indent=2))
+        else:
+            for rep in reports:
+                print(
+                    "%s status=%s findings=%d multi_engine=%s"
+                    % (
+                        rep.get("address"),
+                        rep.get("status"),
+                        len(rep.get("findings") or []),
+                        (rep.get("agreement") or {}).get("multi_engine_clusters"),
+                    )
+                )
+        return 0
 
     if args.cmd == "enqueue":
         from eth_scanner.types import Target
