@@ -37,6 +37,8 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## `/test` — ETH funds-at-risk scanner desk
 
+Architecture and phased plan: [`docs/scanner-roadmap.md`](docs/scanner-roadmap.md).
+
 Live at [`/test`](https://beigefield.vercel.app/test) (linked as **Scanner** from the home page). Defensive triage
 only: findings are framed as *funds at risk*, automation never stamps "exploitable", and the desk never generates
 exploit or PoC code. Counterexamples, call sequences and long calldata are elided from every engine's output.
