@@ -34,7 +34,8 @@ SEL = {
     "DEFAULT_ADMIN_ROLE()": "a217fddf",
 }
 
-RANDOM_EOA = "0x00000000000000000000000000000000000000dEad"
+# Non-special random EOA (avoid 0xdead / zero — some public RPCs reject them as `from`).
+RANDOM_EOA = "0x1111111111111111111111111111111111111111"
 # Static-call from a random EOA for privileged selectors — expect revert.
 PRIVILEGED_PROBE_SELECTORS = (
     ("pause()", "8456cb59"),
@@ -253,11 +254,11 @@ def _privileged_call_probes(addr: str, rpc: str, timeout_s: float, klass: str) -
     out: list[LiveInvariantResult] = []
     for name, sel in PRIVILEGED_PROBE_SELECTORS:
         data = sel
-        if "address" in name:
-            data = sel + _pad_addr(RANDOM_EOA)
-        elif name.startswith("upgradeToAndCall"):
-            # upgradeToAndCall(address,bytes) — empty bytes
+        if name.startswith("upgradeToAndCall"):
+            # upgradeToAndCall(address,bytes) — empty bytes payload
             data = sel + _pad_addr(RANDOM_EOA) + ("%064x" % 64) + ("%064x" % 0)
+        elif "(address)" in name or "(address," in name:
+            data = sel + _pad_addr(RANDOM_EOA)
         try:
             _eth_call(rpc, addr, "0x" + data, timeout_s, from_addr=RANDOM_EOA)
             # If it returned without error, the call did not revert — evidence of open privilege.
