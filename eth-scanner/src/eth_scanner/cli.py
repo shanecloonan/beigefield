@@ -109,6 +109,17 @@ def main(argv: list[str] | None = None) -> int:
     fp.add_argument("--json", action="store_true")
     fp.add_argument("--dry-run", action="store_true")
 
+    pg = sub.add_parser(
+        "protocol-graph",
+        help="Phase C protocol context graph + risk factors (read-only)",
+    )
+    pg.add_argument("--address", required=True, help="0x…")
+    pg.add_argument("--source", help="optional local Solidity for static edges")
+    pg.add_argument("--class", dest="contract_class", default="unknown")
+    pg.add_argument("--funds", type=float, default=None, help="funds USD for weighting")
+    pg.add_argument("--json", action="store_true")
+    pg.add_argument("--dry-run", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -178,6 +189,31 @@ def main(argv: list[str] | None = None) -> int:
         else:
             for r in payload:
                 print("%s %s %s — %s" % (r["status"], r["id"], r["severity"], r["evidence"][:120]))
+        return 0
+
+    if args.cmd == "protocol-graph":
+        from eth_scanner.protocol_graph.builder import build_protocol_graph
+        from eth_scanner.protocol_graph.risk import score_graph_risks
+        source_text = ""
+        if args.source:
+            source_text = Path(args.source).read_text(encoding="utf-8", errors="replace")
+        graph = build_protocol_graph(
+            args.address,
+            source=source_text,
+            contract_class=str(args.contract_class or "unknown"),
+            rpc_url=getattr(settings, "eth_rpc_url", "") or "",
+        )
+        risks = score_graph_risks(graph, funds_usd=args.funds, source=source_text)
+        payload = {"graph": graph.to_dict(), "risks": risks}
+        if args.json:
+            print(json.dumps(payload, indent=2))
+        else:
+            print("nodes=%d edges=%d factors=%d max_likelihood=%s" % (
+                len(graph.nodes), len(graph.edges),
+                len(risks.get("factors") or []), risks.get("max_likelihood"),
+            ))
+            for f in risks.get("factors") or []:
+                print("- %s (L=%s): %s" % (f.get("id"), f.get("likelihood"), f.get("detail")))
         return 0
 
     if args.cmd == "enqueue":
