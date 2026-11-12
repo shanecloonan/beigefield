@@ -67,7 +67,7 @@ export async function GET(req: Request) {
 
   let targetsQuery = sb
     .from("eth_scan_targets")
-    .select("address,bytecode_hash,tvl_usd,status,src_confidence,ir_confidence,heat,bucket,updated_at")
+    .select("address,bytecode_hash,tvl_usd,status,src_confidence,ir_confidence,heat,bucket,funds_usd,funds_breakdown,funds_status,funds_checked_at,updated_at")
     .order("updated_at", { ascending: false })
     .limit(limit);
   if (bucket && (BUCKETS as readonly string[]).includes(bucket)) {
@@ -78,7 +78,7 @@ export async function GET(req: Request) {
     targetsQuery,
     sb
       .from("eth_scan_results")
-      .select("id,address,bucket,heat,stage_trace,notes,created_at")
+      .select("id,address,bucket,heat,stage_trace,notes,funds_usd,funds_breakdown,funds_status,funds_checked_at,created_at")
       .order("created_at", { ascending: false })
       .limit(limit),
   ]);

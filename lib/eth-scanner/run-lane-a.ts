@@ -40,6 +40,16 @@ export type LaneARunInput = {
   fixture?: string;
 };
 
+export type FundsAsset = {
+  symbol: string;
+  address?: string | null;
+  amount?: number;
+  decimals?: number;
+  price_usd?: number;
+  usd?: number;
+  kind?: string;
+};
+
 export type LaneAResult = {
   address: string;
   bucket: string | null;
@@ -52,6 +62,10 @@ export type LaneAResult = {
   contract_class: string | null;
   scope: string | null;
   notes: string[];
+  funds_usd: number | null;
+  funds_breakdown: FundsAsset[];
+  funds_status: string | null;
+  funds_checked_at: string | null;
 };
 
 export type LaneARunOk = {
@@ -137,7 +151,33 @@ function asMovers(raw: unknown): string[] {
   return raw.map((m) => String(m)).filter(Boolean).slice(0, 40);
 }
 
+function asFundsBreakdown(raw: unknown): FundsAsset[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((row) => row && typeof row === "object")
+    .map((row) => {
+      const r = row as Record<string, unknown>;
+      return {
+        symbol: String(r.symbol || "ASSET"),
+        address: r.address == null ? null : String(r.address),
+        amount: typeof r.amount === "number" ? r.amount : Number(r.amount) || undefined,
+        decimals: typeof r.decimals === "number" ? r.decimals : undefined,
+        price_usd: typeof r.price_usd === "number" ? r.price_usd : undefined,
+        usd: typeof r.usd === "number" ? r.usd : Number(r.usd) || undefined,
+        kind: r.kind == null ? undefined : String(r.kind),
+      };
+    })
+    .slice(0, 40);
+}
+
 function shapeResult(row: Record<string, unknown>, address: string): LaneAResult {
+  const fundsUsdRaw = row.funds_usd;
+  const fundsUsd =
+    typeof fundsUsdRaw === "number" && Number.isFinite(fundsUsdRaw)
+      ? fundsUsdRaw
+      : fundsUsdRaw == null || fundsUsdRaw === ""
+        ? null
+        : Number(fundsUsdRaw);
   return {
     address,
     bucket: row.bucket == null ? null : String(row.bucket),
@@ -150,6 +190,10 @@ function shapeResult(row: Record<string, unknown>, address: string): LaneAResult
     contract_class: row.contract_class == null ? null : String(row.contract_class),
     scope: row.scope == null ? null : String(row.scope),
     notes: asNotes(row.notes),
+    funds_usd: fundsUsd != null && Number.isFinite(fundsUsd) ? fundsUsd : null,
+    funds_breakdown: asFundsBreakdown(row.funds_breakdown),
+    funds_status: row.funds_status == null ? null : String(row.funds_status),
+    funds_checked_at: row.funds_checked_at == null ? null : String(row.funds_checked_at),
   };
 }
 

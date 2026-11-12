@@ -232,6 +232,10 @@ def _print_results(results, settings, paths: Optional[list[Optional[Path]]] = No
             "scope": res.scope,
             "stage_trace": to_plain(res.stage_trace),
             "notes": res.notes,
+            "funds_usd": getattr(res, "funds_usd", None),
+            "funds_breakdown": getattr(res, "funds_breakdown", None) or [],
+            "funds_status": getattr(res, "funds_status", None),
+            "funds_checked_at": getattr(res, "funds_checked_at", None),
             "receipt_path": str(path) if path else None,
         })
     print(json.dumps(payload, indent=2))

@@ -9,6 +9,7 @@ from pathlib import Path
 from eth_scanner.types import (
     DEFAULT_ETHERSCAN_INTERVAL_S,
     DEFAULT_HEAT_THRESHOLD,
+    DEFAULT_MIN_FUNDS_USD,
     DEFAULT_TVL_FLOOR_USD,
 )
 
@@ -67,6 +68,7 @@ class Settings:
     work_dir: Path = DEFAULT_WORK_DIR
     heat_threshold: int = DEFAULT_HEAT_THRESHOLD
     tvl_floor_usd: float = DEFAULT_TVL_FLOOR_USD
+    min_funds_usd: float = DEFAULT_MIN_FUNDS_USD
     etherscan_min_interval_s: float = DEFAULT_ETHERSCAN_INTERVAL_S
     worker_id: str = "eth-scanner"
     claim_stale_seconds: int = 900
@@ -100,6 +102,11 @@ def load_settings() -> Settings:
     except ValueError:
         tvl = DEFAULT_TVL_FLOOR_USD
     try:
+        min_funds = float(os.environ.get("ETH_SCANNER_MIN_FUNDS_USD") or DEFAULT_MIN_FUNDS_USD)
+    except ValueError:
+        min_funds = DEFAULT_MIN_FUNDS_USD
+    min_funds = max(0.0, min_funds)
+    try:
         interval = float(os.environ.get("ETH_SCANNER_ETHERSCAN_INTERVAL") or DEFAULT_ETHERSCAN_INTERVAL_S)
     except ValueError:
         interval = DEFAULT_ETHERSCAN_INTERVAL_S
@@ -113,6 +120,7 @@ def load_settings() -> Settings:
         work_dir=work,
         heat_threshold=heat,
         tvl_floor_usd=tvl,
+        min_funds_usd=min_funds,
         etherscan_min_interval_s=interval,
         worker_id=os.environ.get("ETH_SCANNER_WORKER_ID", "eth-scanner"),
     )

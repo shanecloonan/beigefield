@@ -67,6 +67,10 @@ class MemoryStore:
             "ir_confidence": None,
             "heat": 0,
             "bucket": None,
+            "funds_usd": target.funds_usd,
+            "funds_breakdown": list(target.funds_breakdown or []),
+            "funds_status": target.funds_status,
+            "funds_checked_at": target.funds_checked_at,
             "claimed_by": prev.get("claimed_by"),
             "claimed_at": prev.get("claimed_at"),
             "updated_at": now,
@@ -76,6 +80,14 @@ class MemoryStore:
         row["bytecode_hash"] = target.bytecode_hash or prev.get("bytecode_hash")
         row["tvl_usd"] = target.tvl_usd if target.tvl_usd is not None else prev.get("tvl_usd")
         row["status"] = target.status or prev.get("status") or "pending"
+        if target.funds_usd is not None:
+            row["funds_usd"] = target.funds_usd
+        if target.funds_breakdown:
+            row["funds_breakdown"] = list(target.funds_breakdown)
+        if target.funds_status:
+            row["funds_status"] = target.funds_status
+        if target.funds_checked_at:
+            row["funds_checked_at"] = target.funds_checked_at
         self.targets[addr] = row
         self._flush()
         return target
@@ -121,6 +133,10 @@ class MemoryStore:
             "ir_confidence": result.ir_confidence,
             "dropped": result.dropped,
             "drop_reason": result.drop_reason,
+            "funds_usd": result.funds_usd,
+            "funds_breakdown": list(result.funds_breakdown or []),
+            "funds_status": result.funds_status,
+            "funds_checked_at": result.funds_checked_at,
             "created_at": _now(),
         }
         self.results.append(row)
@@ -130,6 +146,15 @@ class MemoryStore:
         tgt["src_confidence"] = result.src_confidence
         tgt["ir_confidence"] = result.ir_confidence
         tgt["status"] = "skipped" if result.dropped else "done"
+        if result.funds_usd is not None:
+            tgt["funds_usd"] = result.funds_usd
+            tgt["tvl_usd"] = result.funds_usd if tgt.get("tvl_usd") is None else tgt.get("tvl_usd")
+        if result.funds_breakdown:
+            tgt["funds_breakdown"] = list(result.funds_breakdown)
+        if result.funds_status:
+            tgt["funds_status"] = result.funds_status
+        if result.funds_checked_at:
+            tgt["funds_checked_at"] = result.funds_checked_at
         tgt["updated_at"] = _now()
         self._flush()
 
@@ -229,12 +254,20 @@ class SupabaseStore:
     def upsert_target(self, target: Target) -> Target:
         addr = normalize_address(target.address)
         target.address = addr
-        body = {
+        body: dict[str, Any] = {
             "address": addr,
             "bytecode_hash": target.bytecode_hash,
             "tvl_usd": target.tvl_usd,
             "status": target.status,
         }
+        if target.funds_usd is not None:
+            body["funds_usd"] = target.funds_usd
+        if target.funds_breakdown is not None:
+            body["funds_breakdown"] = list(target.funds_breakdown or [])
+        if target.funds_status:
+            body["funds_status"] = target.funds_status
+        if target.funds_checked_at:
+            body["funds_checked_at"] = target.funds_checked_at
         self._req("POST", "eth_scan_targets", body, prefer="return=minimal,resolution=merge-duplicates")
         return target
 
@@ -260,14 +293,23 @@ class SupabaseStore:
 
     def save_result(self, address: str, result: FunnelResult) -> None:
         addr = normalize_address(address)
-        self._req("POST", "eth_scan_results", {
+        result_body: dict[str, Any] = {
             "address": addr,
             "bucket": result.bucket,
             "heat": result.heat,
             "stage_trace": to_plain(result.stage_trace),
             "hypotheses": to_plain(result.hypotheses),
             "notes": "\n".join(result.notes),
-        }, prefer="return=minimal")
+        }
+        if result.funds_usd is not None:
+            result_body["funds_usd"] = result.funds_usd
+        if result.funds_breakdown is not None:
+            result_body["funds_breakdown"] = list(result.funds_breakdown or [])
+        if result.funds_status:
+            result_body["funds_status"] = result.funds_status
+        if result.funds_checked_at:
+            result_body["funds_checked_at"] = result.funds_checked_at
+        self._req("POST", "eth_scan_results", result_body, prefer="return=minimal")
         patch: dict[str, Any] = {
             "bucket": result.bucket,
             "heat": result.heat,
@@ -275,6 +317,15 @@ class SupabaseStore:
             "ir_confidence": result.ir_confidence,
             "status": "skipped" if result.dropped else "done",
         }
+        if result.funds_usd is not None:
+            patch["funds_usd"] = result.funds_usd
+            patch["tvl_usd"] = result.funds_usd
+        if result.funds_breakdown is not None:
+            patch["funds_breakdown"] = list(result.funds_breakdown or [])
+        if result.funds_status:
+            patch["funds_status"] = result.funds_status
+        if result.funds_checked_at:
+            patch["funds_checked_at"] = result.funds_checked_at
         self._req("PATCH", "eth_scan_targets", patch, query={"address": "eq.%s" % addr})
 
     def claim_pending(self, limit: int, worker_id: str) -> list[dict[str, Any]]:
