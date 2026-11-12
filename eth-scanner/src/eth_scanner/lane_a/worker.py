@@ -7,8 +7,9 @@ from __future__ import annotations
 
 import hashlib
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from eth_scanner.config import Settings, load_settings
 from eth_scanner.decompile.heimdall import decompile
@@ -247,6 +248,89 @@ def claim_and_run(limit: int = 10, *, settings: Optional[Settings] = None) -> li
     for row in claimed:
         result = run_one(row["address"], settings=settings, store=store, tvl_usd=_as_float(row.get("tvl_usd")))
         out.append((row["address"], result))
+    return out
+
+
+def claim_and_drain(
+    *,
+    max_scans: int = 1000,
+    workers: int = 8,
+    deadline_monotonic: Optional[float] = None,
+    settings: Optional[Settings] = None,
+    store: Optional[ScanStore] = None,
+    batch_size: Optional[int] = None,
+) -> list[tuple[str, Any]]:
+    """Claim pending targets and scan until empty, max_scans, or deadline.
+
+    Uses a small thread pool (default 8). Etherscan KeyRotator is process-shared
+    via per-call clients with min-interval; 429s already backoff inside ingest.
+    Each worker opens its own store handle so HTTP clients stay thread-local.
+    """
+    settings = settings or load_settings()
+    store = store or open_store(settings)
+    workers = max(1, min(int(workers or 1), 32))
+    max_scans = max(0, int(max_scans or 0))
+    if max_scans <= 0:
+        return []
+    chunk = max(workers, int(batch_size or workers * 2))
+    out: list[tuple[str, Any]] = []
+    scanned = 0
+    started = time.monotonic()
+
+    while scanned < max_scans:
+        now = time.monotonic()
+        if deadline_monotonic is not None and now >= deadline_monotonic:
+            break
+        remaining = max_scans - scanned
+        # After the first batch, leave headroom so in-flight Lane A work can
+        # finish before the Actions job timeout. Scale headroom for short
+        # deadlines (tests / manual runs) so we do not soft-stop immediately.
+        if deadline_monotonic is not None and scanned > 0:
+            left = deadline_monotonic - now
+            budget = max(1.0, deadline_monotonic - started)
+            headroom = min(90.0, max(5.0, budget * 0.05))
+            if left < headroom:
+                break
+        claim_n = min(chunk, remaining)
+        claimed = store.claim_pending(claim_n, settings.worker_id)
+        if not claimed:
+            break
+
+        def _work(row: dict[str, Any]) -> tuple[str, Any]:
+            addr = str(row.get("address") or "")
+            local_store = open_store(settings)
+            try:
+                result = run_one(
+                    addr,
+                    settings=settings,
+                    store=local_store,
+                    tvl_usd=_as_float(row.get("tvl_usd")),
+                )
+                return addr, {
+                    "address": addr,
+                    "bucket": result.bucket,
+                    "heat": result.heat,
+                    "dropped": result.dropped,
+                    "drop_reason": result.drop_reason,
+                    "funds_usd": result.funds_usd,
+                    "contract_class": result.contract_class,
+                    "known_safe": result.known_safe,
+                    "deployed_block": row.get("deployed_block"),
+                }
+            except Exception as exc:  # noqa: BLE001 — keep draining siblings
+                return addr, {"address": addr, "error": str(exc)[:200], "deployed_block": row.get("deployed_block")}
+
+        if workers == 1 or len(claimed) == 1:
+            for row in claimed:
+                out.append(_work(row))
+        else:
+            with ThreadPoolExecutor(max_workers=min(workers, len(claimed))) as pool:
+                futs = [pool.submit(_work, row) for row in claimed]
+                for fut in as_completed(futs):
+                    out.append(fut.result())
+        scanned += len(claimed)
+        # Brief pause between batches so Alchemy/Etherscan recover after bursts.
+        time.sleep(0.25)
     return out
 
 

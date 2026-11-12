@@ -76,9 +76,9 @@ def seed_recent_deployments(
     *,
     rpc_url: str = "",
     etherscan_keys: str = "",
-    lookback_hours: int = 48,
-    max_blocks: int = 200,
-    max_results: int = 100,
+    lookback_hours: int = 2,
+    max_blocks: int = 800,
+    max_results: int = 1000,
     prefer_verified: Optional[bool] = None,
 ) -> tuple[list[DiscoveredContract], DiscoveryStats]:
     """Discover recent creates and upsert them as pending targets (newest first)."""
@@ -108,9 +108,10 @@ def scan_watchlist(
     rpc_url: str = "",
     min_funds_usd: float = 2_000.0,
     funds_delta_ratio: float = 0.25,
-    limit: int = 100,
+    limit: int = 1000,
     seed_discoveries: bool = True,
-    lookback_hours: int = 48,
+    lookback_hours: int = 2,
+    max_blocks: int = 800,
     prefer_verified: Optional[bool] = None,
 ) -> tuple[list[MonitorAlert], DiscoveryStats, list[DiscoveredContract]]:
     """Seed recent deployments (default), then compare stored targets for upgrades/TVL.
@@ -130,6 +131,7 @@ def scan_watchlist(
                 rpc_url=rpc,
                 etherscan_keys=os.environ.get("ETHERSCAN_API_KEYS") or "",
                 lookback_hours=lookback_hours,
+                max_blocks=max_blocks,
                 max_results=max(limit, 1),
                 prefer_verified=prefer_verified,
             )

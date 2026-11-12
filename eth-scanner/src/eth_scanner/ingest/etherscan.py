@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -66,21 +67,23 @@ class KeyRotator:
     min_interval_s: float = DEFAULT_ETHERSCAN_INTERVAL_S
     _last: dict[str, float] = field(default_factory=dict)
     _i: int = 0
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
 
     def acquire(self) -> str:
         if not self.keys:
             raise IngestError("ETHERSCAN_API_KEYS is empty — set comma-separated keys or use --source / --dry-run")
         n = len(self.keys)
-        for _ in range(n * 2):
-            key = self.keys[self._i % n]
-            self._i += 1
-            last = self._last.get(key, 0.0)
-            wait = self.min_interval_s - (time.monotonic() - last)
-            if wait > 0:
-                time.sleep(wait)
-            self._last[key] = time.monotonic()
-            return key
-        return self.keys[0]
+        while True:
+            with self._lock:
+                key = self.keys[self._i % n]
+                self._i += 1
+                last = self._last.get(key, 0.0)
+                wait = self.min_interval_s - (time.monotonic() - last)
+                if wait <= 0:
+                    self._last[key] = time.monotonic()
+                    return key
+            # Sleep outside the lock so other keys / workers can proceed.
+            time.sleep(wait)
 
 
 class EtherscanClient:

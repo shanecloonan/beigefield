@@ -24,10 +24,11 @@ from eth_scanner.known_safe import SAFE_ADDRESSES
 
 ETHERSCAN_V2 = "https://api.etherscan.io/v2/api"
 CHAIN_ID = "1"
-# ~12s blocks → 24h ≈ 7200, 72h ≈ 21600
-DEFAULT_LOOKBACK_HOURS = 48
-MAX_BLOCKS_TO_SCAN = 200  # Alchemy / dedicated RPC can cover more
-MAX_CREATES_PER_RUN = 100
+# ~12s blocks → 1h ≈ 300, 2h ≈ 600. Monitor cron is */10 so a short dense
+# lookback covers "everything since last run" with overlap if a run is skipped.
+DEFAULT_LOOKBACK_HOURS = 2
+MAX_BLOCKS_TO_SCAN = 800  # Alchemy can walk ~2h of blocks densely
+MAX_CREATES_PER_RUN = 1000
 
 
 @dataclass
@@ -160,17 +161,22 @@ def _discover_via_rpc(
 ) -> list[DiscoveredContract]:
     head_hex = _rpc(rpc, "eth_blockNumber", [])
     head = int(head_hex, 16)
-    # Sample recent blocks: stride so we cover lookback without scanning every block.
-    approx_blocks = max(100, int(lookback_hours * 3600 / 12))
-    stride = max(1, approx_blocks // max(1, max_blocks))
+    # Prefer a dense walk when lookback fits in max_blocks (monitor "since last run").
+    approx_blocks = max(50, int(lookback_hours * 3600 / 12))
+    blocks_to_walk = min(max_blocks, approx_blocks)
+    stride = 1 if approx_blocks <= max_blocks else max(1, approx_blocks // max(1, max_blocks))
     creates: list[DiscoveredContract] = []
     blocks_tried = 0
-    for i in range(max_blocks):
+    for i in range(blocks_to_walk if stride == 1 else max_blocks):
         bn = head - (i * stride)
         if bn <= 0:
             break
         blocks_tried += 1
-        block = _rpc(rpc, "eth_getBlockByNumber", [hex(bn), True])
+        try:
+            block = _rpc(rpc, "eth_getBlockByNumber", [hex(bn), True])
+        except Exception:  # noqa: BLE001 — soft-skip flaky RPC block
+            time.sleep(0.2)
+            continue
         if not isinstance(block, dict):
             continue
         ts = int(block.get("timestamp") or "0x0", 16)
@@ -205,7 +211,7 @@ def _discover_via_rpc(
                 break
         if len(creates) >= max_results:
             break
-        if i and i % 20 == 0:
+        if i and i % 25 == 0:
             time.sleep(0.05)
     creates.sort(key=lambda r: r.deployed_block, reverse=True)
     for c in creates:
@@ -213,7 +219,17 @@ def _discover_via_rpc(
     return creates
 
 
+_VERIFY_LAST_CALL = 0.0
+_VERIFY_MIN_INTERVAL_S = 0.35
+
+
 def _etherscan_verified(address: str, api_key: str) -> tuple[Optional[bool], Optional[str]]:
+    global _VERIFY_LAST_CALL
+    # Pace verified-source checks so prefer_verified does not trip free-tier 429s.
+    gap = _VERIFY_MIN_INTERVAL_S - (time.monotonic() - _VERIFY_LAST_CALL)
+    if gap > 0:
+        time.sleep(gap)
+    _VERIFY_LAST_CALL = time.monotonic()
     qs = urllib.parse.urlencode({
         "chainid": CHAIN_ID,
         "module": "contract",
@@ -222,18 +238,29 @@ def _etherscan_verified(address: str, api_key: str) -> tuple[Optional[bool], Opt
         "apikey": api_key,
     })
     url = "%s?%s" % (ETHERSCAN_V2, qs)
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "eth-scanner-discover/0.2"})
-        with urllib.request.urlopen(req, timeout=12) as resp:
-            body = json.loads(resp.read().decode("utf-8", errors="replace"))
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, ValueError):
+    for attempt in range(4):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "eth-scanner-discover/0.2"})
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                body = json.loads(resp.read().decode("utf-8", errors="replace"))
+        except urllib.error.HTTPError as exc:
+            if exc.code == 429:
+                time.sleep(min(30.0, 1.5 ** (attempt + 1)))
+                continue
+            return None, None
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, ValueError):
+            return None, None
+        result = body.get("result")
+        msg = str(body.get("message") or "")
+        if isinstance(result, str) and "rate limit" in (result + msg).lower():
+            time.sleep(min(30.0, 1.5 ** (attempt + 1)))
+            continue
+        if isinstance(result, list) and result:
+            row = result[0]
+            src = (row.get("SourceCode") or "").strip()
+            name = (row.get("ContractName") or "").strip() or None
+            return (bool(src), name)
         return None, None
-    result = body.get("result")
-    if isinstance(result, list) and result:
-        row = result[0]
-        src = (row.get("SourceCode") or "").strip()
-        name = (row.get("ContractName") or "").strip() or None
-        return (bool(src), name)
     return None, None
 
 

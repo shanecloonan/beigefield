@@ -134,11 +134,34 @@ def main(argv: list[str] | None = None) -> int:
         "monitor",
         help="Seed recent deployments + upgrade/funds-delta watch (read-only)",
     )
-    mon.add_argument("--limit", type=int, default=100)
+    mon.add_argument("--limit", type=int, default=1000, help="max creates to discover/enqueue (default 1000)")
     mon.add_argument("--persist", action="store_true", help="write alerts to eth_scan_alerts when remote store")
     mon.add_argument("--no-discover", action="store_true", help="skip recent-deploy seeding (legacy watchlist only)")
-    mon.add_argument("--lookback-hours", type=int, default=48)
-    mon.add_argument("--scan", type=int, default=0, help="after seeding, claim+run lane-a on N pending targets")
+    mon.add_argument(
+        "--lookback-hours",
+        type=int,
+        default=2,
+        help="dense RPC lookback for creates since last run (default 2h)",
+    )
+    mon.add_argument("--max-blocks", type=int, default=800, help="max blocks to walk during discovery")
+    mon.add_argument(
+        "--scan",
+        type=int,
+        default=1000,
+        help="max Lane A scans after seeding; drains pending until empty/deadline (default 1000)",
+    )
+    mon.add_argument(
+        "--workers",
+        type=int,
+        default=8,
+        help="parallel Lane A workers (default 8; respects Etherscan/Alchemy pacing)",
+    )
+    mon.add_argument(
+        "--deadline-minutes",
+        type=float,
+        default=40.0,
+        help="stop claiming new scan batches this many minutes after start (default 40)",
+    )
     mon.add_argument(
         "--allow-unverified",
         action="store_true",
@@ -151,9 +174,9 @@ def main(argv: list[str] | None = None) -> int:
         "discover",
         help="Seed queue from recent mainnet contract creations (read-only)",
     )
-    disc.add_argument("--lookback-hours", type=int, default=48)
-    disc.add_argument("--max-blocks", type=int, default=200)
-    disc.add_argument("--max-results", type=int, default=100)
+    disc.add_argument("--lookback-hours", type=int, default=2)
+    disc.add_argument("--max-blocks", type=int, default=800)
+    disc.add_argument("--max-results", type=int, default=1000)
     disc.add_argument("--enqueue", action="store_true", help="upsert discoveries as pending targets")
     disc.add_argument("--allow-unverified", action="store_true", help="keep creates even when not verified")
     disc.add_argument("--json", action="store_true")
@@ -322,38 +345,33 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "monitor":
+        import time as _time
         from eth_scanner.monitor.watch import scan_watchlist
         prefer_verified = False if args.allow_unverified else None
+        started = _time.monotonic()
         alerts, disc_stats, discovered = scan_watchlist(
             store,
             rpc_url=getattr(settings, "eth_rpc_url", "") or "",
             limit=int(args.limit),
             seed_discoveries=not bool(args.no_discover),
             lookback_hours=int(args.lookback_hours),
+            max_blocks=int(getattr(args, "max_blocks", 800) or 800),
             prefer_verified=prefer_verified,
         )
         scan_results: list[dict[str, Any]] = []
+        workers = max(1, int(getattr(args, "workers", 8) or 8))
+        deadline_min = float(getattr(args, "deadline_minutes", 40.0) or 40.0)
+        deadline = started + max(60.0, deadline_min * 60.0)
         if int(args.scan or 0) > 0:
-            claimed = store.claim_pending(int(args.scan), settings.worker_id)
-            for row in claimed:
-                addr = str(row.get("address") or "")
-                if not addr:
-                    continue
-                try:
-                    fr = lane_a.run_one(addr, settings=settings, store=store)
-                    scan_results.append({
-                        "address": addr,
-                        "bucket": fr.bucket,
-                        "heat": fr.heat,
-                        "dropped": fr.dropped,
-                        "drop_reason": fr.drop_reason,
-                        "funds_usd": fr.funds_usd,
-                        "contract_class": fr.contract_class,
-                        "known_safe": fr.known_safe,
-                        "deployed_block": row.get("deployed_block"),
-                    })
-                except Exception as exc:  # noqa: BLE001
-                    scan_results.append({"address": addr, "error": str(exc)[:200]})
+            drained = lane_a.claim_and_drain(
+                max_scans=int(args.scan),
+                workers=workers,
+                deadline_monotonic=deadline,
+                settings=settings,
+                store=store,
+            )
+            scan_results = [row for _addr, row in drained]
+        duration_s = round(_time.monotonic() - started, 1)
         if args.persist:
             persist_fn = getattr(store, "save_alerts", None)
             if callable(persist_fn):
@@ -370,12 +388,15 @@ def main(argv: list[str] | None = None) -> int:
             "discovered_enqueued": len(discovered),
             "scanned": len(scan_results),
             "alerts": len(alerts),
+            "workers": workers,
+            "duration_s": duration_s,
         }
         # Human-readable counts always on stderr for Actions logs.
         print(
             "monitor creates_found=%(creates_found)d verified_kept=%(verified_kept)d "
             "unverified_skipped=%(unverified_skipped)d discovered_enqueued=%(discovered_enqueued)d "
-            "scanned=%(scanned)d prefer_verified=%(prefer_verified)s keys=%(keys_configured)s"
+            "scanned=%(scanned)d workers=%(workers)d duration_s=%(duration_s)s "
+            "prefer_verified=%(prefer_verified)s keys=%(keys_configured)s"
             % summary,
             file=sys.stderr,
         )
@@ -389,13 +410,14 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(payload, indent=2))
         else:
             print(
-                "alerts=%d scans=%d creates_found=%d verified_kept=%d unverified_skipped=%d"
+                "alerts=%d scans=%d creates_found=%d verified_kept=%d unverified_skipped=%d duration_s=%s"
                 % (
                     len(alerts),
                     len(scan_results),
                     disc_stats.creates_found,
                     disc_stats.verified_kept,
                     disc_stats.unverified_skipped,
+                    duration_s,
                 )
             )
             for a in alerts:
