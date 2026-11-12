@@ -49,6 +49,7 @@ class MemoryStore:
         self.targets: dict[str, dict[str, Any]] = {}
         self.artifacts: list[dict[str, Any]] = []
         self.results: list[dict[str, Any]] = []
+        self.alerts: list[dict[str, Any]] = []
         if work_dir:
             work_dir.mkdir(parents=True, exist_ok=True)
             self._load()
@@ -265,6 +266,26 @@ class MemoryStore:
         rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)
         return rows[:limit]
 
+    def save_alerts(self, alerts: list[dict[str, Any]]) -> int:
+        if not hasattr(self, "alerts"):
+            self.alerts = []  # type: ignore[attr-defined]
+        n = 0
+        existing = {(a.get("address"), a.get("fingerprint")) for a in self.alerts}  # type: ignore[attr-defined]
+        for row in alerts:
+            key = (row.get("address"), row.get("fingerprint"))
+            if key in existing:
+                continue
+            self.alerts.append(dict(row, created_at=_now()))  # type: ignore[attr-defined]
+            existing.add(key)
+            n += 1
+        self._flush()
+        return n
+
+    def list_alerts(self, limit: int = 50) -> list[dict[str, Any]]:
+        rows = list(getattr(self, "alerts", []) or [])
+        rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)
+        return rows[:limit]
+
     def _path(self) -> Optional[Path]:
         if not self.work_dir:
             return None
@@ -281,6 +302,7 @@ class MemoryStore:
         self.targets = {r["address"]: r for r in data.get("targets", [])}
         self.artifacts = list(data.get("artifacts", []))
         self.results = list(data.get("results", []))
+        self.alerts = list(data.get("alerts", []))
 
     def _flush(self) -> None:
         p = self._path()
@@ -290,6 +312,7 @@ class MemoryStore:
             "targets": list(self.targets.values()),
             "artifacts": self.artifacts,
             "results": self.results,
+            "alerts": self.alerts,
         }, indent=2), encoding="utf-8")
 
 
@@ -525,6 +548,39 @@ class SupabaseStore:
         if kind:
             q["kind"] = "eq.%s" % kind
         return self._req("GET", "eth_scan_artifacts", query=q)
+
+    def save_alerts(self, alerts: list[dict[str, Any]]) -> int:
+        n = 0
+        for row in alerts:
+            body = {
+                "address": normalize_address(str(row.get("address") or "")),
+                "kind": row.get("kind"),
+                "fingerprint": row.get("fingerprint"),
+                "detail": row.get("detail") or "",
+                "previous": row.get("previous"),
+                "current": row.get("current"),
+                "funds_usd": row.get("funds_usd"),
+            }
+            try:
+                self._req(
+                    "POST",
+                    "eth_scan_alerts",
+                    body,
+                    prefer="resolution=ignore-duplicates,return=minimal",
+                )
+                n += 1
+            except Exception:  # noqa: BLE001
+                continue
+        return n
+
+    def list_alerts(self, limit: int = 50) -> list[dict[str, Any]]:
+        try:
+            return self._req("GET", "eth_scan_alerts", query={
+                "order": "created_at.desc",
+                "limit": str(limit),
+            })
+        except Exception:  # noqa: BLE001
+            return []
 
     def _mark_running(self, rows: list[dict[str, Any]], worker_id: str) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []

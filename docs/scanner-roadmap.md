@@ -138,6 +138,7 @@ Build a contract graph from verified source + on-chain reads:
 
 - Re-scan funded contracts on implementation change events and large TVL / funds deltas
 - Alert surface on `/test` (no spam: dedupe by address + change fingerprint)
+- Code: `eth_scanner/monitor/`, CLI `monitor`, workflow `eth-scanner-monitor.yml`, table `eth_scan_alerts`
 
 ---
 

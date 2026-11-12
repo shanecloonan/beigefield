@@ -108,6 +108,7 @@ type Feed = {
   history?: { runs: HistoryRun[]; findings: HistoryFinding[]; error?: string };
   precision?: PrecisionStats | null;
   benchmark?: BenchmarkStats | null;
+  alerts?: { id?: string; address: string; kind: string; detail: string; funds_usd?: number | null; created_at?: string }[];
   fixtures?: FixtureOpt[];
   note?: string;
   ephemeral_store?: boolean;
@@ -1119,6 +1120,20 @@ export default function TestApp() {
                   {" · "}
                   {feed.benchmark.passes_baseline ? "baseline ok" : "baseline FAIL"}
                 </p>
+              </div>
+            )}
+            {!!feed?.alerts?.length && (
+              <div>
+                <p className="text-[10px] tracking-[0.14em] uppercase text-brand-500">Monitor alerts</p>
+                <ul className="mt-1 space-y-1 text-brand-100">
+                  {feed.alerts.slice(0, 5).map((a) => (
+                    <li key={a.id || `${a.address}-${a.kind}-${a.detail}`} className="truncate">
+                      <span className="text-brand-400">{a.kind}</span>{" "}
+                      <span className="font-mono text-[10px]">{a.address.slice(0, 10)}…</span>{" "}
+                      {a.detail}
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>
