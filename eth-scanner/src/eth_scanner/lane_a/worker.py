@@ -13,7 +13,9 @@ from typing import Any, Optional
 
 from eth_scanner.config import Settings, load_settings
 from eth_scanner.decompile.heimdall import decompile
+from eth_scanner.engines.pipeline import run_advanced_engines
 from eth_scanner.funnel.s0_s7 import FunnelConfig, FunnelContext, run_lane_a
+from eth_scanner.heat import evidence_heat, should_promote_lane_b
 from eth_scanner.ingest.etherscan import (
     EtherscanClient,
     IngestError,
@@ -133,6 +135,76 @@ def run_one(
     result.contract_name = artifact.contract_name
     if funds.status == "unknown":
         result.notes = list(result.notes or []) + list(funds.notes or ["funds lookup unknown — continued"])
+
+    # Advanced engines AFTER funds floor + class: Slither (cached) → Mythril →
+    # read-only corroboration. Leads never add heat alone.
+    if (
+        not result.dropped
+        and artifact.kind == "source"
+        and artifact.src_confidence in {"high", "med"}
+        and (target.funds_usd is not None and target.funds_usd >= min_funds)
+    ):
+        try:
+            eng = run_advanced_engines(
+                address=addr,
+                source=artifact.content or "",
+                bytecode_hash=code_hash or "",
+                contract_class=result.contract_class or "unknown",
+                contract_name=artifact.contract_name,
+                funds_usd=target.funds_usd,
+                verified=True,
+                rpc_url=settings.eth_rpc_url or "",
+                invariant_results=list(result.invariant_results or []),
+                work_dir=settings.work_dir,
+            )
+            result.engine_leads = list(eng.leads)
+            result.confirmed_findings = list(eng.confirmed)
+            result.engine_timing = dict(eng.timing)
+            result.notes = list(result.notes or []) + list(eng.notes)
+            # Recompute evidence heat with corroborations (Slither-only stays 0).
+            priv, eoa = _flags_from_invariant_dicts(list(result.invariant_results or []))
+            heat, heat_bd = evidence_heat(
+                funds_usd=target.funds_usd,
+                invariant_results=list(result.invariant_results or []),
+                privileged_callable=priv,
+                eoa_admin=eoa,
+                corroborated=list(eng.confirmed),
+            )
+            heat_bd = dict(heat_bd)
+            heat_bd["engine_leads"] = len(eng.leads)
+            heat_bd["engine_confirmed"] = eng.confirmed_count
+            heat_bd["engine_timing"] = dict(eng.timing)
+            result.heat = heat
+            result.heat_breakdown = heat_bd
+            promote, why = should_promote_lane_b(
+                funds_usd=target.funds_usd,
+                invariant_results=list(result.invariant_results or []),
+                privileged_callable=priv,
+                eoa_admin=eoa,
+                corroborated=list(eng.confirmed),
+            )
+            if promote and result.bucket == "lane-a-cool":
+                result.bucket = "lane-b-queue"
+                result.notes = list(result.notes or []) + ["promoted after corroborated engine lead: %s" % why]
+            # Persist engine findings on the target when the store supports it.
+            patch = getattr(store, "patch_deep_status", None)
+            if callable(patch):
+                try:
+                    patch(
+                        addr,
+                        deep_status="inline-engines",
+                        engine_findings=list(eng.leads),
+                        engine_agreement={
+                            "confirmed": list(eng.confirmed),
+                            "timing": dict(eng.timing),
+                            "proxy": dict(eng.proxy),
+                        },
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
+        except Exception as exc:  # noqa: BLE001 — engines must never sink Lane A
+            result.notes = list(result.notes or []) + ["advanced engines error: %s" % str(exc)[:160]]
+
     store.save_result(addr, result)
     return result
 
@@ -462,3 +534,18 @@ def _as_float(v: object) -> Optional[float]:
         return float(v)
     except (TypeError, ValueError):
         return None
+
+
+def _flags_from_invariant_dicts(rows: list[dict[str, Any]]) -> tuple[bool, bool]:
+    privileged = any(
+        (r.get("status") or "").lower() == "failed"
+        and str(r.get("id") or "").startswith("privileged-")
+        for r in rows
+    )
+    eoa_admin = False
+    for r in rows:
+        if r.get("id") == "roles-owner":
+            extras = r.get("extras") or {}
+            if isinstance(extras, dict) and extras.get("kind") == "eoa":
+                eoa_admin = True
+    return privileged, eoa_admin

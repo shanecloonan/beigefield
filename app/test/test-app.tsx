@@ -142,6 +142,10 @@ type RunResult = {
   known_safe?: boolean;
   deployed_block?: number | null;
   deployed_at?: string | null;
+  engine_leads?: Array<Record<string, unknown>> | null;
+  confirmed_findings?: Array<Record<string, unknown>> | null;
+  engine_timing?: Record<string, unknown> | null;
+  heat_breakdown?: Record<string, unknown> | null;
 };
 
 type PersistInfo = {
@@ -408,14 +412,23 @@ export default function TestApp() {
   }, [useSession, feed, session]);
 
   const shown = useMemo(() => {
-    const rows = baseRows;
     const needle = q.trim().toLowerCase();
-    if (!needle) return rows;
-    return rows.filter((t) =>
-      [t.address, t.bucket, t.src_confidence, t.ir_confidence, t.bytecode_hash]
-        .filter(Boolean)
-        .some((v) => String(v).toLowerCase().includes(needle)),
-    );
+    const filtered = !needle
+      ? baseRows
+      : baseRows.filter((t) =>
+          [t.address, t.bucket, t.src_confidence, t.ir_confidence, t.bytecode_hash]
+            .filter(Boolean)
+            .some((v) => String(v).toLowerCase().includes(needle)),
+        );
+    // Default sort: confirmed heat desc, then funds desc.
+    return [...filtered].sort((a, b) => {
+      const ha = Number(a.heat ?? 0);
+      const hb = Number(b.heat ?? 0);
+      if (hb !== ha) return hb - ha;
+      const fa = Number(a.funds_usd ?? a.tvl_usd ?? 0);
+      const fb = Number(b.funds_usd ?? b.tvl_usd ?? 0);
+      return fb - fa;
+    });
   }, [baseRows, q]);
 
   const fixtures = feed?.fixtures ?? [];
@@ -1012,6 +1025,41 @@ export default function TestApp() {
                 Value movers:{" "}
                 <span className="font-mono text-[11px] text-brand-100">{lastRun.result.value_movers.join(", ")}</span>
               </p>
+            )}
+            {((lastRun.result.engine_leads?.length ?? 0) > 0 ||
+              (lastRun.result.confirmed_findings?.length ?? 0) > 0) && (
+              <div className="mt-3 space-y-2 border-t border-brand-800/60 pt-3">
+                <p className="text-[10px] tracking-[0.14em] uppercase text-brand-500">
+                  Engine leads vs confirmed
+                  {lastRun.result.engine_timing?.total_ms != null
+                    ? ` · ${fmtMs(Number(lastRun.result.engine_timing.total_ms))} engines`
+                    : ""}
+                </p>
+                {(lastRun.result.confirmed_findings ?? [])
+                  .filter((c) => c && c.confirmed)
+                  .map((c, i) => (
+                    <div key={`cf-${i}`} className="rounded-md border border-emerald-800/50 bg-emerald-950/20 px-2 py-1.5">
+                      <p className="text-[11px] text-emerald-200">
+                        Confirmed · {String(c.lead_id ?? "lead")}
+                        <span className="ml-2 text-brand-500">by {String(c.method ?? "eth_call")}</span>
+                      </p>
+                      <p className="mt-0.5 font-mono text-[10px] text-brand-300 break-all">
+                        {String(c.evidence ?? "").slice(0, 280)}
+                      </p>
+                    </div>
+                  ))}
+                {(lastRun.result.engine_leads ?? []).slice(0, 12).map((lead, i) => (
+                  <div key={`el-${i}`} className="rounded-md border border-amber-900/40 bg-amber-950/10 px-2 py-1.5">
+                    <p className="text-[11px] text-amber-200/90">
+                      Lead · {String(lead.engine ?? "engine")}:{String(lead.rule ?? lead.id ?? "—")}
+                      <span className="ml-2 text-brand-500">not heat until confirmed</span>
+                    </p>
+                    <p className="mt-0.5 font-mono text-[10px] text-brand-400 break-all">
+                      {String(lead.title ?? lead.evidence ?? "").slice(0, 220)}
+                    </p>
+                  </div>
+                ))}
+              </div>
             )}
             {randomPick?.address && lastRun.result.address.toLowerCase() === randomPick.address.toLowerCase() && (
               <p className="mt-2 text-brand-300">

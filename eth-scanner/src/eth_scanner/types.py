@@ -188,6 +188,10 @@ class FunnelResult:
     heat_breakdown: dict[str, Any] = field(default_factory=dict)
     known_safe: bool = False
     contract_name: Optional[str] = None
+    # Advanced engines: Slither/Mythril/clone leads vs read-only confirmed findings.
+    engine_leads: list[dict[str, Any]] = field(default_factory=list)
+    confirmed_findings: list[dict[str, Any]] = field(default_factory=list)
+    engine_timing: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return to_plain(self)

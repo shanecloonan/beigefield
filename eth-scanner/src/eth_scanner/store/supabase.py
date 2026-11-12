@@ -145,6 +145,12 @@ class MemoryStore:
             "funds_breakdown": list(result.funds_breakdown or []),
             "funds_status": result.funds_status,
             "funds_checked_at": result.funds_checked_at,
+            "engine_findings": list(getattr(result, "engine_leads", None) or []),
+            "heat_breakdown": {
+                **dict(getattr(result, "heat_breakdown", None) or {}),
+                "confirmed_findings": list(getattr(result, "confirmed_findings", None) or []),
+                "engine_timing": dict(getattr(result, "engine_timing", None) or {}),
+            },
             "created_at": _now(),
         }
         self.results.append(row)
@@ -154,6 +160,7 @@ class MemoryStore:
         tgt["src_confidence"] = result.src_confidence
         tgt["ir_confidence"] = result.ir_confidence
         tgt["status"] = "skipped" if result.dropped else "done"
+        tgt["engine_findings"] = list(getattr(result, "engine_leads", None) or [])
         if result.funds_usd is not None:
             tgt["funds_usd"] = result.funds_usd
             tgt["tvl_usd"] = result.funds_usd if tgt.get("tvl_usd") is None else tgt.get("tvl_usd")
@@ -434,6 +441,13 @@ class SupabaseStore:
             result_body["drop_reason"] = result.drop_reason
         if getattr(result, "contract_class", None):
             result_body["contract_class"] = result.contract_class
+        if getattr(result, "engine_leads", None) is not None:
+            result_body["engine_findings"] = list(result.engine_leads or [])
+        if getattr(result, "confirmed_findings", None) is not None:
+            hb = dict(result_body.get("heat_breakdown") or result.heat_breakdown or {})
+            hb["confirmed_findings"] = list(result.confirmed_findings or [])
+            hb["engine_timing"] = dict(getattr(result, "engine_timing", None) or {})
+            result_body["heat_breakdown"] = hb
         self._req("POST", "eth_scan_results", result_body, prefer="return=minimal")
         patch: dict[str, Any] = {
             "bucket": result.bucket,

@@ -12,7 +12,7 @@ import { runLaneA, scanInFlight } from "@/lib/eth-scanner/run-lane-a";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 function json(body: unknown, status = 200) {
   return NextResponse.json(body, {
