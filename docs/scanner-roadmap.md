@@ -87,12 +87,13 @@ Each phase ships as its **own PR → merge to `main` → confirm Vercel → repo
 
 | Piece | Detail |
 |---|---|
-| Claim | `SupabaseStore.claim_lane_b` via `SUPABASE_URL` + `SUPABASE_SECRET_KEY` |
+| Claim | `claim_deep` via `SUPABASE_URL` + `SUPABASE_SECRET_KEY` |
 | Engines | Owner forks: [slither](https://github.com/shanecloonan/slither), [aderyn](https://github.com/shanecloonan/aderyn), Mythril **or** Halmos/hevm when feasible |
 | Normalize | One findings schema (align with `lib/eth-scanner/desk/findings.ts`) |
-| Dedupe | Stable key: class + rule family + location fingerprint |
-| Agreement | ≥2 engines on same class/location → `confidence=high`; single generic detector → no heat bump |
+| Dedupe | Stable key: class + rule family (+ location for within-engine) |
+| Agreement | ≥2 engines on same class/rule-family → `confidence=high`; single generic detector → no heat bump |
 | Secrets to add (repo → Settings → Secrets) | See [Secrets checklist](#secrets-checklist-phase-a) below |
+| Code | `.github/workflows/eth-scanner-deep.yml`, `eth_scanner/deep/*`, CLI `python -m eth_scanner deep`, migration `20261112190000_deep_engines.sql` |
 
 **Out of scope for A:** fuzz campaigns that emit exploit sequences; any transaction broadcast.
 

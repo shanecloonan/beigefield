@@ -80,6 +80,19 @@ a temp workdir and a hard timeout, and only run against whitelisted fixtures or 
 | `ETH_RPC_URL` | optional | Read-only RPC for proxy / storage checks. |
 | `ETH_SCANNER_DRY_RUN` | optional | `1` forces local dry-run even with Supabase set. |
 | `ETH_SCANNER_PYTHON`, `ETH_SCANNER_WORK_DIR` | local only | Interpreter / work dir override. |
+
+### GitHub Actions deep worker (Phase A)
+
+Workflow: [`.github/workflows/eth-scanner-deep.yml`](.github/workflows/eth-scanner-deep.yml) (hourly + manual). Add these **Actions** secrets (separate from Vercel):
+
+| Secret | Required |
+| --- | --- |
+| `SUPABASE_URL` | yes |
+| `SUPABASE_SECRET_KEY` | yes |
+| `ETHERSCAN_API_KEYS` | recommended |
+| `ETH_RPC_URL` | recommended |
+
+Details: [`docs/scanner-roadmap.md`](docs/scanner-roadmap.md).
 | `ETH_SCANNER_<ENGINE>_BIN`, `ETH_SCANNER_ENGINES_DISABLED` | workers only | Engine binary overrides / force stub. |
 
 See `.env.example` for the full list. `npm run build` downloads a pinned portable CPython on Vercel only

@@ -1,0 +1,108 @@
+# Phase A — deep analysis worker (off Vercel serverless).
+# Defensive only: Slither / Aderyn / Mythril|Halmos → normalized findings.
+# Never sends transactions. Free-tier budget: short timeout, claim ≤2.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_URL
+#   SUPABASE_SECRET_KEY
+# Recommended:
+#   ETHERSCAN_API_KEYS
+#   ETH_RPC_URL
+#
+# See docs/scanner-roadmap.md § Secrets checklist (Phase A).
+
+name: eth-scanner-deep
+
+on:
+  schedule:
+    # Every hour — stay well under free GHA minutes.
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      claim:
+        description: "Max targets to claim"
+        required: false
+        default: "2"
+      engines:
+        description: "Comma list: slither,aderyn,mythril,halmos"
+        required: false
+        default: "slither,aderyn,mythril"
+
+concurrency:
+  group: eth-scanner-deep
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deep:
+    name: Claim + deep engines
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Cache solc + pip tools
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.solc-select
+            ~/.cache/pip
+          key: deep-tools-${{ runner.os }}-py312-v1
+
+      - name: Install solc + scanner + engines (best-effort)
+        run: |
+          set -euo pipefail
+          python -m pip install -U pip wheel
+          python -m pip install solc-select
+          solc-select install 0.8.20 || true
+          solc-select use 0.8.20 || true
+          python -m pip install -e ./eth-scanner
+          # Owner forks preferred; fall back to PyPI if git clone is slow.
+          python -m pip install "slither-analyzer" || \
+            python -m pip install "git+https://github.com/shanecloonan/slither" || true
+          python -m pip install mythril || true
+          # Aderyn: try prebuilt release (fast); cargo install is too heavy for free tier.
+          if ! command -v aderyn >/dev/null 2>&1; then
+            curl -fsSL -o /tmp/aderyn.tgz \
+              "https://github.com/Cyfrin/aderyn/releases/latest/download/aderyn-x86_64-unknown-linux-gnu.tar.gz" \
+              && tar -xzf /tmp/aderyn.tgz -C /tmp \
+              && sudo mv /tmp/aderyn /usr/local/bin/aderyn \
+              && sudo chmod +x /usr/local/bin/aderyn \
+              || echo "aderyn install skipped"
+          fi
+          python - <<'PY'
+          from eth_scanner.deep.runners import engine_availability
+          print("engine_availability=", engine_availability())
+          PY
+
+      - name: Run deep claim
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          ETH_SCANNER_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          ETHERSCAN_API_KEYS: ${{ secrets.ETHERSCAN_API_KEYS }}
+          ETH_RPC_URL: ${{ secrets.ETH_RPC_URL }}
+          ETH_SCANNER_DRY_RUN: "0"
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
+            echo "Missing SUPABASE_URL or SUPABASE_SECRET_KEY — add them as Actions secrets."
+            echo "See docs/scanner-roadmap.md"
+            exit 0
+          fi
+          CLAIM="${{ github.event.inputs.claim || '2' }}"
+          ENGINES="${{ github.event.inputs.engines || 'slither,aderyn,mythril' }}"
+          python -m eth_scanner deep \
+            --claim "$CLAIM" \
+            --engines "$ENGINES" \
+            --timeout 90 \
+            --json
