@@ -87,6 +87,23 @@ def run_deep_one(
 
     findings, runs = run_all_engines(source, engines=engines, timeout_s=timeout_s)
     summary = agreement_summary(findings)
+    fork_props: list[dict[str, Any]] = []
+    try:
+        from eth_scanner.fork_props.runner import run_fork_properties
+        klass = str((store.get_target(addr) or {}).get("contract_class") or "unknown")
+        fork_props = [
+            r.to_dict()
+            for r in run_fork_properties(
+                addr,
+                contract_class=klass,
+                rpc_url=getattr(settings, "eth_rpc_url", "") or "",
+                run_forge=False,  # forge is optional in GHA Phase B job / local --fork-props
+                timeout_s=float(timeout_s),
+            )
+        ]
+        notes.append("phase-B eth_call fork properties=%d" % len(fork_props))
+    except Exception as exc:  # noqa: BLE001
+        notes.append("phase-B fork properties skipped: %s" % str(exc)[:160])
     report = {
         "address": addr,
         "status": "done",
@@ -96,6 +113,7 @@ def run_deep_one(
         "findings": [f.to_dict() for f in findings],
         "agreement": summary,
         "heat_eligible_clusters": heat_eligible_clusters(summary),
+        "fork_properties": fork_props,
         "engine_runs": [
             {
                 "engine": r.engine,
@@ -108,7 +126,8 @@ def run_deep_one(
         ],
         "policy": (
             "Deep engines raise confidence via agreement only. "
-            "They do not add heat by themselves; Lane A evidence gate still applies."
+            "They do not add heat by themselves; Lane A evidence gate still applies. "
+            "Fork properties report held/violated with state evidence only."
         ),
         "defensive_only": True,
     }
@@ -199,6 +218,7 @@ def _persist_deep(
             contract_name=contract_name or report.get("contract_name"),
             engine_findings=report.get("findings") or [],
             engine_agreement=report.get("agreement") or {},
+            fork_properties=report.get("fork_properties") or [],
         )
         return
     # Memory / older stores: best-effort target touch.
