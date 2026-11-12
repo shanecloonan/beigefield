@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "notes": "Read-only labeled set for precision/recall. No PoC code. Labels: safe | affected (historically incident-related versions — public post-mortems only).",
+  "baseline_precision_min": 0.5,
+  "entries": [
+    {
+      "address": "0x514910771af9ca656af840dff83e8264ecf986ca",
+      "name": "LINK",
+      "label": "safe",
+      "reason": "well-known ERC-20; curated known-safe"
+    },
+    {
+      "address": "0x3845badade8e6dff049820680d1f14bd3903a5d0",
+      "name": "SAND",
+      "label": "safe",
+      "reason": "well-known ERC-20; curated known-safe"
+    },
+    {
+      "address": "0x2b591e99afe9f32eaa6214f7b7629768c40eeb39",
+      "name": "HEX",
+      "label": "safe",
+      "reason": "well-known token; curated known-safe"
+    },
+    {
+      "address": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+      "name": "FrxUSD",
+      "label": "safe",
+      "reason": "audited stablecoin surface; curated known-safe"
+    },
+    {
+      "address": "0x1270787da38849fc5f3148357f3b8f6e69ab3858",
+      "name": "Curve alUSDavUSD gauge",
+      "label": "safe",
+      "reason": "Curve liquidity gauge; curated known-safe"
+    },
+    {
+      "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "name": "sUSDe",
+      "label": "safe",
+      "reason": "funded ERC-4626 vault expected cool unless invariant fails"
+    },
+    {
+      "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "name": "USDC",
+      "label": "safe",
+      "reason": "FiatToken; curated known-safe"
+    },
+    {
+      "address": "0x6b175474e89094c44da98b954eedeac495271d0f",
+      "name": "DAI",
+      "label": "safe",
+      "reason": "Maker DAI; curated known-safe"
+    }
+  ]
+}

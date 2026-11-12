@@ -84,6 +84,18 @@ type PrecisionStats = {
   precision?: number | null;
 };
 
+type BenchmarkStats = {
+  labeled?: number;
+  false_positive?: number;
+  true_negative?: number;
+  true_positive?: number;
+  false_negative?: number;
+  precision?: number | null;
+  recall?: number | null;
+  false_positive_rate?: number | null;
+  passes_baseline?: boolean;
+};
+
 type Feed = {
   ok: boolean;
   dry_run: boolean;
@@ -95,6 +107,7 @@ type Feed = {
   results: { address: string; bucket: string; heat: number; notes: string | null; created_at: string }[];
   history?: { runs: HistoryRun[]; findings: HistoryFinding[]; error?: string };
   precision?: PrecisionStats | null;
+  benchmark?: BenchmarkStats | null;
   fixtures?: FixtureOpt[];
   note?: string;
   ephemeral_store?: boolean;
@@ -1071,18 +1084,43 @@ export default function TestApp() {
           })}
         </div>
 
-        {feed?.precision && (
-          <div className="mt-4 rounded-lg border border-brand-800/80 bg-brand-900/20 px-4 py-3 text-[11px] text-brand-300">
-            <p className="text-[10px] tracking-[0.14em] uppercase text-brand-500">Triage precision</p>
-            <p className="mt-1 tabular-nums text-brand-100">
-              flags {feed.precision.flagged ?? 0}
-              {" · "}true {feed.precision.confirmed_true ?? 0}
-              {" · "}false {feed.precision.confirmed_false ?? 0}
-              {" · "}open {feed.precision.open_flags ?? 0}
-              {feed.precision.precision != null
-                ? ` · precision ${(Number(feed.precision.precision) * 100).toFixed(1)}%`
-                : " · precision —"}
-            </p>
+        {(feed?.precision || feed?.benchmark) && (
+          <div className="mt-4 rounded-lg border border-brand-800/80 bg-brand-900/20 px-4 py-3 text-[11px] text-brand-300 space-y-2">
+            {feed?.precision && (
+              <div>
+                <p className="text-[10px] tracking-[0.14em] uppercase text-brand-500">Triage precision</p>
+                <p className="mt-1 tabular-nums text-brand-100">
+                  flags {feed.precision.flagged ?? 0}
+                  {" · "}true {feed.precision.confirmed_true ?? 0}
+                  {" · "}false {feed.precision.confirmed_false ?? 0}
+                  {" · "}open {feed.precision.open_flags ?? 0}
+                  {feed.precision.precision != null
+                    ? ` · precision ${(Number(feed.precision.precision) * 100).toFixed(1)}%`
+                    : " · precision —"}
+                </p>
+              </div>
+            )}
+            {feed?.benchmark && (
+              <div>
+                <p className="text-[10px] tracking-[0.14em] uppercase text-brand-500">Labeled benchmark</p>
+                <p className="mt-1 tabular-nums text-brand-100">
+                  n {feed.benchmark.labeled ?? 0}
+                  {" · "}FP {feed.benchmark.false_positive ?? 0}
+                  {" · "}TN {feed.benchmark.true_negative ?? 0}
+                  {feed.benchmark.false_positive_rate != null
+                    ? ` · FPR ${(Number(feed.benchmark.false_positive_rate) * 100).toFixed(1)}%`
+                    : ""}
+                  {feed.benchmark.precision != null
+                    ? ` · precision ${(Number(feed.benchmark.precision) * 100).toFixed(1)}%`
+                    : " · precision —"}
+                  {feed.benchmark.recall != null
+                    ? ` · recall ${(Number(feed.benchmark.recall) * 100).toFixed(1)}%`
+                    : ""}
+                  {" · "}
+                  {feed.benchmark.passes_baseline ? "baseline ok" : "baseline FAIL"}
+                </p>
+              </div>
+            )}
           </div>
         )}
 
