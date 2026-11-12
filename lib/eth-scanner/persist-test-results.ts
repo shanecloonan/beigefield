@@ -78,6 +78,9 @@ export type PersistRunInput = {
   invariant_results?: unknown;
   heat_breakdown?: unknown;
   known_safe?: boolean | null;
+  deployed_block?: number | null;
+  deployed_at?: string | null;
+  discovery_source?: string | null;
   bucket?: string | null;
   heat?: number | null;
   status?: string | null;
@@ -202,6 +205,9 @@ export async function persistTestScanRun(
     invariant_results: asJson(input.invariant_results ?? []) ?? [],
     heat_breakdown: asJson(input.heat_breakdown ?? {}) ?? {},
     known_safe: Boolean(input.known_safe),
+    deployed_block: input.deployed_block ?? null,
+    deployed_at: input.deployed_at ?? null,
+    discovery_source: input.discovery_source ?? null,
     bucket: input.bucket ?? null,
     heat: input.heat ?? null,
     status: input.status ?? (input.dropped ? "dropped" : input.error ? "error" : "done"),

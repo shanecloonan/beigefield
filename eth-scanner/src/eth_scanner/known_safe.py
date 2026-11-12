@@ -31,6 +31,12 @@ SAFE_CONTRACT_NAMES = frozenset({
     # Well-known protocol tokens / gauges that are not custom custody bugs.
     "linktoken", "sand", "hex", "frxusd", "frxeth", "sfrxeth",
     "weth9", "weth", "wsteth", "steth", "dai", "usdc", "usdt",
+    "tethertoken", "fiattokenv2", "fiattokenv2_1", "fiattokenv2_2",
+    "atoken", "atokeninstance", "variabledebtToken".lower(),
+    "stabledebtToken".lower(), "scaledbalanceToken".lower(),
+    "crv", "curve dao token", "3crv",
+    "layerzerotoken", "cosmoserc20", "pendle", "titanx", "ach",
+    "baseregistrarimplementation", "ens",
     "liquiditygauge", "liquiditygaugev2", "liquiditygaugev3",
     "liquiditygaugev4", "liquiditygaugev5", "liquiditygaugev6",
     "curve.fi liquidity gauge", "vyper_contract",
@@ -55,12 +61,22 @@ SAFE_ADDRESSES = frozenset({
     "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
     # wstETH
     "0x7f39c581f595b53a5c1df47d1b2b8b17df4c43fa",
+    # stETH
+    "0xae7ab96520de3a18e32e500a704a4fc268f5ed57",
     # USDC
     "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
     # USDT
     "0xdac17f958d2ee523a2206206994597c13d831ec7",
     # DAI
     "0x6b175474e89094c44da98b954eedeac495271d0f",
+    # CRV
+    "0xd533a949740bb3306d119cc777fa900ba034cd52",
+    # 3Crv LP
+    "0x6c3f90f043a72fa612cbac8115ee7e52bde6e490",
+    # WBTC
+    "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+    # USDe
+    "0x4c9edd5852cd905f08685a2e67ec7941119ee468",
 })
 
 _OZ_IMPORT = re.compile(
@@ -101,14 +117,23 @@ def is_known_safe(
         reasons.append("openzeppelin-or-solmate-import")
 
     # Pure ERC-20 / Ownable shells with no custom custody verbs → safe.
-    if name in {"erc20", "linktoken", "sand", "hex", "frxusd", "weth9", "dai"}:
+    if name in {
+        "erc20", "linktoken", "sand", "hex", "frxusd", "weth9", "weth",
+        "dai", "tethertoken", "wsteth", "steth", "usdc", "usdt", "crv",
+        "fiattokenv2_2", "fiattokenv2_1", "fiattokenv2", "atokeninstance",
+    }:
         if "curated-address" not in ",".join(reasons) and addr:
             reasons.append("well-known-token-name")
+
+    # Aave aToken / debt token name shapes (implementation clones).
+    if name.startswith("atoken") or name.endswith("atoken") or "debtToken".lower() in name:
+        reasons.append("contract-name:aave-token-shell")
 
     return (bool(reasons and (
         any(r.startswith("curated-") for r in reasons)
         or any(r.startswith("contract-name:") for r in reasons)
         or name in SAFE_CONTRACT_NAMES
+        or any(r == "well-known-token-name" for r in reasons)
     )), reasons)
 
 

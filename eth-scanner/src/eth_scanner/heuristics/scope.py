@@ -312,6 +312,20 @@ def classify_scope(
             focused_custody = [n for n in custody if n in declared_here]
             if focused_custody:
                 custody = focused_custody
+    # Named Curve Twocrypto / Tricrypto / StableSwap shells — even when the
+    # Vyper blob fails to unpack, the verified contract name is enough to
+    # keep the address in-scope for live pool invariants.
+    focus_l = (contract_name or "").strip().lower().replace(" ", "")
+    if focus_l and any(
+        k in focus_l for k in ("twocrypto", "tricrypto", "stableswap", "curvepool", "cryptopool")
+    ):
+        return ScopeDecision(
+            contract_class="pool",
+            scope="in-scope",
+            signals=["name-curve-pool"],
+            promote=True,
+        )
+
     # Same-file sibling WETH (live mETH flatten) has deposit/withdraw +
     # msg.value and IR wrap-unwrap roles. Only this contract counts.
     wrap_role_names = {
@@ -330,6 +344,15 @@ def classify_scope(
     )
     # wstETH-like share wrap holds the inner token the same way WETH holds ETH.
     # Live wstETH (`0x7f39…Ca0`) imported `getPooledEthByShares` and became staking.
+    # Deposit pools (BlurPool) look WETH-shaped but hold third-party ETH for
+    # settlement — classify as pool *before* wrap demotion.
+    if _is_deposit_pool(src, names, custody, contract_name):
+        return ScopeDecision(
+            contract_class="pool",
+            scope="in-scope",
+            signals=["deposit-pool"],
+            promote=True,
+        )
     if _is_share_wrap(src, names, custody, contract_name):
         return ScopeDecision(
             contract_class="wrap-token",
@@ -417,14 +440,16 @@ def classify_scope(
                 signals=["imported-erc20-on-passthrough"] + pass_signals,
                 promote=False,
             )
-        # Fallback token→custody only with proof of third-party money at rest:
+        # Fallback token→custody/pool only with proof of third-party money at rest:
         # per-user deposit/stake mappings or holdings of other assets.
         if _third_party_funds_at_rest(src, names, custody, contract_name):
+            klass = "pool" if _is_deposit_pool(src, names, custody, contract_name) else "custody"
             return ScopeDecision(
-                contract_class="custody",
+                contract_class=klass,
                 scope="in-scope",
-                signals=["erc20-plus-custody:%s" % ",".join(custody[:8]), "funds-at-rest"],
-                promote=False,
+                signals=["erc20-plus-custody:%s" % ",".join(custody[:8]), "funds-at-rest"]
+                + (["deposit-pool"] if klass == "pool" else []),
+                promote=klass in FUNDS_AT_RISK_CLASSES,
             )
         klass = "wrap-token" if (wrap or wrap_only) else "token"
         return ScopeDecision(
@@ -569,6 +594,44 @@ _HOLD_OTHER_ASSET_RX = re.compile(
     r"safeTransfer(From)?\s*\(|\btransferFrom\s*\([^)]*address\s*\(\s*this",
     re.I,
 )
+_DEPOSIT_POOL_RX = re.compile(
+    r"\b(withdrawFrom|executePayment|settlement)\b",
+    re.I,
+)
+
+
+def _is_deposit_pool(
+    src: str,
+    names: set[str],
+    custody: list[str],
+    focus: Optional[str] = None,
+) -> bool:
+    """ETH/token deposit pool with third-party custody (BlurPool-class).
+
+    Distinct from WETH wrap-token: users deposit value that sits in the
+    contract for later settlement / withdrawFrom, not a bare 1:1 wrap shell.
+    deposit()+msg.value alone is WETH-shaped — require withdrawFrom or a
+    named payment/deposit pool.
+    """
+    movers = {str(n).lower() for n in (custody or []) if n}
+    probe = _this_or_names(src, names, focus) | movers
+    if "deposit" not in probe:
+        return False
+    # Canonical WETH9 is wrap-token (and known-safe); leave it alone.
+    focus_l = (focus or "").strip().lower().replace(" ", "")
+    if focus_l in {"weth9", "weth", "weth10"}:
+        return False
+    # Exact named payment/deposit shells (BlurPool). Avoid substring hits on
+    # Rocket DepositPool / Tokemak EthPool / generic *Pool venues.
+    if focus_l in {"blurpool", "paymentpool", "blur eth pool", "blurethpool"}:
+        return True
+    # Third-party withdrawal / settlement verbs — not a 1:1 wrap shell.
+    if "withdrawfrom" in probe:
+        return True
+    search = _family_search(src, focus)
+    if _DEPOSIT_POOL_RX.search(search):
+        return True
+    return False
 
 
 def _third_party_funds_at_rest(
@@ -584,10 +647,12 @@ def _third_party_funds_at_rest(
     false-kept as custody.
     """
     movers = {str(n).lower() for n in (custody or []) if n}
+    if _is_deposit_pool(src, names, custody, focus):
+        return True
     # Explicit venue verbs on this contract.
     venue = movers & {
         "deposit", "stake", "lock", "supply", "borrow", "mintshares",
-        "joinswap", "joinpool", "addliquidity", "enter", "bond",
+        "joinswap", "joinpool", "addliquidity", "enter", "bond", "withdrawfrom",
     }
     if venue and (_FUNDS_AT_REST_RX.search(src) or _HOLD_OTHER_ASSET_RX.search(src)):
         return True

@@ -89,6 +89,12 @@ class MemoryStore:
             row["funds_status"] = target.funds_status
         if target.funds_checked_at:
             row["funds_checked_at"] = target.funds_checked_at
+        if getattr(target, "deployed_block", None) is not None:
+            row["deployed_block"] = int(target.deployed_block)  # type: ignore[arg-type]
+        if getattr(target, "deployed_at", None):
+            row["deployed_at"] = target.deployed_at
+        if getattr(target, "discovery_source", None):
+            row["discovery_source"] = target.discovery_source
         self.targets[addr] = row
         self._flush()
         return target
@@ -162,9 +168,13 @@ class MemoryStore:
     def claim_pending(self, limit: int, worker_id: str) -> list[dict[str, Any]]:
         claimed: list[dict[str, Any]] = []
         now = _now()
-        for row in self.targets.values():
-            if row.get("status") != "pending":
-                continue
+        pending = [r for r in self.targets.values() if r.get("status") == "pending"]
+        # Prefer newest deployments first; rows without age sort last.
+        pending.sort(
+            key=lambda r: int(r.get("deployed_block") or 0),
+            reverse=True,
+        )
+        for row in pending:
             row["status"] = "running"
             row["claimed_by"] = worker_id
             row["claimed_at"] = now
@@ -341,6 +351,12 @@ class SupabaseStore:
             body["funds_status"] = target.funds_status
         if target.funds_checked_at:
             body["funds_checked_at"] = target.funds_checked_at
+        if getattr(target, "deployed_block", None) is not None:
+            body["deployed_block"] = int(target.deployed_block)  # type: ignore[arg-type]
+        if getattr(target, "deployed_at", None):
+            body["deployed_at"] = target.deployed_at
+        if getattr(target, "discovery_source", None):
+            body["discovery_source"] = target.discovery_source
         self._req("POST", "eth_scan_targets", body, prefer="return=minimal,resolution=merge-duplicates")
         return target
 
@@ -392,6 +408,10 @@ class SupabaseStore:
             result_body["contract_name"] = result.contract_name
         if getattr(result, "pattern_leads", None) is not None:
             result_body["pattern_leads"] = to_plain(result.pattern_leads)
+        if getattr(result, "drop_reason", None):
+            result_body["drop_reason"] = result.drop_reason
+        if getattr(result, "contract_class", None):
+            result_body["contract_class"] = result.contract_class
         self._req("POST", "eth_scan_results", result_body, prefer="return=minimal")
         patch: dict[str, Any] = {
             "bucket": result.bucket,
@@ -418,11 +438,18 @@ class SupabaseStore:
         self._req("PATCH", "eth_scan_targets", patch, query={"address": "eq.%s" % addr})
 
     def claim_pending(self, limit: int, worker_id: str) -> list[dict[str, Any]]:
+        # Newest deployments first; fall back to updated_at when age is missing.
         rows = self._req("GET", "eth_scan_targets", query={
             "status": "eq.pending",
-            "order": "updated_at.asc",
+            "order": "deployed_block.desc.nullslast,updated_at.asc",
             "limit": str(limit),
         })
+        if not isinstance(rows, list) or not rows:
+            rows = self._req("GET", "eth_scan_targets", query={
+                "status": "eq.pending",
+                "order": "updated_at.asc",
+                "limit": str(limit),
+            })
         return self._mark_running(rows, worker_id)
 
     def claim_lane_b(self, limit: int, worker_id: str) -> list[dict[str, Any]]:

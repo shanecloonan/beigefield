@@ -80,6 +80,10 @@ class Target:
     funds_breakdown: list[dict[str, Any]] = field(default_factory=list)
     funds_status: Optional[str] = None  # ok | unknown | skipped | override
     funds_checked_at: Optional[str] = None
+    # Recent-deployment discovery metadata (prefer newest first).
+    deployed_block: Optional[int] = None
+    deployed_at: Optional[str] = None  # ISO8601 UTC
+    discovery_source: Optional[str] = None  # rpc-create | etherscan-verified | fallback
 
 
 @dataclass

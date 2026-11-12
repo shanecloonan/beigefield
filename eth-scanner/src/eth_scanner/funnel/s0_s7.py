@@ -160,17 +160,72 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
         verified_match=(ctx.artifact.verified_match if ctx.artifact else None),
     ))
 
+    source = ctx.source_text or (ctx.artifact.content if ctx.artifact else "")
+    funds_usd = _funds_usd(ctx)
+    scope_early = _scope_of(ctx)
+
+    # --- Known-safe hard skip (heat 0) — after scope so triage keeps class ---
+    early_safe, early_safe_reasons = is_known_safe(
+        address=ctx.target.address,
+        contract_name=(ctx.artifact.contract_name if ctx.artifact else None),
+        source=source,
+        implementation=(ctx.artifact.implementation if ctx.artifact else None),
+    )
+    if early_safe:
+        movers_early = _exposed_movers(ir) if ir else []
+        traces.append(_trace(
+            "S1b", "drop", "known-safe",
+            reasons=early_safe_reasons[:6],
+            contract_name=(ctx.artifact.contract_name if ctx.artifact else None),
+            contract_class=scope_early.contract_class,
+            scope=scope_early.scope,
+            movers=movers_early,
+        ))
+        return FunnelResult(
+            bucket="lane-a-cool",
+            dropped=True,
+            drop_reason="known-safe",
+            heat=0,
+            src_confidence=src_conf,
+            ir_confidence=ir_conf,
+            stage_trace=traces,
+            notes=notes + ["known-safe — heat 0, skipped (%s)" % ",".join(early_safe_reasons[:4])],
+            value_movers=movers_early,
+            contract_class=scope_early.contract_class,
+            scope=scope_early.scope,
+            scope_signals=list(scope_early.signals),
+            funds_usd=funds_usd,
+            heat_breakdown={"funds": 0, "funds_rank": 0, "funds_in_heat": 0, "total": 0},
+            known_safe=True,
+            contract_name=(ctx.artifact.contract_name if ctx.artifact else None),
+            invariant_results=[{
+                "id": "known-safe",
+                "name": "known-safe library/protocol",
+                "status": "held",
+                "evidence": ",".join(early_safe_reasons) or "curated",
+            }],
+        )
+
     # --- S2 IR confidence --------------------------------------------------
     # Classify scope FIRST, then route analysis failures. Demoted surfaces
-    # cool-archive; funds-at-floor venues with failed analysis → manual-review
-    # with reason 'analysis failed'. Pattern leads never add heat.
-    scope_early = _scope_of(ctx)
-    funds_usd = _funds_usd(ctx)
+    # cool-archive; funds-at-floor venues with failed analysis → try live
+    # invariants when the class is already known funds-at-risk, else
+    # manual-review. Pattern leads never add heat.
     analysis_failed = (
         ir is None or ir.lift_failed or ir_conf == "low"
         or (ir and ir.unpack_failed) or src_conf == "low"
     )
-    if analysis_failed:
+    # Soft recovery: verified source + in-scope funds class → still run live
+    # invariants even when unpack/IR lift failed (e.g. Curve Twocrypto Vyper).
+    soft_recover = (
+        analysis_failed
+        and src_conf == "high"
+        and scope_early.contract_class in FUNDS_AT_RISK_CLASSES
+        and not scope_early.demoted
+        and funds_usd is not None
+        and funds_usd >= ctx.config.min_funds_usd
+    )
+    if analysis_failed and not soft_recover:
         reason = "analysis failed"
         if ir and ir.unpack_failed:
             detail = "unpack_failed"
@@ -178,19 +233,31 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
             detail = "ir_failed_or_low"
         else:
             detail = "src_confidence=low"
-        if scope_early.demoted:
+        if scope_early.demoted or scope_early.contract_class in {"token", "wrap-token", "nft"}:
             traces.append(_trace(
-                "S2", "lane-a-cool", reason,
+                "S2", "drop", "token-only" if scope_early.contract_class in {"token", "wrap-token", "nft"} else reason,
                 detail=detail, ir_confidence=ir_conf, src_confidence=src_conf,
                 contract_class=scope_early.contract_class, scope=scope_early.scope,
             ))
-            return _done(
-                "lane-a-cool", traces, src_conf, ir_conf, 0, notes,
-                extra="Analysis failed on demoted class — cool-archive (not manual-review).",
-                pattern_leads=pattern_leads,
-                movers=_exposed_movers(ir) if ir else [],
-                scope=scope_early,
+            drop_reason = (
+                "token-only" if scope_early.contract_class in {"token", "wrap-token", "nft"}
+                else "analysis-failed-demoted"
+            )
+            return FunnelResult(
+                bucket="lane-a-cool",
+                dropped=True,
+                drop_reason=drop_reason,
+                heat=0,
+                src_confidence=src_conf,
+                ir_confidence=ir_conf,
+                stage_trace=traces,
+                notes=notes + ["Dropped demoted/token surface after analysis failure."],
+                contract_class=scope_early.contract_class,
+                scope=scope_early.scope,
+                scope_signals=list(scope_early.signals),
                 funds_usd=funds_usd,
+                heat_breakdown={"funds": 0, "funds_rank": 0, "funds_in_heat": 0, "total": 0},
+                contract_name=(ctx.artifact.contract_name if ctx.artifact else None),
             )
         if funds_usd is not None and funds_usd >= ctx.config.min_funds_usd:
             traces.append(_trace(
@@ -220,10 +287,70 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
             scope=scope_early,
             funds_usd=funds_usd,
         )
+    if soft_recover:
+        traces.append(_trace(
+            "S2", "continue",
+            "analysis soft-recover: verified + in-scope %s — run live invariants"
+            % scope_early.contract_class,
+            ir_confidence=ir_conf,
+            unpack_failed=bool(ir and ir.unpack_failed),
+            lift_failed=bool(ir and ir.lift_failed),
+        ))
+        # Jump to live-invariant path with empty movers / injected class.
+        inv_rows: list[dict[str, Any]] = []
+        if not ctx.config.skip_live_invariants:
+            live = run_live_invariants(
+                ctx.target.address,
+                contract_class=scope_early.contract_class,
+                rpc_url=ctx.rpc_url or "",
+            )
+            inv_rows = [r.to_dict() for r in live]
+        privileged, eoa_admin = False, False
+        if inv_rows:
+            from eth_scanner.invariants.live import LiveInvariantResult
+            objs = [
+                LiveInvariantResult(
+                    id=str(r.get("id") or ""),
+                    name=str(r.get("name") or ""),
+                    status=str(r.get("status") or "unknown"),
+                    evidence=str(r.get("evidence") or ""),
+                    extras=dict(r.get("extras") or {}),
+                )
+                for r in inv_rows
+            ]
+            privileged, eoa_admin = summarize_role_flags(objs)
+        weights = load_heat_weights()
+        heat, heat_bd = evidence_heat(
+            funds_usd=funds_usd,
+            invariant_results=inv_rows,
+            privileged_callable=privileged,
+            eoa_admin=eoa_admin,
+            weights=weights,
+        )
+        promote, why = should_promote_lane_b(
+            funds_usd=funds_usd,
+            invariant_results=inv_rows,
+            privileged_callable=privileged,
+            eoa_admin=eoa_admin,
+            weights=weights,
+        )
+        bucket = "lane-b-queue" if promote else "lane-a-cool"
+        traces.append(_trace("S5b", "heat", "soft-recover evidence heat=%d" % heat, heat=heat, heat_breakdown=heat_bd))
+        traces.append(_trace("S6", bucket, why, heat=heat, funds_usd=funds_usd))
+        return _done(
+            bucket, traces, src_conf, ir_conf, heat, notes,  # type: ignore[arg-type]
+            extra="Soft-recovered after unpack/IR failure; live invariants only. Not a verdict.",
+            pattern_leads=pattern_leads,
+            movers=_exposed_movers(ir) if ir else [],
+            scope=scope_early,
+            funds_usd=funds_usd,
+            invariant_results=inv_rows,
+            heat_breakdown=heat_bd,
+            contract_name=(ctx.artifact.contract_name if ctx.artifact else None),
+        )
     traces.append(_trace("S2", "continue", "ir_confidence=%s" % ir_conf, ir_confidence=ir_conf, lift_tool=ir.lift_tool))
 
     # --- S3 Known-pattern skim (high/med IR only) --------------------------
-    source = ctx.source_text or (ctx.artifact.content if ctx.artifact else "")
     pattern_leads = list(ir.pattern_leads) or skim_known_patterns(source)
     traces.append(_trace(
         "S3", "leads-only",
@@ -262,20 +389,12 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
             source=source,
             implementation=(ctx.artifact.implementation if ctx.artifact else None),
         )
-        if demoted_safe:
-            notes.append(
-                "known-safe surface (%s) — demoted class stays cool"
-                % ",".join(demoted_safe_reasons[:4])
-            )
-        heat_demoted, heat_bd_demoted = evidence_heat(
-            funds_usd=funds_usd,
-            invariant_results=[],
-            privileged_callable=False,
-            eoa_admin=False,
-        )
+        # Token / wrap-token / nft / router: drop — balance dust is not custody.
+        drop_token = scope.contract_class in {"token", "wrap-token", "nft", "router", "nft-market"}
+        drop_reason = "known-safe" if demoted_safe else ("token-only" if drop_token else "demoted-passthrough")
         traces.append(_trace(
-            "S4", "lane-a-cool",
-            "no funds-at-risk surface — demoted from the main Lane A path",
+            "S4", "drop",
+            drop_reason,
             contract_class=scope.contract_class,
             scope=scope.scope,
             signals=scope.signals,
@@ -283,22 +402,29 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
             movers=movers,
             known_safe=demoted_safe,
         ))
-        traces.append(_trace("S5", "skip", "out-of-scope class — not competing for Lane B"))
-        traces.append(_trace("S6", "lane-a-cool", "cool-archive (funds heat ranks; pattern leads add zero)"))
-        return _done(
-            "lane-a-cool", traces, src_conf, ir_conf, heat_demoted, notes,
-            extra=(
-                "Demoted %s from the main scan lane. Lane A only keeps venues that "
-                "hold or account third-party value (vault/staking/lending/pool/bridge/maker). "
-                "Tokens, wrap-tokens, pass-through routers, and atomic NFT markets do not "
-                "compete for Lane B. Not a verdict."
-                % scope.contract_class
-            ) + erc20_note,
+        traces.append(_trace("S5", "skip", "out-of-scope class — dropped"))
+        traces.append(_trace("S6", "drop", "heat 0 — demoted / token-only / known-safe"))
+        return FunnelResult(
+            bucket="lane-a-cool",
+            dropped=True,
+            drop_reason=drop_reason,
+            heat=0,
+            src_confidence=src_conf,
+            ir_confidence=ir_conf,
+            stage_trace=traces,
             pattern_leads=pattern_leads,
-            movers=movers,
-            scope=scope,
+            notes=notes + [
+                "Dropped %s (%s). Tokens/wraps/routers/NFTs are not money-at-risk venues; "
+                "funds on a token contract are accidental self-balance, not custody. Heat 0."
+                % (scope.contract_class, drop_reason)
+                + erc20_note
+            ],
+            value_movers=movers,
+            contract_class=scope.contract_class,
+            scope=scope.scope,
+            scope_signals=list(scope.signals),
             funds_usd=funds_usd,
-            heat_breakdown=heat_bd_demoted,
+            heat_breakdown={"funds": 0, "funds_rank": 0, "funds_in_heat": 0, "total": 0},
             known_safe=demoted_safe,
             contract_name=(ctx.artifact.contract_name if ctx.artifact else None),
         )
@@ -470,8 +596,8 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
 
     # --- S6 Deep-lane gate (evidence only) ---------------------------------
     # lane-b only if funds >= floor AND (failed invariant OR privileged
-    # callable OR EOA admin on >= $100k). Else cool, ranked by funds heat.
-    # proxy-delegatecall is NOT a promote signal.
+    # callable OR EOA admin on >= $100k). Else cool; funds_rank sorts /test.
+    # proxy-delegatecall is NOT a promote signal. Funds alone never make heat.
     promote, why = should_promote_lane_b(
         funds_usd=funds_usd,
         invariant_results=inv_rows,
@@ -500,12 +626,13 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
 
     traces.append(_trace(
         "S6", "lane-a-cool",
-        why or "no evidence for lane-b — rank by funds",
+        why or "no evidence for lane-b — funds_rank sorts, heat stays 0",
         heat=heat, funds_usd=funds_usd, contract_class=scope.contract_class,
+        funds_rank=(heat_bd or {}).get("funds_rank"),
     ))
     return _done(
         "lane-a-cool", traces, src_conf, ir_conf, heat, notes,
-        extra="Lane A cool-archive ranked by measured funds. Pattern leads recorded, zero heat.",
+        extra="Lane A cool-archive. Heat is evidence-only; funds_usd/funds_rank sort the desk.",
         pattern_leads=pattern_leads,
         movers=movers,
         scope=scope,
@@ -731,9 +858,18 @@ def _done(
     n = list(notes)
     if extra:
         n.append(extra)
-    # Cool-archive still ranks by measured funds so /test sorts usefully.
+    # Cool-archive ranks by funds_rank in heat_breakdown — funds never become heat.
     if heat_breakdown is None and funds_usd is not None and bucket == "lane-a-cool":
-        heat, heat_breakdown = evidence_heat(funds_usd=funds_usd, invariant_results=invariant_results or [])
+        heat, heat_breakdown = evidence_heat(
+            funds_usd=funds_usd,
+            invariant_results=invariant_results or [],
+        )
+    if known_safe:
+        heat = 0
+        if heat_breakdown is not None:
+            heat_breakdown = dict(heat_breakdown)
+            heat_breakdown["total"] = 0
+            heat_breakdown["funds_in_heat"] = 0
     return FunnelResult(
         bucket=bucket,
         dropped=False,

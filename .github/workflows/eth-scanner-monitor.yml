@@ -1,4 +1,4 @@
-# Phase F — upgrade / funds-delta watch (free-tier, hourly).
+# Seed recent deployments + upgrade / funds-delta watch (free-tier, hourly).
 name: eth-scanner-monitor
 
 on:
@@ -16,7 +16,7 @@ concurrency:
 jobs:
   monitor:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,16 +25,24 @@ jobs:
           cache: pip
       - name: Install scanner
         run: python -m pip install -e ./eth-scanner
-      - name: Run watchlist
+      - name: Discover + scan recent deployments
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           ETH_SCANNER_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           ETH_RPC_URL: ${{ secrets.ETH_RPC_URL }}
+          ETHERSCAN_API_KEYS: ${{ secrets.ETHERSCAN_API_KEYS }}
         run: |
           set -euo pipefail
           if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
             echo "Missing Actions secrets SUPABASE_URL / SUPABASE_SECRET_KEY — skip."
             exit 0
           fi
-          python -m eth_scanner monitor --limit 30 --json --persist
+          # Default source: recent mainnet creates (public RPC fallback if ETH_RPC_URL unset).
+          # Prefer verified when ETHERSCAN_API_KEYS is set; otherwise keep creates unverified.
+          python -m eth_scanner monitor \
+            --limit 30 \
+            --lookback-hours 48 \
+            --scan 8 \
+            --json \
+            --persist

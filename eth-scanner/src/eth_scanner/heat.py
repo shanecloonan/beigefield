@@ -1,11 +1,12 @@
-"""Evidence-based heat weights — one place to configure ranking.
+"""Evidence-based heat — ranking signal only when rules fail.
 
-Pattern leads (weak auth, proxy-delegatecall, fork family, erc4626-rounding,
-etc.) contribute ZERO heat. They only select which invariants to evaluate.
+Funds are a *sort key*, never heat. Pattern leads (weak auth, proxy-delegatecall,
+fork family, erc4626-rounding, etc.) contribute ZERO heat.
 
-Heat comes from:
-  (a) measured funds (log-scaled USD from the live funds check)
-  (b) invariant checks that actually fail (held/failed/unknown)
+Heat comes only from evidence:
+  (a) invariant checks that actually fail (held/unknown → 0)
+  (b) privileged function callable by an outsider
+  (c) single-EOA admin over eoa_admin_min_usd
 
 Never a verdict. Never auto-yes.
 """
@@ -22,7 +23,7 @@ from typing import Any, Optional
 class HeatWeights:
     """Configurable multipliers. Override via ETH_SCANNER_HEAT_* env vars."""
 
-    # log10(1 + funds_usd) * funds_log_scale, capped at funds_cap
+    # log10(1 + funds_usd) * funds_log_scale — ranking/sort only, NOT heat
     funds_log_scale: float = 1.5
     funds_cap: int = 8
     # per failed invariant (held → 0, unknown → 0)
@@ -72,13 +73,17 @@ def load_heat_weights() -> HeatWeights:
     )
 
 
-def funds_heat(funds_usd: Optional[float], weights: Optional[HeatWeights] = None) -> int:
-    """Log-scaled funds contribution. None/unknown → 0."""
+def funds_rank(funds_usd: Optional[float], weights: Optional[HeatWeights] = None) -> int:
+    """Log-scaled funds *ranking* key. Not heat. None/unknown → 0."""
     w = weights or load_heat_weights()
     if funds_usd is None or funds_usd <= 0:
         return 0
     score = math.log10(1.0 + float(funds_usd)) * w.funds_log_scale
     return min(w.funds_cap, max(0, int(round(score))))
+
+
+# Back-compat alias — callers that still say funds_heat mean the ranking key.
+funds_heat = funds_rank
 
 
 def invariant_heat(
@@ -99,17 +104,20 @@ def evidence_heat(
     eoa_admin: bool = False,
     weights: Optional[HeatWeights] = None,
 ) -> tuple[int, dict[str, Any]]:
-    """Compose total heat from evidence only. Pattern leads are ignored."""
+    """Compose heat from evidence only. Funds are ranking metadata, not heat."""
     w = weights or load_heat_weights()
-    f = funds_heat(funds_usd, w)
+    rank = funds_rank(funds_usd, w)
     inv = invariant_heat(invariant_results, w)
     priv = w.privileged_callable if privileged_callable else 0
     eoa = 0
     if eoa_admin and funds_usd is not None and funds_usd >= w.eoa_admin_min_usd:
         eoa = w.eoa_admin
-    total = min(w.max_heat, f + inv + priv + eoa)
+    total = min(w.max_heat, inv + priv + eoa)
     breakdown = {
-        "funds": f,
+        # "funds" kept for UI sort; explicitly not part of total heat.
+        "funds": rank,
+        "funds_rank": rank,
+        "funds_in_heat": 0,
         "invariants_failed": inv,
         "privileged_callable": priv,
         "eoa_admin": eoa,

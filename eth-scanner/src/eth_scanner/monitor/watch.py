@@ -1,7 +1,7 @@
-"""Detect implementation changes and large funds deltas for funded targets.
+"""Detect implementation changes, large funds deltas, and seed recent deploys.
 
-Read-only eth_getStorageAt / eth_call / funds probe. Never sends transactions.
-Alerts are deduped by address + change fingerprint.
+Read-only eth_getStorageAt / eth_call / funds probe / block walk.
+Never sends transactions. Alerts are deduped by address + change fingerprint.
 """
 
 from __future__ import annotations
@@ -13,8 +13,10 @@ import urllib.request
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional
 
+from eth_scanner.discover.recent import DiscoveredContract, discover_recent_deployments
 from eth_scanner.ingest.funds import probe_contract_funds
 from eth_scanner.store.supabase import ScanStore, normalize_address
+from eth_scanner.types import Target
 
 
 # EIP-1967 implementation slot
@@ -24,7 +26,7 @@ _IMPL_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc
 @dataclass
 class MonitorAlert:
     address: str
-    kind: str  # upgrade | funds-delta
+    kind: str  # upgrade | funds-delta | discovery
     fingerprint: str
     detail: str
     previous: Any = None
@@ -40,7 +42,7 @@ def _rpc(url: str, method: str, params: list[Any], timeout_s: float = 12.0) -> A
     req = urllib.request.Request(
         url,
         data=payload,
-        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner-monitor/0.1"},
+        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner-monitor/0.2"},
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=timeout_s) as resp:
@@ -65,6 +67,37 @@ def _fp(*parts: Any) -> str:
     return h[:16]
 
 
+def seed_recent_deployments(
+    store: ScanStore,
+    *,
+    rpc_url: str = "",
+    etherscan_keys: str = "",
+    lookback_hours: int = 48,
+    max_blocks: int = 80,
+    max_results: int = 30,
+    prefer_verified: bool = True,
+) -> list[DiscoveredContract]:
+    """Discover recent creates and upsert them as pending targets (newest first)."""
+    found = discover_recent_deployments(
+        rpc_url=rpc_url,
+        etherscan_keys=etherscan_keys,
+        lookback_hours=lookback_hours,
+        max_blocks=max_blocks,
+        max_results=max_results,
+        prefer_verified=prefer_verified,
+    )
+    for row in found:
+        store.upsert_target(Target(
+            address=row.address,
+            status="pending",
+            has_code=True,
+            deployed_block=row.deployed_block,
+            deployed_at=row.deployed_at,
+            discovery_source=row.source,
+        ))
+    return found
+
+
 def scan_watchlist(
     store: ScanStore,
     *,
@@ -72,13 +105,46 @@ def scan_watchlist(
     min_funds_usd: float = 2_000.0,
     funds_delta_ratio: float = 0.25,
     limit: int = 40,
+    seed_discoveries: bool = True,
+    lookback_hours: int = 48,
 ) -> list[MonitorAlert]:
-    """Compare stored targets against live implementation + funds."""
+    """Seed recent deployments (default), then compare stored targets for upgrades/TVL."""
     rpc = (rpc_url or os.environ.get("ETH_RPC_URL") or "").strip()
-    rows = store.list_targets(limit=limit)
     alerts: list[MonitorAlert] = []
     seen = set()
 
+    if seed_discoveries:
+        try:
+            found = seed_recent_deployments(
+                store,
+                rpc_url=rpc,
+                etherscan_keys=os.environ.get("ETHERSCAN_API_KEYS") or "",
+                lookback_hours=lookback_hours,
+                max_results=min(30, limit),
+            )
+            for row in found:
+                fp = _fp(row.address, "discover", row.deployed_block)
+                if fp in seen:
+                    continue
+                seen.add(fp)
+                alerts.append(MonitorAlert(
+                    address=row.address,
+                    kind="discovery",
+                    fingerprint=fp,
+                    detail="recent deploy block=%s source=%s name=%s"
+                    % (row.deployed_block, row.source, row.contract_name or "—"),
+                    previous=None,
+                    current=row.deployed_block,
+                ))
+        except Exception as exc:  # noqa: BLE001
+            alerts.append(MonitorAlert(
+                address="0x0000000000000000000000000000000000000000",
+                kind="discovery",
+                fingerprint=_fp("discover-error", str(exc)[:80]),
+                detail="discovery error: %s" % str(exc)[:160],
+            ))
+
+    rows = store.list_targets(limit=limit)
     for row in rows:
         addr = normalize_address(str(row.get("address") or ""))
         prev_funds = row.get("funds_usd")

@@ -51,12 +51,22 @@ def normalize(
     if looks_like_etherscan_json(src):
         files = parse_etherscan_sources(src)
         if not files:
-            unpack_failed = True
-            lift_failed = True
-            notes.append(
-                "Etherscan JSON payload did not unpack to Solidity/Vyper — "
-                "not a no-mover close (Do Not Auto-Dismiss)"
-            )
+            # Soft recover: some Vyper / single-file Etherscan payloads look like
+            # JSON wrappers but still contain usable source text. Prefer lifting
+            # that over hard analysis-failed (Curve Twocrypto-class).
+            recovered = _recover_source_from_blob(src)
+            if recovered:
+                src = recovered
+                artifact.content = recovered
+                notes.append(
+                    "Etherscan JSON unpack empty — recovered inline Solidity/Vyper source"
+                )
+            else:
+                unpack_failed = True
+                notes.append(
+                    "Etherscan JSON payload did not unpack to Solidity/Vyper — "
+                    "will attempt soft class recovery in funnel"
+                )
         elif source_dir is None or not source_dir.exists():
             tmp_holder = tempfile.TemporaryDirectory(prefix="eth-scanner-unpack-")
             artifact, unpacked = materialize_source(artifact, Path(tmp_holder.name))
@@ -67,8 +77,19 @@ def normalize(
 
     surface: dict[str, Any] = {"files": [], "summary": {}}
     try:
-        if unpack_failed:
+        if unpack_failed and not (src or "").strip():
+            lift_failed = True
             surface = {"error": "unpack_failed", "files": [], "summary": {}}
+        elif unpack_failed and (src or "").strip():
+            # Still try heuristic lift on raw blob so classify_scope can see verbs.
+            filename = "Contract.vy" if language == "vyper" else "Contract.sol"
+            try:
+                surface = run_scan_source(src, filename=filename, language=language)
+                notes.append("heuristic lift on unpack-failed blob (best-effort)")
+            except Exception as exc:  # noqa: BLE001
+                lift_failed = True
+                surface = {"error": str(exc), "files": [], "summary": {}}
+                notes.append("heuristic lift after unpack_failed failed: %s" % exc)
         elif source_dir and source_dir.exists():
             try:
                 surface = run_scan([str(source_dir)])
@@ -109,6 +130,10 @@ def normalize(
             notes.append("slither CLI missing or failed — falling back to heuristic IR")
 
     fn_count = _surface_function_count(surface)
+    if unpack_failed and fn_count > 0:
+        # Recovered a usable inventory from the blob — do not hard-fail S2.
+        unpack_failed = False
+        notes.append("cleared unpack_failed after recovering %d functions" % fn_count)
     ir_conf = _ir_confidence(
         src_conf=src_conf,
         language=language,
@@ -118,7 +143,7 @@ def normalize(
         unpack_failed=unpack_failed,
         function_count=fn_count,
     )
-    if lift_failed:
+    if lift_failed and fn_count == 0:
         ir_conf = "low"
         notes.append("IR lift failed → ir_confidence=low → manual-review (Do Not Auto-Dismiss)")
     elif ir_conf == "high" and not slither_ok:
@@ -284,7 +309,11 @@ def _ir_confidence(
     unpack_failed: bool = False,
     function_count: int = 0,
 ) -> str:
-    if lift_failed or unpack_failed or kind == "decompile" or src_conf == "low":
+    if kind == "decompile" or src_conf == "low":
+        return "low"
+    if lift_failed and function_count == 0:
+        return "low"
+    if unpack_failed and function_count == 0:
         return "low"
     if slither_ok and language == "solidity" and src_conf == "high":
         return "high"
@@ -294,6 +323,73 @@ def _ir_confidence(
     if src_conf == "high" and language in {"solidity", "vyper"} and function_count > 0:
         return "high"
     return "med"
+
+
+def _recover_source_from_blob(raw: str) -> str:
+    """Best-effort extract Solidity/Vyper text from a failed Etherscan JSON unpack."""
+    text = (raw or "").strip()
+    if not text:
+        return ""
+    # Already looks like source.
+    if "pragma solidity" in text or "pragma vyper" in text or "# @version" in text:
+        # Strip a thin JSON string wrapper if present.
+        if text.startswith("{") and '"content"' in text[:2000]:
+            try:
+                from eth_scanner.ingest.unpack import _loads_etherscan_json
+                obj = _loads_etherscan_json(text)
+                if isinstance(obj, dict):
+                    # Walk for the largest source-like string.
+                    best = ""
+                    stack = [obj]
+                    while stack:
+                        cur = stack.pop()
+                        if isinstance(cur, dict):
+                            for v in cur.values():
+                                stack.append(v)
+                        elif isinstance(cur, list):
+                            stack.extend(cur)
+                        elif isinstance(cur, str) and len(cur) > len(best):
+                            if (
+                                "pragma solidity" in cur
+                                or "pragma vyper" in cur
+                                or "# @version" in cur
+                                or "\ndef " in cur
+                                or "\nfunction " in cur
+                            ):
+                                best = cur
+                    if best:
+                        return best
+            except Exception:  # noqa: BLE001
+                pass
+        return text
+    # Try JSON walk even without pragma in the outer wrapper.
+    try:
+        from eth_scanner.ingest.unpack import _loads_etherscan_json
+        obj = _loads_etherscan_json(text)
+    except Exception:  # noqa: BLE001
+        return ""
+    if not isinstance(obj, dict):
+        return ""
+    best = ""
+    stack: list[Any] = [obj]
+    while stack:
+        cur = stack.pop()
+        if isinstance(cur, dict):
+            for v in cur.values():
+                stack.append(v)
+        elif isinstance(cur, list):
+            stack.extend(cur)
+        elif isinstance(cur, str) and len(cur) > len(best):
+            if (
+                "pragma solidity" in cur
+                or "pragma vyper" in cur
+                or "# @version" in cur
+                or "@version" in cur[:200]
+                or "\ndef " in cur
+                or "\nfunction " in cur
+            ):
+                best = cur
+    return best
 
 
 def _main_contract_source(
