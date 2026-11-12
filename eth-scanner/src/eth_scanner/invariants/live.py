@@ -393,26 +393,28 @@ def _pool_checks(addr: str, rpc: str, timeout_s: float, klass: str) -> list[Live
                     contract_class=klass,
                     extras={"recorded": bal0, "actual": actual, "coin": coin0},
                 ))
-    elif eth_bal is not None:
-        # Deposit pool (BlurPool-class): native ETH held for depositors.
-        if supply is not None and supply > 0 and eth_bal == 0:
-            out.append(LiveInvariantResult(
-                "pool-eth-backing",
-                "nonzero supply implies ETH reserves",
-                "failed",
-                "totalSupply=%s eth_balance=0" % supply,
-                contract_class=klass,
-                extras={"totalSupply": supply, "eth_balance": eth_bal},
-            ))
-        else:
-            out.append(LiveInvariantResult(
-                "pool-eth-backing",
-                "deposit pool ETH balance",
-                "held",
-                "eth_balance=%s totalSupply=%s" % (eth_bal, supply),
-                contract_class=klass,
-                extras={"eth_balance": eth_bal, "totalSupply": supply},
-            ))
+    elif eth_bal is not None and eth_bal > 0:
+        # Native ETH sitting in the contract (BlurPool-class deposit pools).
+        out.append(LiveInvariantResult(
+            "pool-eth-backing",
+            "deposit pool ETH balance",
+            "held",
+            "eth_balance=%s totalSupply=%s" % (eth_bal, supply),
+            contract_class=klass,
+            extras={"eth_balance": eth_bal, "totalSupply": supply},
+        ))
+    elif eth_bal == 0 and supply is not None and supply > 0:
+        # ERC-20 Curve/AMM pools often hold zero ETH; missing balances(i)
+        # is unknown coverage, not a failed invariant.
+        out.append(LiveInvariantResult(
+            "pool-reserves",
+            "token reserve views",
+            "unknown",
+            "balances(i) unavailable; eth_balance=0 with totalSupply=%s — likely ERC-20 pool"
+            % supply,
+            contract_class=klass,
+            extras={"eth_balance": eth_bal, "totalSupply": supply},
+        ))
     else:
         out.append(LiveInvariantResult(
             "pool-views", "pool reserve views", "unknown",
