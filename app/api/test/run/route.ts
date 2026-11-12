@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { capabilityNote, fixtureCatalog, pythonCapability, scannerCapabilities } from "@/lib/eth-scanner/capabilities";
 import { latestWrittenReceipt } from "@/lib/eth-scanner/local-store";
+import { laneAPersistInput, persistTestScanRun } from "@/lib/eth-scanner/persist-test-results";
 import { runLaneA, scanInFlight } from "@/lib/eth-scanner/run-lane-a";
 
 export const runtime = "nodejs";
@@ -71,12 +72,31 @@ export async function POST(req: Request) {
   // /api/test/receipt can land on a cold instance with no work dir. Inline
   // the receipt this run just wrote so the desk can always download it.
   const written = latestWrittenReceipt(out.result.address);
-  return json({
+  const duration_ms = Date.now() - started;
+  const payload = {
     ...out,
-    duration_ms: Date.now() - started,
+    duration_ms,
     note: capabilityNote(out),
     receipt_url: `/api/test/receipt?address=${encodeURIComponent(out.result.address)}`,
     receipt_markdown: written?.markdown ?? null,
     receipt_filename: written?.filename ?? null,
+  };
+  // Soft-fail detailed persist — page must keep working if Supabase is down.
+  const persisted = await persistTestScanRun(
+    laneAPersistInput({
+      ...payload,
+      tvl: typeof tvl === "number" || typeof tvl === "string" ? Number(tvl) : null,
+    }),
+  );
+  return json({
+    ...payload,
+    persist: persisted.ok
+      ? {
+          ok: true,
+          run_id: persisted.run_id,
+          findings_count: persisted.findings_count,
+          finding_ids: persisted.finding_ids,
+        }
+      : { ok: false, skipped: persisted.skipped ?? false, error: persisted.error },
   });
 }

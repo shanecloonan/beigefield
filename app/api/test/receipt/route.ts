@@ -3,23 +3,17 @@
  * Read-only. .md only. Noindex via the /test page; not public nav.
  */
 
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { supabaseUrl } from "@/lib/eth-scanner/capabilities";
 import { latestResearchReceipt, latestWrittenReceipt, loadDryRunStore, pickSourceArtifact } from "@/lib/eth-scanner/local-store";
 import { receiptFilename, renderReceiptMarkdown } from "@/lib/eth-scanner/receipt";
+import { createServiceSupabaseClient } from "@/lib/eth-scanner/service-supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 
 function serviceClient() {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const url = supabaseUrl();
-  if (!key || !url) return null;
-  return createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  return createServiceSupabaseClient();
 }
 
 function isAddress(raw: string | null): raw is string {

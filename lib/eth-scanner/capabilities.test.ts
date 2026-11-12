@@ -9,6 +9,7 @@ import {
 
 const savedKeys = process.env.ETHERSCAN_API_KEYS;
 const savedRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const savedSecret = process.env.SUPABASE_SECRET_KEY;
 const savedDry = process.env.ETH_SCANNER_DRY_RUN;
 
 afterEach(() => {
@@ -16,6 +17,8 @@ afterEach(() => {
   else process.env.ETHERSCAN_API_KEYS = savedKeys;
   if (savedRole == null) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   else process.env.SUPABASE_SERVICE_ROLE_KEY = savedRole;
+  if (savedSecret == null) delete process.env.SUPABASE_SECRET_KEY;
+  else process.env.SUPABASE_SECRET_KEY = savedSecret;
   if (savedDry == null) delete process.env.ETH_SCANNER_DRY_RUN;
   else process.env.ETH_SCANNER_DRY_RUN = savedDry;
 });
@@ -42,6 +45,7 @@ describe("etherscan /test fallback", () => {
   it("never puts the fallback key in capability notes", () => {
     delete process.env.ETHERSCAN_API_KEYS;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.SUPABASE_SECRET_KEY;
     const note = capabilityNote(scannerCapabilities());
     assert.equal(note.includes(TEST_ETHERSCAN_FALLBACK_KEY), false);
     assert.match(note, /live verified-source fetch available/);
