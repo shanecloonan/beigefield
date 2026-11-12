@@ -12,10 +12,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
+from eth_scanner.heat import evidence_heat, load_heat_weights, should_promote_lane_b
 from eth_scanner.heuristics.patterns import detect_fork_family, detect_weird_signals, skim_known_patterns
 from eth_scanner.heuristics.scope import FUNDS_AT_RISK_CLASSES, ScopeDecision, classify_scope
+from eth_scanner.invariants.live import run_live_invariants, summarize_role_flags
+from eth_scanner.known_safe import filter_standard_movers, is_known_safe
 from eth_scanner.types import (
     DEFAULT_HEAT_THRESHOLD,
+    DEFAULT_MIN_FUNDS_USD,
     DEFAULT_TVL_FLOOR_USD,
     MAX_HEAT,
     Bucket,
@@ -32,6 +36,9 @@ from eth_scanner.types import (
 class FunnelConfig:
     heat_threshold: int = DEFAULT_HEAT_THRESHOLD
     tvl_floor_usd: float = DEFAULT_TVL_FLOOR_USD
+    min_funds_usd: float = DEFAULT_MIN_FUNDS_USD
+    # Unit tests can inject results / skip network.
+    skip_live_invariants: bool = False
 
 
 @dataclass
@@ -42,6 +49,8 @@ class FunnelContext:
     source_text: str = ""
     hypotheses: list[Hypothesis] = field(default_factory=list)
     config: FunnelConfig = field(default_factory=FunnelConfig)
+    rpc_url: str = ""
+    invariant_results: list[dict[str, Any]] = field(default_factory=list)
 
 
 def _trace(stage: str, decision: str, reason: str, **extras: Any) -> StageTrace:
@@ -49,9 +58,15 @@ def _trace(stage: str, decision: str, reason: str, **extras: Any) -> StageTrace:
 
 
 def _exposed_movers(ir: IRDocument) -> list[str]:
+    """Deduped exposed custody movers (not erc20-standard)."""
     names: list[str] = []
+    seen: set[str] = set()
     for fn in ir.functions:
         if fn.is_value_mover and fn.exposed and fn.role != "erc20-standard":
+            key = (fn.name or "").lower()
+            if key in seen:
+                continue
+            seen.add(key)
             names.append(fn.name)
     return names
 
@@ -92,6 +107,22 @@ def _cap_heat(heat: int) -> int:
     return min(max(0, int(heat)), MAX_HEAT)
 
 
+def _funds_usd(ctx: FunnelContext) -> Optional[float]:
+    """Prefer live funds probe; fall back to manual TVL override on the target."""
+    t = ctx.target
+    if getattr(t, "funds_usd", None) is not None:
+        try:
+            return float(t.funds_usd)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            pass
+    if t.tvl_usd is not None:
+        try:
+            return float(t.tvl_usd)
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
 def run_lane_a(ctx: FunnelContext) -> FunnelResult:
     """S0–S6. Lane A emits a bucket; it never stamps yes/no."""
     notes: list[str] = [
@@ -130,30 +161,64 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
     ))
 
     # --- S2 IR confidence --------------------------------------------------
-    # Failed lift or low IR → manual-review. Low src (decompile) also
-    # forces manual-review after S2 (heat override + S1 prefer-manual).
-    if ir is None or ir.lift_failed or ir_conf == "low" or (ir and ir.unpack_failed):
-        reason = "ir_failed_or_low" if not (ir and ir.unpack_failed) else "unpack_failed"
+    # Classify scope FIRST, then route analysis failures. Demoted surfaces
+    # cool-archive; funds-at-floor venues with failed analysis → manual-review
+    # with reason 'analysis failed'. Pattern leads never add heat.
+    scope_early = _scope_of(ctx)
+    funds_usd = _funds_usd(ctx)
+    analysis_failed = (
+        ir is None or ir.lift_failed or ir_conf == "low"
+        or (ir and ir.unpack_failed) or src_conf == "low"
+    )
+    if analysis_failed:
+        reason = "analysis failed"
+        if ir and ir.unpack_failed:
+            detail = "unpack_failed"
+        elif ir is None or (ir and ir.lift_failed) or ir_conf == "low":
+            detail = "ir_failed_or_low"
+        else:
+            detail = "src_confidence=low"
+        if scope_early.demoted:
+            traces.append(_trace(
+                "S2", "lane-a-cool", reason,
+                detail=detail, ir_confidence=ir_conf, src_confidence=src_conf,
+                contract_class=scope_early.contract_class, scope=scope_early.scope,
+            ))
+            return _done(
+                "lane-a-cool", traces, src_conf, ir_conf, 0, notes,
+                extra="Analysis failed on demoted class — cool-archive (not manual-review).",
+                pattern_leads=pattern_leads,
+                movers=_exposed_movers(ir) if ir else [],
+                scope=scope_early,
+                funds_usd=funds_usd,
+            )
+        if funds_usd is not None and funds_usd >= ctx.config.min_funds_usd:
+            traces.append(_trace(
+                "S2", "manual-review", reason,
+                detail=detail, ir_confidence=ir_conf, src_confidence=src_conf,
+                funds_usd=funds_usd,
+            ))
+            heat, heat_bd = evidence_heat(funds_usd=funds_usd, invariant_results=[])
+            return _done(
+                "manual-review", traces, src_conf, ir_conf, heat, notes,
+                extra="analysis failed — funds >= floor; needs human read (Do Not Auto-Dismiss).",
+                pattern_leads=pattern_leads,
+                movers=_exposed_movers(ir) if ir else [],
+                scope=scope_early,
+                funds_usd=funds_usd,
+                heat_breakdown=heat_bd,
+            )
         traces.append(_trace(
-            "S2", "manual-review", reason,
-            ir_confidence=ir_conf, lift_failed=bool(ir and ir.lift_failed),
-            unpack_failed=bool(ir and ir.unpack_failed),
+            "S2", "lane-a-cool", reason,
+            detail=detail, funds_usd=funds_usd,
         ))
         return _done(
-            "manual-review", traces, src_conf, ir_conf, heat, notes,
-            extra="Do Not Auto-Dismiss: IR build failed, unpack failed, or ir_confidence=low.",
+            "lane-a-cool", traces, src_conf, ir_conf, 0, notes,
+            extra="analysis failed with funds below floor / unknown — cool-archive.",
             pattern_leads=pattern_leads,
             movers=_exposed_movers(ir) if ir else [],
-            scope=_scope_of(ctx),
-        )
-    if src_conf == "low":
-        traces.append(_trace("S2", "manual-review", "src_confidence=low override", src_confidence=src_conf))
-        return _done(
-            "manual-review", traces, src_conf, ir_conf, heat, notes,
-            extra="Do Not Auto-Dismiss: src_confidence=low (decompile / unverified) → manual-review.",
-            pattern_leads=pattern_leads,
-            movers=_exposed_movers(ir),
-            scope=_scope_of(ctx),
+            scope=scope_early,
+            funds_usd=funds_usd,
         )
     traces.append(_trace("S2", "continue", "ir_confidence=%s" % ir_conf, ir_confidence=ir_conf, lift_tool=ir.lift_tool))
 
@@ -201,7 +266,7 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
             movers=movers,
         ))
         traces.append(_trace("S5", "skip", "out-of-scope class — not competing for Lane B"))
-        traces.append(_trace("S6", "lane-a-cool", "cool-archive (TVL does not promote tokens/passthrough)"))
+        traces.append(_trace("S6", "lane-a-cool", "cool-archive (funds heat ranks; pattern leads add zero)"))
         return _done(
             "lane-a-cool", traces, src_conf, ir_conf, heat, notes,
             extra=(
@@ -214,6 +279,7 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
             pattern_leads=pattern_leads,
             movers=movers,
             scope=scope,
+            funds_usd=funds_usd,
         )
 
     if not movers:
@@ -267,15 +333,22 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
         movers=movers, contract_class=scope.contract_class, scope=scope.scope,
     ))
 
-    # --- S5 Cheap I1 auth heat ---------------------------------------------
-    # SELF-SCOPED? is treated as WEAK (clear class). True AMBIGUOUS only
-    # forces manual-review when *no* mover has a clear PRESENT/WEAK/MISSING
-    # bind — high heat + clear movers + weak/missing → keep walking to S6.
-    ambiguous_n = 0
-    missing_or_weak = False
-    all_strong = True
-    clear_n = 0
+    # --- S5 Evidence collection (auth tag + live invariants) ---------------
+    # Pattern leads / weird / fork / missing-auth keyword heat contribute ZERO.
+    # They only select which invariants to run.
+    safe, safe_reasons = is_known_safe(
+        address=ctx.target.address,
+        contract_name=(ctx.artifact.contract_name if ctx.artifact else None),
+        source=source,
+        implementation=(ctx.artifact.implementation if ctx.artifact else None),
+    )
+    if safe:
+        movers = filter_standard_movers(movers, known_safe=True)
+        notes.append("known-safe surface (%s) — standard movers ignored for ranking" % ",".join(safe_reasons[:4]))
+
     auth_map: dict[str, str] = {}
+    ambiguous_n = 0
+    clear_n = 0
     for name in movers:
         auth = _auth_for(ir, name)
         if auth == "SELF-SCOPED?":
@@ -283,104 +356,142 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
         auth_map[name] = auth
         if auth == "AMBIGUOUS":
             ambiguous_n += 1
-            all_strong = False
-        elif auth.startswith("MISSING") or auth == "WEAK":
-            missing_or_weak = True
-            all_strong = False
-            clear_n += 1
-            if ir_conf == "high":
-                heat += 2
-        elif auth == "PRESENT":
-            clear_n += 1
         else:
-            ambiguous_n += 1
-            all_strong = False
+            clear_n += 1
 
-    only_ambiguous = ambiguous_n > 0 and clear_n == 0
-    if only_ambiguous:
+    # Proxy flag comes from Etherscan Proxy/Implementation fields only.
+    is_proxy = bool(ctx.artifact and ctx.artifact.is_proxy)
+    impl = ctx.artifact.implementation if ctx.artifact else None
+    weird = list(ir.weird_signals) or []
+    fork = ir.fork_family
+    # Record pattern leads for invariant selection — never as heat.
+    traces.append(_trace(
+        "S5", "evidence",
+        "auth tagged; live invariants next (pattern leads add zero heat)",
+        auth=auth_map,
+        known_safe=safe,
+        is_proxy=is_proxy,
+        implementation=impl,
+        weird=weird,
+        fork_family=fork,
+        pattern_lead_ids=[p.get("id") for p in pattern_leads],
+    ))
+
+    inv_rows = list(ctx.invariant_results or [])
+    if not inv_rows and not ctx.config.skip_live_invariants and not safe:
+        live = run_live_invariants(
+            ctx.target.address,
+            contract_class=scope.contract_class,
+            rpc_url=ctx.rpc_url or "",
+        )
+        inv_rows = [r.to_dict() for r in live]
+    elif not inv_rows and safe:
+        inv_rows = [{
+            "id": "known-safe",
+            "name": "known-safe library/protocol",
+            "status": "held",
+            "evidence": ",".join(safe_reasons) or "curated",
+        }]
+
+    privileged, eoa_admin = False, False
+    if inv_rows:
+        # Rebuild lightweight objects for summarize_role_flags
+        from eth_scanner.invariants.live import LiveInvariantResult
+        objs = [
+            LiveInvariantResult(
+                id=str(r.get("id") or ""),
+                name=str(r.get("name") or ""),
+                status=str(r.get("status") or "unknown"),
+                evidence=str(r.get("evidence") or ""),
+                extras=dict(r.get("extras") or {}),
+            )
+            for r in inv_rows
+        ]
+        privileged, eoa_admin = summarize_role_flags(objs)
+
+    weights = load_heat_weights()
+    heat, heat_bd = evidence_heat(
+        funds_usd=funds_usd,
+        invariant_results=inv_rows,
+        privileged_callable=privileged,
+        eoa_admin=eoa_admin,
+        weights=weights,
+    )
+    traces.append(_trace(
+        "S5b", "heat",
+        "evidence heat=%d (funds + failed invariants only)" % heat,
+        heat=heat,
+        heat_breakdown=heat_bd,
+        invariant_results=inv_rows,
+        privileged_callable=privileged,
+        eoa_admin=eoa_admin,
+        funds_usd=funds_usd,
+    ))
+
+    if ambiguous_n > 0 and clear_n == 0 and funds_usd is not None and funds_usd >= ctx.config.min_funds_usd:
         traces.append(_trace(
             "S5", "manual-review",
-            "all cheap auth parses are truly ambiguous",
-            auth=auth_map, heat=_cap_heat(heat),
+            "analysis failed",
+            detail="all cheap auth parses are truly ambiguous",
+            auth=auth_map, heat=heat,
         ))
         return _done(
-            "manual-review", traces, src_conf, ir_conf, _cap_heat(heat), notes,
-            extra="Ambiguous cheap I1 check → manual-review, never discard.",
+            "manual-review", traces, src_conf, ir_conf, heat, notes,
+            extra="Ambiguous auth with funds >= floor → manual-review (analysis failed).",
             pattern_leads=pattern_leads,
             movers=movers,
             scope=scope,
+            funds_usd=funds_usd,
+            invariant_results=inv_rows,
+            heat_breakdown=heat_bd,
+            known_safe=safe,
         )
-    if ambiguous_n and clear_n:
-        traces.append(_trace(
-            "S5", "continue",
-            "mixed auth: %d clear / %d ambiguous — not a dismiss" % (clear_n, ambiguous_n),
-            auth=auth_map, heat=heat,
-        ))
-    elif missing_or_weak:
-        traces.append(_trace("S5", "heat+", "missing/weak bind on a value mover", auth=auth_map, heat=heat))
-    elif all_strong and ir_conf == "high":
-        traces.append(_trace("S5", "cool-candidate", "strong bind on all movers + high IR", auth=auth_map, heat=heat))
-    else:
-        traces.append(_trace("S5", "continue", "auth present or IR not high", auth=auth_map, heat=heat))
 
-    # Additive heat (ranking only)
-    weird = list(ir.weird_signals) or detect_weird_signals(source)
-    fork = ir.fork_family or detect_fork_family(source)
-    if "bridge-mint-release" in weird:
-        heat += 2
-    if ir.abi_mismatch_hint or (ctx.artifact and ctx.artifact.is_proxy and not ctx.artifact.implementation):
-        heat += 2
-        ir.abi_mismatch_hint = True
-    unpaired_acct = bool(ir.accounting_hits) and not any(fn.accounting_touched for fn in ir.functions if fn.is_value_mover)
-    if unpaired_acct:
-        heat += 1
-    if fork and any(s in weird for s in ("custom-share-math", "proxy-delegatecall", "first-deposit-edge")):
-        heat += 1
-    if "first-deposit-edge" in weird:
-        heat += 1
-    heat = _cap_heat(heat)
-
-    # --- S6 Deep-lane gate -------------------------------------------------
-    # Tokens / pass-through never reach here (S4 demote). Funds-at-risk
-    # families (lending / vault / staking / pool / bridge / maker) promote
-    # on regularity. Generic custody can still promote on heat / TVL / weirdness.
-    tvl = float(ctx.target.tvl_usd or 0)
-    family_promote = scope.contract_class in FUNDS_AT_RISK_CLASSES
-    promote = (
-        family_promote
-        or heat >= ctx.config.heat_threshold
-        or tvl >= ctx.config.tvl_floor_usd
-        or bool(set(weird) & {"bridge-mint-release", "custom-share-math", "proxy-delegatecall"})
-        or bool(fork and missing_or_weak)
+    # --- S6 Deep-lane gate (evidence only) ---------------------------------
+    # lane-b only if funds >= floor AND (failed invariant OR privileged
+    # callable OR EOA admin on >= $100k). Else cool, ranked by funds heat.
+    # proxy-delegatecall is NOT a promote signal.
+    promote, why = should_promote_lane_b(
+        funds_usd=funds_usd,
+        invariant_results=inv_rows,
+        privileged_callable=privileged,
+        eoa_admin=eoa_admin,
+        weights=weights,
     )
     if promote:
-        why = "in-scope %s" % scope.contract_class if family_promote else "heat/TVL/weirdness gate"
         traces.append(_trace(
             "S6", "lane-b-queue",
             why,
-            heat=heat, tvl_usd=tvl, weird=weird, fork_family=fork,
-            contract_class=scope.contract_class,
-            heat_threshold=ctx.config.heat_threshold, tvl_floor=ctx.config.tvl_floor_usd,
+            heat=heat, funds_usd=funds_usd, contract_class=scope.contract_class,
+            invariant_failed=any((r.get("status") or "").lower() == "failed" for r in inv_rows),
         ))
         return _done(
             "lane-b-queue", traces, src_conf, ir_conf, heat, notes,
-            extra="Promoted to Lane B (deep invariants). Not a finding.",
+            extra="Promoted to Lane B on failed invariant / open privilege / EOA admin. Not a finding.",
             pattern_leads=pattern_leads,
             movers=movers,
             scope=scope,
+            funds_usd=funds_usd,
+            invariant_results=inv_rows,
+            heat_breakdown=heat_bd,
+            known_safe=safe,
         )
 
     traces.append(_trace(
         "S6", "lane-a-cool",
-        "below deep-lane gate",
-        heat=heat, tvl_usd=tvl, weird=weird, contract_class=scope.contract_class,
+        why or "no evidence for lane-b — rank by funds",
+        heat=heat, funds_usd=funds_usd, contract_class=scope.contract_class,
     ))
     return _done(
         "lane-a-cool", traces, src_conf, ir_conf, heat, notes,
-        extra="Lane A archive with score trail. Human spot-check sample.",
+        extra="Lane A cool-archive ranked by measured funds. Pattern leads recorded, zero heat.",
         pattern_leads=pattern_leads,
         movers=movers,
         scope=scope,
+        funds_usd=funds_usd,
+        invariant_results=inv_rows,
+        heat_breakdown=heat_bd,
+        known_safe=safe,
     )
 
 
@@ -590,10 +701,18 @@ def _done(
     hypotheses: Optional[list[Hypothesis]] = None,
     movers: Optional[list[str]] = None,
     scope: Optional[ScopeDecision] = None,
+    funds_usd: Optional[float] = None,
+    invariant_results: Optional[list[dict[str, Any]]] = None,
+    heat_breakdown: Optional[dict[str, Any]] = None,
+    known_safe: bool = False,
+    contract_name: Optional[str] = None,
 ) -> FunnelResult:
     n = list(notes)
     if extra:
         n.append(extra)
+    # Cool-archive still ranks by measured funds so /test sorts usefully.
+    if heat_breakdown is None and funds_usd is not None and bucket == "lane-a-cool":
+        heat, heat_breakdown = evidence_heat(funds_usd=funds_usd, invariant_results=invariant_results or [])
     return FunnelResult(
         bucket=bucket,
         dropped=False,
@@ -609,4 +728,9 @@ def _done(
         contract_class=scope.contract_class if scope else "unknown",
         scope=scope.scope if scope else "unknown",
         scope_signals=list(scope.signals) if scope else [],
+        funds_usd=funds_usd,
+        invariant_results=list(invariant_results or []),
+        heat_breakdown=dict(heat_breakdown or {}),
+        known_safe=known_safe,
+        contract_name=contract_name,
     )

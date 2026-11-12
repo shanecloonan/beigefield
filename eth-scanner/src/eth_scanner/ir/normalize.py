@@ -127,9 +127,12 @@ def normalize(
             "(Slither not required)"
         )
 
-    weird = detect_weird_signals(src)
-    fork = detect_fork_family(src)
-    leads = skim_known_patterns(src)
+    # Weird / fork-family regexes run on the *main* contract file only so
+    # imported OZ Proxy.sol / IERC20.sol do not false-flag the target.
+    main_src = _main_contract_source(src, artifact.contract_name, surface)
+    weird = detect_weird_signals(main_src)
+    fork = detect_fork_family(main_src)
+    leads = skim_known_patterns(src)  # leads still scan full blob for invariant selection
     accounting: list[dict[str, Any]] = []
     ext: list[dict[str, Any]] = []
     for f in surface.get("files") or []:
@@ -291,6 +294,32 @@ def _ir_confidence(
     if src_conf == "high" and language in {"solidity", "vyper"} and function_count > 0:
         return "high"
     return "med"
+
+
+def _main_contract_source(
+    src: str,
+    contract_name: Optional[str],
+    surface: dict[str, Any],
+) -> str:
+    """Best-effort primary contract body for weird/fork regexes.
+
+    Prefers the surface file whose path/name matches ContractName; else the
+    Solidity/Vyper type block for that name; else the full source.
+    """
+    focus = (contract_name or "").strip()
+    files = list(surface.get("files") or [])
+    if focus and files:
+        for f in files:
+            path = str(f.get("file") or f.get("path") or "").replace("\\", "/")
+            if _path_matches_focus(path, focus, { _norm_ident(focus) }, set()):
+                body = f.get("source") or f.get("content") or ""
+                if body:
+                    return str(body)
+    if focus and src:
+        for kind, name, body in _type_blocks(src):
+            if kind == "contract" and _ident_match(name, focus):
+                return body or src
+    return src
 
 
 def _try_slither(src: str, source_dir: Optional[Path]) -> bool:

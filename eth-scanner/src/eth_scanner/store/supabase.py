@@ -309,6 +309,16 @@ class SupabaseStore:
             result_body["funds_status"] = result.funds_status
         if result.funds_checked_at:
             result_body["funds_checked_at"] = result.funds_checked_at
+        if getattr(result, "invariant_results", None) is not None:
+            result_body["invariant_results"] = list(result.invariant_results or [])
+        if getattr(result, "heat_breakdown", None) is not None:
+            result_body["heat_breakdown"] = dict(result.heat_breakdown or {})
+        if getattr(result, "known_safe", False):
+            result_body["known_safe"] = True
+        if getattr(result, "contract_name", None):
+            result_body["contract_name"] = result.contract_name
+        if getattr(result, "pattern_leads", None) is not None:
+            result_body["pattern_leads"] = to_plain(result.pattern_leads)
         self._req("POST", "eth_scan_results", result_body, prefer="return=minimal")
         patch: dict[str, Any] = {
             "bucket": result.bucket,
@@ -326,6 +336,12 @@ class SupabaseStore:
             patch["funds_status"] = result.funds_status
         if result.funds_checked_at:
             patch["funds_checked_at"] = result.funds_checked_at
+        if getattr(result, "known_safe", False):
+            patch["known_safe"] = True
+        if getattr(result, "contract_name", None):
+            patch["contract_name"] = result.contract_name
+        if getattr(result, "heat_breakdown", None) is not None:
+            patch["heat_breakdown"] = dict(result.heat_breakdown or {})
         self._req("PATCH", "eth_scan_targets", patch, query={"address": "eq.%s" % addr})
 
     def claim_pending(self, limit: int, worker_id: str) -> list[dict[str, Any]]:

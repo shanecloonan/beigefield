@@ -67,20 +67,21 @@ export async function GET(req: Request) {
 
   let targetsQuery = sb
     .from("eth_scan_targets")
-    .select("address,bytecode_hash,tvl_usd,status,src_confidence,ir_confidence,heat,bucket,funds_usd,funds_breakdown,funds_status,funds_checked_at,updated_at")
+    .select("address,bytecode_hash,tvl_usd,status,src_confidence,ir_confidence,heat,bucket,funds_usd,funds_breakdown,funds_status,funds_checked_at,known_safe,contract_name,heat_breakdown,updated_at")
     .order("updated_at", { ascending: false })
     .limit(limit);
   if (bucket && (BUCKETS as readonly string[]).includes(bucket)) {
     targetsQuery = targetsQuery.eq("bucket", bucket);
   }
 
-  const [targetsRes, resultsRes] = await Promise.all([
+  const [targetsRes, resultsRes, precisionRes] = await Promise.all([
     targetsQuery,
     sb
       .from("eth_scan_results")
-      .select("id,address,bucket,heat,stage_trace,notes,funds_usd,funds_breakdown,funds_status,funds_checked_at,created_at")
+      .select("id,address,bucket,heat,stage_trace,notes,funds_usd,funds_breakdown,funds_status,funds_checked_at,invariant_results,heat_breakdown,known_safe,contract_name,created_at")
       .order("created_at", { ascending: false })
       .limit(limit),
+    sb.from("test_scan_precision").select("*").maybeSingle(),
   ]);
 
   if (targetsRes.error || resultsRes.error) {
@@ -121,10 +122,11 @@ export async function GET(req: Request) {
     targets,
     results: resultsRes.data ?? [],
     history: { runs: history.runs, findings: history.findings, error: history.error },
+    precision: precisionRes.error ? null : precisionRes.data,
     fixtures,
     research_fixtures: researchFixtureCatalog(),
     research_receipts: listResearchReceipts(12),
     python_runtime,
-    note: `${modeNote} Automation never stamps yes. Low IR stays in manual-review. Detailed /test history loads from test_scan_*.`,
+    note: `${modeNote} Heat is evidence-only (funds + failed invariants). Pattern leads add zero heat. Detailed /test history loads from test_scan_*.`,
   });
 }

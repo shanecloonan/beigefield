@@ -88,7 +88,8 @@ describe("persist payload mappers", () => {
     const a = buildDedupeKey(input);
     const b = buildDedupeKey(input);
     assert.equal(a, b);
-    assert.match(a, /^[a-f0-9]{64}$/);
+    // Lane A re-scans of the same address share one dedupe key (update, not duplicate).
+    assert.match(a, /^lane-a:0x[0-9a-f]{40}$/);
     assert.equal(input.funds_usd, 4200);
     assert.equal(input.tvl_usd, 4200);
     assert.equal(input.money_at_risk_usd, 4200);

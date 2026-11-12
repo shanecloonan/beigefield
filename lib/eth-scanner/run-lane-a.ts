@@ -66,6 +66,13 @@ export type LaneAResult = {
   funds_breakdown: FundsAsset[];
   funds_status: string | null;
   funds_checked_at: string | null;
+  invariant_results: unknown[];
+  heat_breakdown: Record<string, unknown>;
+  known_safe: boolean;
+  contract_name: string | null;
+  stage_trace: unknown[];
+  pattern_leads: unknown[];
+  hypotheses: unknown[];
 };
 
 export type LaneARunOk = {
@@ -194,6 +201,16 @@ function shapeResult(row: Record<string, unknown>, address: string): LaneAResult
     funds_breakdown: asFundsBreakdown(row.funds_breakdown),
     funds_status: row.funds_status == null ? null : String(row.funds_status),
     funds_checked_at: row.funds_checked_at == null ? null : String(row.funds_checked_at),
+    invariant_results: Array.isArray(row.invariant_results) ? row.invariant_results : [],
+    heat_breakdown:
+      row.heat_breakdown && typeof row.heat_breakdown === "object" && !Array.isArray(row.heat_breakdown)
+        ? (row.heat_breakdown as Record<string, unknown>)
+        : {},
+    known_safe: Boolean(row.known_safe),
+    contract_name: row.contract_name == null ? null : String(row.contract_name),
+    stage_trace: Array.isArray(row.stage_trace) ? row.stage_trace : [],
+    pattern_leads: Array.isArray(row.pattern_leads) ? row.pattern_leads : [],
+    hypotheses: Array.isArray(row.hypotheses) ? row.hypotheses : [],
   };
 }
 
