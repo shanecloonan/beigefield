@@ -69,12 +69,15 @@ jobs:
           fi
           command -v slither && slither --version | head -1 || echo "slither missing"
           # Foundry (forge/anvil) — Medusa primary fuzz, Foundry fallback.
+          # foundryup-init currently installs under ~/.config/.foundry/bin.
           if ! command -v forge >/dev/null 2>&1; then
             curl -L https://foundry.paradigm.xyz | bash || true
-            export PATH="$HOME/.foundry/bin:$PATH"
+            export PATH="$HOME/.config/.foundry/bin:$HOME/.foundry/bin:$PATH"
+            echo "$HOME/.config/.foundry/bin" >> "$GITHUB_PATH"
             echo "$HOME/.foundry/bin" >> "$GITHUB_PATH"
-            foundryup || true
+            foundryup || "$HOME/.config/.foundry/bin/foundryup" || "$HOME/.foundry/bin/foundryup" || true
           fi
+          export PATH="$HOME/.config/.foundry/bin:$HOME/.foundry/bin:$PATH"
           command -v forge && forge --version | head -1 || echo "forge missing"
           command -v anvil && anvil --version | head -1 || echo "anvil missing"
           # Medusa (optional) — parallel fuzz; skip quietly on failure.

@@ -64,6 +64,18 @@ class HarnessGeneration(unittest.TestCase):
 
 
 class FuzzEvidenceHeat(unittest.TestCase):
+    def test_medusa_compile_failure_is_not_a_property_failure(self):
+        from eth_scanner.engines.fuzz_runner import FuzzReport, _ingest_medusa_output
+
+        report = FuzzReport(
+            ran=True,
+            property_ids=["solvency_assets_cover_shares"],
+            properties_checked=1,
+        )
+        _ingest_medusa_output("Failed to compile target\x1b[31m", report)
+        self.assertEqual(report.failure_count, 0)
+        self.assertTrue(any("compile" in n.lower() for n in report.notes))
+
     def test_property_failure_feeds_failed_invariant_heat(self):
         report = FuzzReport(
             ran=True,
