@@ -69,6 +69,11 @@ class CloneFingerprint(unittest.TestCase):
 
 
 class PipelineGating(unittest.TestCase):
+    def test_custody_is_engine_eligible(self):
+        from eth_scanner.engines.pipeline import ENGINE_ELIGIBLE_CLASSES
+        self.assertIn("custody", ENGINE_ELIGIBLE_CLASSES)
+        self.assertIn("vault", ENGINE_ELIGIBLE_CLASSES)
+
     def test_skips_when_not_money_at_risk(self):
         report = run_advanced_engines(
             address="0x" + "11" * 20,
