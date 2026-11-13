@@ -44,8 +44,10 @@ def _aggregate_engine_stats(scan_results: list[dict[str, Any]]) -> dict[str, Any
         if not n_leads:
             n_leads = int(hb.get("engine_leads") or et.get("leads") or 0)
         leads += n_leads
-        n_conf = len(row.get("confirmed_findings") or [])
-        if not n_conf:
+        findings = list(row.get("confirmed_findings") or [])
+        if findings:
+            n_conf = sum(1 for c in findings if c.get("confirmed"))
+        else:
             n_conf = int(hb.get("engine_confirmed") or et.get("confirmed") or 0)
         confirmed += n_conf
         if et or n_leads or n_conf:
