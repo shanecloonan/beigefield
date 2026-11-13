@@ -171,8 +171,10 @@ def run_one(
                 for art in list(eng.fuzz_artifacts or []):
                     try:
                         save_art(addr, "fuzz", dict(art), "med" if art.get("failures") else "low")
-                    except Exception:  # noqa: BLE001
-                        pass
+                    except Exception as exc:  # noqa: BLE001
+                        result.notes = list(result.notes or []) + [
+                            "fuzz artifact save failed: %s" % str(exc)[:120]
+                        ]
             # Recompute evidence heat with corroborations + fuzz failures.
             priv, eoa = _flags_from_invariant_dicts(inv_rows)
             heat, heat_bd = evidence_heat(
