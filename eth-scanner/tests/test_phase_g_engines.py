@@ -86,7 +86,8 @@ class HalmosSymbolic(unittest.TestCase):
             self.assertIn("vm.etch", sol)
             self.assertNotIn("new MockBound", sol)
             toml = (root / "foundry.toml").read_text(encoding="utf-8")
-            self.assertIn('solc = "0.8.19"', toml)
+            # Harness floors at 0.8.20 even when target compiler is older.
+            self.assertIn('solc = "0.8.20"', toml)
             self.assertTrue((root / "lib" / "forge-std" / "src" / "Vm.sol").is_file())
             self.assertGreaterEqual(len(props), 2)
             # Halmos fallback: mock etch hex without deployCode/`new`.
@@ -101,12 +102,16 @@ class HalmosSymbolic(unittest.TestCase):
             self.assertNotIn("new MockBound", sol2)
 
     def test_solc_detect_from_pragma_and_compiler(self):
-        from eth_scanner.engines.fuzz_harness import detect_solc_version
+        from eth_scanner.engines.fuzz_harness import detect_solc_version, harness_solc_version
         self.assertEqual(detect_solc_version(compiler="v0.8.17+commit.8df45f5f"), "0.8.17")
         self.assertEqual(
             detect_solc_version(source="pragma solidity ^0.8.12;"),
             "0.8.12",
         )
+        # Harness never goes below 0.8.20 (LiveProperties pragma).
+        self.assertEqual(harness_solc_version(compiler="v0.8.17+commit.8df45f5f"), "0.8.20")
+        self.assertEqual(harness_solc_version(compiler="v0.4.26+commit.xxx"), "0.8.20")
+        self.assertEqual(harness_solc_version(compiler="v0.8.30+commit.xxx"), "0.8.30")
 
     def test_error_paths_are_property_skips_not_compile_skip(self):
         from eth_scanner.engines.halmos_runner import _ingest

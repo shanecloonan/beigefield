@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from eth_scanner.engines.fuzz_harness import (
-    detect_solc_version,
+    harness_solc_version,
     properties_for_class,
     write_live_fuzz_project,
 )
@@ -123,7 +123,7 @@ def run_lead_halmos(
         if code:
             report.notes.append("halmos fetched runtime bytecode (%d bytes)" % max(0, (len(code) - 2) // 2))
 
-    solc = detect_solc_version(source=source, compiler=compiler)
+    solc = harness_solc_version(source=source, compiler=compiler)
     report.notes.append("halmos solc=%s" % solc)
 
     base = Path(work_dir) if work_dir else Path(tempfile.gettempdir())
@@ -140,6 +140,7 @@ def run_lead_halmos(
             runtime_bytecode=code,
             source_dir=source_dir,
             allow_mock_etch=True,  # Halmos cannot new/deployCode
+            include_target_sources=False,  # OZ remaps break etch harness compile
         )
         report.property_ids = props
         report.properties_checked = len(props)
@@ -175,6 +176,7 @@ def run_lead_halmos(
 
     cmd = [
         bin_path,
+        "--contract", "LiveProperties",
         "--function", "check_",
         "--solver-timeout-assertion", "2000",
         "--solver-timeout-branching", "2000",
@@ -220,14 +222,16 @@ def run_lead_halmos(
         report.status = "failed"
     elif report.properties_executed > 0:
         report.status = "ok"
-    elif proc.returncode not in (0, None):
-        report.status = "error"
+    else:
+        # Exit 0 with zero check_* results is NOT a successful campaign.
+        report.status = "skipped"
+        report.executed = False
+        report.skipped = True
+        report.ran = False
         report.notes.append(
             "halmos exit=%s with no executed checks — %s"
             % (proc.returncode, blob[-180:].replace("\n", " ")[:160])
         )
-    else:
-        report.status = "ok"
 
     report.notes.append(
         "halmos exit=%s executed=%d skipped_props=%d failures=%d"

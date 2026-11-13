@@ -108,6 +108,31 @@ def detect_solc_version(
     return default
 
 
+def harness_solc_version(
+    *,
+    source: str = "",
+    compiler: Optional[str] = None,
+    floor: str = "0.8.20",
+) -> str:
+    """Solc for the LiveProperties harness — must satisfy pragma ^0.8.20.
+
+    Target contracts may be 0.4.x / 0.8.18; we only compile our etch harness,
+    so floor at 0.8.20 (and prefer the target's 0.8.x when newer).
+    """
+    detected = detect_solc_version(source=source, compiler=compiler, default=floor)
+    return _max_solc(detected, floor)
+
+
+def _max_solc(a: str, b: str) -> str:
+    def parts(v: str) -> tuple[int, int, int]:
+        try:
+            x, y, z = (v or "0.0.0").split(".")[:3]
+            return int(x), int(y), int(z)
+        except (TypeError, ValueError):
+            return (0, 0, 0)
+    return a if parts(a) >= parts(b) else b
+
+
 def write_live_fuzz_project(
     dest: Path,
     *,
@@ -120,12 +145,17 @@ def write_live_fuzz_project(
     runtime_bytecode: str = "",
     source_dir: Optional[Path] = None,
     allow_mock_etch: bool = False,
+    include_target_sources: bool = False,
 ) -> tuple[Path, list[str]]:
     """Materialize a Foundry (+ Medusa/Halmos) project with forge-std + etch setUp.
 
     Halmos cannot `new`/deployCode — pass allow_mock_etch=True so missing
     runtime bytecode falls back to etching MOCK_BOUND_RUNTIME_HEX. Foundry
     fork fuzz should leave allow_mock_etch=False and rely on --fork-url.
+
+    Target sources are NOT copied by default: multi-file Etherscan trees often
+    reference @openzeppelin/... that we do not vendor, and that broke CI
+    compile. Etch uses runtime bytecode only.
     """
     root = Path(dest)
     if root.exists():
@@ -137,7 +167,8 @@ def write_live_fuzz_project(
     props = list(properties_for_class(contract_class))
     addr_hex = _hex40(address)
     name = (contract_name or "Target").replace(" ", "")[:40] or "Target"
-    solc = solc_version or detect_solc_version(source=source, compiler=compiler)
+    # Always compile harness at >=0.8.20 (pragma on LiveProperties/MockBound).
+    solc = solc_version or harness_solc_version(source=source, compiler=compiler)
 
     # Vendor minimal forge-std (Vm + Test) for Halmos etch support.
     _copy_forge_std(root / "lib" / "forge-std" / "src")
@@ -146,8 +177,9 @@ def write_live_fuzz_project(
         encoding="utf-8",
     )
 
-    # Optional: unpack multi-file / copy source_dir into src/target for remappings.
-    remaps_extra = _materialize_target_sources(root, source=source, source_dir=source_dir)
+    remaps_extra: list[str] = []
+    if include_target_sources:
+        remaps_extra = _materialize_target_sources(root, source=source, source_dir=source_dir)
 
     remappings_toml = 'remappings = ["forge-std/=lib/forge-std/src/"'
     for r in remaps_extra:
@@ -168,6 +200,7 @@ def write_live_fuzz_project(
             "fs_permissions = []",
             "isolate = false",
             "evm_version = \"shanghai\"",
+            "auto_detect_solc = false",
             remappings_toml,
             "",
             "[profile.default.fuzz]",

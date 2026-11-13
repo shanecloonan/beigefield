@@ -124,15 +124,18 @@ def run_lead_fuzz(
     base = Path(work_dir) if work_dir else Path(tempfile.gettempdir())
     dest = base / "engine-fuzz" / (address.lower()[-16:] or "target")
     try:
+        from eth_scanner.engines.fuzz_harness import harness_solc_version
         project, props = write_live_fuzz_project(
             dest,
             address=address,
             contract_class=contract_class,
             contract_name=contract_name,
+            solc_version=harness_solc_version(source=source, compiler=compiler),
             compiler=compiler,
             source=source,
             runtime_bytecode=runtime_bytecode,
             source_dir=source_dir,
+            include_target_sources=False,
         )
         report.property_ids = props
         report.properties_checked = len(props)
