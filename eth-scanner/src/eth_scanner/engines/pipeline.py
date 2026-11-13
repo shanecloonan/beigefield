@@ -26,6 +26,10 @@ from eth_scanner.engines.corroborate import corroborate_lead, resolve_proxy_meta
 from eth_scanner.heuristics.scope import FUNDS_AT_RISK_CLASSES
 from eth_scanner.research.slither_runner import SLITHER_ALLOWLIST
 
+# Engines run on classic money-at-risk families plus custody (funds-at-rest
+# keep class that is intentionally not auto-promoted by the funnel alone).
+ENGINE_ELIGIBLE_CLASSES = frozenset(FUNDS_AT_RISK_CLASSES | {"custody"})
+
 _CACHE_LOCK = threading.Lock()
 _MEM_CACHE: dict[str, dict[str, Any]] = {}
 
@@ -79,7 +83,7 @@ def run_advanced_engines(
         report.notes.append("skip engines — unverified or empty source")
         report.timing["total_ms"] = int((time.monotonic() - t0) * 1000)
         return report
-    if contract_class not in FUNDS_AT_RISK_CLASSES:
+    if contract_class not in ENGINE_ELIGIBLE_CLASSES:
         report.notes.append("skip engines — class %s not money-at-risk" % contract_class)
         report.timing["total_ms"] = int((time.monotonic() - t0) * 1000)
         return report
