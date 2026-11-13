@@ -214,6 +214,16 @@ class PipelineFuzzGating(unittest.TestCase):
         self.assertTrue(report.skipped)
         self.assertEqual(report.status, "skipped")
 
+    def test_fork_rpc_death_detection(self):
+        from eth_scanner.engines.fuzz_runner import _looks_like_fork_rpc_death
+
+        self.assertTrue(_looks_like_fork_rpc_death([
+            "forge test exit=1 — ieve chain ID from fork endpoint tcp connect",
+        ]))
+        self.assertFalse(_looks_like_fork_rpc_death([
+            "forge test exit=0 passed=4 failed=0",
+        ]))
+
 
 class KnownSafeStayCold(unittest.TestCase):
     def test_curated_tokens_known_safe(self):
