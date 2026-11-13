@@ -88,13 +88,12 @@ def write_live_fuzz_project(
             "optimizer_runs = 200",
             "ffi = false",
             "fs_permissions = []",
+            # Foundry 1.x defaults isolate=true which breaks try/catch against
+            # missing selectors on fork targets; keep classic call semantics.
+            "isolate = false",
             "",
             "[profile.default.fuzz]",
             "runs = 32",
-            "",
-            "[profile.default.invariant]",
-            "runs = 8",
-            "depth = 16",
             "",
         ]),
         encoding="utf-8",
@@ -204,6 +203,9 @@ contract LiveProperties {{
 
     /// Non-owner must not freely take ownership / pause / upgrade.
     function test_access_control_non_owner() public {{
+        // Empty accounts return success on any call — require live code first.
+        if (TARGET.code.length == 0) return;
+
         address own;
         bool hasOwner;
         try t.owner() returns (address o) {{
@@ -221,6 +223,7 @@ contract LiveProperties {{
         if (own == address(0) || own == address(this)) return;
 
         (bool okOwn, ) = TARGET.call(abi.encodeWithSignature("transferOwnership(address)", outsider));
+        // Success with empty/non-reverting return on a real contract is a fail.
         assert(!okOwn);
 
         (bool okPause, ) = TARGET.call(abi.encodeWithSignature("pause()"));
@@ -269,10 +272,6 @@ contract LiveProperties {{
         }} else {{
             assert(afterBal == beforeBal);
         }}
-    }}
-
-    function invariant_solvency_assets_cover_shares() public view {{
-        test_solvency_assets_cover_shares();
     }}
 }}
 """

@@ -61,7 +61,31 @@ class HarnessGeneration(unittest.TestCase):
             self.assertNotIn("broadcast", low)
             self.assertIn("proof of bug", low)
             self.assertIn('address(bytes20(hex"', sol)
+            self.assertNotIn("function invariant_", sol)
+            toml = (root / "foundry.toml").read_text(encoding="utf-8")
+            self.assertIn("isolate = false", toml)
             self.assertGreaterEqual(len(props), 2)
+
+    def test_forge_cli_omits_removed_invariant_runs_flag(self):
+        import ast
+        import inspect
+        from eth_scanner.engines import fuzz_runner as fr
+
+        src = inspect.getsource(fr._run_forge)
+        self.assertIn("--fuzz-runs", src)
+        self.assertIn("--fork-url", src)
+        # Ensure the argv literal list never passes the removed Foundry 1.9 flag.
+        tree = ast.parse(src)
+        argv_lists = [
+            node for node in ast.walk(tree)
+            if isinstance(node, ast.List)
+        ]
+        rendered = [" ".join(
+            (elt.value if isinstance(elt, ast.Constant) and isinstance(elt.value, str) else "")
+            for elt in lst.elts
+        ) for lst in argv_lists]
+        self.assertTrue(any("--fuzz-runs" in r for r in rendered))
+        self.assertFalse(any("--invariant-runs" in r for r in rendered))
 
 
 class FuzzEvidenceHeat(unittest.TestCase):
