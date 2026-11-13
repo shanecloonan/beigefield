@@ -273,6 +273,23 @@ contract LiveProperties {{
             assert(afterBal == beforeBal);
         }}
     }}
+
+    // Halmos entrypoints (check_*) — same properties, symbolic path.
+    function check_solvency_assets_cover_shares() public view {{
+        test_solvency_assets_cover_shares();
+    }}
+
+    function check_share_price_round_trip(uint96 assets) public view {{
+        testFuzz_share_price_round_trip(assets);
+    }}
+
+    function check_access_control_non_owner() public {{
+        test_access_control_non_owner();
+    }}
+
+    function check_no_third_party_balance_drop() public {{
+        test_no_third_party_balance_drop();
+    }}
 }}
 """
 

@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "note": "Curated public-disclosure fingerprints only (DeFiHackLabs / public audits). Matches are leads — confirmation still requires read-only/fork checks. No exploit payloads.",
+  "entries": [
+    {
+      "id": "defihacklabs-erc4626-inflation",
+      "title": "ERC-4626 first-depositor share inflation family",
+      "severity": "high",
+      "refs": ["https://github.com/SunWeb3Sec/DeFiHackLabs"],
+      "source_markers": ["totalSupply() == 0", "deposit(", "mint(", "convertToShares"],
+      "selector_skeleton": ["6e553f65", "b760faf9", "07a2d13a", "c6e6f592"],
+      "notes": "Public audit class: inflation via empty vault"
+    },
+    {
+      "id": "defihacklabs-unprotected-init",
+      "title": "Unprotected initialize on upgradeable proxy family",
+      "severity": "critical",
+      "refs": ["https://github.com/SunWeb3Sec/DeFiHackLabs"],
+      "source_markers": ["function initialize", "public", "owner ="],
+      "selector_skeleton": ["8129fc1c", "c4d66de8"],
+      "notes": "Missing initializer modifier / _disableInitializers"
+    },
+    {
+      "id": "defihacklabs-proxy-admin-takeover",
+      "title": "Public changeAdmin / upgradeTo without access control",
+      "severity": "critical",
+      "refs": ["https://github.com/SunWeb3Sec/DeFiHackLabs"],
+      "source_markers": ["function changeAdmin", "function upgradeTo"],
+      "selector_skeleton": ["8f283970", "3659cfe6", "4f1ef286"],
+      "notes": "Anyone-callable proxy admin"
+    },
+    {
+      "id": "audit-oracle-spot-only",
+      "title": "Spot AMM price without TWAP / manipulation resistance",
+      "severity": "high",
+      "refs": ["public audit findings"],
+      "source_markers": ["getReserves()", "slot0()", "getAmountOut"],
+      "selector_skeleton": ["0902f1ac", "3850c7bd"],
+      "notes": "Thin-pool spot price used for critical accounting"
+    },
+    {
+      "id": "audit-reentrancy-eth",
+      "title": "Ether transfer before state finalization pattern",
+      "severity": "high",
+      "refs": ["public audit findings"],
+      "source_markers": [".call{value:", "balances[", "require(success"],
+      "selector_skeleton": [],
+      "notes": "Classic CEI violation markers — lead only"
+    }
+  ]
+}
