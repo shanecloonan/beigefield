@@ -406,11 +406,13 @@ def _run_forge(
         report.status = "skipped"
         report.notes.append("forge not on PATH")
         return
+    # Foundry 1.9 dropped --invariant-runs; fuzz runs come from CLI / foundry.toml.
+    # Harness is unit/fuzz tests only (no invariant_* handlers) so campaigns stay
+    # on the live TARGET via --fork-url.
     cmd = [
         forge, "test",
         "--fork-url", fork_rpc,
         "--fuzz-runs", "24",
-        "--invariant-runs", "4",
         "--match-contract", "LiveProperties",
         "-vv",
     ]
@@ -447,7 +449,11 @@ def _run_forge(
         report.status = "failed"
     elif proc.returncode != 0:
         report.status = "error"
-        report.notes.append("forge test exit=%s with no parsed failures" % proc.returncode)
+        tail = blob[-240:].replace("\n", " ").strip()
+        report.notes.append(
+            "forge test exit=%s with no parsed failures — %s"
+            % (proc.returncode, tail[:200])
+        )
     else:
         report.status = "ok"
     report.notes.append(

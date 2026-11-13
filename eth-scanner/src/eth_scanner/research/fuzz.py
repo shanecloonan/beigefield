@@ -109,7 +109,8 @@ def run_forge_fuzz(
     runs = max(1, min(int(fuzz_runs or 64), 256))
     try:
         proc = subprocess.run(
-            ["forge", "test", "--fuzz-runs", str(runs), "--invariant-runs", "8"],
+            # Foundry 1.9+: --invariant-runs removed; use foundry.toml / defaults.
+            ["forge", "test", "--fuzz-runs", str(runs)],
             cwd=str(root),
             capture_output=True,
             text=True,
