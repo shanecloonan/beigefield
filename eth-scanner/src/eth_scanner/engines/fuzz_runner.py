@@ -153,12 +153,14 @@ def run_lead_fuzz(
 
     anvil_proc: Optional[subprocess.Popen[str]] = None
     fork_rpc = rpc_url
+    parent_rpc = rpc_url
     try:
         anvil_proc, fork_rpc, block = _start_anvil_fork(rpc_url, remaining=remaining)
         if block is not None:
             report.fork_block = block
         if anvil_proc is None:
             report.notes.append("anvil unavailable — forge/medusa will use ETH_RPC_URL directly")
+            fork_rpc = parent_rpc
         remaining = budget - int(time.monotonic() - t0)
 
         med = medusa_bin()
@@ -166,12 +168,25 @@ def run_lead_fuzz(
             report.tool = "medusa"
             report.ran = True
             report.skipped = False
-            _run_medusa(med, project, fork_rpc, remaining, report)
+            active_rpc = _alive_fork_rpc(anvil_proc, fork_rpc, parent_rpc, report)
+            _run_medusa(med, project, active_rpc, remaining, report)
         elif forge_bin() and remaining >= 8:
             report.tool = "forge"
             report.ran = True
             report.skipped = False
-            _run_forge(project, fork_rpc, remaining, report)
+            active_rpc = _alive_fork_rpc(anvil_proc, fork_rpc, parent_rpc, report)
+            _run_forge(project, active_rpc, remaining, report)
+            # Parallel workers can kill local anvil mid-run; retry once on parent RPC.
+            if (
+                report.status == "error"
+                and active_rpc != parent_rpc
+                and _looks_like_fork_rpc_death(report.notes)
+            ):
+                report.notes.append("anvil died mid-run — retrying forge against ETH_RPC_URL")
+                report.failures.clear()
+                retry_budget = max(8, budget - int(time.monotonic() - t0))
+                if retry_budget >= 8:
+                    _run_forge(project, parent_rpc, retry_budget, report)
         else:
             report.status = "skipped"
             report.notes.append("fuzz skipped — medusa and forge not on PATH")
@@ -496,6 +511,40 @@ def _free_port() -> int:
         return int(s.getsockname()[1])
 
 
+def _alive_fork_rpc(
+    anvil_proc: Optional[subprocess.Popen[str]],
+    fork_rpc: str,
+    parent_rpc: str,
+    report: FuzzReport,
+) -> str:
+    """Prefer local anvil when still serving; otherwise fall back to parent RPC."""
+    if anvil_proc is None or fork_rpc == parent_rpc:
+        return parent_rpc
+    if anvil_proc.poll() is not None:
+        report.notes.append("anvil exited early — using ETH_RPC_URL")
+        return parent_rpc
+    if _eth_block_number(fork_rpc) is None:
+        report.notes.append("anvil not answering eth_blockNumber — using ETH_RPC_URL")
+        return parent_rpc
+    return fork_rpc
+
+
+def _looks_like_fork_rpc_death(notes: list[str]) -> bool:
+    blob = " ".join(notes).lower()
+    return any(
+        tok in blob
+        for tok in (
+            "fork endpoint",
+            "tcp connect",
+            "connection refused",
+            "error sending request",
+            "could not instantiate",
+            "failed to get chain id",
+            "ieve chain id",  # truncated "retrieve chain ID"
+        )
+    )
+
+
 def _start_anvil_fork(
     rpc_url: str,
     *,
@@ -512,6 +561,8 @@ def _start_anvil_fork(
                 "--fork-url", rpc_url,
                 "--port", str(port),
                 "--silent",
+                "--accounts", "0",
+                "--no-mining",
             ],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
