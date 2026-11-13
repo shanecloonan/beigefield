@@ -1041,7 +1041,10 @@ export default function TestApp() {
                     <div key={`cf-${i}`} className="rounded-md border border-emerald-800/50 bg-emerald-950/20 px-2 py-1.5">
                       <p className="text-[11px] text-emerald-200">
                         Confirmed · {String(c.lead_id ?? "lead")}
-                        <span className="ml-2 text-brand-500">by {String(c.method ?? "eth_call")}</span>
+                        <span className="ml-2 text-brand-500">
+                          by {String(c.method ?? "eth_call")}
+                          {String(c.method) === "fuzz" ? " · proof of a bug, not an attack" : ""}
+                        </span>
                       </p>
                       <p className="mt-0.5 font-mono text-[10px] text-brand-300 break-all">
                         {String(c.evidence ?? "").slice(0, 280)}

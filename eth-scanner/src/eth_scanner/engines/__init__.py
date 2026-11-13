@@ -1,6 +1,7 @@
-"""Advanced defensive engines: Slither → Mythril → read-only corroboration.
+"""Advanced defensive engines: Slither → Mythril → corroboration → fuzz.
 
-Leads never add heat alone. Heat requires a confirming eth_call / fork check.
+Leads never add heat alone. Heat requires confirming eth_call / fork check
+or a failed Medusa/Foundry property on an anvil fork (proof, not an attack).
 Never writes attack code or broadcasts transactions.
 """
 
