@@ -242,9 +242,11 @@ def fuzz_failures_as_confirmed(report: FuzzReport) -> list[dict[str, Any]]:
 def _forge_build(project: Path, *, timeout_s: int) -> tuple[bool, str]:
     forge = forge_bin()
     if not forge:
-        # Without forge we cannot compile; Medusa may still use crytic-compile.
+        # Without forge we cannot pre-compile Foundry harnesses. Allow Medusa
+        # to attempt crytic-compile, but do NOT mark compiled=True (caller still
+        # proceeds when medusa is present via soft path below).
         if medusa_bin():
-            return True, "forge missing — defer compile to medusa/crytic-compile"
+            return True, "forge missing — soft-allow medusa attempt (compile failures skip, never heat)"
         return False, "forge not on PATH — cannot compile fuzz harness"
     try:
         proc = subprocess.run(
@@ -327,6 +329,16 @@ def _run_medusa(
     _ingest_medusa_output(blob, report)
     if report.failures:
         report.status = "failed"
+    elif "compil" in blob.lower() or "crytic-compile" in blob.lower():
+        report.notes.append("medusa could not compile — trying forge fallback")
+        if forge_bin():
+            report.tool = "forge"
+            _run_forge(project, fork_rpc, max(8, budget_s // 2), report)
+        else:
+            report.status = "compile-skip"
+            report.ran = False
+            report.skipped = True
+            report.notes.append("fuzz compile-skip — medusa compile failed and forge missing")
     elif proc.returncode not in (0, None) and "not found" in blob.lower():
         report.notes.append("medusa unavailable — falling back to forge")
         if forge_bin():
@@ -351,10 +363,26 @@ def _run_medusa(
 
 
 def _ingest_medusa_output(blob: str, report: FuzzReport) -> None:
-    hits = _MEDUSA_FAIL.findall(blob or "")
+    text = blob or ""
+    low_all = text.lower()
+    # Compile / infra errors are skips — never property failures / heat.
+    if any(tok in low_all for tok in (
+        "failed to compile",
+        "compilation failed",
+        "could not compile",
+        "solc error",
+        "crytic-compile",
+        "no such file",
+        "command not found",
+    )) and "falsified" not in low_all and "property fail" not in low_all:
+        report.notes.append("medusa compile/infra failure — treating as compile-skip")
+        return
+    hits = _MEDUSA_FAIL.findall(text)
     for hit in hits[:8]:
-        prop = "medusa_property"
         low = hit.lower()
+        if "compil" in low or "crytic" in low:
+            continue
+        prop = "medusa_property"
         for pid in report.property_ids:
             if pid.replace("_", "").lower() in low.replace("_", "").replace(" ", ""):
                 prop = pid
