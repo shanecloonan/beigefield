@@ -68,9 +68,36 @@ jobs:
             echo "ETH_SCANNER_MYTHRIL_BIN=/tmp/mythril-venv/bin/mythril" >> "$GITHUB_ENV"
           fi
           command -v slither && slither --version | head -1 || echo "slither missing"
+          # Foundry (forge/anvil) — Medusa primary fuzz, Foundry fallback.
+          if ! command -v forge >/dev/null 2>&1; then
+            curl -L https://foundry.paradigm.xyz | bash || true
+            export PATH="$HOME/.foundry/bin:$PATH"
+            echo "$HOME/.foundry/bin" >> "$GITHUB_PATH"
+            foundryup || true
+          fi
+          command -v forge && forge --version | head -1 || echo "forge missing"
+          command -v anvil && anvil --version | head -1 || echo "anvil missing"
+          # Medusa (optional) — parallel fuzz; skip quietly on failure.
+          if ! command -v medusa >/dev/null 2>&1; then
+            MEDUSA_URL="$(curl -fsSL https://api.github.com/repos/crytic/medusa/releases/latest \
+              | python3 -c "import sys,json,re; d=json.load(sys.stdin); print(next((a['browser_download_url'] for a in d.get('assets',[]) if re.search(r'linux.*x64|linux.*amd64', a['name'], re.I)), ''))" \
+              || true)"
+            if [ -n "${MEDUSA_URL}" ]; then
+              curl -fsSL -o /tmp/medusa.tgz "$MEDUSA_URL" || true
+              mkdir -p "$HOME/.local/bin"
+              tar -xzf /tmp/medusa.tgz -C /tmp 2>/dev/null || true
+              find /tmp -maxdepth 3 -type f -name medusa -executable -exec cp {} "$HOME/.local/bin/medusa" \; 2>/dev/null || true
+              chmod +x "$HOME/.local/bin/medusa" 2>/dev/null || true
+              echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+              export PATH="$HOME/.local/bin:$PATH"
+            fi
+          fi
+          command -v medusa && medusa --version | head -1 || echo "medusa missing (forge fallback ok)"
           python - <<'PY'
           from eth_scanner.deep.runners import engine_availability
+          from eth_scanner.engines.fuzz_runner import anvil_bin, forge_bin, medusa_bin
           print("engine_availability=", engine_availability())
+          print("fuzz_tools=", {"medusa": bool(medusa_bin()), "forge": bool(forge_bin()), "anvil": bool(anvil_bin())})
           PY
 
       - name: Discover + scan recent deployments

@@ -100,9 +100,12 @@ class PipelineGating(unittest.TestCase):
         fake = EngineRunResult("slither", "ok", findings=[finding], note="ok", duration_ms=12)
         with mock.patch("eth_scanner.engines.pipeline.run_slither", return_value=fake), \
              mock.patch("eth_scanner.engines.pipeline.run_mythril", return_value=EngineRunResult("mythril", "skipped", note="skip")), \
-             mock.patch("eth_scanner.engines.pipeline.corroborate_lead") as corr:
+             mock.patch("eth_scanner.engines.pipeline.corroborate_lead") as corr, \
+             mock.patch("eth_scanner.engines.pipeline.run_lead_fuzz") as fuzz:
             from eth_scanner.engines.corroborate import Corroboration
+            from eth_scanner.engines.fuzz_runner import FuzzReport
             corr.return_value = Corroboration("slither-1", False, "eth_call", "reverted")
+            fuzz.return_value = FuzzReport(ran=False, skipped=True, status="skipped")
             report = run_advanced_engines(
                 address="0x" + "22" * 20,
                 source="pragma solidity ^0.8.0; contract Vault { function deposit() external payable {} }",

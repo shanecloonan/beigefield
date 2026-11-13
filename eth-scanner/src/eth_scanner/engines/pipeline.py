@@ -23,6 +23,12 @@ from eth_scanner.deep.findings import EngineFinding, is_generic_rule, sanitize_e
 from eth_scanner.deep.runners import EngineRunResult, run_mythril, run_slither
 from eth_scanner.engines.clones import match_known_bad
 from eth_scanner.engines.corroborate import corroborate_lead, resolve_proxy_meta
+from eth_scanner.engines.fuzz_runner import (
+    FuzzReport,
+    fuzz_failures_as_confirmed,
+    fuzz_failures_as_invariants,
+    run_lead_fuzz,
+)
 from eth_scanner.heuristics.scope import FUNDS_AT_RISK_CLASSES
 from eth_scanner.research.slither_runner import SLITHER_ALLOWLIST
 
@@ -49,6 +55,9 @@ class AdvancedEngineReport:
     proxy: dict[str, Any] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
     timing: dict[str, Any] = field(default_factory=dict)
+    fuzz: dict[str, Any] = field(default_factory=dict)
+    fuzz_invariant_results: list[dict[str, Any]] = field(default_factory=list)
+    fuzz_artifacts: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -72,9 +81,11 @@ def run_advanced_engines(
     work_dir: Optional[Path] = None,
     slither_timeout_s: int = 60,
     mythril_timeout_s: int = 90,
+    fuzz_timeout_s: int = 60,
     min_funds_usd: float = 2_000.0,
+    run_fuzz: bool = True,
 ) -> AdvancedEngineReport:
-    """Run gated Slither/Mythril/clone/proxy/corroboration. Defensive only."""
+    """Run gated Slither/Mythril/clone/proxy/corroboration/fuzz. Defensive only."""
     report = AdvancedEngineReport()
     t0 = time.monotonic()
     inv = list(invariant_results or [])
@@ -210,15 +221,61 @@ def run_advanced_engines(
                 "evidence": "corroboration skipped",
             })
 
+    # --- Fuzz (Medusa → Foundry) on Slither/invariant leads only ------------
+    # Gated: funds floor already applied; require Slither lead or failed/unknown
+    # invariant. Hard timeout; compile failures skip without blocking.
+    fuzz_report: Optional[FuzzReport] = None
+    if run_fuzz and (has_slither_lead or inv_needs) and rpc_url:
+        try:
+            fuzz_report = run_lead_fuzz(
+                address=address,
+                contract_class=contract_class,
+                contract_name=contract_name,
+                rpc_url=rpc_url,
+                work_dir=work_dir,
+                timeout_s=fuzz_timeout_s,
+            )
+            report.fuzz = fuzz_report.to_dict()
+            report.notes.extend(list(fuzz_report.notes or [])[:6])
+            report.notes.append(
+                "fuzz %s tool=%s props=%d failures=%d (%sms)"
+                % (
+                    fuzz_report.status,
+                    fuzz_report.tool,
+                    fuzz_report.properties_checked,
+                    fuzz_report.failure_count,
+                    fuzz_report.duration_ms,
+                )
+            )
+            if fuzz_report.failures:
+                report.fuzz_invariant_results = fuzz_failures_as_invariants(fuzz_report)
+                for row in fuzz_failures_as_confirmed(fuzz_report):
+                    report.confirmed.append(row)
+            if fuzz_report.artifact:
+                report.fuzz_artifacts.append(dict(fuzz_report.artifact))
+        except Exception as exc:  # noqa: BLE001 — fuzz must never sink engines
+            report.notes.append("fuzz error (non-blocking): %s" % str(exc)[:160])
+            report.fuzz = {"status": "error", "ran": False, "skipped": True}
+    elif run_fuzz:
+        report.notes.append("fuzz skipped — need Slither lead or failed/unknown invariant + rpc")
+        report.fuzz = {"status": "skipped", "ran": False, "skipped": True}
+
+    fuzz_ms = int((fuzz_report.duration_ms if fuzz_report else 0) or 0)
     report.timing = {
         "slither_ms": report.slither_ms,
         "mythril_ms": report.mythril_ms,
+        "fuzz_ms": fuzz_ms,
         "total_ms": int((time.monotonic() - t0) * 1000),
         "cache_hit": report.cache_hit,
         "ran_slither": report.ran_slither,
         "ran_mythril": report.ran_mythril,
+        "ran_fuzz": bool(fuzz_report and fuzz_report.ran),
         "slither_status": report.slither_status,
         "mythril_status": report.mythril_status,
+        "fuzz_status": (fuzz_report.status if fuzz_report else report.fuzz.get("status") or "skipped"),
+        "fuzz_tool": (fuzz_report.tool if fuzz_report else "none"),
+        "fuzz_properties": (fuzz_report.properties_checked if fuzz_report else 0),
+        "fuzz_failures": (fuzz_report.failure_count if fuzz_report else 0),
         "leads": len(report.leads),
         "confirmed": report.confirmed_count,
     }

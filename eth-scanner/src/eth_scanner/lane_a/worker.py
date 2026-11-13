@@ -161,11 +161,23 @@ def run_one(
             result.confirmed_findings = list(eng.confirmed)
             result.engine_timing = dict(eng.timing)
             result.notes = list(result.notes or []) + list(eng.notes)
-            # Recompute evidence heat with corroborations (Slither-only stays 0).
-            priv, eoa = _flags_from_invariant_dicts(list(result.invariant_results or []))
+            # Fuzz property failures feed failed_invariant evidence (+ confirmed).
+            inv_rows = list(result.invariant_results or []) + list(eng.fuzz_invariant_results or [])
+            if eng.fuzz_invariant_results:
+                result.invariant_results = inv_rows
+            # Persist fuzz proof artifacts (kind=fuzz) — minimal reproduction only.
+            save_art = getattr(store, "save_artifact", None)
+            if callable(save_art):
+                for art in list(eng.fuzz_artifacts or []):
+                    try:
+                        save_art(addr, "fuzz", dict(art), "med" if art.get("failures") else "low")
+                    except Exception:  # noqa: BLE001
+                        pass
+            # Recompute evidence heat with corroborations + fuzz failures.
+            priv, eoa = _flags_from_invariant_dicts(inv_rows)
             heat, heat_bd = evidence_heat(
                 funds_usd=target.funds_usd,
-                invariant_results=list(result.invariant_results or []),
+                invariant_results=inv_rows,
                 privileged_callable=priv,
                 eoa_admin=eoa,
                 corroborated=list(eng.confirmed),
@@ -174,11 +186,12 @@ def run_one(
             heat_bd["engine_leads"] = len(eng.leads)
             heat_bd["engine_confirmed"] = eng.confirmed_count
             heat_bd["engine_timing"] = dict(eng.timing)
+            heat_bd["fuzz"] = dict(eng.fuzz or {})
             result.heat = heat
             result.heat_breakdown = heat_bd
             promote, why = should_promote_lane_b(
                 funds_usd=target.funds_usd,
-                invariant_results=list(result.invariant_results or []),
+                invariant_results=inv_rows,
                 privileged_callable=priv,
                 eoa_admin=eoa,
                 corroborated=list(eng.confirmed),
@@ -198,6 +211,7 @@ def run_one(
                             "confirmed": list(eng.confirmed),
                             "timing": dict(eng.timing),
                             "proxy": dict(eng.proxy),
+                            "fuzz": dict(eng.fuzz or {}),
                         },
                     )
                 except Exception:  # noqa: BLE001
