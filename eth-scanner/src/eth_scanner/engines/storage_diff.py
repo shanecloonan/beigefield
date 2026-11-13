@@ -86,6 +86,7 @@ def run_storage_diff(
     try:
         word = eth_get_storage_at(rpc_url, address, EIP1967_IMPLEMENTATION_SLOT)
         report.current_impl = storage_word_to_address(word)
+        report.ran = True  # slot read succeeded — stage executed
     except Exception as exc:  # noqa: BLE001
         report.notes.append("storage-diff: impl slot read failed: %s" % str(exc)[:100])
         report.duration_ms = int((time.monotonic() - t0) * 1000)
@@ -97,7 +98,6 @@ def run_storage_diff(
         report.duration_ms = int((time.monotonic() - t0) * 1000)
         return report
 
-    report.ran = True
     prev = _previous_implementation(rpc_url, address, deadline)
     report.previous_impl = prev
 

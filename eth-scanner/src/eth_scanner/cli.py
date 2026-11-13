@@ -21,22 +21,52 @@ from eth_scanner.store.supabase import normalize_address, open_store
 from eth_scanner.types import FunnelResult, to_plain
 
 
+def _stage_exec_skip(et: dict[str, Any], *, executed_key: str, skipped_key: str, ran_key: str, status_key: str) -> tuple[bool, bool]:
+    """Prefer explicit executed/skipped flags; fall back to ran + status."""
+    if executed_key in et or skipped_key in et:
+        executed = bool(et.get(executed_key))
+        skipped = bool(et.get(skipped_key)) if skipped_key in et else (not executed)
+        return executed, skipped
+    status = str(et.get(status_key) or "")
+    ran = bool(et.get(ran_key))
+    executed = ran and status not in {"skipped", "compile-skip", ""}
+    return executed, (not executed)
+
+
 def _aggregate_engine_stats(scan_results: list[dict[str, Any]]) -> dict[str, Any]:
-    """Roll up Slither/Mythril/fuzz/halmos/oracle/admin/storage counts."""
+    """Roll up Slither/Mythril/fuzz/halmos/oracle/admin/storage with executed vs skipped."""
     slither_run = 0
+    slither_executed = 0
+    slither_skipped = 0
     mythril_run = 0
+    mythril_executed = 0
+    mythril_skipped = 0
     fuzzed = 0
+    fuzz_executed = 0
+    fuzz_skipped = 0
     fuzz_properties = 0
     fuzz_failures = 0
     halmos_run = 0
+    halmos_executed = 0
+    halmos_skipped = 0
     halmos_properties = 0
-    halmos_failures = 0
+    halmos_properties_executed = 0
+    halmos_properties_skipped = 0
+    gen_halmos_failures = 0
     oracle_run = 0
+    oracle_executed = 0
+    oracle_skipped = 0
     oracle_confirmed = 0
     admin_run = 0
+    admin_executed = 0
+    admin_skipped = 0
     admin_confirmed = 0
     storage_run = 0
+    storage_executed = 0
+    storage_skipped = 0
     storage_confirmed = 0
+    clone_executed = 0
+    clone_skipped = 0
     clone_leads = 0
     leads = 0
     confirmed = 0
@@ -51,28 +81,117 @@ def _aggregate_engine_stats(scan_results: list[dict[str, Any]]) -> dict[str, Any
         symbolic = dict(hb.get("symbolic") or {})
         status_sl = str(et.get("slither_status") or "")
         status_my = str(et.get("mythril_status") or "")
-        if et.get("ran_slither") or status_sl in {"ok", "error"}:
+
+        sl_ex, _sl_sk = _stage_exec_skip(
+            et, executed_key="slither_executed", skipped_key="slither_skipped",
+            ran_key="ran_slither", status_key="slither_status",
+        )
+        if et.get("ran_slither") or status_sl in {"ok", "error", "compile-skip"} or sl_ex:
             slither_run += 1
-        if et.get("ran_mythril") or status_my in {"ok", "error"}:
+        if sl_ex:
+            slither_executed += 1
+        elif et or status_sl:
+            slither_skipped += 1
+
+        my_ex, _my_sk = _stage_exec_skip(
+            et, executed_key="mythril_executed", skipped_key="mythril_skipped",
+            ran_key="ran_mythril", status_key="mythril_status",
+        )
+        if et.get("ran_mythril") or status_my in {"ok", "error", "compile-skip"} or my_ex:
             mythril_run += 1
-        if et.get("ran_fuzz") or fuzz.get("ran"):
+        if my_ex:
+            mythril_executed += 1
+        elif et.get("ran_mythril") is not None or status_my or "mythril_skipped" in et:
+            mythril_skipped += 1
+
+        fuzz_ex, _fuzz_sk = _stage_exec_skip(
+            et, executed_key="fuzz_executed", skipped_key="fuzz_skipped",
+            ran_key="ran_fuzz", status_key="fuzz_status",
+        )
+        if et.get("ran_fuzz") or fuzz.get("ran") or fuzz_ex:
             fuzzed += 1
+        if fuzz_ex:
+            fuzz_executed += 1
+        elif et.get("ran_fuzz") is not None or et.get("fuzz_status") or fuzz:
+            fuzz_skipped += 1
         fuzz_properties += int(et.get("fuzz_properties") or fuzz.get("properties_checked") or 0)
         fuzz_failures += int(et.get("fuzz_failures") or fuzz.get("failure_count") or len(fuzz.get("failures") or []))
-        if et.get("ran_halmos") or symbolic.get("ran"):
+
+        hal_ex, _hal_sk = _stage_exec_skip(
+            et, executed_key="halmos_executed", skipped_key="halmos_skipped",
+            ran_key="ran_halmos", status_key="halmos_status",
+        )
+        # Prefer explicit executed flag / symbolic.executed over ran_halmos alone
+        # (ran_halmos used to be true even on false compile-skip).
+        if "halmos_executed" in et:
+            hal_ex = bool(et.get("halmos_executed"))
+            hal_sk = bool(et.get("halmos_skipped")) if "halmos_skipped" in et else (not hal_ex)
+        elif symbolic.get("executed") is not None:
+            hal_ex = bool(symbolic.get("executed"))
+            hal_sk = not hal_ex
+        if et.get("ran_halmos") or symbolic.get("ran") or hal_ex:
             halmos_run += 1
+        if hal_ex:
+            halmos_executed += 1
+        elif et.get("ran_halmos") is not None or et.get("halmos_status") or symbolic:
+            halmos_skipped += 1
         halmos_properties += int(et.get("halmos_properties") or symbolic.get("properties_checked") or 0)
-        halmos_failures += int(et.get("halmos_failures") or symbolic.get("failure_count") or len(symbolic.get("failures") or []))
-        if et.get("ran_oracle"):
+        halmos_properties_executed += int(
+            et.get("halmos_properties_executed") or symbolic.get("properties_executed") or 0
+        )
+        halmos_properties_skipped += int(
+            et.get("halmos_properties_skipped") or symbolic.get("properties_skipped") or 0
+        )
+        gen_halmos_failures += int(
+            et.get("halmos_failures") or symbolic.get("failure_count") or len(symbolic.get("failures") or [])
+        )
+
+        or_ex, _or_sk = _stage_exec_skip(
+            et, executed_key="oracle_executed", skipped_key="oracle_skipped",
+            ran_key="ran_oracle", status_key="oracle_status",
+        )
+        if et.get("ran_oracle") or or_ex:
             oracle_run += 1
+        if or_ex:
+            oracle_executed += 1
+        elif "oracle_executed" in et or "ran_oracle" in et:
+            oracle_skipped += 1
         oracle_confirmed += int(et.get("oracle_confirmed") or 0)
-        if et.get("ran_admin"):
+
+        ad_ex, _ad_sk = _stage_exec_skip(
+            et, executed_key="admin_executed", skipped_key="admin_skipped",
+            ran_key="ran_admin", status_key="admin_status",
+        )
+        if et.get("ran_admin") or ad_ex:
             admin_run += 1
+        if ad_ex:
+            admin_executed += 1
+        elif "admin_executed" in et or "ran_admin" in et:
+            admin_skipped += 1
         admin_confirmed += int(et.get("admin_confirmed") or 0)
-        if et.get("ran_storage"):
+
+        st_ex, _st_sk = _stage_exec_skip(
+            et, executed_key="storage_executed", skipped_key="storage_skipped",
+            ran_key="ran_storage", status_key="storage_status",
+        )
+        if et.get("ran_storage") or st_ex:
             storage_run += 1
+        if st_ex:
+            storage_executed += 1
+        elif "storage_executed" in et or "ran_storage" in et:
+            storage_skipped += 1
         storage_confirmed += int(et.get("storage_confirmed") or 0)
+
+        if "clone_executed" in et:
+            if et.get("clone_executed"):
+                clone_executed += 1
+            else:
+                clone_skipped += 1
+        elif et:
+            # Clone fingerprint always runs when engines gate passes.
+            clone_executed += 1
         clone_leads += int(et.get("clone_leads") or 0)
+
         n_leads = len(row.get("engine_leads") or [])
         if not n_leads:
             n_leads = int(hb.get("engine_leads") or et.get("leads") or 0)
@@ -99,6 +218,10 @@ def _aggregate_engine_stats(scan_results: list[dict[str, Any]]) -> dict[str, Any
                 "fuzz_status": et.get("fuzz_status") or fuzz.get("status"),
                 "fuzz_tool": et.get("fuzz_tool") or fuzz.get("tool"),
                 "halmos_status": et.get("halmos_status") or symbolic.get("status"),
+                "halmos_executed": hal_ex,
+                "slither_executed": sl_ex,
+                "mythril_executed": my_ex,
+                "fuzz_executed": fuzz_ex,
                 "leads": n_leads,
                 "confirmed": n_conf,
                 "funds_usd": row.get("funds_usd"),
@@ -107,19 +230,37 @@ def _aggregate_engine_stats(scan_results: list[dict[str, Any]]) -> dict[str, Any
             })
     return {
         "slither_run": slither_run,
+        "slither_executed": slither_executed,
+        "slither_skipped": slither_skipped,
         "mythril_run": mythril_run,
+        "mythril_executed": mythril_executed,
+        "mythril_skipped": mythril_skipped,
         "fuzzed": fuzzed,
+        "fuzz_executed": fuzz_executed,
+        "fuzz_skipped": fuzz_skipped,
         "fuzz_properties": fuzz_properties,
         "fuzz_failures": fuzz_failures,
         "halmos_run": halmos_run,
+        "halmos_executed": halmos_executed,
+        "halmos_skipped": halmos_skipped,
         "halmos_properties": halmos_properties,
-        "halmos_failures": halmos_failures,
+        "halmos_properties_executed": halmos_properties_executed,
+        "halmos_properties_skipped": halmos_properties_skipped,
+        "halmos_failures": gen_halmos_failures,
         "oracle_run": oracle_run,
+        "oracle_executed": oracle_executed,
+        "oracle_skipped": oracle_skipped,
         "oracle_confirmed": oracle_confirmed,
         "admin_run": admin_run,
+        "admin_executed": admin_executed,
+        "admin_skipped": admin_skipped,
         "admin_confirmed": admin_confirmed,
         "storage_run": storage_run,
+        "storage_executed": storage_executed,
+        "storage_skipped": storage_skipped,
         "storage_confirmed": storage_confirmed,
+        "clone_executed": clone_executed,
+        "clone_skipped": clone_skipped,
         "clone_leads": clone_leads,
         "leads": leads,
         "confirmed": confirmed,
@@ -424,13 +565,30 @@ def main(argv: list[str] | None = None) -> int:
             max_full_scans=int(args.max_full_scans),
             reset=bool(args.reset),
         )
+        # Contracts processed = cumulative full Lane-A scans; remaining ≈
+        # funds≥floor not yet fully scanned (lower bound) plus block window left.
+        contracts_processed = int(progress.fully_scanned_total or 0)
+        contracts_remaining = max(
+            0,
+            int(progress.funds_ge_floor_total or 0) - contracts_processed,
+        )
         print(
             "backfill status=%(status)s cursor=%(cursor_block)d end=%(end_block)d "
-            "covered=%(blocks_covered_this_job)d remaining=%(blocks_remaining)d "
+            "start=%(start_block)d covered=%(blocks_covered_this_job)d "
+            "blocks_remaining=%(blocks_remaining)d "
+            "contracts_processed=%(contracts_processed)d "
+            "contracts_remaining=%(contracts_remaining)d "
+            "discovered_total=%(discovered_total)d funds_ge_floor_total=%(funds_ge_floor_total)d "
+            "fully_scanned_total=%(fully_scanned_total)d heat_positive_total=%(heat_positive_total)d "
             "discovered=%(discovered_this_job)d funds_ge_floor=%(funds_ge_floor_this_job)d "
             "scanned=%(fully_scanned_this_job)d heat_gt0=%(heat_positive_this_job)d "
             "duration_s=%(duration_s)s eta_hours=%(eta_hours)s source=%(source)s"
-            % {**progress.to_dict(), "eta_hours": progress.eta_hours},
+            % {
+                **progress.to_dict(),
+                "eta_hours": progress.eta_hours,
+                "contracts_processed": contracts_processed,
+                "contracts_remaining": contracts_remaining,
+            },
             file=sys.stderr,
         )
         if args.json:
@@ -555,13 +713,22 @@ def main(argv: list[str] | None = None) -> int:
             "unverified_skipped=%(unverified_skipped)d discovered_enqueued=%(discovered_enqueued)d "
             "scanned=%(scanned)d workers=%(workers)d duration_s=%(duration_s)s "
             "prefer_verified=%(prefer_verified)s keys=%(keys_configured)s "
-            "slither_run=%(slither_run)d mythril_run=%(mythril_run)d "
-            "fuzzed=%(fuzzed)d fuzz_properties=%(fuzz_properties)d fuzz_failures=%(fuzz_failures)d "
-            "halmos_run=%(halmos_run)d halmos_properties=%(halmos_properties)d halmos_failures=%(halmos_failures)d "
-            "oracle_run=%(oracle_run)d oracle_confirmed=%(oracle_confirmed)d "
-            "admin_run=%(admin_run)d admin_confirmed=%(admin_confirmed)d "
-            "storage_run=%(storage_run)d storage_confirmed=%(storage_confirmed)d "
-            "clone_leads=%(clone_leads)d "
+            "slither_run=%(slither_run)d slither_executed=%(slither_executed)d slither_skipped=%(slither_skipped)d "
+            "mythril_run=%(mythril_run)d mythril_executed=%(mythril_executed)d mythril_skipped=%(mythril_skipped)d "
+            "fuzzed=%(fuzzed)d fuzz_executed=%(fuzz_executed)d fuzz_skipped=%(fuzz_skipped)d "
+            "fuzz_properties=%(fuzz_properties)d fuzz_failures=%(fuzz_failures)d "
+            "halmos_run=%(halmos_run)d halmos_executed=%(halmos_executed)d halmos_skipped=%(halmos_skipped)d "
+            "halmos_properties=%(halmos_properties)d "
+            "halmos_properties_executed=%(halmos_properties_executed)d "
+            "halmos_properties_skipped=%(halmos_properties_skipped)d "
+            "halmos_failures=%(halmos_failures)d "
+            "oracle_run=%(oracle_run)d oracle_executed=%(oracle_executed)d oracle_skipped=%(oracle_skipped)d "
+            "oracle_confirmed=%(oracle_confirmed)d "
+            "admin_run=%(admin_run)d admin_executed=%(admin_executed)d admin_skipped=%(admin_skipped)d "
+            "admin_confirmed=%(admin_confirmed)d "
+            "storage_run=%(storage_run)d storage_executed=%(storage_executed)d storage_skipped=%(storage_skipped)d "
+            "storage_confirmed=%(storage_confirmed)d "
+            "clone_executed=%(clone_executed)d clone_skipped=%(clone_skipped)d clone_leads=%(clone_leads)d "
             "leads=%(leads)d confirmed=%(confirmed)d heat_gt0=%(heat_gt0)d"
             % summary,
             file=sys.stderr,

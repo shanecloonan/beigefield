@@ -89,6 +89,8 @@ def run_oracle_checks(
     src = source or ""
     deadline = t0 + max(5.0, float(timeout_s))
 
+    # Stage executed once we inspect source (even when no oracle patterns).
+    report.ran = True
     has_cl = bool(_CHAINLINK_RX.search(src))
     has_amm = bool(_AMM_RX.search(src))
     if not has_cl and not has_amm:
@@ -97,7 +99,6 @@ def run_oracle_checks(
         report.duration_ms = int((time.monotonic() - t0) * 1000)
         return report
 
-    report.ran = True
     if has_cl:
         report.leads.append(OracleFinding(
             id="oracle-chainlink-usage",

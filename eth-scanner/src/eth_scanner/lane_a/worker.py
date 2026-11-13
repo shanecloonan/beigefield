@@ -156,6 +156,9 @@ def run_one(
                 rpc_url=settings.eth_rpc_url or "",
                 invariant_results=list(result.invariant_results or []),
                 work_dir=settings.work_dir,
+                source_dir=src_dir,
+                compiler=getattr(artifact, "compiler", None),
+                runtime_bytecode=code or "",
             )
             result.engine_leads = list(eng.leads)
             result.confirmed_findings = list(eng.confirmed)
