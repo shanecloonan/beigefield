@@ -145,7 +145,10 @@ class MonitorEngineRollup(unittest.TestCase):
                 "address": "0x2",
                 "heat": 40,
                 "engine_leads": [{"id": "b"}, {"id": "c"}],
-                "confirmed_findings": [{"lead_id": "b", "confirmed": True}],
+                "confirmed_findings": [
+                    {"lead_id": "b", "confirmed": True},
+                    {"lead_id": "c", "confirmed": False},
+                ],
                 "engine_timing": {
                     "ran_slither": True,
                     "slither_status": "ok",
