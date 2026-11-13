@@ -60,6 +60,7 @@ class HarnessGeneration(unittest.TestCase):
             self.assertNotIn("vm.prank", low)
             self.assertNotIn("broadcast", low)
             self.assertIn("proof of bug", low)
+            self.assertIn("address(uint160(", sol)
             self.assertGreaterEqual(len(props), 2)
 
 
