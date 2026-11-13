@@ -110,10 +110,14 @@ def write_live_fuzz_project(
 
 
 def _checksum_or_raw(address: str) -> str:
-    a = (address or "").strip()
-    if not a.startswith("0x"):
-        a = "0x" + a
-    return a.lower()
+    """Return a 0x-hex body suitable for address(uint160(...)) (no checksum needed)."""
+    a = (address or "").strip().lower()
+    if a.startswith("0x"):
+        a = a[2:]
+    a = "".join(c for c in a if c in "0123456789abcdef")
+    if len(a) != 40:
+        a = (a + "0" * 40)[:40]
+    return "0x" + a
 
 
 _IFACE_SOL = """\
@@ -162,7 +166,8 @@ import {{IFundsAtRisk}} from "../src/IFundsAtRisk.sol";
 /// Auto-generated properties:
 {prop_comments}
 contract LiveProperties {{
-    address constant TARGET = {address};
+    // Use uint160 cast — avoids solc EIP-55 address-literal checksum errors.
+    address constant TARGET = address(uint160({address}));
     IFundsAtRisk internal t;
     address internal outsider = address(0xBEEF);
 
