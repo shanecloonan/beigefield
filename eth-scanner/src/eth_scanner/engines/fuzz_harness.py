@@ -73,7 +73,7 @@ def write_live_fuzz_project(
     (root / "src").mkdir(parents=True)
     (root / "test").mkdir(parents=True)
     props = list(properties_for_class(contract_class))
-    addr = _checksum_or_raw(address)
+    addr_hex = _hex40(address)
     name = (contract_name or "Target").replace(" ", "")[:40] or "Target"
 
     (root / "foundry.toml").write_text(
@@ -102,22 +102,22 @@ def write_live_fuzz_project(
 
     (root / "src" / "IFundsAtRisk.sol").write_text(_IFACE_SOL, encoding="utf-8")
     (root / "test" / "LiveProperties.t.sol").write_text(
-        _live_properties_sol(addr, name, contract_class, props),
+        _live_properties_sol(addr_hex, name, contract_class, props),
         encoding="utf-8",
     )
     (root / "medusa.json").write_text(_medusa_json(), encoding="utf-8")
     return root, props
 
 
-def _checksum_or_raw(address: str) -> str:
-    """Return a 0x-hex body suitable for address(uint160(...)) (no checksum needed)."""
+def _hex40(address: str) -> str:
+    """40 lowercase hex digits (no 0x) for Solidity hex\"…\" bytes20 literals."""
     a = (address or "").strip().lower()
     if a.startswith("0x"):
         a = a[2:]
     a = "".join(c for c in a if c in "0123456789abcdef")
     if len(a) != 40:
         a = (a + "0" * 40)[:40]
-    return "0x" + a
+    return a
 
 
 _IFACE_SOL = """\
@@ -146,7 +146,7 @@ interface IFundsAtRisk {
 
 
 def _live_properties_sol(
-    address: str,
+    address_hex40: str,
     name: str,
     contract_class: str,
     props: list[str],
@@ -155,6 +155,7 @@ def _live_properties_sol(
     prop_comments = "\n".join("/// - %s" % p for p in props)
     # Access-control probes use low-level calls from `address(this)` (not owner).
     # If the target has no such selector, staticcall/call fails closed (skip).
+    # bytes20(hex"…") avoids solc treating 40-nibble literals as address constants.
     return f"""\
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
@@ -166,8 +167,7 @@ import {{IFundsAtRisk}} from "../src/IFundsAtRisk.sol";
 /// Auto-generated properties:
 {prop_comments}
 contract LiveProperties {{
-    // Use uint160 cast — avoids solc EIP-55 address-literal checksum errors.
-    address constant TARGET = address(uint160({address}));
+    address constant TARGET = address(bytes20(hex"{address_hex40}"));
     IFundsAtRisk internal t;
     address internal outsider = address(0xBEEF);
 
