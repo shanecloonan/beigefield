@@ -133,6 +133,31 @@ class HalmosSymbolic(unittest.TestCase):
         from eth_scanner.engines.halmos_runner import _looks_like_true_compile_failure
         self.assertFalse(_looks_like_true_compile_failure(blob))
 
+    def test_ansi_colored_pass_counts_as_executed(self):
+        """CI Halmos wraps [PASS] in green ANSI — must still count executed."""
+        from eth_scanner.engines.halmos_runner import _ingest
+        report = HalmosReport(
+            ran=True, skipped=False, status="ok",
+            properties_checked=4,
+            property_ids=[
+                "solvency_assets_cover_shares",
+                "share_price_round_trip",
+                "access_control_non_owner",
+                "no_third_party_balance_drop",
+            ],
+        )
+        blob = (
+            "\x1b[32m[PASS]\x1b[0m check_access_control_non_owner() (paths: 1)\n"
+            "\x1b[32m[PASS]\x1b[0m check_no_third_party_balance_drop() (paths: 1)\n"
+            "\x1b[32m[PASS]\x1b[0m check_share_price_round_trip(uint96) (paths: 3)\n"
+            "\x1b[32m[PASS]\x1b[0m check_solvency_assets_cover_shares() (paths: 1)\n"
+            "Symbolic test result: 4 passed; 0 failed; time: 0.04s\n"
+        )
+        _ingest(blob, report)
+        self.assertTrue(report.executed)
+        self.assertEqual(report.properties_executed, 4)
+        self.assertEqual(report.failure_count, 0)
+
     def test_true_compile_failure_marker(self):
         from eth_scanner.engines.halmos_runner import _looks_like_true_compile_failure
         self.assertTrue(_looks_like_true_compile_failure("Error: Compiler run failed\nbuild failed"))
