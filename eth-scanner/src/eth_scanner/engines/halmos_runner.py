@@ -31,6 +31,7 @@ _PASS_RX = re.compile(r"\[PASS\]\s*(check_\w+)", re.I)
 _FAIL_RX = re.compile(r"\[FAIL[^\]]*\]\s*(check_\w+)", re.I)
 _ERROR_RX = re.compile(r"\[ERROR\]\s*(check_\w+)", re.I)
 _COUNTER_RX = re.compile(r"Counterexample[^\n]{0,240}", re.I)
+_ANSI_RX = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
 
 @dataclass
@@ -282,8 +283,13 @@ def symbolic_failures_as_confirmed(report: HalmosReport) -> list[dict[str, Any]]
     return out
 
 
+def _strip_ansi(text: str) -> str:
+    """Halmos CI output wraps [PASS]/[FAIL] in ANSI color codes."""
+    return _ANSI_RX.sub("", text or "")
+
+
 def _ingest(blob: str, report: HalmosReport) -> None:
-    text = blob or ""
+    text = _strip_ansi(blob or "")
     if not text.strip():
         return
 
