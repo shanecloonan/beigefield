@@ -161,22 +161,37 @@ def run_one(
             result.confirmed_findings = list(eng.confirmed)
             result.engine_timing = dict(eng.timing)
             result.notes = list(result.notes or []) + list(eng.notes)
-            # Fuzz property failures feed failed_invariant evidence (+ confirmed).
-            inv_rows = list(result.invariant_results or []) + list(eng.fuzz_invariant_results or [])
-            if eng.fuzz_invariant_results:
+            # Fuzz/Halmos property failures feed failed_invariant evidence (+ confirmed).
+            inv_rows = (
+                list(result.invariant_results or [])
+                + list(eng.fuzz_invariant_results or [])
+                + list(getattr(eng, "extra_invariant_results", None) or [])
+            )
+            if eng.fuzz_invariant_results or getattr(eng, "extra_invariant_results", None):
                 result.invariant_results = inv_rows
-            # Persist fuzz proof artifacts (kind=fuzz) — minimal reproduction only.
+            # Persist stage proof artifacts (fuzz/symbolic/oracle/admin/storage).
             save_art = getattr(store, "save_artifact", None)
             if callable(save_art):
-                for art in list(eng.fuzz_artifacts or []):
+                arts = list(eng.fuzz_artifacts or []) + list(getattr(eng, "stage_artifacts", None) or [])
+                seen_kinds: set[str] = set()
+                for art in arts:
+                    kind = str(art.get("kind") or "fuzz")
+                    # Avoid double-saving the same fuzz artifact from both lists.
+                    key = kind + ":" + str(art.get("address") or "") + ":" + str(art.get("status") or "")
+                    if key in seen_kinds:
+                        continue
+                    seen_kinds.add(key)
                     try:
-                        save_art(addr, "fuzz", dict(art), "med" if art.get("failures") else "low")
+                        conf = "med" if art.get("failures") or art.get("confirmed") else "low"
+                        save_art(addr, kind, dict(art), conf)
                     except Exception as exc:  # noqa: BLE001
                         result.notes = list(result.notes or []) + [
-                            "fuzz artifact save failed: %s" % str(exc)[:120]
+                            "%s artifact save failed: %s" % (kind, str(exc)[:120])
                         ]
-            # Recompute evidence heat with corroborations + fuzz failures.
+            # Recompute evidence heat with corroborations + stage confirmations.
             priv, eoa = _flags_from_invariant_dicts(inv_rows)
+            priv = bool(priv or getattr(eng, "privileged_callable", False))
+            eoa = bool(eoa or getattr(eng, "eoa_admin", False))
             heat, heat_bd = evidence_heat(
                 funds_usd=target.funds_usd,
                 invariant_results=inv_rows,
@@ -189,6 +204,10 @@ def run_one(
             heat_bd["engine_confirmed"] = eng.confirmed_count
             heat_bd["engine_timing"] = dict(eng.timing)
             heat_bd["fuzz"] = dict(eng.fuzz or {})
+            heat_bd["oracle"] = dict(getattr(eng, "oracle", None) or {})
+            heat_bd["admin"] = dict(getattr(eng, "admin", None) or {})
+            heat_bd["storage"] = dict(getattr(eng, "storage", None) or {})
+            heat_bd["symbolic"] = dict(getattr(eng, "symbolic", None) or {})
             result.heat = heat
             result.heat_breakdown = heat_bd
             promote, why = should_promote_lane_b(
@@ -214,6 +233,10 @@ def run_one(
                             "timing": dict(eng.timing),
                             "proxy": dict(eng.proxy),
                             "fuzz": dict(eng.fuzz or {}),
+                            "oracle": dict(getattr(eng, "oracle", None) or {}),
+                            "admin": dict(getattr(eng, "admin", None) or {}),
+                            "storage": dict(getattr(eng, "storage", None) or {}),
+                            "symbolic": dict(getattr(eng, "symbolic", None) or {}),
                         },
                     )
                 except Exception:  # noqa: BLE001

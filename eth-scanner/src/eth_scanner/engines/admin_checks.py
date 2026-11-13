@@ -1,0 +1,350 @@
+"""Admin / upgrade surface checks — EIP-1967 proxies, Safe, timelock, init.
+
+Read-only + fork eth_call simulation only. Uninitialized implementation or
+anyone-callable admin on fork sim → confirmed. Feeds eoa_admin /
+privileged_callable for Lane B ($100k+ EOA admin).
+"""
+
+from __future__ import annotations
+
+import json
+import time
+import urllib.request
+from dataclasses import asdict, dataclass, field
+from typing import Any, Optional
+
+from eth_scanner.engines.corroborate import PROBE_SELECTORS, code_size, eth_call_probe
+from eth_scanner.research.proxy import (
+    EIP1967_ADMIN_SLOT,
+    EIP1967_BEACON_SLOT,
+    EIP1967_IMPLEMENTATION_SLOT,
+    eth_get_storage_at,
+    storage_word_to_address,
+)
+
+# Gnosis Safe
+_SEL_GET_OWNERS = "a0e67e2b"       # getOwners()
+_SEL_GET_THRESHOLD = "e75235b8"    # getThreshold()
+# TimelockController
+_SEL_GET_MIN_DELAY = "f0350c04"    # getMinDelay() — OZ TimelockController
+# OpenZeppelin Initializable: ERC-7201 / legacy slot heuristics
+_OZ_INITIALIZED_SLOT = "0x0000000000000000000000000000000000000000000000000000000000000000"
+
+
+@dataclass
+class AdminFinding:
+    id: str
+    title: str
+    evidence: str
+    confirmed: bool = False
+    method: str = "storage"
+    extras: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class AdminReport:
+    ran: bool = False
+    status: str = "skipped"
+    proxy_kind: str = "none"  # eip1967 | transparent | uups | beacon | none
+    implementation: Optional[str] = None
+    admin: Optional[str] = None
+    admin_class: str = "unknown"  # eoa | safe | timelock | contract | unknown
+    admin_is_eoa: bool = False
+    privileged_callable: bool = False
+    eoa_admin: bool = False
+    leads: list[AdminFinding] = field(default_factory=list)
+    confirmed: list[AdminFinding] = field(default_factory=list)
+    duration_ms: int = 0
+    notes: list[str] = field(default_factory=list)
+    artifact: dict[str, Any] = field(default_factory=dict)
+    meta: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "ran": self.ran,
+            "status": self.status,
+            "proxy_kind": self.proxy_kind,
+            "implementation": self.implementation,
+            "admin": self.admin,
+            "admin_class": self.admin_class,
+            "admin_is_eoa": self.admin_is_eoa,
+            "privileged_callable": self.privileged_callable,
+            "eoa_admin": self.eoa_admin,
+            "leads": [f.to_dict() for f in self.leads],
+            "confirmed": [f.to_dict() for f in self.confirmed],
+            "duration_ms": self.duration_ms,
+            "notes": list(self.notes),
+            "meta": dict(self.meta),
+            "artifact": dict(self.artifact),
+        }
+
+
+def run_admin_checks(
+    *,
+    address: str,
+    rpc_url: str,
+    funds_usd: Optional[float] = None,
+    source: str = "",
+    timeout_s: float = 30.0,
+) -> AdminReport:
+    report = AdminReport()
+    t0 = time.monotonic()
+    if not rpc_url:
+        report.notes.append("admin skipped — no RPC")
+        report.duration_ms = int((time.monotonic() - t0) * 1000)
+        return report
+
+    report.ran = True
+    deadline = t0 + max(8.0, float(timeout_s))
+
+    impl = _safe_slot_addr(rpc_url, address, EIP1967_IMPLEMENTATION_SLOT)
+    admin = _safe_slot_addr(rpc_url, address, EIP1967_ADMIN_SLOT)
+    beacon = _safe_slot_addr(rpc_url, address, EIP1967_BEACON_SLOT)
+    report.implementation = impl
+    report.admin = admin
+
+    if beacon and not impl:
+        report.proxy_kind = "beacon"
+    elif admin and impl:
+        report.proxy_kind = "transparent"
+    elif impl and not admin:
+        report.proxy_kind = "uups"
+    elif impl:
+        report.proxy_kind = "eip1967"
+    else:
+        report.proxy_kind = "none"
+
+    controller = admin or _owner_of(rpc_url, address)
+    if controller:
+        report.admin = report.admin or controller
+        report.admin_class, details = _classify_controller(rpc_url, controller, deadline)
+        report.meta["controller_details"] = details
+        report.admin_is_eoa = report.admin_class == "eoa"
+        if report.admin_is_eoa:
+            report.eoa_admin = True
+            lead = AdminFinding(
+                id="admin-eoa",
+                title="Admin/owner is an EOA",
+                evidence="controller=%s class=eoa" % controller,
+                confirmed=False,
+                method="storage",
+                extras={"controller": controller},
+            )
+            report.leads.append(lead)
+            if funds_usd is not None and funds_usd >= 100_000:
+                conf = AdminFinding(
+                    id="admin-eoa-confirmed",
+                    title="EOA admin on contract with funds >= $100k",
+                    evidence="controller=%s funds_usd=%.0f" % (controller, funds_usd),
+                    confirmed=True,
+                    method="storage",
+                    extras={"controller": controller, "funds_usd": funds_usd},
+                )
+                report.confirmed.append(conf)
+        elif report.admin_class == "safe":
+            report.notes.append(
+                "admin is Safe threshold=%s owners=%s"
+                % (details.get("threshold"), details.get("owners_n"))
+            )
+        elif report.admin_class == "timelock":
+            report.notes.append("admin is Timelock minDelay=%ss" % details.get("min_delay"))
+
+    # Uninitialized implementation: eth_call initialize() on impl must revert.
+    if impl and time.monotonic() < deadline:
+        ok, note = eth_call_probe(
+            rpc_url, impl, PROBE_SELECTORS["initialize()"],
+            timeout_s=min(8.0, deadline - time.monotonic()),
+        )
+        if ok:
+            conf = AdminFinding(
+                id="admin-uninit-impl",
+                title="Implementation initialize() succeeds (uninitialized)",
+                evidence="impl=%s %s" % (impl, note),
+                confirmed=True,
+                method="eth_call",
+                extras={"implementation": impl, "probe": "initialize()"},
+            )
+            report.confirmed.append(conf)
+            report.privileged_callable = True
+            report.leads.append(AdminFinding(
+                id="admin-uninit-impl-lead",
+                title="Implementation may be uninitialized",
+                evidence=note,
+            ))
+        else:
+            report.notes.append("initialize() on impl: %s" % note[:120])
+
+    # Anyone-callable upgrade/admin on the proxy itself.
+    if time.monotonic() < deadline:
+        for name, sel in (
+            ("upgradeTo(address)", PROBE_SELECTORS["upgradeTo(address)"] + ("00" * 32)),
+            ("changeAdmin(address)", PROBE_SELECTORS["changeAdmin(address)"] + ("00" * 32)),
+            ("transferOwnership(address)", PROBE_SELECTORS["transferOwnership(address)"] + ("00" * 32)),
+        ):
+            if time.monotonic() > deadline:
+                break
+            ok, note = eth_call_probe(
+                rpc_url, address, sel[:8],
+                data_suffix=sel[8:] if len(sel) > 8 else "",
+                timeout_s=min(6.0, deadline - time.monotonic()),
+            )
+            if ok:
+                report.privileged_callable = True
+                conf = AdminFinding(
+                    id="admin-privileged-open",
+                    title="Privileged admin function callable by outsider",
+                    evidence="%s on %s — %s" % (name, address, note),
+                    confirmed=True,
+                    method="eth_call",
+                    extras={"probe": name},
+                )
+                report.confirmed.append(conf)
+                break
+
+    # Source hint: UUPS without _disableInitializers already covered by clones;
+    # note proxy kind for UI.
+    if "UUPSUpgradeable" in (source or "") or "upgradeTo" in (source or ""):
+        report.meta["source_upgradeable"] = True
+
+    report.status = "ok"
+    report.notes.append(
+        "admin kind=%s class=%s eoa=%s priv=%s confirmed=%d"
+        % (
+            report.proxy_kind,
+            report.admin_class,
+            report.eoa_admin,
+            report.privileged_callable,
+            len(report.confirmed),
+        )
+    )
+    report.duration_ms = int((time.monotonic() - t0) * 1000)
+    report.artifact = {
+        "kind": "admin",
+        "address": address.lower(),
+        "proxy_kind": report.proxy_kind,
+        "implementation": report.implementation,
+        "admin": report.admin,
+        "admin_class": report.admin_class,
+        "confirmed": [f.to_dict() for f in report.confirmed],
+        "leads": [f.to_dict() for f in report.leads],
+        "notes": list(report.notes)[:10],
+        "duration_ms": report.duration_ms,
+    }
+    return report
+
+
+def admin_as_confirmed(report: AdminReport) -> list[dict[str, Any]]:
+    return [
+        {
+            "lead_id": c.id,
+            "confirmed": True,
+            "method": c.method or "admin",
+            "evidence": c.evidence[:500],
+            "extras": dict(c.extras),
+        }
+        for c in report.confirmed
+    ]
+
+
+def admin_as_leads(report: AdminReport) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": lead.id,
+            "engine": "admin",
+            "rule": lead.id,
+            "title": lead.title,
+            "severity": "high",
+            "evidence": lead.evidence,
+            "generic": False,
+        }
+        for lead in report.leads
+    ]
+
+
+def _rpc(rpc_url: str, method: str, params: list[Any], timeout_s: float = 10.0) -> Any:
+    payload = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
+    req = urllib.request.Request(
+        rpc_url, data=payload,
+        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner-admin/0.1"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+        body = json.loads(resp.read().decode("utf-8", errors="replace"))
+    if body.get("error"):
+        raise RuntimeError(str(body["error"])[:200])
+    return body.get("result")
+
+
+def _safe_slot_addr(rpc_url: str, address: str, slot: str) -> Optional[str]:
+    try:
+        word = eth_get_storage_at(rpc_url, address, slot)
+        return storage_word_to_address(word)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _owner_of(rpc_url: str, address: str) -> Optional[str]:
+    for sel in ("8da5cb5b", "b449c54b", "f851a440"):  # owner(), getOwner(), admin()
+        try:
+            raw = str(_rpc(rpc_url, "eth_call", [{"to": address, "data": "0x" + sel}, "latest"]) or "")
+            addr = storage_word_to_address(raw)
+            if addr:
+                return addr
+        except Exception:  # noqa: BLE001
+            continue
+    return None
+
+
+def _classify_controller(
+    rpc_url: str,
+    controller: str,
+    deadline: float,
+) -> tuple[str, dict[str, Any]]:
+    details: dict[str, Any] = {}
+    sz = code_size(rpc_url, controller)
+    if sz == 0:
+        return "eoa", {"code_size": 0}
+    # Safe?
+    try:
+        if time.monotonic() < deadline:
+            owners_raw = str(_rpc(
+                rpc_url, "eth_call",
+                [{"to": controller, "data": "0x" + _SEL_GET_OWNERS}, "latest"],
+                timeout_s=min(6.0, max(1.0, deadline - time.monotonic())),
+            ) or "")
+            thr_raw = str(_rpc(
+                rpc_url, "eth_call",
+                [{"to": controller, "data": "0x" + _SEL_GET_THRESHOLD}, "latest"],
+                timeout_s=min(6.0, max(1.0, deadline - time.monotonic())),
+            ) or "")
+            # owners is address[]; non-empty decode length prefix suggests Safe
+            h = owners_raw.removeprefix("0x")
+            if len(h) >= 128:
+                # offset + length
+                length = int(h[64:128], 16) if len(h) >= 128 else 0
+                if 0 < length <= 64:
+                    thr = int(thr_raw.removeprefix("0x") or "0", 16) if thr_raw else 0
+                    details.update({"owners_n": length, "threshold": thr, "code_size": sz})
+                    return "safe", details
+    except Exception:  # noqa: BLE001
+        pass
+    # Timelock?
+    try:
+        if time.monotonic() < deadline:
+            delay_raw = str(_rpc(
+                rpc_url, "eth_call",
+                [{"to": controller, "data": "0x" + _SEL_GET_MIN_DELAY}, "latest"],
+                timeout_s=min(6.0, max(1.0, deadline - time.monotonic())),
+            ) or "")
+            if delay_raw and delay_raw not in {"0x", "0x0"}:
+                delay = int(delay_raw.removeprefix("0x") or "0", 16)
+                if delay > 0:
+                    details.update({"min_delay": delay, "code_size": sz})
+                    return "timelock", details
+    except Exception:  # noqa: BLE001
+        pass
+    details["code_size"] = sz
+    return "contract", details

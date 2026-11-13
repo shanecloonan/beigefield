@@ -96,11 +96,18 @@ jobs:
             fi
           fi
           command -v medusa && medusa --version | head -1 || echo "medusa missing (forge fallback ok)"
+          # Halmos (optional) — symbolic check_* on lead harnesses; skip quietly.
+          if ! command -v halmos >/dev/null 2>&1; then
+            python -m pip install -q "halmos>=0.1.0" || true
+          fi
+          command -v halmos && halmos --version 2>/dev/null | head -1 || echo "halmos missing (symbolic skip ok)"
           python - <<'PY'
           from eth_scanner.deep.runners import engine_availability
           from eth_scanner.engines.fuzz_runner import anvil_bin, forge_bin, medusa_bin
+          from eth_scanner.engines.halmos_runner import halmos_bin
           print("engine_availability=", engine_availability())
           print("fuzz_tools=", {"medusa": bool(medusa_bin()), "forge": bool(forge_bin()), "anvil": bool(anvil_bin())})
+          print("halmos=", bool(halmos_bin()))
           PY
 
       - name: Discover + scan recent deployments

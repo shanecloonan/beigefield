@@ -22,12 +22,22 @@ from eth_scanner.types import FunnelResult, to_plain
 
 
 def _aggregate_engine_stats(scan_results: list[dict[str, Any]]) -> dict[str, Any]:
-    """Roll up Slither/Mythril/fuzz/lead/confirmed counts from drain rows."""
+    """Roll up Slither/Mythril/fuzz/halmos/oracle/admin/storage counts."""
     slither_run = 0
     mythril_run = 0
     fuzzed = 0
     fuzz_properties = 0
     fuzz_failures = 0
+    halmos_run = 0
+    halmos_properties = 0
+    halmos_failures = 0
+    oracle_run = 0
+    oracle_confirmed = 0
+    admin_run = 0
+    admin_confirmed = 0
+    storage_run = 0
+    storage_confirmed = 0
+    clone_leads = 0
     leads = 0
     confirmed = 0
     heat_gt0 = 0
@@ -38,6 +48,7 @@ def _aggregate_engine_stats(scan_results: list[dict[str, Any]]) -> dict[str, Any
         hb = dict(row.get("heat_breakdown") or {})
         et = dict(row.get("engine_timing") or hb.get("engine_timing") or {})
         fuzz = dict(hb.get("fuzz") or et.get("fuzz") or {})
+        symbolic = dict(hb.get("symbolic") or {})
         status_sl = str(et.get("slither_status") or "")
         status_my = str(et.get("mythril_status") or "")
         if et.get("ran_slither") or status_sl in {"ok", "error"}:
@@ -48,6 +59,20 @@ def _aggregate_engine_stats(scan_results: list[dict[str, Any]]) -> dict[str, Any
             fuzzed += 1
         fuzz_properties += int(et.get("fuzz_properties") or fuzz.get("properties_checked") or 0)
         fuzz_failures += int(et.get("fuzz_failures") or fuzz.get("failure_count") or len(fuzz.get("failures") or []))
+        if et.get("ran_halmos") or symbolic.get("ran"):
+            halmos_run += 1
+        halmos_properties += int(et.get("halmos_properties") or symbolic.get("properties_checked") or 0)
+        halmos_failures += int(et.get("halmos_failures") or symbolic.get("failure_count") or len(symbolic.get("failures") or []))
+        if et.get("ran_oracle"):
+            oracle_run += 1
+        oracle_confirmed += int(et.get("oracle_confirmed") or 0)
+        if et.get("ran_admin"):
+            admin_run += 1
+        admin_confirmed += int(et.get("admin_confirmed") or 0)
+        if et.get("ran_storage"):
+            storage_run += 1
+        storage_confirmed += int(et.get("storage_confirmed") or 0)
+        clone_leads += int(et.get("clone_leads") or 0)
         n_leads = len(row.get("engine_leads") or [])
         if not n_leads:
             n_leads = int(hb.get("engine_leads") or et.get("leads") or 0)
@@ -64,11 +89,16 @@ def _aggregate_engine_stats(scan_results: list[dict[str, Any]]) -> dict[str, Any
                 "slither_ms": et.get("slither_ms"),
                 "mythril_ms": et.get("mythril_ms"),
                 "fuzz_ms": et.get("fuzz_ms"),
+                "halmos_ms": et.get("halmos_ms"),
+                "oracle_ms": et.get("oracle_ms"),
+                "admin_ms": et.get("admin_ms"),
+                "storage_ms": et.get("storage_ms"),
                 "total_ms": et.get("total_ms"),
                 "slither_status": status_sl or None,
                 "mythril_status": status_my or None,
                 "fuzz_status": et.get("fuzz_status") or fuzz.get("status"),
                 "fuzz_tool": et.get("fuzz_tool") or fuzz.get("tool"),
+                "halmos_status": et.get("halmos_status") or symbolic.get("status"),
                 "leads": n_leads,
                 "confirmed": n_conf,
                 "funds_usd": row.get("funds_usd"),
@@ -81,6 +111,16 @@ def _aggregate_engine_stats(scan_results: list[dict[str, Any]]) -> dict[str, Any
         "fuzzed": fuzzed,
         "fuzz_properties": fuzz_properties,
         "fuzz_failures": fuzz_failures,
+        "halmos_run": halmos_run,
+        "halmos_properties": halmos_properties,
+        "halmos_failures": halmos_failures,
+        "oracle_run": oracle_run,
+        "oracle_confirmed": oracle_confirmed,
+        "admin_run": admin_run,
+        "admin_confirmed": admin_confirmed,
+        "storage_run": storage_run,
+        "storage_confirmed": storage_confirmed,
+        "clone_leads": clone_leads,
         "leads": leads,
         "confirmed": confirmed,
         "heat_gt0": heat_gt0,
@@ -517,6 +557,11 @@ def main(argv: list[str] | None = None) -> int:
             "prefer_verified=%(prefer_verified)s keys=%(keys_configured)s "
             "slither_run=%(slither_run)d mythril_run=%(mythril_run)d "
             "fuzzed=%(fuzzed)d fuzz_properties=%(fuzz_properties)d fuzz_failures=%(fuzz_failures)d "
+            "halmos_run=%(halmos_run)d halmos_properties=%(halmos_properties)d halmos_failures=%(halmos_failures)d "
+            "oracle_run=%(oracle_run)d oracle_confirmed=%(oracle_confirmed)d "
+            "admin_run=%(admin_run)d admin_confirmed=%(admin_confirmed)d "
+            "storage_run=%(storage_run)d storage_confirmed=%(storage_confirmed)d "
+            "clone_leads=%(clone_leads)d "
             "leads=%(leads)d confirmed=%(confirmed)d heat_gt0=%(heat_gt0)d"
             % summary,
             file=sys.stderr,

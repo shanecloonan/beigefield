@@ -1043,7 +1043,9 @@ export default function TestApp() {
                         Confirmed · {String(c.lead_id ?? "lead")}
                         <span className="ml-2 text-brand-500">
                           by {String(c.method ?? "eth_call")}
-                          {String(c.method) === "fuzz" ? " · proof of a bug, not an attack" : ""}
+                          {["fuzz", "symbolic"].includes(String(c.method))
+                            ? " · proof of a bug, not an attack"
+                            : ""}
                         </span>
                       </p>
                       <p className="mt-0.5 font-mono text-[10px] text-brand-300 break-all">
@@ -1051,6 +1053,29 @@ export default function TestApp() {
                       </p>
                     </div>
                   ))}
+                {(lastRun.result.engine_timing &&
+                  (lastRun.result.engine_timing.oracle_ms != null ||
+                    lastRun.result.engine_timing.admin_ms != null ||
+                    lastRun.result.engine_timing.halmos_ms != null)) && (
+                  <p className="text-[10px] text-brand-500">
+                    stages
+                    {lastRun.result.engine_timing.ran_oracle
+                      ? ` · oracle conf ${Number(lastRun.result.engine_timing.oracle_confirmed ?? 0)}`
+                      : ""}
+                    {lastRun.result.engine_timing.ran_admin
+                      ? ` · admin conf ${Number(lastRun.result.engine_timing.admin_confirmed ?? 0)}`
+                      : ""}
+                    {lastRun.result.engine_timing.ran_storage
+                      ? ` · storage conf ${Number(lastRun.result.engine_timing.storage_confirmed ?? 0)}`
+                      : ""}
+                    {lastRun.result.engine_timing.ran_halmos
+                      ? ` · halmos fail ${Number(lastRun.result.engine_timing.halmos_failures ?? 0)}`
+                      : ""}
+                    {lastRun.result.engine_timing.clone_leads != null
+                      ? ` · clone leads ${Number(lastRun.result.engine_timing.clone_leads ?? 0)}`
+                      : ""}
+                  </p>
+                )}
                 {(lastRun.result.engine_leads ?? []).slice(0, 12).map((lead, i) => (
                   <div key={`el-${i}`} className="rounded-md border border-amber-900/40 bg-amber-950/10 px-2 py-1.5">
                     <p className="text-[11px] text-amber-200/90">
