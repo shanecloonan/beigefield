@@ -103,6 +103,10 @@ def run_lead_fuzz(
     rpc_url: str,
     work_dir: Optional[Path] = None,
     timeout_s: int = 60,
+    source: str = "",
+    compiler: Optional[str] = None,
+    runtime_bytecode: str = "",
+    source_dir: Optional[Path] = None,
 ) -> FuzzReport:
     """Fuzz only when caller already gated on leads + funds. Hard timeout."""
     report = FuzzReport()
@@ -125,6 +129,10 @@ def run_lead_fuzz(
             address=address,
             contract_class=contract_class,
             contract_name=contract_name,
+            compiler=compiler,
+            source=source,
+            runtime_bytecode=runtime_bytecode,
+            source_dir=source_dir,
         )
         report.property_ids = props
         report.properties_checked = len(props)
@@ -135,7 +143,8 @@ def run_lead_fuzz(
         return report
 
     # Compile first with a slice of the budget; skip fuzz if compile fails/times out.
-    compile_budget = min(20, max(8, budget // 3))
+    # Leave headroom for solc download when version is pinned per-contract.
+    compile_budget = min(35, max(12, budget // 3))
     compiled, compile_note = _forge_build(project, timeout_s=compile_budget)
     report.notes.append(compile_note)
     if not compiled:

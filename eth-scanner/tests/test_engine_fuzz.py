@@ -152,7 +152,7 @@ class PipelineFuzzGating(unittest.TestCase):
             report = run_advanced_engines(
                 address="0x" + "ab" * 20,
                 source="pragma solidity ^0.8.0; contract V { function deposit() external payable {} }",
-                bytecode_hash="deadbeef",
+                bytecode_hash="fuzz-skip-no-lead-hash",
                 contract_class="vault",
                 funds_usd=25_000,
                 verified=True,

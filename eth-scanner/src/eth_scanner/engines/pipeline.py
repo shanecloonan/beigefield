@@ -108,6 +108,9 @@ def run_advanced_engines(
     rpc_url: str = "",
     invariant_results: Optional[list[dict[str, Any]]] = None,
     work_dir: Optional[Path] = None,
+    source_dir: Optional[Path] = None,
+    compiler: Optional[str] = None,
+    runtime_bytecode: str = "",
     slither_timeout_s: int = 60,
     mythril_timeout_s: int = 90,
     fuzz_timeout_s: int = 60,
@@ -325,6 +328,10 @@ def run_advanced_engines(
                 rpc_url=rpc_url,
                 work_dir=work_dir,
                 timeout_s=fuzz_timeout_s,
+                source=source,
+                compiler=compiler,
+                runtime_bytecode=runtime_bytecode,
+                source_dir=source_dir,
             )
             report.fuzz = fuzz_report.to_dict()
             report.notes.extend(list(fuzz_report.notes or [])[:4])
@@ -363,6 +370,10 @@ def run_advanced_engines(
                 rpc_url=rpc_url,
                 work_dir=work_dir,
                 timeout_s=halmos_timeout_s,
+                source=source,
+                compiler=compiler,
+                runtime_bytecode=runtime_bytecode,
+                source_dir=source_dir,
             )
             report.symbolic = halmos_report.to_dict()
             report.notes.extend(list(halmos_report.notes or [])[:4])
@@ -383,6 +394,18 @@ def run_advanced_engines(
 
     fuzz_ms = int((fuzz_report.duration_ms if fuzz_report else 0) or 0)
     halmos_ms = int((halmos_report.duration_ms if halmos_report else 0) or 0)
+    fuzz_status = (fuzz_report.status if fuzz_report else report.fuzz.get("status") or "skipped")
+    halmos_status = (halmos_report.status if halmos_report else report.symbolic.get("status") or "skipped")
+    oracle_ran = bool((report.oracle or {}).get("ran"))
+    admin_ran = bool((report.admin or {}).get("ran"))
+    storage_ran = bool((report.storage or {}).get("ran"))
+    slither_executed = report.ran_slither and report.slither_status not in {"skipped", "compile-skip"}
+    mythril_executed = report.ran_mythril and report.mythril_status not in {"skipped", "compile-skip"}
+    fuzz_executed = bool(fuzz_report and fuzz_report.ran and fuzz_status not in {"skipped", "compile-skip"})
+    halmos_executed = bool(
+        halmos_report and getattr(halmos_report, "executed", False)
+        and halmos_status not in {"skipped", "compile-skip"}
+    )
     report.timing = {
         "slither_ms": report.slither_ms,
         "mythril_ms": report.mythril_ms,
@@ -397,17 +420,36 @@ def run_advanced_engines(
         "ran_mythril": report.ran_mythril,
         "ran_fuzz": bool(fuzz_report and fuzz_report.ran),
         "ran_halmos": bool(halmos_report and halmos_report.ran),
-        "ran_oracle": bool((report.oracle or {}).get("ran")),
-        "ran_admin": bool((report.admin or {}).get("ran")),
-        "ran_storage": bool((report.storage or {}).get("ran")),
+        "ran_oracle": oracle_ran,
+        "ran_admin": admin_ran,
+        "ran_storage": storage_ran,
+        # Executed vs skipped (campaign actually checked something).
+        "slither_executed": slither_executed,
+        "slither_skipped": not slither_executed,
+        "mythril_executed": mythril_executed,
+        "mythril_skipped": not mythril_executed,
+        "fuzz_executed": fuzz_executed,
+        "fuzz_skipped": not fuzz_executed,
+        "halmos_executed": halmos_executed,
+        "halmos_skipped": not halmos_executed,
+        "oracle_executed": oracle_ran,
+        "oracle_skipped": not oracle_ran,
+        "admin_executed": admin_ran,
+        "admin_skipped": not admin_ran,
+        "storage_executed": storage_ran,
+        "storage_skipped": not storage_ran,
+        "clone_executed": True,  # fingerprint stage always runs when engines gate passes
+        "clone_skipped": False,
         "slither_status": report.slither_status,
         "mythril_status": report.mythril_status,
-        "fuzz_status": (fuzz_report.status if fuzz_report else report.fuzz.get("status") or "skipped"),
+        "fuzz_status": fuzz_status,
         "fuzz_tool": (fuzz_report.tool if fuzz_report else "none"),
         "fuzz_properties": (fuzz_report.properties_checked if fuzz_report else 0),
         "fuzz_failures": (fuzz_report.failure_count if fuzz_report else 0),
-        "halmos_status": (halmos_report.status if halmos_report else report.symbolic.get("status") or "skipped"),
+        "halmos_status": halmos_status,
         "halmos_properties": (halmos_report.properties_checked if halmos_report else 0),
+        "halmos_properties_executed": int(getattr(halmos_report, "properties_executed", 0) or 0) if halmos_report else 0,
+        "halmos_properties_skipped": int(getattr(halmos_report, "properties_skipped", 0) or 0) if halmos_report else 0,
         "halmos_failures": (halmos_report.failure_count if halmos_report else 0),
         "oracle_confirmed": sum(1 for c in (report.oracle or {}).get("confirmed") or [] if c.get("confirmed")),
         "admin_confirmed": sum(1 for c in (report.admin or {}).get("confirmed") or [] if c.get("confirmed")),

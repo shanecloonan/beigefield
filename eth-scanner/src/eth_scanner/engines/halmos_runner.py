@@ -1,29 +1,36 @@
 """Time-boxed Halmos symbolic checks on lead contracts.
 
-Reuses the same LiveProperties harness as Medusa/Foundry (check_* entrypoints).
-Counterexamples → failed_invariant + eth_scan_artifacts kind=symbolic.
-Hard timeout; missing binary / compile failure → skip (never blocks queue).
+Uses the LiveProperties harness with vm.etch (Halmos does not support
+createSelectFork). Counterexamples ([FAIL]) → failed_invariant + artifact
+kind=symbolic. [ERROR] all-paths-reverted is a property skip, not heat.
+Hard timeout; missing binary / true compile failure → campaign skipped.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
 import subprocess
 import tempfile
 import time
+import urllib.request
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
-from eth_scanner.engines.fuzz_harness import properties_for_class, write_live_fuzz_project
+from eth_scanner.engines.fuzz_harness import (
+    detect_solc_version,
+    properties_for_class,
+    write_live_fuzz_project,
+)
 from eth_scanner.engines.fuzz_runner import forge_bin, _forge_build, _scrub_env
 
-_FAIL_RX = re.compile(
-    r"\[FAIL[^\]]*\]\s*(check_\w+)|Counterexample[^\n]{0,200}|AssertionError[^\n]{0,120}",
-    re.I,
-)
+_PASS_RX = re.compile(r"\[PASS\]\s*(check_\w+)", re.I)
+_FAIL_RX = re.compile(r"\[FAIL[^\]]*\]\s*(check_\w+)", re.I)
+_ERROR_RX = re.compile(r"\[ERROR\]\s*(check_\w+)", re.I)
+_COUNTER_RX = re.compile(r"Counterexample[^\n]{0,240}", re.I)
 
 
 @dataclass
@@ -40,8 +47,11 @@ class SymbolicFailure:
 class HalmosReport:
     ran: bool = False
     skipped: bool = True
+    executed: bool = False  # at least one check_* executed
     status: str = "skipped"  # ok | failed | error | skipped | timeout | compile-skip
     properties_checked: int = 0
+    properties_executed: int = 0
+    properties_skipped: int = 0
     property_ids: list[str] = field(default_factory=list)
     failures: list[SymbolicFailure] = field(default_factory=list)
     duration_ms: int = 0
@@ -56,8 +66,11 @@ class HalmosReport:
         return {
             "ran": self.ran,
             "skipped": self.skipped,
+            "executed": self.executed,
             "status": self.status,
             "properties_checked": self.properties_checked,
+            "properties_executed": self.properties_executed,
+            "properties_skipped": self.properties_skipped,
             "property_ids": list(self.property_ids),
             "failures": [f.to_dict() for f in self.failures],
             "duration_ms": self.duration_ms,
@@ -81,6 +94,10 @@ def run_lead_halmos(
     rpc_url: str = "",
     work_dir: Optional[Path] = None,
     timeout_s: int = 90,
+    source: str = "",
+    compiler: Optional[str] = None,
+    runtime_bytecode: str = "",
+    source_dir: Optional[Path] = None,
 ) -> HalmosReport:
     """Symbolic property campaign on leads. Hard wall-clock budget 60–120s."""
     report = HalmosReport()
@@ -100,6 +117,15 @@ def run_lead_halmos(
         report.duration_ms = int((time.monotonic() - t0) * 1000)
         return report
 
+    code = runtime_bytecode or ""
+    if not code and rpc_url:
+        code = _eth_get_code(rpc_url, address) or ""
+        if code:
+            report.notes.append("halmos fetched runtime bytecode (%d bytes)" % max(0, (len(code) - 2) // 2))
+
+    solc = detect_solc_version(source=source, compiler=compiler)
+    report.notes.append("halmos solc=%s" % solc)
+
     base = Path(work_dir) if work_dir else Path(tempfile.gettempdir())
     dest = base / "engine-halmos" / (address.lower()[-16:] or "target")
     try:
@@ -108,6 +134,12 @@ def run_lead_halmos(
             address=address,
             contract_class=contract_class,
             contract_name=contract_name,
+            solc_version=solc,
+            compiler=compiler,
+            source=source,
+            runtime_bytecode=code,
+            source_dir=source_dir,
+            allow_mock_etch=True,  # Halmos cannot new/deployCode
         )
         report.property_ids = props
         report.properties_checked = len(props)
@@ -117,13 +149,15 @@ def run_lead_halmos(
         report.duration_ms = int((time.monotonic() - t0) * 1000)
         return report
 
-    compile_budget = min(25, max(10, budget // 4))
+    # Ensure solc is available via foundry (auto-download) — give compile room.
+    compile_budget = min(35, max(12, budget // 3))
     compiled, compile_note = _forge_build(project, timeout_s=compile_budget)
     report.notes.append(compile_note)
     if not compiled:
         report.status = "compile-skip"
         report.notes.append("halmos skipped — harness compile failed")
         report.duration_ms = int((time.monotonic() - t0) * 1000)
+        _finalize_artifact(report, address, contract_class, contract_name, t0)
         return report
 
     remaining = budget - int(time.monotonic() - t0)
@@ -138,14 +172,6 @@ def run_lead_halmos(
     env = _scrub_env()
     if rpc_url:
         env["ETH_RPC_URL"] = rpc_url
-        # Halmos/forge fork via foundry.toml rpc_endpoints when set.
-        try:
-            toml = (project / "foundry.toml").read_text(encoding="utf-8")
-            if "[rpc_endpoints]" not in toml:
-                with (project / "foundry.toml").open("a", encoding="utf-8") as fh:
-                    fh.write('\n[rpc_endpoints]\nmainnet = "%s"\n' % rpc_url.replace('"', ""))
-        except OSError:
-            pass
 
     cmd = [
         bin_path,
@@ -182,21 +208,35 @@ def run_lead_halmos(
 
     blob = ((proc.stdout or "") + "\n" + (proc.stderr or "")).strip()
     _ingest(blob, report)
-    if report.failures:
+
+    true_compile = _looks_like_true_compile_failure(blob) and report.properties_executed == 0
+    if true_compile:
+        report.status = "compile-skip"
+        report.executed = False
+        report.ran = False
+        report.skipped = True
+        report.notes.append("halmos true compile/infra failure — no heat")
+    elif report.failures:
         report.status = "failed"
+    elif report.properties_executed > 0:
+        report.status = "ok"
     elif proc.returncode not in (0, None):
-        low = blob.lower()
-        if "compil" in low or "error:" in low[:400]:
-            report.status = "compile-skip"
-            report.notes.append("halmos compile/infra failure — no heat")
-        else:
-            report.status = "error"
-            report.notes.append("halmos exit=%s with no parsed counterexamples" % proc.returncode)
+        report.status = "error"
+        report.notes.append(
+            "halmos exit=%s with no executed checks — %s"
+            % (proc.returncode, blob[-180:].replace("\n", " ")[:160])
+        )
     else:
         report.status = "ok"
+
     report.notes.append(
-        "halmos exit=%s props=%d failures=%d"
-        % (proc.returncode, report.properties_checked, report.failure_count)
+        "halmos exit=%s executed=%d skipped_props=%d failures=%d"
+        % (
+            proc.returncode,
+            report.properties_executed,
+            report.properties_skipped,
+            report.failure_count,
+        )
     )
     _finalize_artifact(report, address, contract_class, contract_name, t0)
     return report
@@ -242,26 +282,87 @@ def _ingest(blob: str, report: HalmosReport) -> None:
     text = blob or ""
     if not text.strip():
         return
-    low = text.lower()
-    if any(tok in low for tok in ("failed to compile", "compilation failed", "solc error")):
-        report.notes.append("halmos compile noise — ignoring as property failure")
-        return
+
+    passed = {_clean_prop(m.group(1), report) for m in _PASS_RX.finditer(text)}
+    failed_names = []
     for m in _FAIL_RX.finditer(text):
-        prop = m.group(1) or "halmos_property"
-        if prop.startswith("check_"):
-            prop = prop[len("check_"):]
-        for pid in report.property_ids:
-            if pid.lower() in prop.lower().replace("-", "_"):
-                prop = pid
-                break
-        snippet = re.sub(r"\s+", " ", m.group(0))[:400]
+        prop = _clean_prop(m.group(1), report)
+        failed_names.append(prop)
+        # Prefer nearby counterexample
+        window = text[m.start():m.start() + 500]
+        cm = _COUNTER_RX.search(window) or _COUNTER_RX.search(text)
+        repro = re.sub(r"\s+", " ", (cm.group(0) if cm else m.group(0)))[:400]
         report.failures.append(SymbolicFailure(
             property_id=prop,
-            reproduction=snippet,
-            evidence="halmos counterexample: %s" % snippet[:280],
+            reproduction=repro,
+            evidence="halmos counterexample: %s" % repro[:280],
         ))
-        if len(report.failures) >= 8:
-            break
+
+    errored = set()
+    for m in _ERROR_RX.finditer(text):
+        prop = _clean_prop(m.group(1), report)
+        errored.add(prop)
+        # All-paths-reverted etc. — property skip, not a confirmed bug.
+        report.notes.append("halmos property skip: %s (ERROR/restrictive paths)" % prop)
+
+    executed = passed | set(failed_names) | errored
+    report.properties_executed = len(executed)
+    report.properties_skipped = max(0, report.properties_checked - report.properties_executed)
+    report.executed = report.properties_executed > 0
+    if len(report.failures) > 8:
+        report.failures = report.failures[:8]
+
+
+def _clean_prop(name: str, report: HalmosReport) -> str:
+    prop = (name or "halmos_property").strip()
+    if prop.startswith("check_"):
+        prop = prop[len("check_"):]
+    for pid in report.property_ids:
+        if pid.lower() in prop.lower().replace("-", "_"):
+            return pid
+    return prop
+
+
+def _looks_like_true_compile_failure(blob: str) -> bool:
+    low = (blob or "").lower()
+    # Halmos prints [ERROR] for restrictive paths — that is NOT a compile failure.
+    if "[pass]" in low or ("[fail" in low and "setup() failed" not in low):
+        return False
+    markers = (
+        "build failed",
+        "compiler run failed",
+        "failed to compile",
+        "compilation failed",
+        "solc error",
+        "error (9582)",
+        "error (1629)",
+        "setup() failed",
+        "no successful path found in setup",
+        "unsupported cheat code",
+    )
+    return any(m in low for m in markers)
+
+
+def _eth_get_code(rpc_url: str, address: str, timeout_s: float = 12.0) -> Optional[str]:
+    try:
+        payload = json.dumps({
+            "jsonrpc": "2.0", "id": 1,
+            "method": "eth_getCode",
+            "params": [address, "latest"],
+        }).encode()
+        req = urllib.request.Request(
+            rpc_url, data=payload,
+            headers={"Content-Type": "application/json", "User-Agent": "eth-scanner-halmos/0.2"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+            body = json.loads(resp.read().decode("utf-8", errors="replace"))
+        raw = body.get("result")
+        if isinstance(raw, str) and raw not in {"0x", "0x0"} and len(raw) > 4:
+            return raw
+    except Exception:  # noqa: BLE001
+        return None
+    return None
 
 
 def _finalize_artifact(
@@ -277,10 +378,13 @@ def _finalize_artifact(
         "label": "proof of a bug, not an attack",
         "tool": "halmos",
         "status": report.status,
+        "executed": report.executed,
         "address": address.lower(),
         "contract_class": contract_class,
         "contract_name": contract_name,
         "properties_checked": report.properties_checked,
+        "properties_executed": report.properties_executed,
+        "properties_skipped": report.properties_skipped,
         "property_ids": list(report.property_ids),
         "failures": [f.to_dict() for f in report.failures],
         "duration_ms": report.duration_ms,

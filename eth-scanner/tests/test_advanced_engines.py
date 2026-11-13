@@ -139,9 +139,20 @@ class MonitorEngineRollup(unittest.TestCase):
                 "engine_timing": {
                     "ran_slither": True,
                     "slither_status": "ok",
+                    "slither_executed": True,
+                    "slither_skipped": False,
                     "slither_ms": 12,
                     "ran_mythril": False,
                     "mythril_status": "skipped",
+                    "mythril_executed": False,
+                    "mythril_skipped": True,
+                    "ran_halmos": True,
+                    "halmos_status": "compile-skip",
+                    "halmos_executed": False,
+                    "halmos_skipped": True,
+                    "halmos_properties": 16,
+                    "halmos_properties_executed": 0,
+                    "clone_executed": True,
                 },
             },
             {
@@ -155,16 +166,44 @@ class MonitorEngineRollup(unittest.TestCase):
                 "engine_timing": {
                     "ran_slither": True,
                     "slither_status": "ok",
+                    "slither_executed": True,
+                    "slither_skipped": False,
                     "slither_ms": 40,
                     "ran_mythril": True,
                     "mythril_status": "ok",
+                    "mythril_executed": True,
+                    "mythril_skipped": False,
                     "mythril_ms": 90,
+                    "ran_halmos": True,
+                    "halmos_status": "ok",
+                    "halmos_executed": True,
+                    "halmos_skipped": False,
+                    "halmos_properties": 5,
+                    "halmos_properties_executed": 5,
+                    "halmos_properties_skipped": 0,
+                    "fuzz_executed": True,
+                    "fuzz_skipped": False,
+                    "ran_fuzz": True,
+                    "oracle_executed": True,
+                    "admin_executed": True,
+                    "storage_executed": False,
+                    "storage_skipped": True,
+                    "clone_executed": True,
                 },
             },
         ]
         stats = _aggregate_engine_stats(rows)
         self.assertEqual(stats["slither_run"], 2)
+        self.assertEqual(stats["slither_executed"], 2)
         self.assertEqual(stats["mythril_run"], 1)
+        self.assertEqual(stats["mythril_executed"], 1)
+        self.assertEqual(stats["mythril_skipped"], 1)
+        self.assertEqual(stats["halmos_run"], 2)
+        self.assertEqual(stats["halmos_executed"], 1)
+        self.assertEqual(stats["halmos_skipped"], 1)
+        self.assertEqual(stats["halmos_properties_executed"], 5)
+        self.assertEqual(stats["fuzz_executed"], 1)
+        self.assertEqual(stats["clone_executed"], 2)
         self.assertEqual(stats["leads"], 3)
         self.assertEqual(stats["confirmed"], 1)
         self.assertEqual(stats["heat_gt0"], 1)

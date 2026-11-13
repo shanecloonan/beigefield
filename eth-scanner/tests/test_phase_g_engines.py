@@ -77,11 +77,61 @@ class HalmosSymbolic(unittest.TestCase):
                 Path(tmp) / "h",
                 address="0x" + "11" * 20,
                 contract_class="vault",
+                runtime_bytecode="0x6080604052" + ("ab" * 40),
+                compiler="v0.8.19+commit.7dd6d404",
             )
             sol = (root / "test" / "LiveProperties.t.sol").read_text(encoding="utf-8")
             self.assertIn("function check_solvency_assets_cover_shares", sol)
             self.assertIn("function check_access_control_non_owner", sol)
+            self.assertIn("vm.etch", sol)
+            self.assertNotIn("new MockBound", sol)
+            toml = (root / "foundry.toml").read_text(encoding="utf-8")
+            self.assertIn('solc = "0.8.19"', toml)
+            self.assertTrue((root / "lib" / "forge-std" / "src" / "Vm.sol").is_file())
             self.assertGreaterEqual(len(props), 2)
+            # Halmos fallback: mock etch hex without deployCode/`new`.
+            root2, _ = write_live_fuzz_project(
+                Path(tmp) / "h2",
+                address="0x" + "22" * 20,
+                contract_class="vault",
+                allow_mock_etch=True,
+            )
+            sol2 = (root2 / "test" / "LiveProperties.t.sol").read_text(encoding="utf-8")
+            self.assertIn("vm.etch", sol2)
+            self.assertNotIn("new MockBound", sol2)
+
+    def test_solc_detect_from_pragma_and_compiler(self):
+        from eth_scanner.engines.fuzz_harness import detect_solc_version
+        self.assertEqual(detect_solc_version(compiler="v0.8.17+commit.8df45f5f"), "0.8.17")
+        self.assertEqual(
+            detect_solc_version(source="pragma solidity ^0.8.12;"),
+            "0.8.12",
+        )
+
+    def test_error_paths_are_property_skips_not_compile_skip(self):
+        from eth_scanner.engines.halmos_runner import _ingest
+        report = HalmosReport(
+            ran=True, skipped=False, status="ok",
+            properties_checked=3,
+            property_ids=["access_control_non_owner", "no_third_party_balance_drop"],
+        )
+        blob = (
+            "[PASS] check_access_control_non_owner ()\n"
+            "[ERROR] check_no_third_party_balance_drop (paths: all reverted)\n"
+            "Symbolic test result: 1 passed, 0 failed, 1 error\n"
+        )
+        _ingest(blob, report)
+        self.assertTrue(report.executed)
+        self.assertEqual(report.properties_executed, 2)
+        self.assertEqual(report.properties_skipped, 1)
+        self.assertEqual(report.failure_count, 0)
+        from eth_scanner.engines.halmos_runner import _looks_like_true_compile_failure
+        self.assertFalse(_looks_like_true_compile_failure(blob))
+
+    def test_true_compile_failure_marker(self):
+        from eth_scanner.engines.halmos_runner import _looks_like_true_compile_failure
+        self.assertTrue(_looks_like_true_compile_failure("Error: Compiler run failed\nbuild failed"))
+        self.assertFalse(_looks_like_true_compile_failure("[PASS] check_foo\n[ERROR] check_bar"))
 
     def test_counterexample_feeds_failed_invariant_heat(self):
         report = HalmosReport(
@@ -220,16 +270,31 @@ class CloneDataset(unittest.TestCase):
 
 class PipelineIntegration(unittest.TestCase):
     def test_stages_run_without_blocking_on_tool_absence(self):
+        from eth_scanner.deep.findings import EngineFinding
         from eth_scanner.deep.runners import EngineRunResult
 
-        fake_sl = EngineRunResult("slither", "ok", findings=[], note="ok", duration_ms=1)
+        finding = EngineFinding(
+            id="slither-1",
+            engine="slither",
+            rule="reentrancy-eth",
+            title="Slither reentrancy-eth",
+            severity="high",
+            confidence="medium",
+            funds_class="reentrancy",
+            evidence="reentrancy lead",
+            generic=False,
+        )
+        fake_sl = EngineRunResult("slither", "ok", findings=[finding], note="ok", duration_ms=1)
         with mock.patch("eth_scanner.engines.pipeline.run_slither", return_value=fake_sl), \
              mock.patch("eth_scanner.engines.pipeline.run_mythril", return_value=EngineRunResult("mythril", "skipped")), \
+             mock.patch("eth_scanner.engines.pipeline.corroborate_lead") as corr, \
              mock.patch("eth_scanner.engines.pipeline.run_lead_fuzz") as fuzz, \
              mock.patch("eth_scanner.engines.pipeline.run_lead_halmos") as halmos, \
              mock.patch("eth_scanner.engines.pipeline.run_oracle_checks") as oracle, \
              mock.patch("eth_scanner.engines.pipeline.run_admin_checks") as admin, \
              mock.patch("eth_scanner.engines.pipeline.run_storage_diff") as storage:
+            from eth_scanner.engines.corroborate import Corroboration
+            corr.return_value = Corroboration("slither-1", False, "eth_call", "reverted")
             from eth_scanner.engines.oracle_checks import OracleReport
             from eth_scanner.engines.admin_checks import AdminReport
             from eth_scanner.engines.storage_diff import StorageReport
@@ -241,21 +306,37 @@ class PipelineIntegration(unittest.TestCase):
                 notes=[], status="skipped", tool="none", properties_checked=0,
                 failure_count=0, duration_ms=0, ran=False, failures=[], artifact={},
             )
-            halmos.return_value = HalmosReport(ran=False, skipped=True, status="skipped")
+            # Simulated prior false-positive: ran=True but executed=False (compile-skip).
+            halmos.return_value = HalmosReport(
+                ran=False, skipped=True, status="compile-skip", executed=False,
+                properties_checked=16, properties_executed=0, properties_skipped=16,
+            )
             report = run_advanced_engines(
                 address="0x" + "ab" * 20,
                 source="pragma solidity ^0.8.0; contract V { function deposit() external payable {} }",
-                bytecode_hash="deadbeef",
+                bytecode_hash="phaseg-pipeline-integration-hash",
                 contract_class="vault",
                 funds_usd=25_000,
                 verified=True,
                 rpc_url="https://example.invalid",
                 run_fuzz=True,
                 run_halmos=True,
+                compiler="v0.8.20+commit.a1b79de6",
+                runtime_bytecode="0x6080604052",
             )
-        self.assertTrue(report.timing.get("ran_oracle"))
+        self.assertTrue(report.timing.get("ran_oracle") or report.timing.get("oracle_executed"))
         self.assertIn("oracle_ms", report.timing)
         self.assertIn("halmos_status", report.timing)
+        self.assertFalse(report.timing.get("halmos_executed"))
+        self.assertTrue(report.timing.get("halmos_skipped"))
+        self.assertTrue(report.timing.get("slither_executed"))
+        self.assertIn("fuzz_executed", report.timing)
+        self.assertIn("clone_executed", report.timing)
+        # solc / bytecode wiring reaches runners
+        fuzz.assert_called()
+        kwargs = fuzz.call_args.kwargs
+        self.assertEqual(kwargs.get("compiler"), "v0.8.20+commit.a1b79de6")
+        self.assertTrue(kwargs.get("runtime_bytecode"))
 
 
 if __name__ == "__main__":
