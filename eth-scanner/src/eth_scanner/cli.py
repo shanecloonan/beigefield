@@ -587,12 +587,28 @@ def main(argv: list[str] | None = None) -> int:
     bf.add_argument("--json", action="store_true")
     bf.add_argument("--dry-run", action="store_true")
 
+    blend = sub.add_parser(
+        "blend",
+        help="Fused Ityfuzz/Halmos/Medusa/Echidna lane (local simulation only)",
+    )
+    blend.add_argument("--address", default="", help="0x… on-demand target")
+    blend.add_argument("--list", dest="list_id", default=None, help="list-1, list-2, or all")
+    blend.add_argument("--fixture", default=None, help="leaky, safe, leaky-strategy, evidence-only, incentive")
+    blend.add_argument("--catalog", action="store_true", help="print list counts and engine pins")
+    blend.add_argument("--select", action="store_true", help="print one page of a named list")
+    blend.add_argument("--offset", type=int, default=0)
+    blend.add_argument("--limit", type=int, default=40)
+    blend.add_argument("--timeout", type=int, default=90)
+    blend.add_argument("--json", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
     if args.cmd == "research":
         from eth_scanner.research.cli import main as research_main
         return research_main(rest)
+    if args.cmd == "blend":
+        return _run_blend_cli(args)
 
     settings = load_settings()
     if getattr(args, "dry_run", False):
@@ -996,6 +1012,51 @@ def main(argv: list[str] | None = None) -> int:
 
     p.error("unknown command")
     return 2
+
+
+def _run_blend_cli(args: Any) -> int:
+    """Print a Blend receipt or a list page. No store, no broadcast."""
+    from eth_scanner.deep.blend.orchestrator import run_blend
+    from eth_scanner.feed.lists import catalog, page_contracts, select_deep
+
+    if args.catalog:
+        print(json.dumps(catalog()))
+        return 0
+    if args.select:
+        if not args.list_id:
+            print("blend: --select needs --list list-1 or list-2", file=sys.stderr)
+            return 2
+        print(json.dumps(page_contracts(args.list_id, offset=args.offset, limit=args.limit)))
+        return 0
+    if args.fixture:
+        report = run_blend(fixture=args.fixture, list_id=args.list_id)
+    elif args.address:
+        rows = []
+        if args.list_id:
+            rows = select_deep(args.list_id, address=args.address)
+        fixture = None
+        funds = None
+        name = ""
+        if rows:
+            fixture = rows[0].get("fixture")
+            funds = rows[0].get("est_usd_held")
+            name = rows[0].get("protocol") or ""
+        if fixture:
+            report = run_blend(fixture=str(fixture), list_id=args.list_id)
+        else:
+            report = run_blend(
+                address=args.address,
+                funds_usd=funds,
+                contract_name=name,
+                list_id=args.list_id,
+                fork_url=(os.environ.get("ETH_RPC_URL") or ""),
+                timeout_s=int(args.timeout or 90),
+            )
+    else:
+        print("blend: pass --fixture, --address, --catalog, or --select", file=sys.stderr)
+        return 2
+    print(json.dumps(report))
+    return 0
 
 
 def _read_addrs(path: Path) -> list[str]:

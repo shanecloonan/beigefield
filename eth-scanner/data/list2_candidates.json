@@ -1,0 +1,55 @@
+{
+  "id": "list-2",
+  "name": "List 2",
+  "kind": "sketchy",
+  "min_usd": 50,
+  "max_usd": 1900,
+  "candidates": [
+    {
+      "address": "0x1111111111111111111111111111111111111111",
+      "protocol": "Sandbox LeakyVault",
+      "est_usd_held": 1000,
+      "tier": 3,
+      "candidate_reason": "sandbox-fixture;caller-profit",
+      "contract_class": "vault",
+      "source": "sandbox-fixture",
+      "fixture": "leaky"
+    },
+    {
+      "address": "0x2222222222222222222222222222222222222222",
+      "protocol": "Sandbox SafeVault",
+      "est_usd_held": 1000,
+      "tier": 3,
+      "candidate_reason": "sandbox-fixture;conservation-holds",
+      "contract_class": "vault",
+      "source": "sandbox-fixture",
+      "fixture": "safe"
+    },
+    {
+      "address": "0x3333333333333333333333333333333333333333",
+      "protocol": "Sandbox StrategyVault",
+      "est_usd_held": 750,
+      "tier": 3,
+      "candidate_reason": "sandbox-fixture;cross-contract",
+      "contract_class": "vault",
+      "source": "sandbox-fixture",
+      "fixture": "leaky-strategy"
+    },
+    {
+      "address": "0x00000000000000000000000000000000000000aa",
+      "protocol": "Dropped above band",
+      "est_usd_held": 5000,
+      "tier": 3,
+      "candidate_reason": "out-of-band",
+      "source": "dropped-by-bounds"
+    },
+    {
+      "address": "0x00000000000000000000000000000000000000bb",
+      "protocol": "Dropped below band",
+      "est_usd_held": 40,
+      "tier": 3,
+      "candidate_reason": "out-of-band",
+      "source": "dropped-by-bounds"
+    }
+  ]
+}

@@ -41,7 +41,7 @@ Signals live in `heuristics/scope.py`. Funds-at-risk family tags are checked *be
 
 ## Research stack (Phase 2, beside Lane A)
 
-Lane A stays the picker. A **research audit stack** (`0.2.0`) sits next to it and only runs L2+ on Lane A funds-at-risk venues. Scanner semver stays `0.3.29`.
+Lane A stays the picker. A **research audit stack** (`0.2.0`) sits next to it and only runs L2+ on Lane A funds-at-risk venues. Scanner semver stays `0.3.30`.
 
 ```bash
 python -m eth_scanner.research run --address 0x… --source tests/fixtures/erc4626_vault_like.sol --dry-run
@@ -135,6 +135,12 @@ python -m eth_scanner lane-b --address 0x... --source path/to/src.sol
 
 # Surface helper (ported invariant_pass heuristics; leads only)
 python -m eth_scanner surface path/to/src --json -
+
+# Blend lane — Ityfuzz, Halmos, Medusa, Echidna on one receipt.
+# Heat moves only when a sandbox caller-profit proof fires.
+python -m eth_scanner blend --fixture leaky
+python -m eth_scanner blend --catalog
+python -m eth_scanner blend --select --list list-2
 
 python -m eth_scanner list
 python -m eth_scanner list --results

@@ -78,6 +78,10 @@ def echidna_bin() -> Optional[str]:
     return _which("ETH_SCANNER_ECHIDNA_BIN", ["echidna"])
 
 
+def ityfuzz_bin() -> Optional[str]:
+    return _which("ETH_SCANNER_ITYFUZZ_BIN", ["ityfuzz"])
+
+
 def engine_availability() -> dict[str, bool]:
     return {
         "slither": bool(slither_bin()),
@@ -89,6 +93,7 @@ def engine_availability() -> dict[str, bool]:
         "anvil": bool(anvil_bin()),
         "medusa": bool(medusa_bin()),
         "echidna": bool(echidna_bin()),
+        "ityfuzz": bool(ityfuzz_bin()),
     }
 
 

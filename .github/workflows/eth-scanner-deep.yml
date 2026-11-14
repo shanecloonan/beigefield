@@ -115,6 +115,16 @@ jobs:
               && chmod +x "$HOME/.local/bin/echidna" \
               || echo "echidna install skipped"
           fi
+          # Ityfuzz pin: nightly-35b7f08962fdd0c2e02df7ef8a43164913d514d9
+          # (same tag as eth_scanner.deep.blend.versions).
+          if ! command -v ityfuzz >/dev/null 2>&1; then
+            curl -fsSL -o /tmp/ityfuzz.tgz \
+              "https://github.com/fuzzland/ityfuzz/releases/download/nightly-35b7f08962fdd0c2e02df7ef8a43164913d514d9/ityfuzz_nightly_linux_amd64.tar.gz" \
+              && tar -xzf /tmp/ityfuzz.tgz -C /tmp \
+              && find /tmp -maxdepth 3 -type f -name ityfuzz -exec cp {} "$HOME/.local/bin/ityfuzz" \; \
+              && chmod +x "$HOME/.local/bin/ityfuzz" \
+              || echo "ityfuzz install skipped"
+          fi
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           export PATH="$HOME/.local/bin:$PATH"
           git clone --depth 1 https://github.com/Decurity/semgrep-smart-contracts.git /tmp/semgrep-smart-contracts || true
@@ -131,10 +141,28 @@ jobs:
           echo "aderyn $(aderyn --version 2>/dev/null | head -1)"
           echo "medusa $(medusa --version 2>/dev/null | head -1)"
           echo "echidna $(echidna --version 2>/dev/null | head -1)"
+          echo "ityfuzz $(ityfuzz --version 2>/dev/null | head -1)"
           set -e
           python - <<'PY'
           from eth_scanner.deep.runners import engine_availability
           print("engine_availability=", engine_availability())
+          PY
+
+      - name: Blend fixture proofs
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          python - <<'PY'
+          from eth_scanner.deep.blend.orchestrator import run_blend
+          leaky = run_blend(fixture="leaky")
+          safe = run_blend(fixture="safe")
+          bundle = run_blend(fixture="leaky-strategy")
+          evidence = run_blend(fixture="evidence-only")
+          assert leaky["bucket"] == "drain-found" and leaky["heat"] > 0, leaky["heat"]
+          assert safe["heat"] == 0 and safe["bucket"] == "no"
+          assert bundle["bucket"] == "drain-found" and bundle["heat"] > 0
+          assert evidence["heat"] == 0 and evidence["findings"][0]["kind"] == "evidence-only"
+          print("blend fixtures ok", leaky["heat"], safe["heat"], bundle["heat"], evidence["heat"])
           PY
 
       - name: Phase B defensive Foundry mock suite

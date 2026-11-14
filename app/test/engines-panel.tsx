@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { groupByEngineRule } from "@/lib/eth-scanner/desk/blend-groups";
 
 type EngineRow = {
   id: string;
@@ -45,6 +46,11 @@ type Finding = {
   evidence: string;
   references: { corpus: string; label: string; url: string }[];
   triage: number;
+  kind?: string | null;
+  label?: string | null;
+  agreement_score?: number | null;
+  agreement_count?: number | null;
+  engines_agreeing?: string[] | null;
 };
 
 type PersistInfo = {
@@ -345,6 +351,7 @@ export default function EnginesPanel() {
       ),
     [sorted, classFilter, sevFilter],
   );
+  const blendGroups = useMemo(() => groupByEngineRule(visible), [visible]);
   const classesSeen = useMemo(() => Array.from(new Set(sorted.map((f) => f.class))).sort(), [sorted]);
   const sevCounts = useMemo(() => {
     const c: Record<string, number> = {};
@@ -700,6 +707,33 @@ export default function EnginesPanel() {
                   {sevCounts[k]} {k}
                 </button>
               ))}
+            </div>
+          )}
+          {blendGroups.length > 0 && (
+            <div className="mb-4 overflow-x-auto rounded-lg border border-brand-800/80">
+              <p className="px-3 py-2 text-[11px] tracking-[0.14em] uppercase text-gold/80">
+                By engine and rule
+              </p>
+              <table className="w-full text-xs">
+                <thead className="bg-brand-900/60 text-brand-400 text-left">
+                  <tr>
+                    <th className="px-3 py-2">Engine</th>
+                    <th className="px-3 py-2">Rule</th>
+                    <th className="px-3 py-2">Agreement</th>
+                    <th className="px-3 py-2">Label</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {blendGroups.map((row) => (
+                    <tr key={`${row.engine}:${row.rule}:${row.title}`} className="border-t border-brand-800/60">
+                      <td className="px-3 py-2">{row.engine}</td>
+                      <td className="px-3 py-2 text-brand-300">{row.rule}</td>
+                      <td className="px-3 py-2 font-mono">{row.agreement_score.toFixed(2)}</td>
+                      <td className="px-3 py-2">{row.label}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
           {visible.length === 0 ? (
