@@ -51,6 +51,7 @@ class MemoryStore:
         self.results: list[dict[str, Any]] = []
         self.alerts: list[dict[str, Any]] = []
         self.backfills: dict[str, dict[str, Any]] = {}
+        self.test_runs: list[dict[str, Any]] = []
         if work_dir:
             work_dir.mkdir(parents=True, exist_ok=True)
             self._load()
@@ -304,6 +305,39 @@ class MemoryStore:
         rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)
         return rows[:limit]
 
+    def patch_target(self, address: str, fields: dict[str, Any]) -> None:
+        addr = normalize_address(address)
+        row = self.targets.get(addr)
+        if not row:
+            return
+        for key, value in fields.items():
+            if value is not None:
+                row[key] = value
+        row["updated_at"] = _now()
+        self._flush()
+
+    def save_test_scan_run(self, row: dict[str, Any]) -> None:
+        """Upsert a /test desk row (dedupe_key) so master-list scans show on /test."""
+        if not hasattr(self, "test_runs"):
+            self.test_runs = []
+        key = str(row.get("dedupe_key") or "")
+        if not key:
+            raise ValueError("dedupe_key required")
+        now = _now()
+        stored = dict(row)
+        stored["updated_at"] = now
+        for i, prev in enumerate(self.test_runs):
+            if prev.get("dedupe_key") == key:
+                stored["created_at"] = prev.get("created_at") or now
+                stored["id"] = prev.get("id") or str(uuid.uuid4())
+                self.test_runs[i] = stored
+                self._flush()
+                return
+        stored["created_at"] = stored.get("created_at") or now
+        stored["id"] = str(uuid.uuid4())
+        self.test_runs.append(stored)
+        self._flush()
+
     def _path(self) -> Optional[Path]:
         if not self.work_dir:
             return None
@@ -341,6 +375,7 @@ class MemoryStore:
         self.results = list(data.get("results", []))
         self.alerts = list(data.get("alerts", []))
         self.backfills = {r["id"]: r for r in data.get("backfills", []) if r.get("id")}
+        self.test_runs = list(data.get("test_runs", []))
 
     def _flush(self) -> None:
         p = self._path()
@@ -352,6 +387,7 @@ class MemoryStore:
             "results": self.results,
             "alerts": self.alerts,
             "backfills": list(self.backfills.values()),
+            "test_runs": list(getattr(self, "test_runs", []) or []),
         }, indent=2), encoding="utf-8")
 
 
@@ -645,6 +681,43 @@ class SupabaseStore:
         except Exception:  # noqa: BLE001
             return []
 
+    def patch_target(self, address: str, fields: dict[str, Any]) -> None:
+        addr = normalize_address(address)
+        body = {k: v for k, v in fields.items() if v is not None}
+        if not body:
+            return
+        self._req(
+            "PATCH",
+            "eth_scan_targets",
+            body,
+            query={"address": "eq.%s" % addr},
+            prefer="return=minimal",
+        )
+
+    def save_test_scan_run(self, row: dict[str, Any]) -> None:
+        """Upsert test_scan_runs on dedupe_key. Retries without new columns if unmigrated."""
+        body = _test_run_body(row)
+        try:
+            self._upsert_test_run(body)
+        except RuntimeError as exc:
+            msg = str(exc)
+            if "candidate_reason" in msg or "tier" in msg or "PGRST204" in msg:
+                slim = dict(body)
+                slim.pop("candidate_reason", None)
+                slim.pop("tier", None)
+                self._upsert_test_run(slim)
+                return
+            raise
+
+    def _upsert_test_run(self, body: dict[str, Any]) -> None:
+        self._req(
+            "POST",
+            "test_scan_runs",
+            body,
+            query={"on_conflict": "dedupe_key"},
+            prefer="resolution=merge-duplicates,return=minimal",
+        )
+
     def get_backfill(self, backfill_id: str) -> Optional[dict[str, Any]]:
         rows = self._req("GET", "eth_scan_backfill", query={"id": "eq.%s" % backfill_id, "limit": "1"})
         return rows[0] if rows else None
@@ -733,3 +806,62 @@ def artifact_payload(art: SourceArtifact) -> dict[str, Any]:
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+_RUN_BUCKETS = {
+    "lane-a-cool",
+    "lane-b-queue",
+    "manual-review",
+    "human-no-candidate",
+    "human-yes-candidate",
+}
+_RUN_CONF = {"high", "med", "low"}
+_RUN_STATUS = {"pending", "running", "done", "dropped", "error", "gated"}
+
+
+def _test_run_body(row: dict[str, Any]) -> dict[str, Any]:
+    """Shape a master-list result for public.test_scan_runs."""
+    addr = normalize_address(str(row.get("address") or ""))
+    bucket = row.get("bucket")
+    status = str(row.get("status") or "done")
+    src = row.get("src_confidence")
+    ir = row.get("ir_confidence")
+    body: dict[str, Any] = {
+        "dedupe_key": str(row.get("dedupe_key") or ("master-list:%s" % addr)),
+        "kind": "lane-a",
+        "chain": "ethereum",
+        "address": addr,
+        "contract_name": row.get("contract_name"),
+        "tvl_usd": row.get("tvl_usd"),
+        "money_at_risk_usd": row.get("money_at_risk_usd"),
+        "funds_usd": row.get("funds_usd"),
+        "funds_breakdown": row.get("funds_breakdown") if row.get("funds_breakdown") is not None else [],
+        "funds_status": row.get("funds_status"),
+        "funds_checked_at": row.get("funds_checked_at"),
+        "invariant_results": row.get("invariant_results") if row.get("invariant_results") is not None else [],
+        "heat_breakdown": row.get("heat_breakdown") if row.get("heat_breakdown") is not None else {},
+        "known_safe": bool(row.get("known_safe")),
+        "discovery_source": row.get("discovery_source") or "master_list",
+        "candidate_reason": row.get("candidate_reason"),
+        "tier": int(row["tier"]) if row.get("tier") is not None else None,
+        "bucket": bucket if bucket in _RUN_BUCKETS else None,
+        "heat": int(row.get("heat") or 0),
+        "status": status if status in _RUN_STATUS else "done",
+        "dropped": bool(row.get("dropped")),
+        "drop_reason": row.get("drop_reason"),
+        "src_confidence": src if src in _RUN_CONF else None,
+        "ir_confidence": ir if ir in _RUN_CONF else None,
+        "contract_class": row.get("contract_class"),
+        "scope": row.get("scope"),
+        "value_movers": row.get("value_movers") if row.get("value_movers") is not None else [],
+        "stage_trace": row.get("stage_trace") if row.get("stage_trace") is not None else [],
+        "hypotheses": row.get("hypotheses") if row.get("hypotheses") is not None else [],
+        "pattern_leads": row.get("pattern_leads") if row.get("pattern_leads") is not None else [],
+        "notes": row.get("notes") if row.get("notes") is not None else [],
+        "live_ingest": row.get("live_ingest"),
+        "persist_remote": row.get("persist_remote"),
+        "error": row.get("error"),
+        "finished_at": row.get("finished_at") or _now(),
+        "raw": row.get("raw") if isinstance(row.get("raw"), dict) else {},
+    }
+    return body

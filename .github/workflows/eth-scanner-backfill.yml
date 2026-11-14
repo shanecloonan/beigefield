@@ -1,7 +1,6 @@
-# One-time / resumable 30-day mainnet create backfill.
-# Efficient create discovery (Alchemy trace_filter → asset transfers → small receipt walk),
-# cheap $2k Multicall3 funds floor, then parallel Lane A for funded contracts.
-# Cron every 15 minutes until the cursor reaches head (then no-op).
+# Resumable scan of the curated master list (same cursor as eth-scanner-monitor).
+# Cron every 15 minutes. No per-run cap; the Supabase cursor resumes mid-list.
+# Pass discover=true to opt into the historical create walk (alchemy_getAssetTransfers).
 name: eth-scanner-backfill
 
 on:
@@ -33,6 +32,10 @@ on:
         description: "Reinitialize cursor (true/false)"
         required: false
         default: "false"
+      discover:
+        description: "true = historical create discovery instead of the master list"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -47,6 +50,10 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -71,14 +78,7 @@ jobs:
             echo "ETH_SCANNER_MYTHRIL_BIN=/tmp/mythril-venv/bin/mythril" >> "$GITHUB_ENV"
           fi
           command -v slither && slither --version | head -1 || echo "slither missing"
-          if ! command -v forge >/dev/null 2>&1; then
-            curl -L https://foundry.paradigm.xyz | bash || true
-            export PATH="$HOME/.config/.foundry/bin:$HOME/.foundry/bin:$PATH"
-            echo "$HOME/.config/.foundry/bin" >> "$GITHUB_PATH"
-            echo "$HOME/.foundry/bin" >> "$GITHUB_PATH"
-            foundryup || "$HOME/.config/.foundry/bin/foundryup" || "$HOME/.foundry/bin/foundryup" || true
-          fi
-          export PATH="$HOME/.config/.foundry/bin:$HOME/.foundry/bin:$PATH"
+          command -v forge && forge --version | head -1 || echo "forge missing"
           if ! command -v medusa >/dev/null 2>&1; then
             MEDUSA_URL="$(curl -fsSL https://api.github.com/repos/crytic/medusa/releases/latest \
               | python3 -c "import sys,json,re; d=json.load(sys.stdin); print(next((a['browser_download_url'] for a in d.get('assets',[]) if re.search(r'linux.*x64|linux.*amd64', a['name'], re.I)), ''))" \
@@ -121,6 +121,7 @@ jobs:
           INPUT_DEADLINE: ${{ github.event.inputs.deadline_minutes || '40' }}
           INPUT_MAX_SCANS: ${{ github.event.inputs.max_full_scans || '200' }}
           INPUT_RESET: ${{ github.event.inputs.reset || 'false' }}
+          INPUT_DISCOVER: ${{ github.event.inputs.discover || 'false' }}
         run: |
           set -euo pipefail
           if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
@@ -134,13 +135,27 @@ jobs:
           case "${INPUT_RESET}" in
             true|TRUE|yes|YES|1) RESET_FLAG="--reset" ;;
           esac
-          echo "backfill params lookback_days=${INPUT_LOOKBACK} chunk_blocks=${INPUT_CHUNK} workers=${INPUT_WORKERS} deadline_minutes=${INPUT_DEADLINE} max_full_scans=${INPUT_MAX_SCANS} reset=${INPUT_RESET}"
-          python -m eth_scanner backfill \
-            --id mainnet-30d \
-            --lookback-days "${INPUT_LOOKBACK}" \
-            --chunk-blocks "${INPUT_CHUNK}" \
-            --workers "${INPUT_WORKERS}" \
-            --deadline-minutes "${INPUT_DEADLINE}" \
-            --max-full-scans "${INPUT_MAX_SCANS}" \
-            ${RESET_FLAG} \
-            --json
+          echo "backfill params discover=${INPUT_DISCOVER} lookback_days=${INPUT_LOOKBACK} chunk_blocks=${INPUT_CHUNK} workers=${INPUT_WORKERS} deadline_minutes=${INPUT_DEADLINE} max_full_scans=${INPUT_MAX_SCANS} reset=${INPUT_RESET}"
+          case "${INPUT_DISCOVER}" in
+            true|TRUE|yes|YES|1)
+              echo "discovery mode: historical creates"
+              python -m eth_scanner backfill \
+                --discover \
+                --id mainnet-30d \
+                --lookback-days "${INPUT_LOOKBACK}" \
+                --chunk-blocks "${INPUT_CHUNK}" \
+                --workers "${INPUT_WORKERS}" \
+                --deadline-minutes "${INPUT_DEADLINE}" \
+                --max-full-scans "${INPUT_MAX_SCANS}" \
+                ${RESET_FLAG} \
+                --json
+              ;;
+            *)
+              echo "master-list mode: rank order, no per-run cap, shared resume cursor"
+              python -m eth_scanner master-list \
+                --workers "${INPUT_WORKERS}" \
+                --deadline-minutes "${INPUT_DEADLINE}" \
+                ${RESET_FLAG} \
+                --json
+              ;;
+          esac

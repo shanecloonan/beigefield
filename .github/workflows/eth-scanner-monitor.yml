@@ -1,6 +1,7 @@
-# Seed recent deployments + upgrade / funds-delta watch (free-tier).
-# Default: every 10 minutes, discover up to 1000 creates since last run,
-# drain pending with 8 parallel Lane A workers until empty or deadline.
+# Curated master-list feed (default). Every 10 minutes, scan the versioned
+# candidate list in rank order (tier, then USD) with 8 parallel Lane A workers
+# until the deadline. A Supabase cursor resumes the next run. Pass
+# discover=true to opt into alchemy/RPC create discovery.
 name: eth-scanner-monitor
 
 on:
@@ -26,9 +27,13 @@ on:
         required: false
         default: "8"
       deadline_minutes:
-        description: "Stop claiming new batches after N minutes"
+        description: "Stop starting new master-list batches after N minutes"
         required: false
         default: "40"
+      discover:
+        description: "true = alchemy/RPC create discovery instead of the master list"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -43,6 +48,10 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -68,16 +77,7 @@ jobs:
             echo "ETH_SCANNER_MYTHRIL_BIN=/tmp/mythril-venv/bin/mythril" >> "$GITHUB_ENV"
           fi
           command -v slither && slither --version | head -1 || echo "slither missing"
-          # Foundry (forge/anvil) — Medusa primary fuzz, Foundry fallback.
-          # foundryup-init currently installs under ~/.config/.foundry/bin.
-          if ! command -v forge >/dev/null 2>&1; then
-            curl -L https://foundry.paradigm.xyz | bash || true
-            export PATH="$HOME/.config/.foundry/bin:$HOME/.foundry/bin:$PATH"
-            echo "$HOME/.config/.foundry/bin" >> "$GITHUB_PATH"
-            echo "$HOME/.foundry/bin" >> "$GITHUB_PATH"
-            foundryup || "$HOME/.config/.foundry/bin/foundryup" || "$HOME/.foundry/bin/foundryup" || true
-          fi
-          export PATH="$HOME/.config/.foundry/bin:$HOME/.foundry/bin:$PATH"
+          # Foundry comes from foundry-rs/foundry-toolchain (forge on PATH).
           command -v forge && forge --version | head -1 || echo "forge missing"
           command -v anvil && anvil --version | head -1 || echo "anvil missing"
           # Medusa (optional) — parallel fuzz; skip quietly on failure.
@@ -122,6 +122,7 @@ jobs:
           INPUT_LOOKBACK: ${{ github.event.inputs.lookback_hours || '2' }}
           INPUT_WORKERS: ${{ github.event.inputs.workers || '8' }}
           INPUT_DEADLINE: ${{ github.event.inputs.deadline_minutes || '40' }}
+          INPUT_DISCOVER: ${{ github.event.inputs.discover || 'false' }}
         run: |
           set -euo pipefail
           if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
@@ -141,15 +142,26 @@ jobs:
           LOOKBACK="${INPUT_LOOKBACK}"
           WORKERS="${INPUT_WORKERS}"
           DEADLINE="${INPUT_DEADLINE}"
-          echo "monitor params limit=${LIMIT} scan=${SCAN} lookback_hours=${LOOKBACK} workers=${WORKERS} deadline_minutes=${DEADLINE}"
-          # Prefer verified when ETHERSCAN_API_KEYS is set (default in discover).
-          # Logs creates_found / verified_kept / unverified_skipped / scanned / duration_s on stderr.
-          python -m eth_scanner monitor \
-            --limit "${LIMIT}" \
-            --lookback-hours "${LOOKBACK}" \
-            --max-blocks 800 \
-            --scan "${SCAN}" \
-            --workers "${WORKERS}" \
-            --deadline-minutes "${DEADLINE}" \
-            --json \
-            --persist
+          echo "monitor params discover=${INPUT_DISCOVER} limit=${LIMIT} scan=${SCAN} lookback_hours=${LOOKBACK} workers=${WORKERS} deadline_minutes=${DEADLINE}"
+          case "${INPUT_DISCOVER}" in
+            true|TRUE|yes|YES|1)
+              echo "discovery mode: alchemy/RPC creates (explicit opt-in)"
+              python -m eth_scanner monitor \
+                --discover \
+                --limit "${LIMIT}" \
+                --lookback-hours "${LOOKBACK}" \
+                --max-blocks 800 \
+                --scan "${SCAN}" \
+                --workers "${WORKERS}" \
+                --deadline-minutes "${DEADLINE}" \
+                --json \
+                --persist
+              ;;
+            *)
+              echo "master-list mode: rank order, no per-run cap, resume via cursor"
+              python -m eth_scanner master-list \
+                --workers "${WORKERS}" \
+                --deadline-minutes "${DEADLINE}" \
+                --json
+              ;;
+          esac

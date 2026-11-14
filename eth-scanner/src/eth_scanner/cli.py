@@ -285,6 +285,64 @@ def _add_receipt_flags(sp: argparse.ArgumentParser) -> None:
     )
 
 
+def _run_master_list_cli(args: Any, settings: Settings, store) -> int:
+    """Primary feed: curated master list, rank order, resumable cursor."""
+    from eth_scanner.feed.runner import run_master_list
+
+    min_funds = getattr(args, "min_funds_usd", None)
+    progress = run_master_list(
+        settings=settings,
+        store=store,
+        path=getattr(args, "list_path", None) or None,
+        workers=int(getattr(args, "workers", 8) or 8),
+        deadline_minutes=float(getattr(args, "deadline_minutes", 40.0) or 40.0),
+        min_funds_usd=float(min_funds) if min_funds is not None else None,
+        reset=bool(getattr(args, "reset", False)),
+    )
+    print(
+        "master_list status=%s list=%d cursor=%d->%d processed=%d persisted=%d "
+        "persist_failed=%d below_floor=%d heat_gt0=%d lane_b=%d errors=%d "
+        "passes=%d resumed=%s duration_s=%s"
+        % (
+            progress.status,
+            progress.list_size,
+            progress.cursor_start,
+            progress.cursor_next,
+            progress.processed,
+            progress.persisted,
+            progress.persist_failed,
+            progress.below_floor,
+            progress.heat_gt0,
+            progress.lane_b,
+            progress.errors,
+            progress.passes_completed,
+            progress.resumed,
+            progress.duration_s,
+        ),
+        file=sys.stderr,
+    )
+    if progress.message:
+        print("master_list %s" % progress.message, file=sys.stderr)
+    for sample in progress.samples:
+        print(
+            "master_list hot address=%s bucket=%s heat=%s funds=%s tier=%s reason=%s"
+            % (
+                sample.get("address"),
+                sample.get("bucket"),
+                sample.get("heat"),
+                sample.get("funds_usd"),
+                sample.get("tier"),
+                sample.get("candidate_reason"),
+            ),
+            file=sys.stderr,
+        )
+    if getattr(args, "json", False):
+        print(json.dumps(progress.to_dict(), indent=2))
+    else:
+        print(progress.message or progress.status)
+    return 0 if progress.status in {"running", "done", "noop"} else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     p = argparse.ArgumentParser(
@@ -337,7 +395,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     deep.add_argument("--address", action="append", default=[], help="0x… (repeatable)")
     deep.add_argument("--source", help="local Solidity file (skips Etherscan)")
-    deep.add_argument("--claim", type=int, default=0, help="claim N lane-b / manual-review rows")
+    deep.add_argument("--claim", type=int, default=0, help="with --discover: claim N lane-b / manual-review rows")
+    deep.add_argument(
+        "--discover",
+        action="store_true",
+        help="claim the discovery queue instead of scanning the master list",
+    )
+    deep.add_argument("--workers", type=int, default=4, help="master-list mode: parallel Lane A workers")
+    deep.add_argument("--deadline-minutes", type=float, default=15.0, help="master-list mode: stop after N minutes")
+    deep.add_argument("--reset", action="store_true", help="master-list mode: restart the cursor at rank 1")
     deep.add_argument(
         "--engines",
         default="slither,aderyn,mythril,halmos",
@@ -380,11 +446,18 @@ def main(argv: list[str] | None = None) -> int:
 
     mon = sub.add_parser(
         "monitor",
-        help="Seed recent deployments + upgrade/funds-delta watch (read-only)",
+        help="Scan the curated master list (default) or, with --discover, seed recent creates",
     )
-    mon.add_argument("--limit", type=int, default=1000, help="max creates to discover/enqueue (default 1000)")
+    mon.add_argument("--limit", type=int, default=1000, help="discovery mode only: max creates to enqueue")
     mon.add_argument("--persist", action="store_true", help="write alerts to eth_scan_alerts when remote store")
-    mon.add_argument("--no-discover", action="store_true", help="skip recent-deploy seeding (legacy watchlist only)")
+    mon.add_argument("--no-discover", action="store_true", help="discovery mode only: skip recent-deploy seeding")
+    mon.add_argument(
+        "--discover",
+        action="store_true",
+        help="opt into alchemy/RPC create discovery (off by default; master list is the feed)",
+    )
+    mon.add_argument("--reset", action="store_true", help="master-list mode: restart the cursor at rank 1")
+    mon.add_argument("--list", dest="list_path", default=None, help="override master_candidates.json path")
     mon.add_argument(
         "--lookback-hours",
         type=int,
@@ -418,6 +491,18 @@ def main(argv: list[str] | None = None) -> int:
     mon.add_argument("--json", action="store_true")
     mon.add_argument("--dry-run", action="store_true")
 
+    ml = sub.add_parser(
+        "master-list",
+        help="Scan the curated master candidate list in rank order (tier, then USD)",
+    )
+    ml.add_argument("--workers", type=int, default=8, help="parallel Lane A workers (default 8)")
+    ml.add_argument("--deadline-minutes", type=float, default=40.0, help="stop after N minutes (default 40)")
+    ml.add_argument("--min-funds-usd", type=float, default=2000.0, help="live balance floor (default 2000)")
+    ml.add_argument("--reset", action="store_true", help="restart the resume cursor at rank 1")
+    ml.add_argument("--list", dest="list_path", default=None, help="override master_candidates.json path")
+    ml.add_argument("--json", action="store_true")
+    ml.add_argument("--dry-run", action="store_true")
+
     disc = sub.add_parser(
         "discover",
         help="Seed queue from recent mainnet contract creations (read-only)",
@@ -432,16 +517,21 @@ def main(argv: list[str] | None = None) -> int:
 
     bf = sub.add_parser(
         "backfill",
-        help="Checkpointed 30d mainnet create backfill (funds floor then Lane A)",
+        help="Scan the master list (default) or, with --discover, the 30d create backfill",
+    )
+    bf.add_argument(
+        "--discover",
+        action="store_true",
+        help="opt into historical create discovery (off by default)",
     )
     bf.add_argument("--id", default="mainnet-30d", help="backfill cursor id")
     bf.add_argument("--lookback-days", type=float, default=30.0)
     bf.add_argument("--chunk-blocks", type=int, default=2000)
     bf.add_argument("--workers", type=int, default=8)
     bf.add_argument("--deadline-minutes", type=float, default=40.0)
-    bf.add_argument("--max-full-scans", type=int, default=200, help="Lane A cap per job")
+    bf.add_argument("--max-full-scans", type=int, default=200, help="discovery mode only: Lane A cap per job")
     bf.add_argument("--min-funds-usd", type=float, default=2000.0)
-    bf.add_argument("--reset", action="store_true", help="reinitialize cursor for lookback window")
+    bf.add_argument("--reset", action="store_true", help="restart the master-list cursor, or the block cursor in --discover mode")
     bf.add_argument("--json", action="store_true")
     bf.add_argument("--dry-run", action="store_true")
 
@@ -456,6 +546,23 @@ def main(argv: list[str] | None = None) -> int:
     if getattr(args, "dry_run", False):
         settings.dry_run = True
     store = open_store(settings)
+
+    if args.cmd in {"master-list", "monitor", "backfill", "deep"} and not (
+        (args.cmd == "monitor" and args.discover)
+        or (args.cmd == "backfill" and args.discover)
+        or (args.cmd == "deep" and (args.discover or args.address))
+    ):
+        if args.cmd == "monitor" and int(getattr(args, "scan", 0) or 0) > 0:
+            print(
+                "monitor: master-list feed has no per-run cap (--scan ignored); resume cursor covers the rest",
+                file=sys.stderr,
+            )
+        if args.cmd == "backfill":
+            print(
+                "backfill: master-list feed (pass --discover for historical create walk)",
+                file=sys.stderr,
+            )
+        return _run_master_list_cli(args, settings, store)
 
     if args.cmd == "deep":
         from eth_scanner.deep.worker import run_deep_claim, run_deep_one

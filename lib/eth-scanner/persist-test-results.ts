@@ -418,12 +418,13 @@ export async function loadTestScanHistory(
   }
 
   const limit = Math.min(100, Math.max(1, opts.limit ?? 40));
+  const runColumns =
+    "id,dedupe_key,kind,chain,address,fixture,contract_name,tvl_usd,money_at_risk_usd,funds_usd,funds_breakdown,funds_status,funds_checked_at,bucket,heat,status,dropped,drop_reason,src_confidence,ir_confidence,contract_class,scope,findings_count,severity_counts,duration_ms,receipt_filename,error,created_at,finished_at";
+  const feedColumns = `${runColumns},discovery_source,candidate_reason,tier`;
   try {
     let runsQ = sb
       .from("test_scan_runs")
-      .select(
-        "id,dedupe_key,kind,chain,address,fixture,contract_name,tvl_usd,money_at_risk_usd,funds_usd,funds_breakdown,funds_status,funds_checked_at,bucket,heat,status,dropped,drop_reason,src_confidence,ir_confidence,contract_class,scope,findings_count,severity_counts,duration_ms,receipt_filename,error,created_at,finished_at",
-      )
+      .select(feedColumns)
       .order("created_at", { ascending: false })
       .limit(limit);
 
@@ -433,7 +434,23 @@ export async function loadTestScanHistory(
       if (addr) runsQ = runsQ.eq("address", addr);
     }
 
-    const { data: runs, error: runsErr } = await runsQ;
+    let { data: runs, error: runsErr } = await runsQ;
+    if (runsErr && /candidate_reason|tier|discovery_source/i.test(runsErr.message)) {
+      // Migration not applied yet — history still loads without the feed columns.
+      let fallbackQ = sb
+        .from("test_scan_runs")
+        .select(runColumns)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (opts.kind) fallbackQ = fallbackQ.eq("kind", opts.kind);
+      if (opts.address) {
+        const addr = normalizeAddress(opts.address);
+        if (addr) fallbackQ = fallbackQ.eq("address", addr);
+      }
+      const fallback = await fallbackQ;
+      runs = fallback.data;
+      runsErr = fallback.error;
+    }
     if (runsErr) {
       logPersistError("load test_scan_runs", runsErr.message);
       return { ok: false, error: runsErr.message, runs: [], findings: [] };

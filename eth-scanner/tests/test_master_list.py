@@ -1,0 +1,244 @@
+"""Curated master-list feed: order, resume cursor, and test_scan_runs metadata.
+
+No live RPC. Lane A is stubbed. Heat rules are not exercised here.
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+import time
+import unittest
+from pathlib import Path
+from unittest import mock
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from eth_scanner.config import Settings
+from eth_scanner.feed.master_list import default_master_list_path, load_master_candidates
+from eth_scanner.feed.runner import CURSOR_ID, DISCOVERY_SOURCE, run_master_list
+from eth_scanner.store.supabase import MemoryStore
+from eth_scanner.types import FunnelResult
+
+
+def _cand(addr: str, tier: int, usd: float, reason: str, rank: int) -> dict:
+    return {
+        "protocol": "P%s" % rank,
+        "slug": "p%s" % rank,
+        "category": "Lending",
+        "address": addr,
+        "est_usd_held": usd,
+        "candidate_reason": reason,
+        "tier": tier,
+        "rank": rank,
+        "verified_contract": True,
+    }
+
+
+def _result(heat: int = 0, bucket: str = "lane-a-cool", funds: float = 5000.0, dropped: bool = False) -> FunnelResult:
+    return FunnelResult(
+        bucket=bucket,  # type: ignore[arg-type]
+        dropped=dropped,
+        drop_reason="below funds floor ($10 < $2,000)" if dropped else None,
+        heat=heat,
+        src_confidence="high",
+        ir_confidence="med",
+        funds_usd=10.0 if dropped else funds,
+        funds_status="ok",
+        contract_class="vault",
+        scope="in-scope",
+        contract_name="Vault",
+    )
+
+
+class MasterListOrder(unittest.TestCase):
+    def test_committed_feed_shape_and_order(self):
+        path = default_master_list_path()
+        self.assertTrue(path.is_file(), path)
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual(len(raw), 352)
+        rows = load_master_candidates(path)
+        self.assertEqual(len(rows), 347)
+        self.assertEqual(len({r.address for r in rows}), 347)
+        tiers = [r.tier for r in rows]
+        self.assertEqual(tiers, sorted(tiers))
+        for i in range(1, len(rows)):
+            prev, cur = rows[i - 1], rows[i]
+            if prev.tier == cur.tier:
+                self.assertGreaterEqual(prev.est_usd_held, cur.est_usd_held)
+        self.assertEqual(rows[0].tier, 1)
+        self.assertEqual(rows[0].address, "0xe3d41d19564922c9952f692c5dd0563030f5f2ef")
+
+    def test_dedupe_keeps_higher_priority_row(self):
+        path = Path("/tmp/master-list-dedupe.json")
+        addr = "0x1111111111111111111111111111111111111111"
+        path.write_text(json.dumps([
+            _cand(addr, 2, 9_000, "later", 2),
+            _cand(addr, 1, 1_000, "better-tier", 9),
+            _cand("0x2222222222222222222222222222222222222222", 1, 50_000, "richer", 3),
+            _cand("0x2222222222222222222222222222222222222222", 1, 10, "poorer", 1),
+        ]), encoding="utf-8")
+        rows = load_master_candidates(path)
+        self.assertEqual([r.address for r in rows], [
+            "0x2222222222222222222222222222222222222222",
+            addr,
+        ])
+        self.assertEqual(rows[0].candidate_reason, "richer")
+        self.assertEqual(rows[1].candidate_reason, "better-tier")
+        self.assertEqual(rows[1].tier, 1)
+
+
+class MasterListRunner(unittest.TestCase):
+    def setUp(self):
+        self.path = Path("/tmp/master-list-runner.json")
+        self.rows = [
+            _cand("0x%040x" % (i + 1), 1 if i < 3 else 2, 100_000 - i * 1000, "reason-%d" % i, i + 1)
+            for i in range(6)
+        ]
+        self.path.write_text(json.dumps(self.rows), encoding="utf-8")
+        self.store = MemoryStore()
+        self.settings = Settings(dry_run=True, etherscan_api_keys=[], eth_rpc_url="", worker_id="master-test")
+
+    def test_resume_cursor_and_metadata(self):
+        seen: list[str] = []
+
+        def scan(addr: str) -> FunnelResult:
+            seen.append(addr)
+            if addr.endswith("1"):
+                return _result(heat=4, bucket="lane-b-queue", funds=80_000)
+            if addr.endswith("2"):
+                return _result(dropped=True)
+            return _result()
+
+        first = run_master_list(
+            settings=self.settings,
+            store=self.store,
+            path=self.path,
+            workers=2,
+            deadline_monotonic=time.monotonic() - 1,
+            scan_one=scan,
+        )
+        self.assertEqual(first.status, "running")
+        self.assertEqual(first.processed, 2)
+        self.assertEqual(first.cursor_start, 0)
+        self.assertEqual(first.cursor_next, 2)
+        self.assertEqual(first.persisted, 2)
+        self.assertEqual(first.heat_gt0, 1)
+        self.assertEqual(first.lane_b, 1)
+        self.assertEqual(first.below_floor, 1)
+        self.assertEqual(len(seen), 2)
+
+        runs = list(self.store.test_runs)
+        self.assertEqual(len(runs), 2)
+        for row in runs:
+            self.assertEqual(row["discovery_source"], DISCOVERY_SOURCE)
+            self.assertIn("candidate_reason", row)
+            self.assertEqual(row["tier"], 1)
+            self.assertTrue(str(row["dedupe_key"]).startswith("master-list:"))
+        hot = next(r for r in runs if r["address"].endswith("1"))
+        self.assertEqual(hot["bucket"], "lane-b-queue")
+        self.assertEqual(hot["heat"], 4)
+        self.assertEqual(hot["candidate_reason"], "reason-0")
+
+        cursor = self.store.get_backfill(CURSOR_ID)
+        self.assertIsNotNone(cursor)
+        assert cursor is not None
+        self.assertEqual(int(cursor["cursor_block"]), 2)
+        self.assertEqual(cursor["source"], DISCOVERY_SOURCE)
+        # Lease is released when the job returns so the next run can continue.
+        self.assertFalse((cursor.get("stats") or {}).get("lease_owner"))
+
+        second = run_master_list(
+            settings=self.settings,
+            store=self.store,
+            path=self.path,
+            workers=1,
+            max_scans=2,
+            deadline_monotonic=time.monotonic() + 30,
+            scan_one=scan,
+        )
+        self.assertTrue(second.resumed)
+        self.assertEqual(second.cursor_start, 2)
+        self.assertEqual(second.processed, 2)
+        self.assertEqual(second.cursor_next, 4)
+        self.assertEqual(seen[2], "0x%040x" % 3)
+
+    def test_full_pass_resets_cursor(self):
+        def scan(_addr: str) -> FunnelResult:
+            return _result()
+
+        done = run_master_list(
+            settings=self.settings,
+            store=self.store,
+            path=self.path,
+            workers=3,
+            deadline_monotonic=time.monotonic() + 30,
+            scan_one=scan,
+        )
+        self.assertEqual(done.status, "done")
+        self.assertEqual(done.processed, 6)
+        self.assertEqual(done.cursor_next, 0)
+        self.assertEqual(done.passes_completed, 1)
+        cursor = self.store.get_backfill(CURSOR_ID)
+        assert cursor is not None
+        self.assertEqual(int(cursor["cursor_block"]), 0)
+
+    def test_lease_blocks_a_second_owner(self):
+        def scan(_addr: str) -> FunnelResult:
+            return _result()
+
+        with mock.patch("eth_scanner.feed.runner._lease_owner", return_value="owner-a"):
+            run_master_list(
+                settings=self.settings,
+                store=self.store,
+                path=self.path,
+                workers=1,
+                max_scans=1,
+                deadline_monotonic=time.monotonic() + 5,
+                scan_one=scan,
+            )
+        # Re-acquire as if the job were still holding the lease.
+        row = self.store.get_backfill(CURSOR_ID)
+        assert row is not None
+        stats = dict(row.get("stats") or {})
+        stats["lease_owner"] = "owner-a"
+        stats["lease_until"] = "2999-01-01T00:00:00+00:00"
+        row["stats"] = stats
+        self.store.upsert_backfill(row)
+
+        with mock.patch("eth_scanner.feed.runner._lease_owner", return_value="owner-b"):
+            blocked = run_master_list(
+                settings=self.settings,
+                store=self.store,
+                path=self.path,
+                workers=1,
+                deadline_monotonic=time.monotonic() + 5,
+                scan_one=scan,
+            )
+        self.assertEqual(blocked.status, "noop")
+        self.assertEqual(blocked.processed, 0)
+
+    def test_default_cli_is_master_list_not_discovery(self):
+        from eth_scanner.cli import main
+
+        def scan(_addr: str) -> FunnelResult:
+            return _result()
+
+        with mock.patch("eth_scanner.feed.runner._default_scan", side_effect=lambda addr, settings: scan(addr)), \
+             mock.patch("eth_scanner.cli.open_store", return_value=self.store), \
+             mock.patch("eth_scanner.cli.load_settings", return_value=self.settings):
+            code = main([
+                "monitor",
+                "--list", str(self.path),
+                "--workers", "1",
+                "--deadline-minutes", "1",
+                "--json",
+            ])
+        self.assertEqual(code, 0)
+        self.assertGreaterEqual(len(self.store.test_runs), 1)
+        self.assertTrue(all(r["discovery_source"] == "master_list" for r in self.store.test_runs))
+
+
+if __name__ == "__main__":
+    unittest.main()

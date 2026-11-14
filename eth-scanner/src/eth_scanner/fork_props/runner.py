@@ -188,11 +188,10 @@ def _optional_forge_fork(
     if not (fuzz_root / "foundry.toml").is_file():
         return []
 
-    env = {
-        "PATH": os.environ.get("PATH", ""),
-        "HOME": os.environ.get("HOME", ""),
-        "FOUNDRY_PROFILE": "default",
-    }
+    # Keep the runner environment (certs, foundry toolchain on PATH). A stripped
+    # env makes `forge` fail to download solc even when the binary is installed.
+    env = os.environ.copy()
+    env["FOUNDRY_PROFILE"] = "default"
     cmd = ["forge", "test", "--match-path", "test/*", "-q"]
     source = "forge-mock"
     if rpc:
