@@ -55,6 +55,7 @@ type Receipt = {
   groups: Finding[];
   target?: { address?: string; contracts?: string[]; funds_usd?: number | null };
   heat_breakdown?: { gate_reason?: string; caller_profit_gate?: boolean };
+  adaptations?: Record<string, { version?: string; heat_contribution?: number }>;
 };
 
 const BUCKET: Record<string, string> = {
@@ -287,6 +288,15 @@ export default function BlendApp() {
               {" · "}heat {receipt.heat}
               {receipt.heat_breakdown?.gate_reason ? ` · ${receipt.heat_breakdown.gate_reason}` : ""}
             </p>
+            {receipt.adaptations && (
+              <ul className="mt-3 flex flex-wrap gap-2 text-[11px] text-brand-400">
+                {Object.entries(receipt.adaptations).map(([name, block]) => (
+                  <li key={name} className="rounded border border-brand-800 px-2 py-1">
+                    {name} · {block.version || "pinned"} · heat {block.heat_contribution ?? 0}
+                  </li>
+                ))}
+              </ul>
+            )}
             <ul className="mt-3 flex flex-wrap gap-2 text-[11px]">
               {receipt.engines.map((engine) => (
                 <li key={engine.engine} className="rounded border border-brand-800 px-2 py-1 text-brand-300">

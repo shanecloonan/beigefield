@@ -163,6 +163,14 @@ jobs:
           assert bundle["bucket"] == "drain-found" and bundle["heat"] > 0
           assert evidence["heat"] == 0 and evidence["findings"][0]["kind"] == "evidence-only"
           print("blend fixtures ok", leaky["heat"], safe["heat"], bundle["heat"], evidence["heat"])
+          from eth_scanner.deep.blend.adapt.versions import ADAPTATION_PINS
+          for name, pin in ADAPTATION_PINS.items():
+              assert pin["version"], name
+              print("adapt", name, pin["version"])
+          assert evidence["adaptations"]["daikon"]["heat_contribution"] == 0
+          assert evidence["adaptations"]["daikon"]["violations"]
+          assert bundle["adaptations"]["lithium"]["minimized_calls"] == ["Strategy.skim"]
+          assert bundle["adaptations"]["lithium"]["heat_contribution"] == 0
           PY
 
       - name: Phase B defensive Foundry mock suite

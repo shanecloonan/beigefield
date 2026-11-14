@@ -41,7 +41,7 @@ Signals live in `heuristics/scope.py`. Funds-at-risk family tags are checked *be
 
 ## Research stack (Phase 2, beside Lane A)
 
-Lane A stays the picker. A **research audit stack** (`0.2.0`) sits next to it and only runs L2+ on Lane A funds-at-risk venues. Scanner semver stays `0.3.30`.
+Lane A stays the picker. A **research audit stack** (`0.2.0`) sits next to it and only runs L2+ on Lane A funds-at-risk venues. Scanner semver stays `0.3.31`.
 
 ```bash
 python -m eth_scanner.research run --address 0x… --source tests/fixtures/erc4626_vault_like.sol --dry-run
@@ -141,6 +141,10 @@ python -m eth_scanner surface path/to/src --json -
 python -m eth_scanner blend --fixture leaky
 python -m eth_scanner blend --catalog
 python -m eth_scanner blend --select --list list-2
+
+# The same receipt also carries the adaptation passes (resource chains,
+# producer/consumer edges, mined invariants, a minimized call list, and a
+# multi-actor history). Those passes do not add heat on their own.
 
 python -m eth_scanner list
 python -m eth_scanner list --results

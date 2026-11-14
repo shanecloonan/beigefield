@@ -101,7 +101,7 @@ def _receipt_for_outputs(
     fixture: Optional[str],
 ) -> dict[str, Any]:
     hits, engines = _hits_and_engines(outputs)
-    return receipt_from_hits(
+    report = receipt_from_hits(
         hits,
         engines=engines,
         address=address,
@@ -111,6 +111,8 @@ def _receipt_for_outputs(
         list_id=list_id,
         fixture=fixture,
     )
+    from eth_scanner.deep.blend.adapt import apply_adaptations
+    return apply_adaptations(report, fixture=fixture)
 
 
 def _outputs_from_logs(logs: dict[str, str]) -> list[EngineOutput]:
