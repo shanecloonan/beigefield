@@ -39,6 +39,7 @@ type Target = {
   src_confidence: string | null;
   ir_confidence: string | null;
   heat: number | null;
+  heat_breakdown?: { drain_probability?: number; profit_invariant_broke?: boolean; drain_band?: string } | null;
   bucket: Bucket | null;
   updated_at: string | null;
   funds_usd?: number | string | null;
@@ -56,6 +57,7 @@ type HistoryRun = {
   fixture: string | null;
   bucket: string | null;
   heat: number | null;
+  heat_breakdown?: { drain_probability?: number; profit_invariant_broke?: boolean } | null;
   status: string | null;
   findings_count: number | null;
   tvl_usd?: number | null;
@@ -427,10 +429,10 @@ export default function TestApp() {
             .filter(Boolean)
             .some((v) => String(v).toLowerCase().includes(needle)),
         );
-    // Default sort: confirmed heat desc, then funds desc.
+    // Rank by drain probability (profit breaks first), then funds.
     return [...filtered].sort((a, b) => {
-      const ha = Number(a.heat ?? 0);
-      const hb = Number(b.heat ?? 0);
+      const ha = Number(a.heat_breakdown?.drain_probability ?? a.heat ?? 0);
+      const hb = Number(b.heat_breakdown?.drain_probability ?? b.heat ?? 0);
       if (hb !== ha) return hb - ha;
       const fa = Number(a.funds_usd ?? a.tvl_usd ?? 0);
       const fb = Number(b.funds_usd ?? b.tvl_usd ?? 0);
@@ -1358,7 +1360,12 @@ export default function TestApp() {
                         <span className="text-brand-100">{t.bucket ?? "—"}</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 tabular-nums">{t.heat ?? 0}</td>
+                    <td className="px-3 py-2 tabular-nums">
+                      {t.heat_breakdown?.drain_probability ?? t.heat ?? 0}
+                      {t.heat_breakdown?.profit_invariant_broke ? (
+                        <span className="block text-[10px] text-gold">profit invariant</span>
+                      ) : null}
+                    </td>
                     <td className="px-3 py-2">
                       {t.src_confidence ?? "—"} / {t.ir_confidence ?? "—"}
                     </td>
@@ -1420,7 +1427,9 @@ export default function TestApp() {
                       </td>
                       <td className="px-3 py-2 text-brand-300">
                         {r.bucket || r.status || "—"}
-                        {r.heat != null ? ` · heat ${r.heat}` : ""}
+                        {r.heat_breakdown?.drain_probability != null
+                          ? ` · drain ${r.heat_breakdown.drain_probability}${r.heat_breakdown.profit_invariant_broke ? " profit" : ""}`
+                          : r.heat != null ? ` · heat ${r.heat}` : ""}
                       </td>
                       <td className="px-3 py-2 tabular-nums">{r.findings_count ?? 0}</td>
                       <td className="px-3 py-2 tabular-nums text-brand-400">

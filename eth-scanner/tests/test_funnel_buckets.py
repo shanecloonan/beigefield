@@ -224,8 +224,10 @@ class LaneARouting(unittest.TestCase):
                 "evidence": "converted > totalAssets",
             }],
         ))
-        self.assertEqual(r.bucket, "lane-b-queue")
+        self.assertEqual(r.bucket, "lane-a-cool")
         self.assertGreaterEqual(r.heat, 3)
+        self.assertLessEqual((r.heat_breakdown or {}).get("drain_probability", 100), 15)
+        self.assertFalse((r.heat_breakdown or {}).get("profit_invariant_broke"))
 
     def test_high_tvl_alone_does_not_promote(self):
         r = run_lane_a(FunnelContext(

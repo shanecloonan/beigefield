@@ -180,6 +180,13 @@ def evidence_heat(
         eoa = w.eoa_admin
     corr = corroborated_heat(list(corroborated or []), w)
     total = min(w.max_heat, inv + priv + eoa + corr)
+    from eth_scanner.drain import score_drain
+    drain = score_drain(
+        funds_usd=funds_usd,
+        invariant_results=list(invariant_results or []),
+        privileged_callable=privileged_callable,
+        eoa_admin=eoa_admin,
+    )
     breakdown = {
         # "funds" kept for UI sort; explicitly not part of total heat.
         "funds": rank,
@@ -190,6 +197,10 @@ def evidence_heat(
         "eoa_admin": eoa,
         "corroborated_leads": corr,
         "total": total,
+        "drain_probability": drain["drain_probability"],
+        "profit_invariant_broke": drain["profit_invariant_broke"],
+        "drain_band": drain["band"],
+        "drain_reason": drain["reason"],
         "weights": w.to_dict(),
     }
     return total, breakdown
@@ -209,16 +220,10 @@ def should_promote_lane_b(
     funds = float(funds_usd) if funds_usd is not None else 0.0
     if funds < w.min_funds_for_lane_b:
         return False, "funds below floor for lane-b"
-    failed = [r for r in invariant_results if (r.get("status") or "").lower() == "failed"]
-    if failed:
-        return True, "invariant failed: %s" % (failed[0].get("id") or failed[0].get("name") or "unknown")
+    from eth_scanner.drain import is_profit_break
+    profit = [r for r in invariant_results if is_profit_break(r)]
+    if profit:
+        return True, "profit invariant broke: %s" % (profit[0].get("id") or "profit")
     if privileged_callable:
         return True, "privileged function callable by arbitrary address"
-    if eoa_admin and funds >= w.eoa_admin_min_usd:
-        return True, "EOA admin/upgrader on contract holding >= $%s" % (
-            "{:,.0f}".format(w.eoa_admin_min_usd)
-        )
-    confirmed = [c for c in (corroborated or []) if c.get("confirmed")]
-    if confirmed:
-        return True, "corroborated engine lead: %s" % (confirmed[0].get("lead_id") or "lead")
-    return False, "no failed invariant / privileged / EOA-admin / corroborated evidence"
+    return False, "no simulated profit path — accounting quirks stay low"

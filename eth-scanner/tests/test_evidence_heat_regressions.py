@@ -183,13 +183,17 @@ class FundsNotHeat(unittest.TestCase):
         self.assertEqual(bd["total"], 0)
 
     def test_failed_invariant_adds_heat_and_promotes(self):
-        inv = [{"id": "x", "status": "failed", "evidence": "broken"}]
+        inv = [{"id": "profit-free-value", "status": "failed", "attacker_delta": 1, "evidence": "caller balance rose"}]
         heat, bd = evidence_heat(funds_usd=50_000, invariant_results=inv)
         self.assertGreater(bd["invariants_failed"], 0)
-        ok, _ = should_promote_lane_b(funds_usd=50_000, invariant_results=inv)
-        self.assertTrue(ok)
+        ok, why = should_promote_lane_b(funds_usd=50_000, invariant_results=inv)
+        self.assertTrue(ok, why)
         self.assertGreater(heat, 0)
+        self.assertGreaterEqual(bd["drain_probability"], 85)
         self.assertEqual(bd["funds_in_heat"], 0)
+        accounting = [{"id": "erc4626-solvency", "status": "failed", "evidence": "converted > assets"}]
+        promote, _ = should_promote_lane_b(funds_usd=50_000, invariant_results=accounting)
+        self.assertFalse(promote)
 
     def test_pattern_leads_do_not_affect_heat(self):
         a, _ = evidence_heat(funds_usd=10_000, invariant_results=[])
