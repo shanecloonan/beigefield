@@ -67,6 +67,7 @@ type HistoryRun = {
   discovery_source?: string | null;
   candidate_reason?: string | null;
   tier?: number | null;
+  notes?: string[] | string | null;
 };
 
 type HistoryFinding = {
@@ -337,6 +338,12 @@ function useElapsed(active: boolean): number {
     };
   }, [active]);
   return active ? secs : 0;
+}
+
+function reviewNote(notes?: string[] | string | null): string {
+  const lines = Array.isArray(notes) ? notes : notes ? [notes] : [];
+  const text = lines.map((line) => String(line)).find((line) => line && !line.startsWith("master-list "));
+  return text ? text.slice(0, 280) : "";
 }
 
 function fmtMs(ms?: number): string | null {
@@ -1424,6 +1431,9 @@ export default function TestApp() {
                             {r.candidate_reason ? ` · ${r.candidate_reason}` : ""}
                           </span>
                         )}
+                        {reviewNote(r.notes) ? (
+                          <span className="mt-0.5 block font-sans text-[10px] text-brand-400">{reviewNote(r.notes)}</span>
+                        ) : null}
                       </td>
                       <td className="px-3 py-2 text-brand-300">
                         {r.bucket || r.status || "—"}

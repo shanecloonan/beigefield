@@ -72,11 +72,22 @@ class MasterListOrder(unittest.TestCase):
         path = default_master_list_path()
         self.assertTrue(path.is_file(), path)
         raw = json.loads(path.read_text(encoding="utf-8"))
+        hand = json.loads((path.parent / HAND_RANKED_FILENAME).read_text(encoding="utf-8"))
         self.assertEqual(len(raw), 1322)
+        self.assertEqual(len(hand), 55)
+
+        def _valid(addr: object) -> str:
+            text = str(addr or "").strip().lower()
+            if text.startswith("0x") and len(text) == 42 and all(c in "0123456789abcdef" for c in text[2:]):
+                return text
+            return ""
+
+        expected = {
+            addr for addr in (_valid(r.get("address")) for r in list(raw) + list(hand)) if addr
+        }
         rows = load_master_candidates(path)
-        self.assertEqual(len(rows), 1322)
-        self.assertEqual(len({r.address for r in rows}), 1322)
-        self.assertEqual(len({r.slug for r in rows}), 220)
+        self.assertEqual(len(rows), len(expected))
+        self.assertEqual({r.address for r in rows}, expected)
         for i in range(1, len(rows)):
             prev, cur = rows[i - 1], rows[i]
             self.assertGreaterEqual(prev.drain_probability, cur.drain_probability)
@@ -89,8 +100,13 @@ class MasterListOrder(unittest.TestCase):
                             float(prev.defillama_eth_tvl or 0.0),
                             float(cur.defillama_eth_tvl or 0.0),
                         )
-        self.assertEqual(rows[0].address, "0x8481a6ebaf5c7dabc3f7e09e44a89531fd31f822")
-        self.assertAlmostEqual(rows[0].drain_probability, 0.7874)
+        self.assertEqual(rows[0].address, "0x3fda67f7583380e67ef93072294a7fac882fd7e7")
+        self.assertAlmostEqual(rows[0].drain_probability, 0.85)
+        self.assertIn("MoneyMarket", rows[0].evidence_note)
+        gold = next(r for r in rows if r.address == "0x8481a6ebaf5c7dabc3f7e09e44a89531fd31f822")
+        self.assertAlmostEqual(gold.drain_probability, 0.79)
+        self.assertIn("Goldfinch", gold.evidence_note)
+        self.assertEqual(gold.tier, 1)
         self.assertGreaterEqual(rows[0].drain_probability, 0.60)
         self.assertTrue(all(r.candidate_reason for r in rows[:10]))
         self.assertTrue(all(r.contract_class for r in rows[:10]))
@@ -118,12 +134,24 @@ class MasterListOrder(unittest.TestCase):
             _cand(replaced, 1, 80_000, "base-old", 2, drain=0.40),
         ]), encoding="utf-8")
         (folder / HAND_RANKED_FILENAME).write_text(json.dumps([
-            _cand(replaced, 2, 4_000, "hand-replaced", 1, drain=0.91),
+            {
+                "address": replaced,
+                "protocol": "Handed",
+                "funds_usd": 4000,
+                "drain_probability": 91,
+                "candidate_reason": "hand-replaced",
+                "evidence_note": "manual review replaced the base prior",
+                "source": "hand:test",
+            },
             _cand(added, 2, 5_000, "hand-added", 2, drain=0.55),
         ]), encoding="utf-8")
         rows = load_master_candidates(base)
         self.assertEqual([r.address for r in rows], [replaced, kept, added])
         self.assertEqual(rows[0].candidate_reason, "hand-replaced")
+        self.assertAlmostEqual(rows[0].drain_probability, 0.91)
+        self.assertEqual(rows[0].tier, 1)
+        self.assertEqual(rows[0].evidence_note, "manual review replaced the base prior")
+        self.assertEqual(rows[0].est_usd_held, 4000)
         self.assertEqual(rows[2].candidate_reason, "hand-added")
 
     def test_dedupe_keeps_higher_priority_row(self):

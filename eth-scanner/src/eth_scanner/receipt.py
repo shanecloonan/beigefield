@@ -249,6 +249,7 @@ def render_markdown(ctx: ReceiptContext) -> str:
         f"- **Target status:** `{_fmt(tgt.get('status'))}`",
         f"- **Has code:** {_fmt(tgt.get('has_code'), empty='unknown')}",
         f"- **Contract class:** `{_fmt(res.get('contract_class') or tgt.get('contract_class'))}`",
+        f"- **Review note:** {_fmt(res.get('evidence_note') or tgt.get('evidence_note'))}",
         f"- **Lane scope:** `{_fmt(res.get('scope') or tgt.get('scope'))}`"
         " — `in-scope` (funds-at-risk) · `demoted-token` · `demoted-passthrough` · `utility`",
         f"- **Scope signals:** `{_fmt(','.join(res.get('scope_signals') or tgt.get('scope_signals') or []) or None)}`",
