@@ -285,6 +285,47 @@ def _add_receipt_flags(sp: argparse.ArgumentParser) -> None:
     )
 
 
+def _run_strong_deep_cli(args: Any, settings: Settings, store) -> int:
+    from eth_scanner.deep.strong import run_strong_deep
+    progress = run_strong_deep(
+        settings=settings,
+        store=store,
+        path=getattr(args, "list_path", None) or None,
+        workers=int(getattr(args, "workers", 2) or 2),
+        deadline_minutes=float(getattr(args, "deadline_minutes", 40.0) or 40.0),
+        reset=bool(getattr(args, "reset", False)),
+    )
+    runtime = " ".join(
+        "%s=%dms" % (name, ms) for name, ms in sorted(progress.engine_runtime_ms.items())
+    )
+    print(
+        "strong_deep status=%s strong=%d cursor=%d->%d scanned=%d "
+        "known_safe_skipped=%d findings=%d heat_changed=%d errors=%d duration_s=%s"
+        % (
+            progress.status, progress.strong, progress.cursor_start, progress.cursor_next,
+            progress.scanned, progress.skipped_known_safe, progress.findings_stored,
+            progress.heat_changed, progress.errors, progress.duration_s,
+        ),
+        file=sys.stderr,
+    )
+    if runtime:
+        print("strong_deep engine_runtime %s" % runtime, file=sys.stderr)
+    print("strong_deep engines %s" % progress.availability, file=sys.stderr)
+    for row in progress.heat_changes:
+        print(
+            "strong_deep heat_changed %s %s->%s tier=%s reason=%s"
+            % (row.get("address"), row.get("heat_before"), row.get("heat_after"), row.get("tier"), row.get("candidate_reason")),
+            file=sys.stderr,
+        )
+    if progress.message:
+        print("strong_deep %s" % progress.message, file=sys.stderr)
+    if getattr(args, "json", False):
+        print(json.dumps(progress.to_dict(), indent=2))
+    else:
+        print(progress.message or progress.status)
+    return 0 if progress.status in {"running", "done", "noop"} else 1
+
+
 def _run_master_list_cli(args: Any, settings: Settings, store) -> int:
     """Primary feed: curated master list, rank order, resumable cursor."""
     from eth_scanner.feed.runner import run_master_list
@@ -503,6 +544,17 @@ def main(argv: list[str] | None = None) -> int:
     ml.add_argument("--json", action="store_true")
     ml.add_argument("--dry-run", action="store_true")
 
+    sd = sub.add_parser(
+        "strong-deep",
+        help="Deep-scan strong master-list candidates (engines are evidence; heat stays live-only)",
+    )
+    sd.add_argument("--workers", type=int, default=2, help="parallel candidates (default 2)")
+    sd.add_argument("--deadline-minutes", type=float, default=40.0)
+    sd.add_argument("--reset", action="store_true", help="restart the strong-deep cursor at rank 1")
+    sd.add_argument("--list", dest="list_path", default=None)
+    sd.add_argument("--json", action="store_true")
+    sd.add_argument("--dry-run", action="store_true")
+
     disc = sub.add_parser(
         "discover",
         help="Seed queue from recent mainnet contract creations (read-only)",
@@ -547,10 +599,14 @@ def main(argv: list[str] | None = None) -> int:
         settings.dry_run = True
     store = open_store(settings)
 
-    if args.cmd in {"master-list", "monitor", "backfill", "deep"} and not (
+    if args.cmd == "strong-deep" or (
+        args.cmd == "deep" and not args.discover and not args.address
+    ):
+        return _run_strong_deep_cli(args, settings, store)
+
+    if args.cmd in {"master-list", "monitor", "backfill"} and not (
         (args.cmd == "monitor" and args.discover)
         or (args.cmd == "backfill" and args.discover)
-        or (args.cmd == "deep" and (args.discover or args.address))
     ):
         if args.cmd == "monitor" and int(getattr(args, "scan", 0) or 0) > 0:
             print(

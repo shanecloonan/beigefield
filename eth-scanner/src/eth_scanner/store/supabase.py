@@ -52,6 +52,7 @@ class MemoryStore:
         self.alerts: list[dict[str, Any]] = []
         self.backfills: dict[str, dict[str, Any]] = {}
         self.test_runs: list[dict[str, Any]] = []
+        self.test_findings: list[dict[str, Any]] = []
         if work_dir:
             work_dir.mkdir(parents=True, exist_ok=True)
             self._load()
@@ -332,11 +333,41 @@ class MemoryStore:
                 stored["id"] = prev.get("id") or str(uuid.uuid4())
                 self.test_runs[i] = stored
                 self._flush()
-                return
+                return stored
         stored["created_at"] = stored.get("created_at") or now
         stored["id"] = str(uuid.uuid4())
         self.test_runs.append(stored)
         self._flush()
+        return stored
+
+    def list_test_scan_runs(self, *, discovery_source: str = "master_list", limit: int = 1000) -> list[dict[str, Any]]:
+        rows = [
+            r for r in (getattr(self, "test_runs", None) or [])
+            if not discovery_source or r.get("discovery_source") == discovery_source
+        ]
+        return rows[:limit]
+
+    def save_test_scan_findings(self, run_id: str, findings: list[dict[str, Any]]) -> int:
+        if not hasattr(self, "test_findings"):
+            self.test_findings = []
+        n = 0
+        for row in findings:
+            stored = dict(row)
+            stored["run_id"] = run_id
+            stored["id"] = stored.get("id") or str(uuid.uuid4())
+            key = (run_id, stored.get("finding_key"))
+            replaced = False
+            for i, prev in enumerate(self.test_findings):
+                if (prev.get("run_id"), prev.get("finding_key")) == key:
+                    stored["id"] = prev.get("id")
+                    self.test_findings[i] = stored
+                    replaced = True
+                    break
+            if not replaced:
+                self.test_findings.append(stored)
+            n += 1
+        self._flush()
+        return n
 
     def _path(self) -> Optional[Path]:
         if not self.work_dir:
@@ -376,6 +407,7 @@ class MemoryStore:
         self.alerts = list(data.get("alerts", []))
         self.backfills = {r["id"]: r for r in data.get("backfills", []) if r.get("id")}
         self.test_runs = list(data.get("test_runs", []))
+        self.test_findings = list(data.get("test_findings", []))
 
     def _flush(self) -> None:
         p = self._path()
@@ -388,6 +420,7 @@ class MemoryStore:
             "alerts": self.alerts,
             "backfills": list(self.backfills.values()),
             "test_runs": list(getattr(self, "test_runs", []) or []),
+            "test_findings": list(getattr(self, "test_findings", []) or []),
         }, indent=2), encoding="utf-8")
 
 
@@ -694,29 +727,74 @@ class SupabaseStore:
             prefer="return=minimal",
         )
 
-    def save_test_scan_run(self, row: dict[str, Any]) -> None:
+    def save_test_scan_run(self, row: dict[str, Any]) -> dict[str, Any]:
         """Upsert test_scan_runs on dedupe_key. Retries without new columns if unmigrated."""
         body = _test_run_body(row)
         try:
-            self._upsert_test_run(body)
+            return self._upsert_test_run(body)
         except RuntimeError as exc:
             msg = str(exc)
             if "candidate_reason" in msg or "tier" in msg or "PGRST204" in msg:
                 slim = dict(body)
                 slim.pop("candidate_reason", None)
                 slim.pop("tier", None)
-                self._upsert_test_run(slim)
-                return
+                return self._upsert_test_run(slim)
             raise
 
-    def _upsert_test_run(self, body: dict[str, Any]) -> None:
-        self._req(
+    def list_test_scan_runs(self, *, discovery_source: str = "master_list", limit: int = 1000) -> list[dict[str, Any]]:
+        query = {
+            "select": "id,address,heat,bucket,funds_usd,tier,candidate_reason,contract_name,discovery_source,status",
+            "order": "created_at.desc",
+            "limit": str(max(1, min(int(limit), 1000))),
+        }
+        if discovery_source:
+            query["discovery_source"] = "eq.%s" % discovery_source
+        try:
+            return self._req("GET", "test_scan_runs", query=query)
+        except Exception:  # noqa: BLE001
+            return []
+
+    def save_test_scan_findings(self, run_id: str, findings: list[dict[str, Any]]) -> int:
+        n = 0
+        for row in findings:
+            body = dict(row)
+            body["run_id"] = run_id
+            body.setdefault("kind", "engines")
+            body.setdefault("defensive_only", True)
+            body.setdefault("chain", "ethereum")
+            try:
+                self._req(
+                    "POST",
+                    "test_scan_findings",
+                    body,
+                    query={"on_conflict": "run_id,finding_key"},
+                    prefer="resolution=merge-duplicates,return=minimal",
+                )
+                n += 1
+            except RuntimeError as exc:
+                if "snippet" in str(exc) or "PGRST204" in str(exc):
+                    body.pop("snippet", None)
+                    self._req(
+                        "POST",
+                        "test_scan_findings",
+                        body,
+                        query={"on_conflict": "run_id,finding_key"},
+                        prefer="resolution=merge-duplicates,return=minimal",
+                    )
+                    n += 1
+                else:
+                    raise
+        return n
+
+    def _upsert_test_run(self, body: dict[str, Any]) -> dict[str, Any]:
+        rows = self._req(
             "POST",
             "test_scan_runs",
             body,
             query={"on_conflict": "dedupe_key"},
-            prefer="resolution=merge-duplicates,return=minimal",
+            prefer="resolution=merge-duplicates,return=representation",
         )
+        return rows[0] if rows else body
 
     def get_backfill(self, backfill_id: str) -> Optional[dict[str, Any]]:
         rows = self._req("GET", "eth_scan_backfill", query={"id": "eq.%s" % backfill_id, "limit": "1"})

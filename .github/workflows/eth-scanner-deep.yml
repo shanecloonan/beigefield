@@ -33,13 +33,13 @@ on:
         required: false
         default: "false"
       deadline_minutes:
-        description: "Master-list mode: stop starting new batches after N minutes"
+        description: "Stop starting new strong-candidate batches after N minutes"
         required: false
-        default: "15"
+        default: "35"
       workers:
-        description: "Master-list mode: parallel Lane A workers"
+        description: "Parallel strong candidates (each runs engines with their own timeouts)"
         required: false
-        default: "4"
+        default: "2"
 
 concurrency:
   group: eth-scanner-deep
@@ -52,7 +52,7 @@ jobs:
   deep:
     name: Master list + Foundry suite
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,7 +60,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: stable
+          version: v1.9.0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -74,7 +74,8 @@ jobs:
           path: |
             ~/.solc-select
             ~/.cache/pip
-          key: deep-tools-${{ runner.os }}-py312-v1
+            ~/.semgrep
+          key: deep-tools-${{ runner.os }}-py312-v3
 
       - name: Install solc + scanner + engines (best-effort)
         run: |
@@ -84,21 +85,53 @@ jobs:
           solc-select install 0.8.20 || true
           solc-select use 0.8.20 || true
           python -m pip install -e ./eth-scanner
-          # Owner forks preferred; fall back to PyPI if git clone is slow.
-          python -m pip install "slither-analyzer" || \
-            python -m pip install "git+https://github.com/shanecloonan/slither" || true
-          python -m pip install mythril || true
-          # Aderyn: try prebuilt release (fast); cargo install is too heavy for free tier.
+          python -m pip install "slither-analyzer==0.11.6" "mythril==0.24.8" "halmos==0.3.3" "semgrep==1.185.0"
+          solc-select install 0.6.12 0.7.6 0.8.17 0.8.20 0.8.26 || true
+          solc-select use 0.8.20 || true
+          # Aderyn upstream withdrew official binaries (installer exits 1). Try the
+          # last published tarball; the scanner skips the engine when it is absent.
           if ! command -v aderyn >/dev/null 2>&1; then
             curl -fsSL -o /tmp/aderyn.tgz \
-              "https://github.com/Cyfrin/aderyn/releases/latest/download/aderyn-x86_64-unknown-linux-gnu.tar.gz" \
+              "https://github.com/Cyfrin/aderyn/releases/download/aderyn-v0.4.0/aderyn-x86_64-unknown-linux-gnu.tar.gz" \
               && tar -xzf /tmp/aderyn.tgz -C /tmp \
               && sudo mv /tmp/aderyn /usr/local/bin/aderyn \
               && sudo chmod +x /usr/local/bin/aderyn \
-              || echo "aderyn install skipped"
+              || echo "aderyn unavailable (upstream binaries withdrawn) — engine will skip"
           fi
-          command -v forge
-          forge --version | head -1
+          mkdir -p "$HOME/.local/bin"
+          if ! command -v medusa >/dev/null 2>&1; then
+            curl -fsSL -o /tmp/medusa.tgz \
+              "https://github.com/crytic/medusa/releases/download/v1.5.1/medusa-linux-x64.tar.gz" \
+              && tar -xzf /tmp/medusa.tgz -C /tmp \
+              && find /tmp -maxdepth 3 -type f -name medusa -exec cp {} "$HOME/.local/bin/medusa" \; \
+              && chmod +x "$HOME/.local/bin/medusa" \
+              || echo "medusa install skipped"
+          fi
+          if ! command -v echidna >/dev/null 2>&1; then
+            curl -fsSL -o /tmp/echidna.tgz \
+              "https://github.com/crytic/echidna/releases/download/v2.4.0/echidna-2.4.0-x86_64-linux.tar.gz" \
+              && tar -xzf /tmp/echidna.tgz -C /tmp \
+              && find /tmp -maxdepth 3 -type f -name echidna -exec cp {} "$HOME/.local/bin/echidna" \; \
+              && chmod +x "$HOME/.local/bin/echidna" \
+              || echo "echidna install skipped"
+          fi
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.local/bin:$PATH"
+          git clone --depth 1 https://github.com/Decurity/semgrep-smart-contracts.git /tmp/semgrep-smart-contracts || true
+          if [ -d /tmp/semgrep-smart-contracts ]; then
+            echo "ETH_SCANNER_SEMGREP_RULES=/tmp/semgrep-smart-contracts" >> "$GITHUB_ENV"
+          fi
+          export PATH="$HOME/.local/bin:$PATH"
+          set +e
+          echo "forge $(forge --version 2>/dev/null | head -1)"
+          echo "slither $(slither --version 2>/dev/null | head -1)"
+          echo "mythril $(myth version 2>/dev/null | head -1)"
+          echo "halmos $(halmos --version 2>/dev/null | head -1)"
+          echo "semgrep $(semgrep --version 2>/dev/null | head -1)"
+          echo "aderyn $(aderyn --version 2>/dev/null | head -1)"
+          echo "medusa $(medusa --version 2>/dev/null | head -1)"
+          echo "echidna $(echidna --version 2>/dev/null | head -1)"
+          set -e
           python - <<'PY'
           from eth_scanner.deep.runners import engine_availability
           print("engine_availability=", engine_availability())
@@ -117,7 +150,7 @@ jobs:
             --timeout 240 \
             --json
 
-      - name: Scan master list (or discovery queue)
+      - name: Deep-scan strong candidates (or discovery queue)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
@@ -128,10 +161,11 @@ jobs:
           INPUT_DISCOVER: ${{ github.event.inputs.discover || 'false' }}
           INPUT_CLAIM: ${{ github.event.inputs.claim || '2' }}
           INPUT_ENGINES: ${{ github.event.inputs.engines || 'slither,aderyn,mythril' }}
-          INPUT_DEADLINE: ${{ github.event.inputs.deadline_minutes || '15' }}
-          INPUT_WORKERS: ${{ github.event.inputs.workers || '4' }}
+          INPUT_DEADLINE: ${{ github.event.inputs.deadline_minutes || '35' }}
+          INPUT_WORKERS: ${{ github.event.inputs.workers || '2' }}
         run: |
           set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
           if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
             echo "Missing SUPABASE_URL or SUPABASE_SECRET_KEY — add them as Actions secrets."
             echo "See docs/scanner-roadmap.md"
@@ -148,8 +182,8 @@ jobs:
                 --json
               ;;
             *)
-              echo "master-list mode: rank order, no per-run cap, shared resume cursor"
-              python -m eth_scanner master-list \
+              echo "strong-deep: hot/Lane B, tier1>=\$10k, tier2>=\$100k; no per-run cap"
+              python -m eth_scanner strong-deep \
                 --workers "$INPUT_WORKERS" \
                 --deadline-minutes "$INPUT_DEADLINE" \
                 --json
