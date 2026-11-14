@@ -259,6 +259,14 @@ def _record_outcome(
     else:
         status = "dropped" if result.dropped else "done"
 
+    if cand.evidence_note:
+        notes = list(getattr(result, "notes", None) or [])
+        if cand.evidence_note not in notes:
+            notes.append(cand.evidence_note)
+            try:
+                result.notes = notes
+            except Exception:  # noqa: BLE001
+                pass
     heat = int(getattr(result, "heat", 0) or 0)
     bucket = getattr(result, "bucket", None)
     funds = getattr(result, "funds_usd", None)
@@ -362,6 +370,8 @@ def _persist_test_run(
     tag = "master-list tier=%s reason=%s" % (cand.tier, cand.candidate_reason or "—")
     if tag not in notes:
         notes.append(tag)
+    if cand.evidence_note and cand.evidence_note not in notes:
+        notes.append(cand.evidence_note)
     row: dict[str, Any] = {
         "dedupe_key": "master-list:%s" % addr,
         "kind": "lane-a",
@@ -379,6 +389,7 @@ def _persist_test_run(
         "known_safe": bool(result.known_safe),
         "discovery_source": DISCOVERY_SOURCE,
         "candidate_reason": cand.candidate_reason or None,
+        "evidence_note": cand.evidence_note or None,
         "tier": int(cand.tier),
         "bucket": result.bucket,
         "heat": int(result.heat or 0),

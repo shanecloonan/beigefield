@@ -420,7 +420,7 @@ export async function loadTestScanHistory(
   const limit = Math.min(100, Math.max(1, opts.limit ?? 40));
   const runColumns =
         "id,dedupe_key,kind,chain,address,fixture,contract_name,tvl_usd,money_at_risk_usd,funds_usd,funds_breakdown,funds_status,funds_checked_at,bucket,heat,heat_breakdown,status,dropped,drop_reason,src_confidence,ir_confidence,contract_class,scope,findings_count,severity_counts,duration_ms,receipt_filename,error,created_at,finished_at";
-  const feedColumns = `${runColumns},discovery_source,candidate_reason,tier`;
+  const feedColumns = `${runColumns},discovery_source,candidate_reason,tier,notes`;
   try {
     let runsQ = sb
       .from("test_scan_runs")
