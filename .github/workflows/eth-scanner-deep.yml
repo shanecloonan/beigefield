@@ -1,6 +1,7 @@
-# Phase A — deep analysis worker (off Vercel serverless).
-# Defensive only: Slither / Aderyn / Mythril|Halmos → normalized findings.
-# Never sends transactions. Free-tier budget: short timeout, claim ≤2.
+# Deep job: curated master-list Lane A (default) plus the defensive Foundry
+# mock suite. Foundry is installed with foundry-rs/foundry-toolchain so forge
+# is on PATH. Pass discover=true to claim the old discovery queue instead.
+# Defensive only. Never sends transactions.
 #
 # Required repo secrets (Settings → Secrets and variables → Actions):
 #   SUPABASE_URL
@@ -20,13 +21,25 @@ on:
   workflow_dispatch:
     inputs:
       claim:
-        description: "Max targets to claim"
+        description: "Discovery mode only: max targets to claim"
         required: false
         default: "2"
       engines:
-        description: "Comma list: slither,aderyn,mythril,halmos"
+        description: "Discovery mode only. Comma list: slither,aderyn,mythril,halmos"
         required: false
         default: "slither,aderyn,mythril"
+      discover:
+        description: "true = claim the discovery queue instead of the master list"
+        required: false
+        default: "false"
+      deadline_minutes:
+        description: "Master-list mode: stop starting new batches after N minutes"
+        required: false
+        default: "15"
+      workers:
+        description: "Master-list mode: parallel Lane A workers"
+        required: false
+        default: "4"
 
 concurrency:
   group: eth-scanner-deep
@@ -37,12 +50,17 @@ permissions:
 
 jobs:
   deep:
-    name: Claim + deep engines
+    name: Master list + Foundry suite
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -79,12 +97,27 @@ jobs:
               && sudo chmod +x /usr/local/bin/aderyn \
               || echo "aderyn install skipped"
           fi
+          command -v forge
+          forge --version | head -1
           python - <<'PY'
           from eth_scanner.deep.runners import engine_availability
           print("engine_availability=", engine_availability())
           PY
 
-      - name: Run deep claim
+      - name: Phase B defensive Foundry mock suite
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          command -v forge
+          forge --version | head -1
+          python -m eth_scanner fork-props \
+            --address 0x1111111111111111111111111111111111111111 \
+            --class vault \
+            --forge \
+            --timeout 240 \
+            --json
+
+      - name: Scan master list (or discovery queue)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
@@ -92,6 +125,11 @@ jobs:
           ETHERSCAN_API_KEYS: ${{ secrets.ETHERSCAN_API_KEYS }}
           ETH_RPC_URL: ${{ secrets.ETH_RPC_URL }}
           ETH_SCANNER_DRY_RUN: "0"
+          INPUT_DISCOVER: ${{ github.event.inputs.discover || 'false' }}
+          INPUT_CLAIM: ${{ github.event.inputs.claim || '2' }}
+          INPUT_ENGINES: ${{ github.event.inputs.engines || 'slither,aderyn,mythril' }}
+          INPUT_DEADLINE: ${{ github.event.inputs.deadline_minutes || '15' }}
+          INPUT_WORKERS: ${{ github.event.inputs.workers || '4' }}
         run: |
           set -euo pipefail
           if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
@@ -99,29 +137,21 @@ jobs:
             echo "See docs/scanner-roadmap.md"
             exit 0
           fi
-          CLAIM="${{ github.event.inputs.claim || '2' }}"
-          ENGINES="${{ github.event.inputs.engines || 'slither,aderyn,mythril' }}"
-          python -m eth_scanner deep \
-            --claim "$CLAIM" \
-            --engines "$ENGINES" \
-            --timeout 90 \
-            --json
-
-      - name: Phase B defensive Foundry mock suite (optional)
-        continue-on-error: true
-        run: |
-          set -euo pipefail
-          if ! command -v forge >/dev/null 2>&1; then
-            curl -L https://foundry.paradigm.xyz | bash || true
-            export PATH="$HOME/.foundry/bin:$PATH"
-            foundryup || true
-          fi
-          if command -v forge >/dev/null 2>&1; then
-            python -m eth_scanner fork-props \
-              --address 0x1111111111111111111111111111111111111111 \
-              --class vault \
-              --forge \
-              --json || true
-          else
-            echo "forge not available — Phase B mock suite skipped"
-          fi
+          case "${INPUT_DISCOVER}" in
+            true|TRUE|yes|YES|1)
+              echo "discovery mode: claim lane-b / manual-review queue"
+              python -m eth_scanner deep \
+                --discover \
+                --claim "$INPUT_CLAIM" \
+                --engines "$INPUT_ENGINES" \
+                --timeout 90 \
+                --json
+              ;;
+            *)
+              echo "master-list mode: rank order, no per-run cap, shared resume cursor"
+              python -m eth_scanner master-list \
+                --workers "$INPUT_WORKERS" \
+                --deadline-minutes "$INPUT_DEADLINE" \
+                --json
+              ;;
+          esac

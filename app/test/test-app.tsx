@@ -62,6 +62,9 @@ type HistoryRun = {
   money_at_risk_usd?: number | null;
   duration_ms?: number | null;
   created_at: string;
+  discovery_source?: string | null;
+  candidate_reason?: string | null;
+  tier?: number | null;
 };
 
 type HistoryFinding = {
@@ -1388,6 +1391,13 @@ export default function TestApp() {
                       <td className="px-3 py-2 text-brand-200">{r.kind}</td>
                       <td className="px-3 py-2 font-mono text-[11px] text-brand-100">
                         {r.address || r.fixture || "—"}
+                        {(r.tier != null || r.candidate_reason || r.discovery_source) && (
+                          <span className="mt-0.5 block font-sans text-[10px] text-brand-500">
+                            {r.discovery_source ? r.discovery_source : "feed"}
+                            {r.tier != null ? ` · tier ${r.tier}` : ""}
+                            {r.candidate_reason ? ` · ${r.candidate_reason}` : ""}
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-2 text-brand-300">
                         {r.bucket || r.status || "—"}
