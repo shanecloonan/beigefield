@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { groupByEngineRule } from "@/lib/eth-scanner/desk/blend-groups";
-import { SCAN_LISTS, type ScanListId } from "@/lib/eth-scanner/lists";
+import { SCAN_LISTS, type ScanListId } from "@/lib/eth-scanner/scan-lists";
 
 type ListCard = {
   id: ScanListId;

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isScanListId } from "@/lib/eth-scanner/lists";
+import { isScanListId } from "@/lib/eth-scanner/scan-lists";
 import { blendEtherscanKeys, blendRandomEnabled, runBlendCli } from "@/lib/eth-scanner/run-blend";
 
 export const runtime = "nodejs";
