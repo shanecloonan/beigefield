@@ -16,22 +16,37 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from eth_scanner.config import Settings
-from eth_scanner.feed.master_list import default_master_list_path, load_master_candidates
+from eth_scanner.feed.master_list import (
+    HAND_RANKED_FILENAME,
+    default_master_list_path,
+    list_fingerprint,
+    load_master_candidates,
+)
 from eth_scanner.feed.runner import CURSOR_ID, DISCOVERY_SOURCE, run_master_list
 from eth_scanner.store.supabase import MemoryStore
 from eth_scanner.types import FunnelResult
 
 
-def _cand(addr: str, tier: int, usd: float, reason: str, rank: int) -> dict:
+def _cand(
+    addr: str,
+    tier: int,
+    usd: float,
+    reason: str,
+    rank: int,
+    drain: float = 0.0,
+    tvl: float = 0.0,
+) -> dict:
     return {
         "protocol": "P%s" % rank,
         "slug": "p%s" % rank,
         "category": "Lending",
         "address": addr,
         "est_usd_held": usd,
+        "defillama_eth_tvl": tvl,
         "candidate_reason": reason,
         "tier": tier,
         "rank": rank,
+        "drain_probability": drain,
         "verified_contract": True,
     }
 
@@ -57,18 +72,59 @@ class MasterListOrder(unittest.TestCase):
         path = default_master_list_path()
         self.assertTrue(path.is_file(), path)
         raw = json.loads(path.read_text(encoding="utf-8"))
-        self.assertEqual(len(raw), 460)
+        self.assertEqual(len(raw), 1322)
         rows = load_master_candidates(path)
-        self.assertEqual(len(rows), 460)
-        self.assertEqual(len({r.address for r in rows}), 460)
-        tiers = [r.tier for r in rows]
-        self.assertEqual(tiers, sorted(tiers))
+        self.assertEqual(len(rows), 1322)
+        self.assertEqual(len({r.address for r in rows}), 1322)
+        self.assertEqual(len({r.slug for r in rows}), 220)
         for i in range(1, len(rows)):
             prev, cur = rows[i - 1], rows[i]
-            if prev.tier == cur.tier:
-                self.assertGreaterEqual(prev.est_usd_held, cur.est_usd_held)
-        self.assertEqual(rows[0].tier, 1)
-        self.assertEqual(rows[0].address, "0xe3d41d19564922c9952f692c5dd0563030f5f2ef")
+            self.assertGreaterEqual(prev.drain_probability, cur.drain_probability)
+            if prev.drain_probability == cur.drain_probability:
+                self.assertLessEqual(prev.tier, cur.tier)
+                if prev.tier == cur.tier:
+                    self.assertGreaterEqual(prev.est_usd_held, cur.est_usd_held)
+                    if prev.est_usd_held == cur.est_usd_held:
+                        self.assertGreaterEqual(
+                            float(prev.defillama_eth_tvl or 0.0),
+                            float(cur.defillama_eth_tvl or 0.0),
+                        )
+        self.assertEqual(rows[0].address, "0x8481a6ebaf5c7dabc3f7e09e44a89531fd31f822")
+        self.assertAlmostEqual(rows[0].drain_probability, 0.7874)
+        self.assertGreaterEqual(rows[0].drain_probability, 0.60)
+        self.assertTrue(all(r.candidate_reason for r in rows[:10]))
+        self.assertTrue(all(r.contract_class for r in rows[:10]))
+
+    def test_drain_probability_outranks_tier_and_usd(self):
+        path = Path("/tmp/master-list-drain-order.json")
+        low = "0x1111111111111111111111111111111111111111"
+        high = "0x2222222222222222222222222222222222222222"
+        path.write_text(json.dumps([
+            _cand(low, 1, 9_000_000, "rich-cold", 1, drain=0.10, tvl=9_000_000),
+            _cand(high, 3, 3_000, "lean-hot", 9, drain=0.80, tvl=1),
+        ]), encoding="utf-8")
+        rows = load_master_candidates(path)
+        self.assertEqual([r.address for r in rows], [high, low])
+
+    def test_hand_ranked_overlay_appends_and_replaces(self):
+        folder = Path("/tmp/master-list-overlay")
+        folder.mkdir(exist_ok=True)
+        base = folder / "master_candidates.json"
+        kept = "0x1111111111111111111111111111111111111111"
+        replaced = "0x2222222222222222222222222222222222222222"
+        added = "0x3333333333333333333333333333333333333333"
+        base.write_text(json.dumps([
+            _cand(kept, 1, 50_000, "base-kept", 1, drain=0.70),
+            _cand(replaced, 1, 80_000, "base-old", 2, drain=0.40),
+        ]), encoding="utf-8")
+        (folder / HAND_RANKED_FILENAME).write_text(json.dumps([
+            _cand(replaced, 2, 4_000, "hand-replaced", 1, drain=0.91),
+            _cand(added, 2, 5_000, "hand-added", 2, drain=0.55),
+        ]), encoding="utf-8")
+        rows = load_master_candidates(base)
+        self.assertEqual([r.address for r in rows], [replaced, kept, added])
+        self.assertEqual(rows[0].candidate_reason, "hand-replaced")
+        self.assertEqual(rows[2].candidate_reason, "hand-added")
 
     def test_dedupe_keeps_higher_priority_row(self):
         path = Path("/tmp/master-list-dedupe.json")
@@ -183,6 +239,44 @@ class MasterListRunner(unittest.TestCase):
         cursor = self.store.get_backfill(CURSOR_ID)
         assert cursor is not None
         self.assertEqual(int(cursor["cursor_block"]), 0)
+
+    def test_stale_list_hash_resets_cursor(self):
+        def scan(_addr: str) -> FunnelResult:
+            return _result()
+
+        run_master_list(
+            settings=self.settings,
+            store=self.store,
+            path=self.path,
+            workers=1,
+            max_scans=2,
+            deadline_monotonic=time.monotonic() + 5,
+            scan_one=scan,
+        )
+        row = self.store.get_backfill(CURSOR_ID)
+        assert row is not None
+        self.assertEqual(int(row["cursor_block"]), 2)
+        stats = dict(row.get("stats") or {})
+        stats["list_sha"] = "stale-ranking"
+        row["stats"] = stats
+        self.store.upsert_backfill(row)
+
+        again = run_master_list(
+            settings=self.settings,
+            store=self.store,
+            path=self.path,
+            workers=1,
+            max_scans=1,
+            deadline_monotonic=time.monotonic() + 5,
+            scan_one=scan,
+        )
+        self.assertEqual(again.cursor_start, 0)
+        self.assertFalse(again.resumed)
+        fresh = self.store.get_backfill(CURSOR_ID)
+        assert fresh is not None
+        self.assertEqual((fresh.get("stats") or {}).get("list_sha"), list_fingerprint(
+            load_master_candidates(self.path)
+        ))
 
     def test_lease_blocks_a_second_owner(self):
         def scan(_addr: str) -> FunnelResult:

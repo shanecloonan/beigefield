@@ -9,7 +9,6 @@ Read-only chain I/O. Never sends a transaction.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import time
@@ -20,7 +19,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from eth_scanner.config import Settings, load_settings
-from eth_scanner.feed.master_list import MasterCandidate, load_master_candidates
+from eth_scanner.feed.master_list import MasterCandidate, list_fingerprint, load_master_candidates
 from eth_scanner.ingest.funds import DEFAULT_MIN_FUNDS_USD
 from eth_scanner.lane_a import worker as lane_a
 from eth_scanner.store.supabase import ScanStore, normalize_address, open_store
@@ -70,7 +69,7 @@ def run_master_list(
     max_scans: int = 0,
     scan_one: Optional[Callable[[str], FunnelResult]] = None,
 ) -> MasterListProgress:
-    """Scan master-list addresses in rank order until the deadline or the list ends.
+    """Scan master-list addresses in drain-probability order until the deadline.
 
     ``max_scans`` 0 means no per-run cap (the scheduled default). A cursor in
     ``eth_scan_backfill`` id ``master-list`` resumes the next run. After a full
@@ -107,7 +106,7 @@ def run_master_list(
         progress.duration_s = round(time.monotonic() - started, 1)
         return progress
 
-    list_sha = _list_sha(candidates)
+    list_sha = list_fingerprint(candidates)
     row = _read_cursor(store)
     if not reset and _lease_blocks(row, owner):
         progress.status = "noop"
@@ -417,11 +416,6 @@ def _persist_test_run(
         return False, str(exc)[:240]
 
 
-def _list_sha(candidates: list[MasterCandidate]) -> str:
-    blob = "\n".join("%s|%s|%s" % (c.tier, c.address, c.rank) for c in candidates)
-    return hashlib.sha256(blob.encode()).hexdigest()[:16]
-
-
 def _lease_owner() -> str:
     run = (os.environ.get("GITHUB_RUN_ID") or "").strip()
     if run:
@@ -490,7 +484,8 @@ def _cursor_index(
         return 0, 0 if reset else int(_stats(row).get("passes_completed") or 0)
     stats = _stats(row)
     passes = int(stats.get("passes_completed") or 0)
-    if stats.get("list_sha") and stats.get("list_sha") != list_sha:
+    # Missing or stale hash means the ranking changed. Start at the top.
+    if stats.get("list_sha") != list_sha:
         return 0, passes
     cur = int(row.get("cursor_block") or 0)
     if cur <= 0 or cur >= n:
