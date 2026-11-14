@@ -516,14 +516,9 @@ def _start_anvil(fork_url: str):
 
 
 def _optional_fuzz_bins(root: Path, *, timeout_s: int) -> list[str]:
-    notes: list[str] = []
-    if echidna_bin() and (root / "echidna.yaml").is_file():
-        notes.append(_run_named(
-            echidna_bin() or "",
-            ["--config", "echidna.yaml", "."],
-            root, timeout_s, "echidna",
-        ))
-    return [n for n in notes if n]
+    """Medusa and Echidna run as their own deep-lane engines."""
+    del root, timeout_s
+    return []
 
 
 def _run_named(bin_path: str, args: list[str], root: Path, timeout_s: int, label: str) -> str:

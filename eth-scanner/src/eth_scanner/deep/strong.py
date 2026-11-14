@@ -24,6 +24,7 @@ from eth_scanner.classify import classify_contract, engine_config_for_class
 from eth_scanner.config import Settings, load_settings
 from eth_scanner.deep.findings import EngineFinding, sanitize_evidence
 from eth_scanner.deep.findings import apply_agreement, dedupe_findings
+from eth_scanner.deep.echidna_runner import run_echidna
 from eth_scanner.deep.medusa_runner import fork_profit_results, run_medusa
 from eth_scanner.deep.runners import EngineRunResult
 from eth_scanner.deep.runners import (
@@ -358,6 +359,7 @@ def _run_engine_set(
         "semgrep": lambda: run_semgrep(project, timeout_s=120),
         "halmos": lambda: run_halmos(harness_dir=FUZZ_ROOT, timeout_s=90),
         "medusa": lambda: run_medusa(suite_dir=FUZZ_ROOT, timeout_s=90),
+        "echidna": lambda: run_echidna(suite_dir=FUZZ_ROOT, timeout_s=90),
     }
     if include_fuzz:
         tasks["forge-fuzz"] = lambda: run_property_fuzz(

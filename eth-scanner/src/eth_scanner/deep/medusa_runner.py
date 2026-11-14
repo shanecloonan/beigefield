@@ -26,6 +26,7 @@ _NOISE = (
 )
 _PROFIT_PROPS = (
     "no_third_party_balance_drop",
+    "no_caller_profit",
     "profit-free-value",
     "profit_free_value",
 )
@@ -95,7 +96,7 @@ def fork_profit_results(findings: list[Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for finding in findings:
         data = finding.to_dict() if hasattr(finding, "to_dict") else dict(finding)
-        if str(data.get("engine") or "").lower() != "medusa":
+        if str(data.get("engine") or "").lower() not in {"medusa", "echidna"}:
             continue
         evidence = str(data.get("evidence") or "")
         match = _DELTA_RX.search(evidence)
