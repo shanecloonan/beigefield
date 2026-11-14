@@ -331,6 +331,7 @@ def _run_master_list_cli(args: Any, settings: Settings, store) -> int:
     from eth_scanner.feed.runner import run_master_list
 
     min_funds = getattr(args, "min_funds_usd", None)
+    max_funds = getattr(args, "max_funds_usd", None)
     progress = run_master_list(
         settings=settings,
         store=store,
@@ -338,6 +339,8 @@ def _run_master_list_cli(args: Any, settings: Settings, store) -> int:
         workers=int(getattr(args, "workers", 8) or 8),
         deadline_minutes=float(getattr(args, "deadline_minutes", 40.0) or 40.0),
         min_funds_usd=float(min_funds) if min_funds is not None else None,
+        max_funds_usd=float(max_funds) if max_funds is not None else None,
+        list_id=str(getattr(args, "list_id", None) or "list-1"),
         reset=bool(getattr(args, "reset", False)),
     )
     print(
@@ -499,6 +502,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     mon.add_argument("--reset", action="store_true", help="master-list mode: restart the cursor at rank 1")
     mon.add_argument("--list", dest="list_path", default=None, help="override master_candidates.json path")
+    mon.add_argument("--list-id", default="list-1", help="named master list (list-1 or list-2)")
     mon.add_argument(
         "--lookback-hours",
         type=int,
@@ -538,7 +542,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     ml.add_argument("--workers", type=int, default=8, help="parallel Lane A workers (default 8)")
     ml.add_argument("--deadline-minutes", type=float, default=40.0, help="stop after N minutes (default 40)")
-    ml.add_argument("--min-funds-usd", type=float, default=2000.0, help="live balance floor (default 2000)")
+    ml.add_argument("--list-id", default="list-1", help="named master list (list-1 or list-2)")
+    ml.add_argument("--min-funds-usd", type=float, default=None, help="override the list's configured minimum")
+    ml.add_argument("--max-funds-usd", type=float, default=None, help="override the list's configured maximum")
     ml.add_argument("--reset", action="store_true", help="restart the resume cursor at rank 1")
     ml.add_argument("--list", dest="list_path", default=None, help="override master_candidates.json path")
     ml.add_argument("--json", action="store_true")
@@ -582,7 +588,9 @@ def main(argv: list[str] | None = None) -> int:
     bf.add_argument("--workers", type=int, default=8)
     bf.add_argument("--deadline-minutes", type=float, default=40.0)
     bf.add_argument("--max-full-scans", type=int, default=200, help="discovery mode only: Lane A cap per job")
-    bf.add_argument("--min-funds-usd", type=float, default=2000.0)
+    bf.add_argument("--list-id", default="list-1", help="named master list (list-1 or list-2)")
+    bf.add_argument("--min-funds-usd", type=float, default=None, help="override the list's configured minimum")
+    bf.add_argument("--max-funds-usd", type=float, default=None, help="override the list's configured maximum")
     bf.add_argument("--reset", action="store_true", help="restart the master-list cursor, or the block cursor in --discover mode")
     bf.add_argument("--json", action="store_true")
     bf.add_argument("--dry-run", action="store_true")
@@ -740,7 +748,7 @@ def main(argv: list[str] | None = None) -> int:
             chunk_blocks=int(args.chunk_blocks),
             workers=int(args.workers),
             deadline_minutes=float(args.deadline_minutes),
-            min_funds_usd=float(args.min_funds_usd),
+            min_funds_usd=float(args.min_funds_usd) if args.min_funds_usd is not None else float(settings.min_funds_usd),
             max_full_scans=int(args.max_full_scans),
             reset=bool(args.reset),
         )

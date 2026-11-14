@@ -1,8 +1,11 @@
-"""Iterate the curated master list with a resumable Supabase cursor.
+"""Iterate a named master list with a resumable Supabase cursor.
 
 Each address goes through the existing Lane A path: verified source / bytecode
-via Etherscan, live funds re-check against the $2,000 floor, then the
-unchanged funnel. Heat rules are not touched here.
+via Etherscan, a live funds re-check against that list's configured min/max,
+then the unchanged funnel. Heat rules are not touched here.
+
+List 1 is the funded, less-audited curated feed. List 2 is the sketchy
+junk-drawer and uses its own bounds. The range is never a hardcoded floor.
 
 Read-only chain I/O. Never sends a transaction.
 """
@@ -19,8 +22,15 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from eth_scanner.config import Settings, load_settings
+from eth_scanner.feed.lists import (
+    LIST1_ID,
+    bounds_for_list,
+    cursor_id_for,
+    dedupe_key_for,
+    get_list_config,
+    load_named_list,
+)
 from eth_scanner.feed.master_list import MasterCandidate, list_fingerprint, load_master_candidates
-from eth_scanner.ingest.funds import DEFAULT_MIN_FUNDS_USD
 from eth_scanner.lane_a import worker as lane_a
 from eth_scanner.store.supabase import ScanStore, normalize_address, open_store
 from eth_scanner.types import FunnelResult, Target, to_plain
@@ -50,6 +60,9 @@ class MasterListProgress:
     message: str = ""
     last_error: str = ""
     source: str = DISCOVERY_SOURCE
+    list_id: str = LIST1_ID
+    list_name: str = "List 1"
+    above_ceiling: int = 0
     samples: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -65,32 +78,42 @@ def run_master_list(
     deadline_minutes: float = 40.0,
     deadline_monotonic: Optional[float] = None,
     min_funds_usd: Optional[float] = None,
+    max_funds_usd: Optional[float] = None,
+    list_id: str = LIST1_ID,
     reset: bool = False,
     max_scans: int = 0,
     scan_one: Optional[Callable[[str], FunnelResult]] = None,
 ) -> MasterListProgress:
-    """Scan master-list addresses in drain-probability order until the deadline.
+    """Scan one named list until the deadline.
 
-    ``max_scans`` 0 means no per-run cap (the scheduled default). A cursor in
-    ``eth_scan_backfill`` id ``master-list`` resumes the next run. After a full
-    pass the cursor returns to 0 so the following run re-checks live balances.
+    Bounds come from that list's config unless a caller passes an override.
+    ``max_scans`` 0 means no per-run cap (the scheduled default). List 1 keeps
+    the ``master-list`` cursor. After a full pass the cursor returns to 0.
     """
     settings = settings or load_settings()
     store = store or open_store(settings)
-    if min_funds_usd is not None:
-        settings.min_funds_usd = float(min_funds_usd)
-    min_funds = float(getattr(settings, "min_funds_usd", DEFAULT_MIN_FUNDS_USD) or DEFAULT_MIN_FUNDS_USD)
+    spec = get_list_config(list_id)
+    configured_min, configured_max = bounds_for_list(spec.id)
+    min_funds = float(configured_min if min_funds_usd is None else min_funds_usd)
+    max_funds = float(configured_max if max_funds_usd is None else max_funds_usd)
+    # Range check only. settings.min_funds_usd stays the heat/engine floor.
+    settings.range_min_usd = min_funds
+    settings.range_max_usd = max_funds
+    cursor_id = cursor_id_for(spec.id)
     started = time.monotonic()
     deadline = (
         float(deadline_monotonic)
         if deadline_monotonic is not None
         else started + max(1.0, float(deadline_minutes) * 60.0)
     )
-    progress = MasterListProgress()
+    progress = MasterListProgress(list_id=spec.id, list_name=spec.name)
     owner = _lease_owner()
 
     try:
-        candidates = load_master_candidates(path)
+        if path:
+            candidates = load_master_candidates(path)
+        else:
+            candidates = load_named_list(spec.id).candidates
     except Exception as exc:  # noqa: BLE001
         progress.status = "error"
         progress.last_error = "load master list: %s" % str(exc)[:240]
@@ -107,7 +130,7 @@ def run_master_list(
         return progress
 
     list_sha = list_fingerprint(candidates)
-    row = _read_cursor(store)
+    row = _read_cursor(store, cursor_id)
     if not reset and _lease_blocks(row, owner):
         progress.status = "noop"
         progress.message = "another master-list run holds the cursor"
@@ -123,7 +146,7 @@ def run_master_list(
     progress.cursor_next = cursor
     progress.resumed = cursor > 0 and not reset
     progress.passes_completed = passes
-    if not _claim_lease(store, row, owner, cursor, n, list_sha, passes):
+    if not _claim_lease(store, row, owner, cursor, n, list_sha, passes, cursor_id):
         progress.status = "noop"
         progress.message = "another master-list run claimed the cursor"
         progress.cursor_next = cursor
@@ -152,6 +175,7 @@ def run_master_list(
                     err,
                     progress,
                     min_funds=min_funds,
+                    max_funds=max_funds,
                 )
             idx += len(batch)
             remaining_cap -= len(batch)
@@ -169,6 +193,7 @@ def run_master_list(
                 passes=passes,
                 progress=progress,
                 last=batch[-1] if batch else None,
+                cursor_id=cursor_id,
             )
             if finished_pass or time.monotonic() >= deadline:
                 break
@@ -193,7 +218,11 @@ def run_master_list(
         progress.message = progress.last_error
     finally:
         if held_lease:
-            _release_lease(store, owner, progress, list_size=n, list_sha=list_sha, passes=progress.passes_completed)
+            _release_lease(
+                store, owner, progress,
+                list_size=n, list_sha=list_sha, passes=progress.passes_completed,
+                cursor_id=cursor_id,
+            )
         progress.duration_s = round(time.monotonic() - started, 1)
     return progress
 
@@ -241,6 +270,7 @@ def _record_outcome(
     progress: MasterListProgress,
     *,
     min_funds: float,
+    max_funds: Optional[float] = None,
 ) -> None:
     progress.processed += 1
     if err or result is None:
@@ -274,12 +304,11 @@ def _record_outcome(
         progress.heat_gt0 += 1
     if bucket == "lane-b-queue":
         progress.lane_b += 1
-    if (
-        result.dropped
-        and funds is not None
-        and float(funds) < min_funds
-    ):
-        progress.below_floor += 1
+    if result.dropped and funds is not None:
+        if float(funds) < min_funds:
+            progress.below_floor += 1
+        elif max_funds is not None and float(funds) > max_funds:
+            progress.above_ceiling += 1
     if heat > 0 or bucket == "lane-b-queue":
         if len(progress.samples) < 30:
             progress.samples.append({
@@ -295,7 +324,7 @@ def _record_outcome(
             })
 
     _stamp_target(store, cand, result, status=status)
-    ok, fail = _persist_test_run(store, cand, result, status=status, error=err)
+    ok, fail = _persist_test_run(store, cand, result, progress, status=status, error=err)
     if ok:
         progress.persisted += 1
     elif fail:
@@ -357,6 +386,7 @@ def _persist_test_run(
     store: ScanStore,
     cand: MasterCandidate,
     result: FunnelResult,
+    progress: MasterListProgress,
     *,
     status: str,
     error: Optional[str],
@@ -367,13 +397,15 @@ def _persist_test_run(
     addr = normalize_address(cand.address)
     funds = result.funds_usd
     notes = list(result.notes or [])
-    tag = "master-list tier=%s reason=%s" % (cand.tier, cand.candidate_reason or "—")
+    list_id = progress.list_id or LIST1_ID
+    list_name = progress.list_name or "List 1"
+    tag = "%s tier=%s reason=%s" % (list_id, cand.tier, cand.candidate_reason or "—")
     if tag not in notes:
         notes.append(tag)
     if cand.evidence_note and cand.evidence_note not in notes:
         notes.append(cand.evidence_note)
     row: dict[str, Any] = {
-        "dedupe_key": "master-list:%s" % addr,
+        "dedupe_key": dedupe_key_for(list_id, addr),
         "kind": "lane-a",
         "chain": "ethereum",
         "address": addr,
@@ -388,6 +420,8 @@ def _persist_test_run(
         "heat_breakdown": dict(result.heat_breakdown or {}),
         "known_safe": bool(result.known_safe),
         "discovery_source": DISCOVERY_SOURCE,
+        "list_id": list_id,
+        "list_name": list_name,
         "candidate_reason": cand.candidate_reason or None,
         "evidence_note": cand.evidence_note or None,
         "tier": int(cand.tier),
@@ -411,6 +445,8 @@ def _persist_test_run(
         "finished_at": _now(),
         "raw": {
             "feed": DISCOVERY_SOURCE,
+            "list_id": list_id,
+            "list_name": list_name,
             "candidate": cand.to_dict(),
             "bucket": result.bucket,
             "heat": int(result.heat or 0),
@@ -462,12 +498,12 @@ def _stats(row: Optional[dict[str, Any]]) -> dict[str, Any]:
     return dict(stats) if isinstance(stats, dict) else {}
 
 
-def _read_cursor(store: ScanStore) -> Optional[dict[str, Any]]:
+def _read_cursor(store: ScanStore, cursor_id: str = CURSOR_ID) -> Optional[dict[str, Any]]:
     get_bf = getattr(store, "get_backfill", None)
     if not callable(get_bf):
         return None
     try:
-        row = get_bf(CURSOR_ID)
+        row = get_bf(cursor_id)
     except Exception:  # noqa: BLE001
         return None
     return dict(row) if row else None
@@ -514,6 +550,7 @@ def _base_row(
     progress: Optional[MasterListProgress],
     last: Optional[MasterCandidate],
     lease: bool,
+    cursor_id: str = CURSOR_ID,
 ) -> dict[str, Any]:
     stats: dict[str, Any] = {
         "list_sha": list_sha,
@@ -544,7 +581,7 @@ def _base_row(
             "samples": progress.samples[:20],
         }
     return {
-        "id": CURSOR_ID,
+        "id": cursor_id,
         "start_block": 0,
         "end_block": int(list_size),
         "cursor_block": int(cursor),
@@ -570,10 +607,11 @@ def _claim_lease(
     n: int,
     list_sha: str,
     passes: int,
+    cursor_id: str = CURSOR_ID,
 ) -> bool:
     body = _base_row(
         cursor=cursor, list_size=n, list_sha=list_sha, passes=passes,
-        owner=owner, progress=None, last=None, lease=True,
+        owner=owner, progress=None, last=None, lease=True, cursor_id=cursor_id,
     )
     if row:
         for key in (
@@ -586,7 +624,7 @@ def _claim_lease(
         _write_cursor(store, body)
     except Exception:  # noqa: BLE001
         return True  # local / unmigrated store: still scan this process
-    latest = _read_cursor(store)
+    latest = _read_cursor(store, cursor_id)
     holder = str(_stats(latest).get("lease_owner") or "")
     if holder and holder != owner and _lease_blocks(latest, owner):
         return False
@@ -603,10 +641,11 @@ def _checkpoint(
     passes: int,
     progress: MasterListProgress,
     last: Optional[MasterCandidate],
+    cursor_id: str = CURSOR_ID,
 ) -> None:
     body = _base_row(
         cursor=cursor, list_size=list_size, list_sha=list_sha, passes=passes,
-        owner=owner, progress=progress, last=last, lease=True,
+        owner=owner, progress=progress, last=last, lease=True, cursor_id=cursor_id,
     )
     # Job totals, not a running sum of checkpoints (those would double-count).
     body["fully_scanned"] = progress.processed
@@ -627,8 +666,9 @@ def _release_lease(
     list_size: int,
     list_sha: str,
     passes: int,
+    cursor_id: str = CURSOR_ID,
 ) -> None:
-    latest = _read_cursor(store)
+    latest = _read_cursor(store, cursor_id)
     holder = str(_stats(latest).get("lease_owner") or "")
     if holder and holder != owner:
         return
@@ -641,6 +681,7 @@ def _release_lease(
         progress=progress,
         last=None,
         lease=False,
+        cursor_id=cursor_id,
     )
     body["status"] = progress.status if progress.status in {"done", "error", "running", "noop"} else "running"
     body["fully_scanned"] = progress.processed

@@ -69,6 +69,9 @@ class Settings:
     heat_threshold: int = DEFAULT_HEAT_THRESHOLD
     tvl_floor_usd: float = DEFAULT_TVL_FLOOR_USD
     min_funds_usd: float = DEFAULT_MIN_FUNDS_USD
+    # Named-list scans set these from data/lists.json. None means "no list range".
+    range_min_usd: float | None = None
+    range_max_usd: float | None = None
     etherscan_min_interval_s: float = DEFAULT_ETHERSCAN_INTERVAL_S
     worker_id: str = "eth-scanner"
     claim_stale_seconds: int = 900

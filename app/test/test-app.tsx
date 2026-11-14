@@ -15,6 +15,7 @@ import {
   type RandomLoopSample,
 } from "@/lib/eth-scanner/random-loop";
 import EnginesPanel from "./engines-panel";
+import ListsDesk from "./lists-desk";
 
 type Bucket =
   | "lane-a-cool"
@@ -396,6 +397,10 @@ export default function TestApp() {
   const [loopHistory, setLoopHistory] = useState<LoopHistoryRow[]>([]);
   const [waitLeft, setWaitLeft] = useState<number | null>(null);
   const [gapSec, setGapSec] = useState(DEFAULT_LOOP_GAP_MS / 1000);
+  const [randomEnabled, setRandomEnabled] = useState(false);
+  const [randomReady, setRandomReady] = useState(false);
+  const historyCapRef = useRef(RANDOM_HISTORY_CAP);
+  const sessionCapRef = useRef(SESSION_ROW_CAP);
   const busy = useRef(false);
   const loopActive = useRef(false);
   const stopRef = useRef(false);
@@ -412,6 +417,15 @@ export default function TestApp() {
   const [uploadedReceipt, setUploadedReceipt] = useState<ResearchResult | null>(null);
   const [session, setSession] = useState<SessionRow[]>([]);
   const elapsed = useElapsed(running);
+  const onRandomScan = useCallback((cfg: { enabled: boolean; gap_ms: number; history_cap: number; session_cap: number }) => {
+    setRandomEnabled(Boolean(cfg.enabled));
+    setRandomReady(true);
+    const sec = clampLoopGapMs(Number(cfg.gap_ms)) / 1000;
+    gapRef.current = sec;
+    setGapSec(sec);
+    if (cfg.history_cap >= 1) historyCapRef.current = cfg.history_cap;
+    if (cfg.session_cap >= 1) sessionCapRef.current = cfg.session_cap;
+  }, []);
 
   const load = useCallback(async () => {
     setError(null);
@@ -590,7 +604,7 @@ export default function TestApp() {
           receipt_filename: body.receipt_filename ?? null,
           ran_at: Date.now(),
         };
-        setSession((prev) => pushCapped(prev.filter((p) => p.key !== key), row, SESSION_ROW_CAP));
+        setSession((prev) => pushCapped(prev.filter((p) => p.key !== key), row, sessionCapRef.current));
         setSelected(key);
         if (!body.fixture) setAddress(r.address);
       }
@@ -663,7 +677,7 @@ export default function TestApp() {
         funds_status: body.result!.funds_status ?? null,
         dropped: body.result!.dropped,
         drop_reason: body.result!.drop_reason,
-      }, RANDOM_HISTORY_CAP));
+      }, historyCapRef.current));
     }
     if (!body.ok) return { ok: false, rateLimited, error: body.error || "The scan failed." };
     if (rateLimited) {
@@ -744,11 +758,14 @@ export default function TestApp() {
           Invariant scanner triage
         </h1>
         <p className="mt-3 max-w-2xl text-sm text-brand-400 leading-relaxed">
-          Lane A/B buckets. Automation never stamps{" "}
+          The desk is organized around named master lists. Lane A still ranks a contract
+          and writes a receipt. Automation never stamps{" "}
           <span className="text-brand-200">yes</span>. Low IR / decompile confidence
-          stays in <span className="text-rose-200">manual-review</span> — never a silent no.
-          No exploit payloads. Humans close BROKEN paths in prose.
+          stays in <span className="text-rose-200">manual-review</span>.
+          Humans close BROKEN paths in prose.
         </p>
+
+        <ListsDesk onRandomScan={onRandomScan} />
 
         <DeskStatus feed={feed} />
         {error && (
@@ -853,12 +870,23 @@ export default function TestApp() {
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <button
               type="button"
+              aria-pressed={randomEnabled}
+              disabled={!randomReady || loopBusy}
+              onClick={() => setRandomEnabled((on) => !on)}
+              className={randomEnabled ? btnPrimary : btnSecondary}
+            >
+              Random scan {randomReady ? (randomEnabled ? "on" : "off") : "…"}
+            </button>
+            {randomEnabled && (
+            <button
+              type="button"
               disabled={loopBusy || running}
               onClick={() => void startLoop()}
               className={btnPrimary}
             >
               {loopState === "paused" ? "Resume" : "Start"}
             </button>
+            )}
             <button
               type="button"
               disabled={!loopBusy}
@@ -887,8 +915,9 @@ export default function TestApp() {
               />
             </label>
             <span className="text-[11px] text-brand-500 leading-relaxed">
-              Start keeps sampling a verified contract and running Lane A, one at a time.
-              Stop finishes the scan in progress and does not start another.
+              {randomEnabled
+                ? "Start samples a verified contract and runs Lane A, one at a time. Stop finishes the scan in progress and does not start another."
+                : "Random scan is off. Turn it on here, or set random_scan.enabled in eth-scanner/data/lists.json."}
               {loopCount > 0 ? ` ${loopCount} scanned this session.` : ""}
             </span>
           </div>

@@ -30,8 +30,16 @@ ADAPTERS = Path("/tmp/llama/DefiLlama-Adapters/projects")
 HACKS_PATH = Path("/tmp/llama/hacks.json")
 NOW = time.time()
 NEW_LISTING_DAYS = 180
-MIN_USD = 2000.0
-MAX_PROTOCOL_TVL = 9_000_000.0
+def _list1_bounds() -> tuple[float, float]:
+    """List 1 min/max live in data/lists.json. This builder does not keep its own floor."""
+    payload = json.loads((ROOT / "lists.json").read_text(encoding="utf-8"))
+    for row in payload.get("lists") or []:
+        if row.get("id") == "list-1":
+            return float(row["min_funds_usd"]), float(row["max_funds_usd"])
+    raise RuntimeError("list-1 bounds missing from data/lists.json")
+
+
+MIN_USD, MAX_PROTOCOL_TVL = _list1_bounds()
 UA = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
@@ -1222,7 +1230,7 @@ def main() -> None:
             bands["2k-100k"] += 1
         elif u < 1_000_000:
             bands["100k-1m"] += 1
-        elif u <= 9_000_000:
+        elif u <= MAX_PROTOCOL_TVL:
             bands["1m-9m"] += 1
         else:
             bands["9m+"] += 1

@@ -615,7 +615,7 @@ def main() -> None:
             bands["2k-100k"] += 1
         elif u < 1_000_000:
             bands["100k-1m"] += 1
-        elif u <= 9_000_000:
+        elif u <= b.MAX_PROTOCOL_TVL:
             bands["1m-9m"] += 1
         else:
             bands["9m+"] += 1

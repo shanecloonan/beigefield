@@ -734,10 +734,17 @@ class SupabaseStore:
             return self._upsert_test_run(body)
         except RuntimeError as exc:
             msg = str(exc)
+            if "list_id" in msg or "list_name" in msg:
+                slim = dict(body)
+                slim.pop("list_id", None)
+                slim.pop("list_name", None)
+                return self._upsert_test_run(slim)
             if "candidate_reason" in msg or "tier" in msg or "PGRST204" in msg:
                 slim = dict(body)
                 slim.pop("candidate_reason", None)
                 slim.pop("tier", None)
+                slim.pop("list_id", None)
+                slim.pop("list_name", None)
                 return self._upsert_test_run(slim)
             raise
 
@@ -920,6 +927,8 @@ def _test_run_body(row: dict[str, Any]) -> dict[str, Any]:
         "heat_breakdown": row.get("heat_breakdown") if row.get("heat_breakdown") is not None else {},
         "known_safe": bool(row.get("known_safe")),
         "discovery_source": row.get("discovery_source") or "master_list",
+        "list_id": row.get("list_id") or None,
+        "list_name": row.get("list_name") or None,
         "candidate_reason": row.get("candidate_reason"),
         "tier": int(row["tier"]) if row.get("tier") is not None else None,
         "bucket": bucket if bucket in _RUN_BUCKETS else None,

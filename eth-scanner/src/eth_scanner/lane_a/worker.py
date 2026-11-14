@@ -25,10 +25,11 @@ from eth_scanner.ingest.etherscan import (
     has_runtime_code,
     parse_source_result,
 )
+from eth_scanner.feed.lists import bounds_for_address
 from eth_scanner.ingest.funds import (
     DEFAULT_MIN_FUNDS_USD,
     FundsSnapshot,
-    format_funds_floor_reason,
+    funds_range_reason,
     probe_contract_funds,
 )
 from eth_scanner.ingest.unpack import materialize_source, select_ir_artifact
@@ -51,9 +52,12 @@ def run_one(
     store = store or open_store(settings)
     addr = normalize_address(address)
     closed = store.closed_no_hashes()
+    # Heat / engine floor stays the historical threshold. List scans do not
+    # rewrite it. The drop below uses the list range when one is configured.
     min_funds = float(getattr(settings, "min_funds_usd", DEFAULT_MIN_FUNDS_USD) or DEFAULT_MIN_FUNDS_USD)
+    drop_min, drop_max = _scan_range(addr, settings, min_funds)
 
-    # --- Funds floor FIRST (before source fetch / analysis) ----------------
+    # --- Funds range FIRST (before source fetch / analysis) ----------------
     # Local fixtures skip the live probe. Manual --tvl override wins.
     funds = _resolve_funds(
         addr,
@@ -62,22 +66,23 @@ def run_one(
         local_source=bool(source_path or source_text),
         min_funds=min_funds,
     )
-    if funds.status == "ok" and funds.total_usd is not None and funds.total_usd < min_funds:
-        reason = format_funds_floor_reason(funds.total_usd, min_funds)
-        result = _funds_floor_drop(addr, funds, reason, min_funds)
-        target = Target(
-            address=addr,
-            tvl_usd=funds.total_usd,
-            status="skipped",
-            has_code=True,
-            funds_usd=funds.total_usd,
-            funds_breakdown=list(funds.to_dict().get("breakdown") or []),
-            funds_status=funds.status,
-            funds_checked_at=funds.checked_at,
-        )
-        store.upsert_target(target)
-        store.save_result(addr, result)
-        return result
+    if funds.status == "ok" and funds.total_usd is not None:
+        reason = funds_range_reason(funds.total_usd, drop_min, drop_max)
+        if reason:
+            result = _funds_floor_drop(addr, funds, reason, drop_min, drop_max)
+            target = Target(
+                address=addr,
+                tvl_usd=funds.total_usd,
+                status="skipped",
+                has_code=True,
+                funds_usd=funds.total_usd,
+                funds_breakdown=list(funds.to_dict().get("breakdown") or []),
+                funds_status=funds.status,
+                funds_checked_at=funds.checked_at,
+            )
+            store.upsert_target(target)
+            store.save_result(addr, result)
+            return result
 
     effective_tvl = tvl_usd if tvl_usd is not None else funds.total_usd
 
@@ -127,7 +132,7 @@ def run_one(
         ),
     ))
     # Prepend funds stage so receipts / Supabase show the floor check first.
-    result.stage_trace = [_funds_trace(funds, min_funds), *list(result.stage_trace or [])]
+    result.stage_trace = [_funds_trace(funds, drop_min, drop_max), *list(result.stage_trace or [])]
     result.funds_usd = target.funds_usd
     result.funds_breakdown = list(target.funds_breakdown or [])
     result.funds_status = target.funds_status
@@ -281,17 +286,37 @@ def _resolve_funds(
     )
 
 
-def _funds_trace(funds: FundsSnapshot, min_funds: float) -> StageTrace:
+def _scan_range(address: str, settings: Settings, fallback_min: float) -> tuple[float, float | None]:
+    """List min/max when this scan is for a list. Otherwise the non-list floor, no ceiling."""
+    rmin = getattr(settings, "range_min_usd", None)
+    rmax = getattr(settings, "range_max_usd", None)
+    if rmin is None and rmax is None:
+        found = bounds_for_address(address)
+        if found is not None:
+            return found
+        return float(fallback_min), None
+    low = float(fallback_min) if rmin is None else float(rmin)
+    high = None if rmax is None else float(rmax)
+    return low, high
+
+
+def _funds_trace(funds: FundsSnapshot, min_funds: float, max_funds: float | None = None) -> StageTrace:
     decision = "keep"
     reason = "funds ok"
+    ranged = funds_range_reason(funds.total_usd, min_funds, max_funds) if funds.total_usd is not None else None
     if funds.status == "override":
         decision, reason = "keep", "manual TVL override"
     elif funds.status == "skipped":
         decision, reason = "skip", "local source — funds floor not applied"
     elif funds.status == "unknown":
         decision, reason = "unknown", funds.error or "funds lookup failed — continue"
-    elif funds.total_usd is not None and funds.total_usd < min_funds:
-        decision, reason = "drop", format_funds_floor_reason(funds.total_usd, min_funds)
+    elif funds.status == "ok" and ranged:
+        decision, reason = "drop", ranged
+    elif funds.status == "ok" and max_funds is not None:
+        decision, reason = "keep", "funds inside range ($%s–$%s)" % (
+            "{:,.0f}".format(min_funds),
+            "{:,.0f}".format(max_funds),
+        )
     elif funds.status == "ok":
         decision, reason = "keep", "funds >= floor ($%s)" % ("{:,.0f}".format(min_funds))
     return StageTrace(
@@ -302,6 +327,7 @@ def _funds_trace(funds: FundsSnapshot, min_funds: float) -> StageTrace:
             "funds_usd": funds.total_usd,
             "funds_status": funds.status,
             "min_funds_usd": min_funds,
+            "max_funds_usd": max_funds,
             "breakdown": funds.to_dict().get("breakdown") or [],
             "checked_at": funds.checked_at,
             "rpc": funds.to_dict().get("rpc_url"),
@@ -309,7 +335,13 @@ def _funds_trace(funds: FundsSnapshot, min_funds: float) -> StageTrace:
     )
 
 
-def _funds_floor_drop(address: str, funds: FundsSnapshot, reason: str, min_funds: float) -> FunnelResult:
+def _funds_floor_drop(
+    address: str,
+    funds: FundsSnapshot,
+    reason: str,
+    min_funds: float,
+    max_funds: float | None = None,
+) -> FunnelResult:
     return FunnelResult(
         bucket="lane-a-cool",
         dropped=True,
@@ -317,11 +349,11 @@ def _funds_floor_drop(address: str, funds: FundsSnapshot, reason: str, min_funds
         heat=0,
         src_confidence="low",
         ir_confidence="low",
-        stage_trace=[_funds_trace(funds, min_funds)],
+        stage_trace=[_funds_trace(funds, min_funds, max_funds)],
         notes=[
             "Lane A is noise-kill + ranking, not a verdict.",
             reason,
-            "Source fetch and analysis skipped — below live funds floor.",
+            "Source fetch and analysis skipped — live funds are outside this list's range.",
         ],
         funds_usd=funds.total_usd,
         funds_breakdown=list(funds.to_dict().get("breakdown") or []),

@@ -3,6 +3,10 @@
  * until the caller stops or Etherscan rate-limits. The gap is what keeps a
  * fast scan from chaining straight into the next sample on the free tier
  * (~3 calls/second, ~100,000/day).
+ *
+ * Whether random scan is on, and the gap / history caps it starts from,
+ * live in eth-scanner/data/lists.json (`random_scan`). The numbers below are
+ * only safety clamps for a missing or broken config.
  */
 
 export const DEFAULT_LOOP_GAP_MS = 8_000;

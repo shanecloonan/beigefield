@@ -99,6 +99,23 @@ def format_funds_floor_reason(total_usd: float, floor_usd: float) -> str:
     )
 
 
+def format_funds_ceiling_reason(total_usd: float, ceiling_usd: float) -> str:
+    """Live balance above the list's configured maximum."""
+    return "above funds ceiling ($%s > $%s)" % (
+        _fmt_usd(total_usd),
+        _fmt_usd(ceiling_usd, commas=True, force_int_if_whole=True),
+    )
+
+
+def funds_range_reason(total_usd: float, min_usd: float | None, max_usd: float | None) -> str | None:
+    """None when the balance sits inside the list range."""
+    if min_usd is not None and total_usd < float(min_usd):
+        return format_funds_floor_reason(total_usd, float(min_usd))
+    if max_usd is not None and total_usd > float(max_usd):
+        return format_funds_ceiling_reason(total_usd, float(max_usd))
+    return None
+
+
 def resolve_rpc_urls(preferred: str = "") -> list[str]:
     urls: list[str] = []
     pref = (preferred or "").strip()

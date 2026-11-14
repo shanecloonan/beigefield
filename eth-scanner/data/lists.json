@@ -1,0 +1,92 @@
+{
+  "random_scan": {
+    "enabled": true,
+    "gap_ms": 8000,
+    "history_cap": 20,
+    "session_cap": 40
+  },
+  "list2_rules": {
+    "below_floor_marker": "below-2000",
+    "exclude_reason_markers": [
+      "canonical:",
+      "gnosis-safe",
+      "eoa-or-empty-code",
+      "yearn-core",
+      "big-curated",
+      "pass-through"
+    ],
+    "exclude_name_substrings": [
+      "sushiswap",
+      "pancakeswap",
+      "uniswap",
+      "curve",
+      "balancer",
+      "aave",
+      "compound",
+      "euler",
+      "lido",
+      "makerdao",
+      "yearn",
+      "convex",
+      "morpho",
+      "pendle",
+      "gmx",
+      "dydx",
+      "synthetix",
+      "chainlink",
+      "frax",
+      "ethena",
+      "instadapp",
+      "liquity",
+      "reflexer",
+      "gearbox",
+      "maple",
+      "stargate",
+      "wormhole",
+      "layerzero",
+      "dodo",
+      "bancor",
+      "kyber",
+      "paraswap",
+      "eigenlayer",
+      "renzo",
+      "etherfi",
+      "rocketpool",
+      "sommelier",
+      "termfinance",
+      "nexusmutual",
+      "abracadabra",
+      "alchemix",
+      "badger"
+    ],
+    "exclude_exact_names": ["maker", "hop", "sky", "aura", "fei"],
+    "generic_labels": ["erc4626vault", "erc4626"],
+    "sketchy_weights": [
+      {"pattern": "past-hack|hacked|exploit|drained|rug", "weight": 50},
+      {"pattern": "abandoned|inactive|unmaintained", "weight": 40},
+      {"pattern": "unknown", "weight": 35},
+      {"pattern": "no-audit|unaudited", "weight": 25},
+      {"pattern": "odd|weird|custom|unusual|obscure", "weight": 20},
+      {"pattern": "unverified", "weight": 12},
+      {"pattern": "fork", "weight": 8}
+    ]
+  },
+  "lists": [
+    {
+      "id": "list-1",
+      "name": "List 1",
+      "strategy": "funded-less-audited",
+      "summary": "Funded, credible-but-less-audited contracts. This is the curated master feed: money-holding venues with a thinner audit history. Scan order stays drain-probability, then tier, then dollars.",
+      "min_funds_usd": 2000,
+      "max_funds_usd": 9000000
+    },
+    {
+      "id": "list-2",
+      "name": "List 2",
+      "strategy": "sketchy-junk-drawer",
+      "summary": "Junk-drawer / sketchy small-dollar contracts. No big names and no canonical protocols. Ranking favors abandoned, unaudited, odd-pattern, or previously-hacked lineage inside this list's own dollar band. Dollars are not the sort key.",
+      "min_funds_usd": 50,
+      "max_funds_usd": 1900
+    }
+  ]
+}
