@@ -26,6 +26,7 @@ WETH = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
 USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7"
 USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
 DAI = "0x6b175474e89094c44da98b954eedeac495271d0f"
+BENTO = "0xf5bce5077908a1b7370b9ae04adc565ebd643966"
 # Curve.fi alUSDavUSD Liquidity Gauge Deposit
 CURVE_GAUGE = "0x1270787da38849fc5f3148357f3b8f6e69ab3858"
 SUSDE = "0x9d39a5de30e57443bff2a8307a4256c8797a3497"
@@ -90,6 +91,7 @@ class KnownSafeTokens(unittest.TestCase):
             (USDT, "TetherToken"),
             (USDC, "FiatTokenV2_2"),
             (DAI, "Dai"),
+            (BENTO, "BentoBoxV1"),
         ):
             ok, reasons = is_known_safe(address=addr, contract_name=name)
             self.assertTrue(ok, msg="%s %s %s" % (addr, name, reasons))
@@ -105,6 +107,7 @@ class KnownSafeTokens(unittest.TestCase):
             (USDT, "TetherToken"),
             (USDC, "FiatTokenV2_2"),
             (DAI, "Dai"),
+            (BENTO, "BentoBoxV1"),
             (CURVE_GAUGE, "LiquidityGaugeV6"),
         ):
             r = run_lane_a(FunnelContext(

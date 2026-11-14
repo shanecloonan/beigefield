@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+from eth_scanner.classify import classify_contract, engine_config_for_class
 from eth_scanner.config import Settings, load_settings
 from eth_scanner.deep.findings import EngineFinding, sanitize_evidence
 from eth_scanner.deep.runners import EngineRunResult
@@ -264,7 +265,17 @@ def _scan_candidate(
             meta = write_verified_project(artifact, root / "proxy" if artifact.is_proxy else root / "srcproj")
             _select_solc(meta.get("solc") or "")
             project = str(root / ("proxy" if artifact.is_proxy else "srcproj"))
-            findings, runs = _run_engine_set(project, meta.get("primary") or "", settings)
+            klass, conf = classify_contract(
+                name=artifact.contract_name or cand.protocol,
+                source=artifact.content or "",
+                category=cand.category,
+                forked_from=cand.forked_from or "",
+            )
+            findings, runs = _run_engine_set(
+                project, meta.get("primary") or "", settings,
+                slither_detect=engine_config_for_class(klass)["slither_detect"],
+            )
+            runs.append({"engine": "class", "status": conf, "note": klass, "duration_ms": 0, "finding_count": 0})
         if impl_artifact and (impl_artifact.content or "").strip():
             impl_root = root / "implementation"
             impl_meta = write_verified_project(impl_artifact, impl_root)
@@ -296,10 +307,11 @@ def _run_engine_set(
     settings: Settings,
     *,
     include_fuzz: bool = True,
+    slither_detect: str = "all",
 ) -> tuple[list[EngineFinding], list[dict[str, Any]]]:
     """Per-engine timeouts. One slow engine does not cancel the others."""
     tasks = {
-        "slither": lambda: run_slither("", project_dir=project, timeout_s=120),
+        "slither": lambda: run_slither("", project_dir=project, timeout_s=120, detect=slither_detect),
         "slither-printers": lambda: run_slither_printers(project, timeout_s=60),
         "aderyn": lambda: run_aderyn("", project_dir=project, timeout_s=120),
         "mythril": lambda: (

@@ -109,7 +109,7 @@ def _write_source_tree(source: str, contract_name: str = "Target") -> tempfile.T
     return tmp
 
 
-def run_slither(source: str, *, timeout_s: int = 90, project_dir: Optional[str] = None) -> EngineRunResult:
+def run_slither(source: str, *, timeout_s: int = 90, project_dir: Optional[str] = None, detect: str = "all") -> EngineRunResult:
     import time
     bin_path = slither_bin()
     if not bin_path:
@@ -118,7 +118,7 @@ def run_slither(source: str, *, timeout_s: int = 90, project_dir: Optional[str] 
 
     def _run(target: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            [bin_path, target, "--json", "-", "--detect", "all", "--disable-color"],
+            [bin_path, target, "--json", "-", "--detect", detect or "all", "--disable-color"],
             capture_output=True,
             text=True,
             timeout=timeout_s,

@@ -128,8 +128,10 @@ class FuzzEvidenceHeat(unittest.TestCase):
             invariant_results=inv,
             corroborated=conf,
         )
-        self.assertGreater(heat, 0)
-        self.assertGreater(bd["invariants_failed"], 0)
+        # Fuzz output is evidence only. Heat waits for a live eth_call failure.
+        self.assertEqual(heat, 0)
+        self.assertEqual(bd["invariants_failed"], 0)
+        self.assertEqual(bd["engine_heat"] if "engine_heat" in bd else 0, 0)
 
     def test_no_failure_keeps_heat_zero_from_fuzz(self):
         report = FuzzReport(ran=True, skipped=False, tool="forge", status="ok", properties_checked=4)

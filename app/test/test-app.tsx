@@ -113,6 +113,7 @@ type Feed = {
   results: { address: string; bucket: string; heat: number; notes: string | null; created_at: string }[];
   history?: { runs: HistoryRun[]; findings: HistoryFinding[]; error?: string };
   precision?: PrecisionStats | null;
+  rule_precision?: { rule: string; engine: string; fires: number; triaged_true: number; triaged_false: number; open_flags: number }[] | null;
   benchmark?: BenchmarkStats | null;
   alerts?: { id?: string; address: string; kind: string; detail: string; funds_usd?: number | null; created_at?: string }[];
   fixtures?: FixtureOpt[];
@@ -1186,6 +1187,21 @@ export default function TestApp() {
                     ? ` · precision ${(Number(feed.precision.precision) * 100).toFixed(1)}%`
                     : " · precision —"}
                 </p>
+              </div>
+            )}
+            {(feed?.rule_precision?.length ?? 0) > 0 && (
+              <div>
+                <p className="text-[10px] tracking-[0.14em] uppercase text-brand-500">Per-rule precision</p>
+                <ul className="mt-1 space-y-0.5">
+                  {feed!.rule_precision!.slice(0, 8).map((row) => (
+                    <li key={`${row.engine}:${row.rule}`} className="tabular-nums text-brand-100">
+                      {row.engine} · {row.rule}
+                      {" · "}fires {row.fires}
+                      {" · "}true {row.triaged_true}
+                      {" · "}false {row.triaged_false}
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
             {feed?.benchmark && (

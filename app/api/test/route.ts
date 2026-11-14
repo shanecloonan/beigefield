@@ -75,7 +75,7 @@ export async function GET(req: Request) {
     targetsQuery = targetsQuery.eq("bucket", bucket);
   }
 
-  const [targetsRes, resultsRes, precisionRes, alertsRes] = await Promise.all([
+  const [targetsRes, resultsRes, precisionRes, alertsRes, rulePrecisionRes] = await Promise.all([
     targetsQuery,
     sb
       .from("eth_scan_results")
@@ -84,6 +84,7 @@ export async function GET(req: Request) {
       .limit(limit),
     sb.from("test_scan_precision").select("*").maybeSingle(),
     sb.from("eth_scan_alerts").select("id,address,kind,fingerprint,detail,funds_usd,created_at").order("created_at", { ascending: false }).limit(20),
+    sb.from("test_scan_rule_precision").select("rule,engine,fires,triaged_true,triaged_false,open_flags").order("fires", { ascending: false }).limit(12),
   ]);
 
   if (targetsRes.error || resultsRes.error) {
@@ -131,6 +132,7 @@ export async function GET(req: Request) {
     results: resultsRes.data ?? [],
     history: { runs: history.runs, findings: history.findings, error: history.error },
     precision: precisionRes.error ? null : precisionRes.data,
+    rule_precision: rulePrecisionRes.error ? null : rulePrecisionRes.data ?? [],
     benchmark,
     alerts: alertsRes.error ? [] : alertsRes.data ?? [],
     fixtures,
