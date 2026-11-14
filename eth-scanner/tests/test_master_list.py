@@ -57,10 +57,10 @@ class MasterListOrder(unittest.TestCase):
         path = default_master_list_path()
         self.assertTrue(path.is_file(), path)
         raw = json.loads(path.read_text(encoding="utf-8"))
-        self.assertEqual(len(raw), 352)
+        self.assertEqual(len(raw), 460)
         rows = load_master_candidates(path)
-        self.assertEqual(len(rows), 347)
-        self.assertEqual(len({r.address for r in rows}), 347)
+        self.assertEqual(len(rows), 460)
+        self.assertEqual(len({r.address for r in rows}), 460)
         tiers = [r.tier for r in rows]
         self.assertEqual(tiers, sorted(tiers))
         for i in range(1, len(rows)):
