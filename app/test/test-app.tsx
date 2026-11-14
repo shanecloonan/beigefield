@@ -76,6 +76,9 @@ type HistoryFinding = {
   triage_status: string;
   funds_at_risk_class?: string | null;
   address?: string | null;
+  engine?: string | null;
+  detector?: string | null;
+  evidence?: string | null;
 };
 
 type PrecisionStats = {
@@ -1412,6 +1415,20 @@ export default function TestApp() {
                 </tbody>
               </table>
             </div>
+            {(feed?.history?.findings?.length ?? 0) > 0 && (
+              <ul className="mt-3 space-y-1 text-[11px] text-brand-300">
+                {feed!.history!.findings.slice(0, 12).map((f) => (
+                  <li key={f.id} className="font-mono">
+                    <span className="text-brand-500">{f.engine || "engine"}</span>
+                    {f.severity ? ` · ${f.severity}` : ""}
+                    {f.detector ? ` · ${f.detector}` : ""}
+                    {" · "}
+                    {f.title || f.evidence || "evidence"}
+                    <span className="ml-2 font-sans text-brand-600">evidence only · heat 0</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
 
