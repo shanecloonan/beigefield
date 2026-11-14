@@ -1,0 +1,25 @@
+{
+  "fuzzing": {
+    "workers": 2,
+    "timeout": 60,
+    "testLimit": 500,
+    "callSequenceLength": 8,
+    "corpusDirectory": "medusa-corpus",
+    "targetContracts": ["VaultConservation"],
+    "deploymentOrder": ["VaultConservation"],
+    "constructorArgs": {},
+    "deployerAddress": "0x10000",
+    "senderAddresses": ["0x20000", "0x30000"],
+    "blockNumberDelayMax": 0,
+    "blockTimestampDelayMax": 0
+  },
+  "compilation": {
+    "platform": "crytic-compile",
+    "platformConfig": {
+      "target": ".",
+      "solcVersion": "",
+      "exportDirectory": ""
+    }
+  },
+  "slither": { "useSlither": false }
+}

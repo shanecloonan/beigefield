@@ -517,10 +517,6 @@ def _start_anvil(fork_url: str):
 
 def _optional_fuzz_bins(root: Path, *, timeout_s: int) -> list[str]:
     notes: list[str] = []
-    if medusa_bin():
-        notes.append(_run_named(
-            medusa_bin() or "", ["fuzz"], root, timeout_s, "medusa",
-        ))
     if echidna_bin() and (root / "echidna.yaml").is_file():
         notes.append(_run_named(
             echidna_bin() or "",
