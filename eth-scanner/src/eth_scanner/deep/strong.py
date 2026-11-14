@@ -1,11 +1,13 @@
 """Deep-scan strong master-list candidates. Defensive engines only.
 
 A strong candidate is hot or Lane B after the light pass, tier 1 holding at
-least TIER1_MIN_FUNDS_USD, or tier 2 holding at least TIER2_MIN_FUNDS_USD.
+least TIER1_MIN_FUNDS_USD, tier 2 holding at least TIER2_MIN_FUNDS_USD, or a
+list drain prior of at least DRAIN_PROBABILITY_STRONG_MIN (0.60).
 
-Engine output is stored on test_scan_findings and adds zero heat. Heat moves
-only when a live read-only invariant or privileged/EOA check fails.
-No exploit code, no transaction broadcasting.
+The deep pass walks that set in drain-probability order. A changed list hash
+resets the cursor to the top. Engine output is stored on test_scan_findings
+and adds zero heat. Heat moves only when a live read-only invariant or
+privileged/EOA check fails. No exploit code, no transaction broadcasting.
 """
 
 from __future__ import annotations
@@ -35,7 +37,7 @@ from eth_scanner.deep.runners import (
     run_slither_printers,
 )
 from eth_scanner.deep.source_tree import solc_version_of, write_verified_project
-from eth_scanner.feed.master_list import MasterCandidate, load_master_candidates
+from eth_scanner.feed.master_list import MasterCandidate, list_fingerprint, load_master_candidates
 from eth_scanner.heat import evidence_heat
 from eth_scanner.ingest.etherscan import EtherscanClient, parse_source_result
 from eth_scanner.known_safe import is_known_safe
@@ -45,7 +47,10 @@ from eth_scanner.types import SourceArtifact
 # Live-balance thresholds for the deep set. Hot/Lane B always qualifies.
 TIER1_MIN_FUNDS_USD = 10_000.0
 TIER2_MIN_FUNDS_USD = 100_000.0
+# List prior (0–1), not the 0–100 live drain score.
+DRAIN_PROBABILITY_STRONG_MIN = 0.60
 CURSOR_ID = "strong-deep"
+RANK_KEY = "drain_probability"
 FUZZ_ROOT = Path(__file__).resolve().parents[3] / "research" / "fuzz"
 
 
@@ -55,11 +60,18 @@ def is_strong_candidate(
     funds_usd: Optional[float],
     heat: int = 0,
     bucket: Optional[str] = None,
+    drain_probability: Optional[float] = None,
     tier1_min_usd: float = TIER1_MIN_FUNDS_USD,
     tier2_min_usd: float = TIER2_MIN_FUNDS_USD,
+    drain_min: float = DRAIN_PROBABILITY_STRONG_MIN,
 ) -> bool:
     if int(heat or 0) > 0 or bucket == "lane-b-queue":
         return True
+    try:
+        if drain_probability is not None and float(drain_probability) >= float(drain_min):
+            return True
+    except (TypeError, ValueError):
+        pass
     funds = float(funds_usd) if funds_usd is not None else 0.0
     if int(tier or 99) == 1 and funds >= float(tier1_min_usd):
         return True
@@ -126,7 +138,7 @@ def select_strong(
     candidates: list[MasterCandidate],
     light_by_address: dict[str, dict[str, Any]],
 ) -> list[tuple[MasterCandidate, dict[str, Any], float]]:
-    """Highest rank first: tier, then live/estimated USD, then rank."""
+    """Highest drain prior first, then tier, live/estimated USD, TVL."""
     chosen: list[tuple[MasterCandidate, dict[str, Any], float]] = []
     for cand in candidates:
         light = light_by_address.get(cand.address) or {}
@@ -136,10 +148,29 @@ def select_strong(
             funds = float(cand.est_usd_held or 0.0)
         heat = int(light.get("heat") or 0)
         bucket = light.get("bucket")
-        if is_strong_candidate(tier=cand.tier, funds_usd=funds, heat=heat, bucket=bucket):
+        if is_strong_candidate(
+            tier=cand.tier,
+            funds_usd=funds,
+            heat=heat,
+            bucket=bucket,
+            drain_probability=cand.drain_probability,
+        ):
             chosen.append((cand, light, funds))
-    chosen.sort(key=lambda item: (item[0].tier, -item[2], item[0].rank, item[0].address))
+    chosen.sort(key=_strong_sort_key)
     return chosen
+
+
+def _strong_sort_key(item: tuple[MasterCandidate, dict[str, Any], float]) -> tuple:
+    cand, _light, funds = item
+    tvl = float(cand.defillama_eth_tvl or 0.0)
+    return (
+        -float(cand.drain_probability or 0.0),
+        cand.tier,
+        -float(funds or 0.0),
+        -tvl,
+        cand.rank,
+        cand.address,
+    )
 
 
 def run_strong_deep(
@@ -172,10 +203,9 @@ def run_strong_deep(
         progress.duration_s = round(time.monotonic() - started, 1)
         return progress
 
+    list_sha = list_fingerprint(candidates)
     row = _read_cursor(store)
-    cursor = 0 if reset or not row else int(row.get("cursor_block") or 0)
-    if cursor < 0 or cursor >= len(selected):
-        cursor = 0
+    cursor = _strong_cursor(row, len(selected), list_sha, reset=reset)
     progress.cursor_start = cursor
     progress.cursor_next = cursor
     workers = max(1, min(int(workers or 1), 4))
@@ -194,19 +224,19 @@ def run_strong_deep(
             idx += len(batch)
             finished = idx >= len(selected)
             progress.cursor_next = 0 if finished else idx
-            _checkpoint(store, progress, len(selected))
+            _checkpoint(store, progress, len(selected), list_sha)
             if finished or time.monotonic() >= deadline:
                 break
         progress.status = "done" if progress.cursor_next == 0 and progress.scanned else "running"
         if progress.status == "done":
-            progress.message = "strong set covered — next run starts at rank 1"
+            progress.message = "strong set covered — next run starts at the highest drain probability"
         else:
             progress.message = "checkpoint saved — resume at %d/%d" % (progress.cursor_next, len(selected))
     except Exception as exc:  # noqa: BLE001
         progress.status = "error"
         progress.message = str(exc)[:240]
     progress.duration_s = round(time.monotonic() - started, 1)
-    _checkpoint(store, progress, len(selected))
+    _checkpoint(store, progress, len(selected), list_sha)
     return progress
 
 
@@ -541,7 +571,27 @@ def _read_cursor(store: ScanStore) -> Optional[dict[str, Any]]:
     return dict(row) if row else None
 
 
-def _checkpoint(store: ScanStore, progress: StrongProgress, strong_n: int) -> None:
+def _strong_cursor(
+    row: Optional[dict[str, Any]],
+    n: int,
+    list_sha: str,
+    *,
+    reset: bool,
+) -> int:
+    if reset or not row:
+        return 0
+    stats = row.get("stats") or {}
+    if not isinstance(stats, dict):
+        stats = {}
+    if stats.get("list_sha") != list_sha or stats.get("rank_key") != RANK_KEY:
+        return 0
+    cur = int(row.get("cursor_block") or 0)
+    if cur <= 0 or cur >= n:
+        return 0
+    return cur
+
+
+def _checkpoint(store: ScanStore, progress: StrongProgress, strong_n: int, list_sha: str = "") -> None:
     fn = getattr(store, "upsert_backfill", None)
     if not callable(fn):
         return
@@ -557,6 +607,8 @@ def _checkpoint(store: ScanStore, progress: StrongProgress, strong_n: int) -> No
             "heat_positive": progress.heat_changed,
             "stats": {
                 "strong": progress.strong,
+                "list_sha": list_sha,
+                "rank_key": RANK_KEY,
                 "engine_runtime_ms": progress.engine_runtime_ms,
                 "heat_changes": progress.heat_changes[:20],
                 "availability": progress.availability,

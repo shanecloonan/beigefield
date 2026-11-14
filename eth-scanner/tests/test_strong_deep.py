@@ -18,6 +18,7 @@ from eth_scanner.config import Settings
 from eth_scanner.deep.runners import forge_fuzz_argv, mythril_argv, semgrep_argv
 from eth_scanner.deep.source_tree import compiler_settings, write_verified_project
 from eth_scanner.deep.strong import (
+    DRAIN_PROBABILITY_STRONG_MIN,
     TIER1_MIN_FUNDS_USD,
     TIER2_MIN_FUNDS_USD,
     heat_if_live_confirmed,
@@ -30,10 +31,11 @@ from eth_scanner.store.supabase import MemoryStore
 from eth_scanner.types import SourceArtifact
 
 
-def _cand(addr: str, tier: int, usd: float, rank: int) -> MasterCandidate:
+def _cand(addr: str, tier: int, usd: float, rank: int, drain: float = 0.0) -> MasterCandidate:
     return MasterCandidate(
         address=addr, protocol="P", slug="p", category="Lending",
         est_usd_held=usd, candidate_reason="no-audit", tier=tier, rank=rank,
+        drain_probability=drain, contract_class="Lending",
     )
 
 
@@ -48,6 +50,9 @@ class StrongSelection(unittest.TestCase):
         self.assertFalse(is_strong_candidate(tier=3, funds_usd=5_000_000))
         self.assertTrue(is_strong_candidate(tier=3, funds_usd=100, heat=1))
         self.assertTrue(is_strong_candidate(tier=3, funds_usd=100, bucket="lane-b-queue"))
+        self.assertEqual(DRAIN_PROBABILITY_STRONG_MIN, 0.60)
+        self.assertTrue(is_strong_candidate(tier=3, funds_usd=100, drain_probability=0.60))
+        self.assertFalse(is_strong_candidate(tier=3, funds_usd=100, drain_probability=0.59))
 
     def test_order_is_tier_then_usd(self):
         a = "0x" + "11" * 20
@@ -58,6 +63,15 @@ class StrongSelection(unittest.TestCase):
             {},
         )
         self.assertEqual([item[0].address for item in rows], [c, b, a])
+
+    def test_order_is_drain_probability_first(self):
+        hot = "0x" + "aa" * 20
+        rich = "0x" + "bb" * 20
+        rows = select_strong(
+            [_cand(rich, 1, 9_000_000, 1, drain=0.10), _cand(hot, 3, 3_000, 9, drain=0.91)],
+            {},
+        )
+        self.assertEqual([item[0].address for item in rows], [hot, rich])
 
     def test_live_funds_override_estimate(self):
         addr = "0x" + "ab" * 20

@@ -1,16 +1,26 @@
 """Load the versioned master candidate list.
 
-Order is tier ascending, then estimated USD held descending, then rank.
-Duplicate addresses keep the higher-priority row. Read-only file IO.
+Scan order is drain_probability descending, then tier ascending, then
+estimated USD held descending, then DefiLlama ETH TVL descending.
+Duplicate addresses in the base file keep the higher-priority row.
+
+A later hand-ranked tranche can be dropped in beside the base file as
+``hand_ranked_candidates.json`` (same row shape). Those rows are appended,
+and a repeated address replaces the base row. The combined list is sorted
+again. No rebuild of master_candidates.json is required.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
+
+# Optional overlay. Absent until a hand-analyzed tranche is committed.
+HAND_RANKED_FILENAME = "hand_ranked_candidates.json"
 
 
 def default_master_list_path() -> Path:
@@ -40,6 +50,9 @@ class MasterCandidate:
     forked_from: Optional[str] = None
     proxy_implementation: Optional[str] = None
     proxy_admin: Optional[str] = None
+    # List prior in [0, 1]. This is not the 0–100 live drain score.
+    drain_probability: float = 0.0
+    contract_class: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -51,6 +64,8 @@ class MasterCandidate:
             "candidate_reason": self.candidate_reason,
             "tier": self.tier,
             "rank": self.rank,
+            "drain_probability": self.drain_probability,
+            "contract_class": self.contract_class,
             "label": self.label,
             "source": self.source,
             "verified_contract": self.verified_contract,
@@ -81,8 +96,32 @@ def _as_int(value: Any, default: int) -> int:
 
 
 def _priority(row: MasterCandidate) -> tuple:
-    """Lower tuple sorts first: tier, then more USD, then rank, then address."""
-    return (row.tier, -row.est_usd_held, row.rank, row.address)
+    """Lower tuple sorts first: higher drain prior, then tier, USD, TVL."""
+    tvl = float(row.defillama_eth_tvl or 0.0)
+    return (
+        -float(row.drain_probability or 0.0),
+        row.tier,
+        -float(row.est_usd_held or 0.0),
+        -tvl,
+        row.rank,
+        row.address,
+    )
+
+
+def list_fingerprint(candidates: list[MasterCandidate]) -> str:
+    """Identity of the ordered feed. A new ranking changes the hash and resets cursors."""
+    blob = "\n".join(
+        "%.6f|%s|%s|%.2f|%.2f|%s" % (
+            float(c.drain_probability or 0.0),
+            c.tier,
+            c.address,
+            float(c.est_usd_held or 0.0),
+            float(c.defillama_eth_tvl or 0.0),
+            c.rank,
+        )
+        for c in candidates
+    )
+    return hashlib.sha256(blob.encode()).hexdigest()[:16]
 
 
 def _from_raw(raw: dict[str, Any]) -> Optional[MasterCandidate]:
@@ -113,29 +152,42 @@ def _from_raw(raw: dict[str, Any]) -> Optional[MasterCandidate]:
             str(raw["proxy_implementation"]) if raw.get("proxy_implementation") else None
         ),
         proxy_admin=(str(raw["proxy_admin"]) if raw.get("proxy_admin") else None),
+        drain_probability=_as_float(raw.get("drain_probability")),
+        contract_class=str(raw.get("contract_class") or raw.get("category") or ""),
     )
 
 
-def load_master_candidates(path: Optional[Path | str] = None) -> list[MasterCandidate]:
-    """Unique Ethereum addresses in scan order (tier, then USD)."""
-    src = Path(path) if path else default_master_list_path()
-    payload = json.loads(src.read_text(encoding="utf-8"))
+def _read_rows(path: Path) -> list[dict[str, Any]]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(payload, dict):
         raw_rows = payload.get("candidates") or payload.get("rows") or []
     elif isinstance(payload, list):
         raw_rows = payload
     else:
         raise ValueError("master candidate list must be a JSON array or {candidates:[]}")
+    return [row for row in raw_rows if isinstance(row, dict)]
 
+
+def _dedupe(raw_rows: list[dict[str, Any]]) -> dict[str, MasterCandidate]:
     best: dict[str, MasterCandidate] = {}
     for raw in raw_rows:
-        if not isinstance(raw, dict):
-            continue
         row = _from_raw(raw)
         if row is None:
             continue
         prev = best.get(row.address)
         if prev is None or _priority(row) < _priority(prev):
+            best[row.address] = row
+    return best
+
+
+def load_master_candidates(path: Optional[Path | str] = None) -> list[MasterCandidate]:
+    """Unique addresses in scan order (drain probability, then tier, USD, TVL)."""
+    src = Path(path) if path else default_master_list_path()
+    best = _dedupe(_read_rows(src))
+    overlay = src.parent / HAND_RANKED_FILENAME
+    if overlay.is_file():
+        # Hand rows are authoritative for an address they name, then re-sorted.
+        for row in _dedupe(_read_rows(overlay)).values():
             best[row.address] = row
     ordered = list(best.values())
     ordered.sort(key=_priority)
