@@ -486,11 +486,25 @@ contract LiveProperties is Test {{
         }} catch {{
             return;
         }}
-        if (ok) {{
-            assert(afterBal >= beforeBal);
-        }} else {{
-            assert(afterBal == beforeBal);
+        if (afterBal > beforeBal) {{
+            uint256 delta = afterBal - beforeBal;
+            require(false, string(abi.encodePacked("caller_profit_delta=", _u256(delta))));
         }}
+        assert(afterBal == beforeBal);
+    }}
+
+    function _u256(uint256 value) internal pure returns (string memory) {{
+        if (value == 0) return "0";
+        bytes memory buf = new bytes(78);
+        uint256 i = 78;
+        while (value != 0) {{
+            i--;
+            buf[i] = bytes1(uint8(48 + value % 10));
+            value /= 10;
+        }}
+        bytes memory out = new bytes(78 - i);
+        for (uint256 j = 0; j < out.length; j++) out[j] = buf[i + j];
+        return string(out);
     }}
 
     // Halmos entrypoints (check_*) — same properties, symbolic path.

@@ -340,6 +340,23 @@ function useElapsed(active: boolean): number {
   return active ? secs : 0;
 }
 
+function callerProfit(evidence?: string | null): boolean {
+  const match = /caller_profit_delta=(\d+)/.exec(evidence || "");
+  return Boolean(match && Number(match[1]) > 0);
+}
+
+function groupFindings<T extends { engine?: string | null; detector?: string | null; title?: string | null }>(rows: T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const row of rows) {
+    const key = `${row.engine || ""}:${row.detector || row.title || ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(row);
+  }
+  return out;
+}
+
 function reviewNote(notes?: string[] | string | null): string {
   const lines = Array.isArray(notes) ? notes : notes ? [notes] : [];
   const text = lines.map((line) => String(line)).find((line) => line && !line.startsWith("master-list "));
@@ -1452,14 +1469,16 @@ export default function TestApp() {
             </div>
             {(feed?.history?.findings?.length ?? 0) > 0 && (
               <ul className="mt-3 space-y-1 text-[11px] text-brand-300">
-                {feed!.history!.findings.slice(0, 12).map((f) => (
+                {groupFindings(feed!.history!.findings).slice(0, 12).map((f) => (
                   <li key={f.id} className="font-mono">
                     <span className="text-brand-500">{f.engine || "engine"}</span>
                     {f.severity ? ` · ${f.severity}` : ""}
                     {f.detector ? ` · ${f.detector}` : ""}
                     {" · "}
                     {f.title || f.evidence || "evidence"}
-                    <span className="ml-2 font-sans text-brand-600">evidence only · heat 0</span>
+                    <span className="ml-2 font-sans text-brand-600">
+                      {callerProfit(f.evidence) ? "fork drain proof" : "evidence only · heat 0"}
+                    </span>
                   </li>
                 ))}
               </ul>

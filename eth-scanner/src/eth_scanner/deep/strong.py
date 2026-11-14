@@ -23,6 +23,8 @@ from typing import Any, Callable, Optional
 from eth_scanner.classify import classify_contract, engine_config_for_class
 from eth_scanner.config import Settings, load_settings
 from eth_scanner.deep.findings import EngineFinding, sanitize_evidence
+from eth_scanner.deep.findings import apply_agreement, dedupe_findings
+from eth_scanner.deep.medusa_runner import fork_profit_results, run_medusa
 from eth_scanner.deep.runners import EngineRunResult
 from eth_scanner.deep.runners import (
     MYTHRIL_EXECUTION_TIMEOUT_S,
@@ -355,6 +357,7 @@ def _run_engine_set(
         ),
         "semgrep": lambda: run_semgrep(project, timeout_s=120),
         "halmos": lambda: run_halmos(harness_dir=FUZZ_ROOT, timeout_s=90),
+        "medusa": lambda: run_medusa(suite_dir=FUZZ_ROOT, timeout_s=90),
     }
     if include_fuzz:
         tasks["forge-fuzz"] = lambda: run_property_fuzz(
@@ -376,9 +379,12 @@ def _run_engine_set(
                     "duration_ms": 0, "finding_count": 0,
                 })
                 continue
-            # Static/symbolic/fuzz output is evidence. Heat stays at zero here.
+            # Static/symbolic/fuzz output is evidence. A caller-profit
+            # counterexample is the only row that may later raise heat.
             for finding in result.findings:
-                finding.generic = True
+                evidence = finding.evidence or ""
+                if "caller_profit_delta=0" in evidence or "caller_profit_delta=" not in evidence:
+                    finding.generic = True
             findings.extend(result.findings[:40])
             results.append({
                 "engine": result.engine,
@@ -387,7 +393,11 @@ def _run_engine_set(
                 "duration_ms": result.duration_ms,
                 "finding_count": len(result.findings),
             })
-    return findings, results
+    ranked = apply_agreement(dedupe_findings(findings))
+    for finding in ranked:
+        if finding.agreement_count > 1 and "agreement" not in finding.title:
+            finding.title = "%s · agreement %d" % (finding.title, finding.agreement_count)
+    return ranked, results
 
 
 def _live(address: str, settings: Settings) -> list[dict[str, Any]]:
@@ -440,8 +450,10 @@ def _absorb(progress, cand, light, funds, report, store) -> None:
         name = str(run.get("engine") or "engine")
         progress.engine_runtime_ms[name] = progress.engine_runtime_ms.get(name, 0) + int(run.get("duration_ms") or 0)
     heat_before = int(report.get("heat_before") if report.get("heat_before") is not None else (light.get("heat") or 0))
+    live = list(report.get("live_results") or [])
+    live.extend(fork_profit_results(report.get("findings") or []))
     heat_after, changed, breakdown = heat_if_live_confirmed(
-        heat_before, funds, list(report.get("live_results") or []),
+        heat_before, funds, live,
     )
     if changed:
         progress.heat_changed += 1
