@@ -15,6 +15,7 @@ from typing import Any, Optional
 from eth_scanner.heat import evidence_heat, load_heat_weights, should_promote_lane_b
 from eth_scanner.heuristics.patterns import detect_fork_family, detect_weird_signals, skim_known_patterns
 from eth_scanner.heuristics.scope import FUNDS_AT_RISK_CLASSES, ScopeDecision, classify_scope
+from eth_scanner.classify import classify_contract
 from eth_scanner.invariants.live import run_live_invariants, summarize_role_flags
 from eth_scanner.known_safe import filter_standard_movers, is_known_safe
 from eth_scanner.types import (
@@ -95,12 +96,31 @@ def _scope_of(ctx: FunnelContext) -> ScopeDecision:
         )
     source = ctx.source_text or (ctx.artifact.content if ctx.artifact else "")
     extra = list(ir.function_names) if ir is not None else []
-    return classify_scope(
+    decision = classify_scope(
         source=source,
         functions=(ir.functions if ir else []),
         extra_names=extra,
         contract_name=(ctx.artifact.contract_name if ctx.artifact else None),
     )
+    fine, conf = classify_contract(
+        name=(ctx.artifact.contract_name if ctx.artifact else "") or "",
+        source=source,
+    )
+    if conf in {"high", "med"} and fine != "other":
+        decision.contract_class = fine
+        decision.signals = list(decision.signals) + ["class:%s:%s" % (fine, conf)]
+    return decision
+
+
+def _class_for_live(ctx: FunnelContext, fallback: str) -> str:
+    source = ctx.source_text or (ctx.artifact.content if ctx.artifact else "")
+    fine, conf = classify_contract(
+        name=(ctx.artifact.contract_name if ctx.artifact else "") or "",
+        source=source,
+    )
+    if conf in {"high", "med"} and fine != "other":
+        return fine
+    return fallback or "other"
 
 
 def _cap_heat(heat: int) -> int:
@@ -301,7 +321,7 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
         if not ctx.config.skip_live_invariants:
             live = run_live_invariants(
                 ctx.target.address,
-                contract_class=scope_early.contract_class,
+                contract_class=_class_for_live(ctx, scope_early.contract_class),
                 rpc_url=ctx.rpc_url or "",
             )
             inv_rows = [r.to_dict() for r in live]
@@ -528,7 +548,7 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
     if not inv_rows and not ctx.config.skip_live_invariants and not safe:
         live = run_live_invariants(
             ctx.target.address,
-            contract_class=scope.contract_class,
+            contract_class=_class_for_live(ctx, scope.contract_class),
             rpc_url=ctx.rpc_url or "",
         )
         inv_rows = [r.to_dict() for r in live]

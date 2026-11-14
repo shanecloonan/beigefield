@@ -38,6 +38,9 @@ SAFE_CONTRACT_NAMES = frozenset({
     "layerzerotoken", "cosmoserc20", "pendle", "titanx", "ach",
     "baseregistrarimplementation", "ens",
     "liquiditygauge", "liquiditygaugev2", "liquiditygaugev3",
+    # Audited standard venues — not custom custody logic.
+    "bentoboxv1", "bentobox",
+    "initializableadminupgradeabilityproxy",
     "liquiditygaugev4", "liquiditygaugev5", "liquiditygaugev6",
     "curve.fi liquidity gauge", "vyper_contract",
     "uniswapv2pair", "uniswapv2factory", "uniswapv2router02",
@@ -77,6 +80,8 @@ SAFE_ADDRESSES = frozenset({
     "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
     # USDe
     "0x4c9edd5852cd905f08685a2e67ec7941119ee468",
+    # Sushi BentoBox V1 (audited standard)
+    "0xf5bce5077908a1b7370b9ae04adc565ebd643966",
 })
 
 _OZ_IMPORT = re.compile(

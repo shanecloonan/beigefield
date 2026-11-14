@@ -224,19 +224,35 @@ def run_lead_fuzz(
     return report
 
 
+def _fuzz_harness_noise(property_id: str) -> bool:
+    name = (property_id or "").lower().replace("()", "")
+    return name in {"setup", "test_setup", "constructor", "deploy"} or name.endswith("setup")
+
+
 def fuzz_failures_as_invariants(report: FuzzReport) -> list[dict[str, Any]]:
-    """Map property failures into failed_invariant rows for evidence heat."""
+    """Map property failures into invariant rows.
+
+    Harness setup failures stay as evidence (status unknown) and do not heat.
+    Real property failures are still recorded, but heat ignores source=fuzz
+    until a live eth_call rule fails.
+    """
     out: list[dict[str, Any]] = []
+    seen: set[str] = set()
     for fail in report.failures:
+        key = str(fail.property_id or "")
+        if key in seen:
+            continue
+        seen.add(key)
+        noise = _fuzz_harness_noise(key)
         out.append({
-            "id": "fuzz-%s" % fail.property_id,
-            "name": fail.property_id,
-            "status": "failed",
+            "id": "fuzz-%s" % key,
+            "name": key,
+            "status": "unknown" if noise else "failed",
             "evidence": fail.evidence[:400],
-            "reproduction": fail.reproduction[:800],
+            "reproduction": "" if noise else fail.reproduction[:800],
             "tool": fail.tool,
             "source": "fuzz",
-            "label": "proof of a bug, not an attack",
+            "label": "harness setup did not run" if noise else "proof of a bug, not an attack",
         })
     return out
 
@@ -244,10 +260,17 @@ def fuzz_failures_as_invariants(report: FuzzReport) -> list[dict[str, Any]]:
 def fuzz_failures_as_confirmed(report: FuzzReport) -> list[dict[str, Any]]:
     """Confirmed evidence rows for /test 'confirmed by' UI."""
     out: list[dict[str, Any]] = []
+    seen: set[str] = set()
     for fail in report.failures:
+        key = str(fail.property_id or "")
+        if key in seen:
+            continue
+        seen.add(key)
+        noise = _fuzz_harness_noise(key)
         out.append({
-            "lead_id": "fuzz-%s" % fail.property_id,
-            "confirmed": True,
+            "lead_id": "fuzz-%s" % key,
+            "confirmed": not noise,
+            "live_confirmed": False,
             "method": "fuzz",
             "evidence": (
                 "proof of a bug, not an attack | %s | %s"

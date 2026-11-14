@@ -92,13 +92,47 @@ def funds_rank(funds_usd: Optional[float], weights: Optional[HeatWeights] = None
 funds_heat = funds_rank
 
 
+def _harness_noise(row: dict[str, Any]) -> bool:
+    """Setup/constructor failures are harness noise, not a live rule failure."""
+    blob = " ".join([
+        str(row.get("id") or ""),
+        str(row.get("name") or ""),
+        str(row.get("evidence") or ""),
+    ]).lower()
+    return any(tok in blob for tok in ("setup()", "setup", "constructor", "deploy("))
+
+
+def _counts_as_live_failure(row: dict[str, Any]) -> bool:
+    if (row.get("status") or "").lower() != "failed":
+        return False
+    if _harness_noise(row):
+        return False
+    # Engine/fuzz/symbolic output is evidence only until a live eth_call fails.
+    source = str(row.get("source") or "").lower()
+    if source in {"fuzz", "symbolic", "halmos", "slither", "mythril", "semgrep", "aderyn"}:
+        return False
+    return True
+
+
 def invariant_heat(
     results: list[dict[str, Any]],
     weights: Optional[HeatWeights] = None,
 ) -> int:
-    """Only *failed* invariants add heat. held/unknown add zero."""
+    """Only *failed* live rules add heat. held/unknown/engine output add zero.
+
+    The same rule id is counted once so a duplicated fuzz row cannot stack.
+    """
     w = weights or load_heat_weights()
-    n_failed = sum(1 for r in results if (r.get("status") or "").lower() == "failed")
+    seen: set[str] = set()
+    n_failed = 0
+    for row in results:
+        if not _counts_as_live_failure(row):
+            continue
+        key = str(row.get("id") or row.get("name") or "")
+        if key in seen:
+            continue
+        seen.add(key)
+        n_failed += 1
     return min(w.failed_invariant_cap, n_failed * w.failed_invariant)
 
 
@@ -108,7 +142,22 @@ def corroborated_heat(
 ) -> int:
     """Only *confirmed* engine/clone corroborations add heat. Leads alone → 0."""
     w = weights or load_heat_weights()
-    n = sum(1 for c in confirmed if c.get("confirmed"))
+    n = 0
+    seen: set[str] = set()
+    for c in confirmed:
+        if not c.get("confirmed"):
+            continue
+        method = str(c.get("method") or "").lower()
+        # Engine output adds zero heat. A live eth_call confirmation still counts.
+        if method in {"fuzz", "symbolic", "slither", "mythril", "semgrep", "aderyn", "halmos", "none", "source"}:
+            if not c.get("live_confirmed"):
+                continue
+        key = str(c.get("lead_id") or "")
+        if key and key in seen:
+            continue
+        if key:
+            seen.add(key)
+        n += 1
     return min(w.corroborated_lead_cap, n * w.corroborated_lead)
 
 

@@ -98,14 +98,19 @@ def run_live_invariants(
     out: list[LiveInvariantResult] = []
     klass = (contract_class or "unknown").lower()
     try:
-        if klass in {"vault", "unknown"}:
+        if klass in {"vault", "erc4626-vault", "allocator", "options-vault"}:
             out.extend(_erc4626_checks(addr, rpc, timeout_s, klass))
-        if klass == "lending":
+        if klass in {"lending", "compound-lending", "aave-lending"}:
             out.extend(_lending_checks(addr, rpc, timeout_s, klass))
-        if klass in {"pool", "custody"}:
+        if klass in {"pool", "custody", "uniswap-amm", "custom-amm"}:
             out.extend(_pool_checks(addr, rpc, timeout_s, klass))
-        if klass in {"staking", "vault"}:
+        if klass in {"staking", "staking-lst", "vault", "erc4626-vault"}:
             out.extend(_staking_balance_checks(addr, rpc, timeout_s, klass))
+        if klass == "cdp":
+            out.extend(_cdp_checks(addr, rpc, timeout_s, klass))
+        if klass == "bridge":
+            out.extend(_bridge_checks(addr, rpc, timeout_s, klass))
+        # Unknown / other: generic admin reads only, not vault math.
         out.extend(_oracle_sanity_checks(addr, rpc, timeout_s, klass))
         out.extend(_role_checks(addr, rpc, timeout_s, klass))
         out.extend(_privileged_call_probes(addr, rpc, timeout_s, klass))
@@ -122,6 +127,79 @@ def run_live_invariants(
             contract_class=klass,
         ))
     return out
+
+
+def donation_inflation_status(supply: int, assets: int) -> str:
+    """Near-empty vault with assets already in is a live solvency shape.
+
+    Empty (no assets) is evidence only. No exploit steps are produced.
+    """
+    if supply <= 0:
+        return "unknown"
+    if supply >= 10**6:
+        return "held"
+    if assets > 0:
+        return "failed"
+    return "unknown"
+
+
+def _donation_result(supply: int, assets: int, klass: str) -> LiveInvariantResult:
+    status = donation_inflation_status(supply, assets)
+    if status == "failed":
+        evidence = (
+            "share supply is tiny (%s) while totalAssets=%s — live deposits sit in a near-empty vault"
+            % (supply, assets)
+        )
+    elif status == "held":
+        evidence = "share supply %s is large enough that a dust donation does not dominate" % supply
+    else:
+        evidence = "share supply %s with totalAssets=%s — recorded as evidence only" % (supply, assets)
+    return LiveInvariantResult(
+        "vault-donation-inflation",
+        "near-empty vault with live assets",
+        status,
+        evidence,
+        contract_class=klass,
+        extras={"totalSupply": supply, "totalAssets": assets},
+    )
+
+
+def _cdp_checks(addr: str, rpc: str, timeout_s: float, klass: str) -> list[LiveInvariantResult]:
+    """Collateral vs debt when both views answer. Otherwise unknown, not a fail."""
+    col = _call_uint(rpc, addr, "9e52c4c9", timeout_s)  # collateral() common
+    debt = _call_uint(rpc, addr, "d283e4e2", timeout_s)  # debt()
+    if col is None or debt is None:
+        return [LiveInvariantResult(
+            "cdp-coverage", "collateral vs debt", "unknown",
+            "collateral()/debt() not both readable — not treated as a failure",
+            contract_class=klass,
+        )]
+    status = "failed" if debt > col and col == 0 and debt > 0 else "held"
+    return [LiveInvariantResult(
+        "cdp-coverage", "collateral vs debt", status,
+        "collateral=%s debt=%s" % (col, debt),
+        contract_class=klass,
+        extras={"collateral": col, "debt": debt},
+    )]
+
+
+def _bridge_checks(addr: str, rpc: str, timeout_s: float, klass: str) -> list[LiveInvariantResult]:
+    """Safe threshold when the escrow is a Safe. Single signer is a live fail."""
+    threshold = _call_uint(rpc, addr, "e75235b8", timeout_s)  # getThreshold()
+    if threshold is None:
+        return [LiveInvariantResult(
+            "bridge-threshold", "signer threshold", "unknown",
+            "getThreshold() not readable — not treated as a failure",
+            contract_class=klass,
+        )]
+    status = "failed" if threshold <= 1 else "held"
+    evidence = "getThreshold=%s" % threshold
+    if status == "failed":
+        evidence += " — single signer or empty threshold on a readable Safe"
+    return [LiveInvariantResult(
+        "bridge-threshold", "signer threshold", status, evidence,
+        contract_class=klass, extras={"threshold": threshold},
+    )]
 
 
 def _pick_rpc(preferred: str) -> str:
@@ -192,6 +270,8 @@ def _erc4626_checks(addr: str, rpc: str, timeout_s: float, klass: str) -> list[L
             contract_class=klass,
             extras={"converted": converted, "totalAssets": total_assets, "totalSupply": supply, "asset": asset},
         ))
+
+    out.append(_donation_result(supply, total_assets, klass))
 
     bal = _call_uint(rpc, asset, SEL["balanceOf(address)"] + _pad_addr(addr), timeout_s)
     if bal is not None and total_assets is not None:

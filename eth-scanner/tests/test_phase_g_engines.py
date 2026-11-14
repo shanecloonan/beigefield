@@ -184,8 +184,8 @@ class HalmosSymbolic(unittest.TestCase):
             invariant_results=inv,
             corroborated=conf,
         )
-        self.assertGreater(heat, 0)
-        self.assertGreater(bd["invariants_failed"], 0)
+        self.assertEqual(heat, 0)
+        self.assertEqual(bd["invariants_failed"], 0)
 
     def test_halmos_missing_is_skip(self):
         from eth_scanner.engines.halmos_runner import run_lead_halmos
