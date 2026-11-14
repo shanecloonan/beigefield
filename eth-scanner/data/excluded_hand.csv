@@ -1,0 +1,56 @@
+address,protocol,reason
+0xba12222222228d8ba445958a75a0704d566bf2c8,Aura/DELV/Sense misattr,"Balancer V2 Vault — shared audited infrastructure, not a protocol-specific money box"
+0xb576491f1e6e5e62f1d8f26062ee822b40b0e0d4,Bent Finance,Curve CRV/ETH pool misattributed as Bent Finance
+0x4d5ef58aac27d99935e5b6b4a6778ff292059991,BasketDAO,UniswapV2Pair misattributed as BasketDAO
+0xf5bce5077908a1b7370b9ae04adc565ebd643966,Sushi BentoBox,"Sushi BentoBox — audited standard, already on cold list"
+0x4e88e72bd81c7ea394cb410296d99987c3a242fe,ZeroLend Vaults Safe,"Gnosis Safe — multisig custody, not a scannable money-logic contract"
+0x9546a22c244497c6fb5338e4ff7c74c5accb3ddd,IXS Safe,"Gnosis Safe — multisig custody, not a scannable money-logic contract"
+0x0c2553e4b9dfa9f83b1a6d3eab96c4baab42d430,Angle Safe,"Gnosis Safe — multisig custody, not a scannable money-logic contract"
+0x57eedcb68445355e9c11a90f39012e8d4aaa89fc,Angle Safe,"Gnosis Safe — multisig custody, not a scannable money-logic contract"
+0xab05c0db9d26e96a9dcedcafca23341316f6fe6f,NaraUSD Safe,"Gnosis Safe — multisig custody, not a scannable money-logic contract"
+0x0d5dc686d0a2abbfdafdfb4d0533e886517d4e83,Keep3r Safe,"Gnosis Safe — multisig custody, not a scannable money-logic contract"
+0x182863131f9a4630ff9e27830d945b1413e347e8,USDS-1 yVault,Audited infra clone (USDS-1 yVault); strategy-level risk exists but vault shell is standard
+0xac37729b76db6438ce62042ae1270ee574ca7571,WETH-2 yVault,Audited infra clone (WETH-2 yVault); strategy-level risk exists but vault shell is standard
+0x028ec7330ff87667b6dfb0d94b954c820195336c,DAI-1 yVault,Audited infra clone (DAI-1 yVault); strategy-level risk exists but vault shell is standard
+0x310b7ea7475a0b449cfd73be81522f1b88efafaa,USDT-1 yVault,Audited infra clone (USDT-1 yVault); strategy-level risk exists but vault shell is standard
+0x7d3db01a4ac4aa27534d2951e58d59992686ea5c,Stake DAO ETH+/ETH Vault,Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard
+0x751f0cc6115410a3ee9ec92d08f46ff6da98b708,WBTC-1 yVault,Audited infra clone (WBTC-1 yVault); strategy-level risk exists but vault shell is standard
+0xee1bc2abbcb80f6b97f441b1f652c09abedd33bd,Stake DAO iREET/pmUSD Vault,Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard
+0xbf319ddc2edc1eb6fdf9910e39b37be221c8805f,crvUSD-2 yVault,Audited infra clone (crvUSD-2 yVault); strategy-level risk exists but vault shell is standard
+0x863687e4e9751b57f38b4b0eba04744c72d0f7b8,Flex USDC yVault,Audited infra clone (Flex USDC yVault); strategy-level risk exists but vault shell is standard
+0xee26a99688474bbde401e784a01d89833c46aa14,Stake DAO Curve.fi Factory Plain Pool: cvxCrv/Crv Vault,Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard
+0xde380abfb5a7117b92a868ebe828e560bebd1ecc,Stake DAO reUSD/sDola Vault,Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard
+0x67ea89d21d449bf9183c0773f0d02af8545f810c,Stake DAO frxUSD/sDOLA Vault,Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard
+0x128e72dfd8b00cbf9d12cb75e846ac87b83ddfc9,yGauge DAI-1 yVault,Audited infra clone (yGauge DAI-1 yVault); strategy-level risk exists but vault shell is standard
+0xd0fd4b4141de8d021df1c15e6eafde2d276fe116,Stake DAO pmUSD/frxUSD Vault,Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard
+0x32c1cd7c991a1f40f5af5701cdc7a6a95f900cd4,Stake DAO Curve.fi Factory Plain Pool: sdCRV/CRV Vault,Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard
+0x5af2c210042fb964c0c10b221ae445ce9d567c57,Stake DAO GHO/crvUSD Vault,Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard
+0x909b19f659b8b99c50128487de14f9c8f011b3d2,Stake DAO USG/USDC Vault,Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard
+0xb420e68d8b532c5402a0c1346f7536b64b222640,Stake DAO frxUSD/sVUSD Vault,Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard
+0xae163a3865e839a75297e3ef739d2f061322b89a,Stake DAO OETH/WETH Vault,Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard
+0x5f4cff7649e06cff0cdb53e3c621cefa8aa9d56d,Stake DAO TricryptoGHO Vault,Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard
+0xae7d8db82480e6d8e3873ecbf22cf17b3d8a7308,USDC-2 yVault,Audited infra clone (USDC-2 yVault); strategy-level risk exists but vault shell is standard
+0xacecd896dcf567debb3cccd18200f9b8ec32b5ec,Stake DAO eUSD/crvUSD Vault,Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard
+0x53de49216fd85230a9a7afc1936479ce0b90fcbf,Stake DAO ZCHF/CRVUSD Vault,Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard
+0x0fc1c0ac3324d06e9f0726e523427407a9b28bc9,Stake DAO sUSDe/crvUSD Vault,Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard
+0x73eddfa87c71addc275c2b9890f5c3a8480bc9e6,Static Aave Ethereum USDC,"Official Aave StaticATokenLM wrapper — audited standard shell, not a protocol-specific money box"
+0x5f9d59db355b4a60501544637b00e94082ca575b,Wrapped Aave Ethereum USDe,Official Aave StataTokenV2 wrapper — audited standard shell
+0xfeb859a50f92c6d5ad7c9ef7c2c060d164b3280f,Static Aave Ethereum AAVE,Official Aave StaticATokenLM wrapper — audited standard shell
+0x52036c9046247c3358c987a2389ffde6ef8564c9,Curve Vault for crvUSD,Official Curve savings vault shell — audited standard
+0x6490828bd87be38279a36f029f3b9af8b4e14b49,Revest (misattributed UniswapV2Pair),"Adapter extracted a UniswapV2Pair, not Revest money-logic"
+0x6c3f90f043a72fa612cbac8115ee7e52bde6e490,Curve 3pool LP,"Token itself (3Crv), not a scannable protocol money box"
+0xd9a442856c234a39a81a089c06451ebaa4306a72,pufETH token,"Official pufETH LST token, not a custom vault"
+0x4b904f19a417d184ad330fc1202cd47b368ca5e2,swETH,"Canonical LST token/wrapper, not custom money-logic"
+0xd4c343f931ba1c2bc80d19911fc3bfc67be0dbe6,Wrapped eETH,"weETH LST wrapper — canonical, skip"
+0xfe9fa6f02fd8ea8fb7d77fc64a76dcd4cf527cf9,Staked Frax Ether,"sfrxETH canonical LST, skip"
+0x07bac35846e5ed502aa91adf6a9e7aa210f2dcbe,Gravity Bridge erowan,"erowan token, not the Gravity bridge escrow"
+0xa693b19d2931d498c5b318df961919bb4aee87a5,Thetanuts (BridgeToken UST),"On-chain name is BridgeToken (UST residual), not the options vault money box"
+0xd57aea3686d623da2dcebc87010a4f2f38ac7b15,GaugeV2,"Curve GaugeV2, not a drainable protocol vault"
+0x72e2f4830b9e45d52f80ac08cb2bec0fef72ed9c,StargateEthVault,"Official Stargate ETH vault — canonical, heavily reviewed bridge infra"
+0xb0d502e938ed5f4df2e681fe6e419ff29631d62b,Stargate LPStaking,Official Stargate LP staking — canonical infra
+0xf7de3c70f2db39a188a81052d2f3c8e3e217822a,SuperUSDC TokenizedStrategy,Yearn V3 TokenizedStrategy audited shell
+0x473f0adec308dc82440665d9fc7d5e26ebcf0e05,rSWELL TokenizedStrategy,Yearn V3 TokenizedStrategy audited shell
+0x6c310b55d6728423b3bddb9d07a6c21bb6efbdcb,Trust Wallet AAVE v3 DAI,"Thin Trust Wallet wrapper over official Aave v3, not custom money-logic"
+0x2a7822d6764dfc7a945a4c38776624cb542b32f6,Trust Wallet Spark DAI,"Thin Trust Wallet wrapper over Spark, not custom money-logic"
+0x7751e2f4b8ae93ef6b79d86419d42fe3295a4559,Wrapped USDL,"Official wUSDL / wYBS wrapper, standard shell"
+0x8c9532a60e0e7c6bbd2b2c1303f63ace1c3e9811,Renzo Restaked LST pzETH,"Canonical-style Renzo/LRT token wrapper, not a custom unaudited money box"

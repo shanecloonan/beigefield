@@ -1,0 +1,277 @@
+[
+  {
+    "address": "0xba12222222228d8ba445958a75a0704d566bf2c8",
+    "protocol": "Aura/DELV/Sense misattr",
+    "reason": "Balancer V2 Vault \u2014 shared audited infrastructure, not a protocol-specific money box"
+  },
+  {
+    "address": "0xb576491f1e6e5e62f1d8f26062ee822b40b0e0d4",
+    "protocol": "Bent Finance",
+    "reason": "Curve CRV/ETH pool misattributed as Bent Finance"
+  },
+  {
+    "address": "0x4d5ef58aac27d99935e5b6b4a6778ff292059991",
+    "protocol": "BasketDAO",
+    "reason": "UniswapV2Pair misattributed as BasketDAO"
+  },
+  {
+    "address": "0xf5bce5077908a1b7370b9ae04adc565ebd643966",
+    "protocol": "Sushi BentoBox",
+    "reason": "Sushi BentoBox \u2014 audited standard, already on cold list"
+  },
+  {
+    "address": "0x4e88e72bd81c7ea394cb410296d99987c3a242fe",
+    "protocol": "ZeroLend Vaults Safe",
+    "reason": "Gnosis Safe \u2014 multisig custody, not a scannable money-logic contract"
+  },
+  {
+    "address": "0x9546a22c244497c6fb5338e4ff7c74c5accb3ddd",
+    "protocol": "IXS Safe",
+    "reason": "Gnosis Safe \u2014 multisig custody, not a scannable money-logic contract"
+  },
+  {
+    "address": "0x0c2553e4b9dfa9f83b1a6d3eab96c4baab42d430",
+    "protocol": "Angle Safe",
+    "reason": "Gnosis Safe \u2014 multisig custody, not a scannable money-logic contract"
+  },
+  {
+    "address": "0x57eedcb68445355e9c11a90f39012e8d4aaa89fc",
+    "protocol": "Angle Safe",
+    "reason": "Gnosis Safe \u2014 multisig custody, not a scannable money-logic contract"
+  },
+  {
+    "address": "0xab05c0db9d26e96a9dcedcafca23341316f6fe6f",
+    "protocol": "NaraUSD Safe",
+    "reason": "Gnosis Safe \u2014 multisig custody, not a scannable money-logic contract"
+  },
+  {
+    "address": "0x0d5dc686d0a2abbfdafdfb4d0533e886517d4e83",
+    "protocol": "Keep3r Safe",
+    "reason": "Gnosis Safe \u2014 multisig custody, not a scannable money-logic contract"
+  },
+  {
+    "address": "0x182863131f9a4630ff9e27830d945b1413e347e8",
+    "protocol": "USDS-1 yVault",
+    "reason": "Audited infra clone (USDS-1 yVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0xac37729b76db6438ce62042ae1270ee574ca7571",
+    "protocol": "WETH-2 yVault",
+    "reason": "Audited infra clone (WETH-2 yVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0x028ec7330ff87667b6dfb0d94b954c820195336c",
+    "protocol": "DAI-1 yVault",
+    "reason": "Audited infra clone (DAI-1 yVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0x310b7ea7475a0b449cfd73be81522f1b88efafaa",
+    "protocol": "USDT-1 yVault",
+    "reason": "Audited infra clone (USDT-1 yVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0x7d3db01a4ac4aa27534d2951e58d59992686ea5c",
+    "protocol": "Stake DAO ETH+/ETH Vault",
+    "reason": "Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0x751f0cc6115410a3ee9ec92d08f46ff6da98b708",
+    "protocol": "WBTC-1 yVault",
+    "reason": "Audited infra clone (WBTC-1 yVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0xee1bc2abbcb80f6b97f441b1f652c09abedd33bd",
+    "protocol": "Stake DAO iREET/pmUSD Vault",
+    "reason": "Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0xbf319ddc2edc1eb6fdf9910e39b37be221c8805f",
+    "protocol": "crvUSD-2 yVault",
+    "reason": "Audited infra clone (crvUSD-2 yVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0x863687e4e9751b57f38b4b0eba04744c72d0f7b8",
+    "protocol": "Flex USDC yVault",
+    "reason": "Audited infra clone (Flex USDC yVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0xee26a99688474bbde401e784a01d89833c46aa14",
+    "protocol": "Stake DAO Curve.fi Factory Plain Pool: cvxCrv/Crv Vault",
+    "reason": "Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0xde380abfb5a7117b92a868ebe828e560bebd1ecc",
+    "protocol": "Stake DAO reUSD/sDola Vault",
+    "reason": "Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0x67ea89d21d449bf9183c0773f0d02af8545f810c",
+    "protocol": "Stake DAO frxUSD/sDOLA Vault",
+    "reason": "Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0x128e72dfd8b00cbf9d12cb75e846ac87b83ddfc9",
+    "protocol": "yGauge DAI-1 yVault",
+    "reason": "Audited infra clone (yGauge DAI-1 yVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0xd0fd4b4141de8d021df1c15e6eafde2d276fe116",
+    "protocol": "Stake DAO pmUSD/frxUSD Vault",
+    "reason": "Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0x32c1cd7c991a1f40f5af5701cdc7a6a95f900cd4",
+    "protocol": "Stake DAO Curve.fi Factory Plain Pool: sdCRV/CRV Vault",
+    "reason": "Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0x5af2c210042fb964c0c10b221ae445ce9d567c57",
+    "protocol": "Stake DAO GHO/crvUSD Vault",
+    "reason": "Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0x909b19f659b8b99c50128487de14f9c8f011b3d2",
+    "protocol": "Stake DAO USG/USDC Vault",
+    "reason": "Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0xb420e68d8b532c5402a0c1346f7536b64b222640",
+    "protocol": "Stake DAO frxUSD/sVUSD Vault",
+    "reason": "Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0xae163a3865e839a75297e3ef739d2f061322b89a",
+    "protocol": "Stake DAO OETH/WETH Vault",
+    "reason": "Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0x5f4cff7649e06cff0cdb53e3c621cefa8aa9d56d",
+    "protocol": "Stake DAO TricryptoGHO Vault",
+    "reason": "Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0xae7d8db82480e6d8e3873ecbf22cf17b3d8a7308",
+    "protocol": "USDC-2 yVault",
+    "reason": "Audited infra clone (USDC-2 yVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0xacecd896dcf567debb3cccd18200f9b8ec32b5ec",
+    "protocol": "Stake DAO eUSD/crvUSD Vault",
+    "reason": "Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0x53de49216fd85230a9a7afc1936479ce0b90fcbf",
+    "protocol": "Stake DAO ZCHF/CRVUSD Vault",
+    "reason": "Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0x0fc1c0ac3324d06e9f0726e523427407a9b28bc9",
+    "protocol": "Stake DAO sUSDe/crvUSD Vault",
+    "reason": "Audited infra clone (RewardVault); strategy-level risk exists but vault shell is standard"
+  },
+  {
+    "address": "0x73eddfa87c71addc275c2b9890f5c3a8480bc9e6",
+    "protocol": "Static Aave Ethereum USDC",
+    "reason": "Official Aave StaticATokenLM wrapper \u2014 audited standard shell, not a protocol-specific money box"
+  },
+  {
+    "address": "0x5f9d59db355b4a60501544637b00e94082ca575b",
+    "protocol": "Wrapped Aave Ethereum USDe",
+    "reason": "Official Aave StataTokenV2 wrapper \u2014 audited standard shell"
+  },
+  {
+    "address": "0xfeb859a50f92c6d5ad7c9ef7c2c060d164b3280f",
+    "protocol": "Static Aave Ethereum AAVE",
+    "reason": "Official Aave StaticATokenLM wrapper \u2014 audited standard shell"
+  },
+  {
+    "address": "0x52036c9046247c3358c987a2389ffde6ef8564c9",
+    "protocol": "Curve Vault for crvUSD",
+    "reason": "Official Curve savings vault shell \u2014 audited standard"
+  },
+  {
+    "address": "0x6490828bd87be38279a36f029f3b9af8b4e14b49",
+    "protocol": "Revest (misattributed UniswapV2Pair)",
+    "reason": "Adapter extracted a UniswapV2Pair, not Revest money-logic"
+  },
+  {
+    "address": "0x6c3f90f043a72fa612cbac8115ee7e52bde6e490",
+    "protocol": "Curve 3pool LP",
+    "reason": "Token itself (3Crv), not a scannable protocol money box"
+  },
+  {
+    "address": "0xd9a442856c234a39a81a089c06451ebaa4306a72",
+    "protocol": "pufETH token",
+    "reason": "Official pufETH LST token, not a custom vault"
+  },
+  {
+    "address": "0x4b904f19a417d184ad330fc1202cd47b368ca5e2",
+    "protocol": "swETH",
+    "reason": "Canonical LST token/wrapper, not custom money-logic"
+  },
+  {
+    "address": "0xd4c343f931ba1c2bc80d19911fc3bfc67be0dbe6",
+    "protocol": "Wrapped eETH",
+    "reason": "weETH LST wrapper \u2014 canonical, skip"
+  },
+  {
+    "address": "0xfe9fa6f02fd8ea8fb7d77fc64a76dcd4cf527cf9",
+    "protocol": "Staked Frax Ether",
+    "reason": "sfrxETH canonical LST, skip"
+  },
+  {
+    "address": "0x07bac35846e5ed502aa91adf6a9e7aa210f2dcbe",
+    "protocol": "Gravity Bridge erowan",
+    "reason": "erowan token, not the Gravity bridge escrow"
+  },
+  {
+    "address": "0xa693b19d2931d498c5b318df961919bb4aee87a5",
+    "protocol": "Thetanuts (BridgeToken UST)",
+    "reason": "On-chain name is BridgeToken (UST residual), not the options vault money box"
+  },
+  {
+    "address": "0xd57aea3686d623da2dcebc87010a4f2f38ac7b15",
+    "protocol": "GaugeV2",
+    "reason": "Curve GaugeV2, not a drainable protocol vault"
+  },
+  {
+    "address": "0x72e2f4830b9e45d52f80ac08cb2bec0fef72ed9c",
+    "protocol": "StargateEthVault",
+    "reason": "Official Stargate ETH vault \u2014 canonical, heavily reviewed bridge infra"
+  },
+  {
+    "address": "0xb0d502e938ed5f4df2e681fe6e419ff29631d62b",
+    "protocol": "Stargate LPStaking",
+    "reason": "Official Stargate LP staking \u2014 canonical infra"
+  },
+  {
+    "address": "0xf7de3c70f2db39a188a81052d2f3c8e3e217822a",
+    "protocol": "SuperUSDC TokenizedStrategy",
+    "reason": "Yearn V3 TokenizedStrategy audited shell"
+  },
+  {
+    "address": "0x473f0adec308dc82440665d9fc7d5e26ebcf0e05",
+    "protocol": "rSWELL TokenizedStrategy",
+    "reason": "Yearn V3 TokenizedStrategy audited shell"
+  },
+  {
+    "address": "0x6c310b55d6728423b3bddb9d07a6c21bb6efbdcb",
+    "protocol": "Trust Wallet AAVE v3 DAI",
+    "reason": "Thin Trust Wallet wrapper over official Aave v3, not custom money-logic"
+  },
+  {
+    "address": "0x2a7822d6764dfc7a945a4c38776624cb542b32f6",
+    "protocol": "Trust Wallet Spark DAI",
+    "reason": "Thin Trust Wallet wrapper over Spark, not custom money-logic"
+  },
+  {
+    "address": "0x7751e2f4b8ae93ef6b79d86419d42fe3295a4559",
+    "protocol": "Wrapped USDL",
+    "reason": "Official wUSDL / wYBS wrapper, standard shell"
+  },
+  {
+    "address": "0x8c9532a60e0e7c6bbd2b2c1303f63ace1c3e9811",
+    "protocol": "Renzo Restaked LST pzETH",
+    "reason": "Canonical-style Renzo/LRT token wrapper, not a custom unaudited money box"
+  }
+]
