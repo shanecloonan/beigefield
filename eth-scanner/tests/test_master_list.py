@@ -74,7 +74,7 @@ class MasterListOrder(unittest.TestCase):
         raw = json.loads(path.read_text(encoding="utf-8"))
         hand = json.loads((path.parent / HAND_RANKED_FILENAME).read_text(encoding="utf-8"))
         self.assertEqual(len(raw), 1322)
-        self.assertEqual(len(hand), 55)
+        self.assertEqual(len(hand), 197)
 
         def _valid(addr: object) -> str:
             text = str(addr or "").strip().lower()
