@@ -93,7 +93,7 @@ Each phase ships as its **own PR → merge to `main` → confirm Vercel → repo
 | Dedupe | Stable key: class + rule family (+ location for within-engine) |
 | Agreement | ≥2 engines on same class/rule-family → `confidence=high`; single generic detector → no heat bump |
 | Secrets to add (repo → Settings → Secrets) | See [Secrets checklist](#secrets-checklist-phase-a) below |
-| Code | `.github/workflows/eth-scanner-deep.yml`, `eth_scanner/deep/*`, CLI `python -m eth_scanner deep`, migration `20261112190000_deep_engines.sql` |
+| Code | `.github/workflows/eth-scanner-deep.yml`, `eth_scanner/deep/*`, CLI `python -m eth_scanner deep`, migration `20261112184417_deep_engines.sql` |
 
 **Out of scope for A:** fuzz campaigns that emit exploit sequences; any transaction broadcast.
 
@@ -105,7 +105,7 @@ Per-class invariant suites (ERC-4626, staking, lending/CDP, AMM/LP, bridges/escr
 - Optional Foundry defensive mock suite (`research/fuzz`) when `forge` is installed; counterexample traces elided
 - Output only: invariant name, `held` / `violated` / `unknown`, minimized **evidence summary** (state values), severity
 - CLI: `python -m eth_scanner fork-props --address 0x… --class vault [--forge]`
-- Migration: `20261112193000_fork_properties.sql`
+- Migration: `20261112185036_fork_properties.sql`
 - **Do not** store or emit a runnable attack sequence — prose + state values only
 
 ### Phase C — Protocol context graph
@@ -115,7 +115,7 @@ Build a contract graph from verified source + on-chain reads:
 - Proxies / implementations, oracles, tokens held, external calls, roles / admins / timelocks / multisigs
 - Risk factors: oracle (spot / manipulable / stale), upgrade/admin (EOA, no timelock, uninitialized impl), dependency (known-incident protocols)
 - Score: funds-at-risk × likelihood; feeds heat only through the evidence gate
-- Code: `eth_scanner/protocol_graph/`, CLI `protocol-graph`, migration `20261112194500_protocol_graph.sql`
+- Code: `eth_scanner/protocol_graph/`, CLI `protocol-graph`, migration `20261112185337_protocol_graph.sql`
 
 ### Phase D — Known-good / known-bad knowledge
 
