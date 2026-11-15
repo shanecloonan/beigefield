@@ -31,6 +31,34 @@ ADAPTATION_PINS = {
         "version": "v0.3.15",
         "upstream": "https://github.com/jepsen-io/jepsen",
     },
+    "randoop": {
+        "version": "v4.3.4",
+        "upstream": "https://github.com/randoop/randoop",
+    },
+    "learnlib": {
+        "version": "0.16.0",
+        "upstream": "https://github.com/LearnLib/learnlib",
+    },
+    "stateright": {
+        "version": "v0.30.0",
+        "upstream": "https://github.com/stateright/stateright",
+    },
+    "pict": {
+        "version": "v3.7.4",
+        "upstream": "https://github.com/microsoft/pict",
+    },
+    "openspiel": {
+        "version": "v1.5",
+        "upstream": "https://github.com/google-deepmind/open_spiel",
+    },
+    "picire": {
+        "version": "21.8",
+        "upstream": "https://github.com/renatahodovan/picire",
+    },
+    "picireny": {
+        "version": "21.8",
+        "upstream": "https://github.com/renatahodovan/picireny",
+    },
 }
 
 

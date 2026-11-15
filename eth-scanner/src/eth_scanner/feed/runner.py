@@ -1094,7 +1094,10 @@ def _default_pick(settings: Settings, skip: set[str]) -> Optional[str]:
     return sample_verified_contract(client, skip=skip)
 
 
-_ADAPTATIONS = ("syzkaller", "restler", "daikon", "lithium", "jepsen")
+_ADAPTATIONS = (
+    "syzkaller", "restler", "daikon", "lithium", "jepsen",
+    "randoop", "learnlib", "stateright", "pict", "openspiel", "picire",
+)
 
 
 def _run_gauntlet(address: str, result: FunnelResult, settings: Settings) -> dict[str, Any]:

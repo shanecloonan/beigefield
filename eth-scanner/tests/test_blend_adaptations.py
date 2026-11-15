@@ -175,11 +175,54 @@ class JepsenHistory(unittest.TestCase):
         self.assertEqual(report["heat"], 0)
 
 
+class AddedTechniquePasses(unittest.TestCase):
+    def test_each_pass_is_cold_without_a_caller_profit_witness(self):
+        from eth_scanner.deep.blend.adapt.learnlib import learn, membership
+        from eth_scanner.deep.blend.adapt.openspiel import search
+        from eth_scanner.deep.blend.adapt.picire import picire
+        from eth_scanner.deep.blend.adapt.pict import covering_rows, covers_pairs
+        from eth_scanner.deep.blend.adapt.randoop import feedback_sequences
+        from eth_scanner.deep.blend.adapt.stateright import interleavings
+        from eth_scanner.deep.blend.adapt.syzkaller import chain_is_legal
+
+        sequences = feedback_sequences()
+        self.assertTrue(sequences)
+        self.assertTrue(all(chain_is_legal(seq) for seq in sequences))
+        self.assertFalse(membership(["Vault.deposit", "Strategy.harvest"]))
+        self.assertTrue(membership(["Vault.deposit", "Oracle.setAnswer", "Strategy.harvest"]))
+        learned = learn()
+        self.assertEqual(learned["heat_contribution"], 0)
+        self.assertTrue(any(row["call"] == "Strategy.harvest" and row["state"] == "stale_oracle" for row in learned["unseen"]))
+        self.assertTrue(any(row["call"] == "Vault.redeem" and row["state"] == "migrated" for row in learned["unseen"]))
+        self.assertEqual(interleavings(4), interleavings(4))
+        rows = covering_rows()
+        self.assertTrue(covers_pairs(rows))
+        self.assertIsNone(search([] )["winning_line"])
+        self.assertEqual(search([])["heat_contribution"], 0)
+        shrunk = picire(
+            ["view_price", "noop", "Strategy.skim", "noop", "view_shares"],
+            lambda seq: "Strategy.skim" in seq,
+        )
+        self.assertEqual(shrunk, ["Strategy.skim"])
+        self.assertEqual(picire(["view_price", "noop"], lambda seq: "Strategy.skim" in seq), [])
+
+        report = run_blend(fixture="safe")
+        for name in ("randoop", "learnlib", "stateright", "pict", "openspiel", "picire"):
+            self.assertEqual(report["adaptations"][name]["heat_contribution"], 0)
+        self.assertEqual(report["heat"], 0)
+        self.assertIsNone(report["adaptations"]["openspiel"]["winning_line"])
+        self.assertTrue(report["adaptations"]["randoop"]["legal"])
+        self.assertTrue(report["adaptations"]["stateright"]["replay_matches_seed"])
+
+
 class CrossContractBundle(unittest.TestCase):
     def test_strategy_fixture_keeps_four_engines_and_the_five_passes(self):
         report = run_blend(fixture="leaky-strategy")
         self.assertEqual(report["target"]["contracts"], ["StrategyVault", "Strategy"])
-        self.assertEqual(set(report["adaptations"]), {"syzkaller", "restler", "daikon", "lithium", "jepsen"})
+        self.assertEqual(set(report["adaptations"]), {
+            "syzkaller", "restler", "daikon", "lithium", "jepsen",
+            "randoop", "learnlib", "stateright", "pict", "openspiel", "picire",
+        })
         self.assertTrue(dependent_chains())
         self.assertGreater(report["heat"], 0)
 

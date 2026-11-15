@@ -11,8 +11,14 @@ from typing import Any, Optional
 
 from eth_scanner.deep.blend.adapt.daikon import as_properties, mine, violations
 from eth_scanner.deep.blend.adapt.jepsen import check_history, schedule
+from eth_scanner.deep.blend.adapt.learnlib import learn
 from eth_scanner.deep.blend.adapt.lithium import ddmin, still_profitable
+from eth_scanner.deep.blend.adapt.openspiel import search as game_search
+from eth_scanner.deep.blend.adapt.picire import picire
+from eth_scanner.deep.blend.adapt.pict import covering_rows
+from eth_scanner.deep.blend.adapt.randoop import feedback_sequences
 from eth_scanner.deep.blend.adapt.restler import infer_edges
+from eth_scanner.deep.blend.adapt.stateright import interleavings
 from eth_scanner.deep.blend.adapt.syzkaller import PROTOCOL, chain_is_legal, dependent_chains
 from eth_scanner.deep.blend.adapt.versions import ADAPTATION_PINS, pin_version
 from eth_scanner.deep.blend.receipt import apply_caller_profit_heat, build_groups
@@ -116,6 +122,18 @@ def apply_adaptations(
     history = schedule(plan["history_ops"], int(plan["seed"]))
     replay = schedule(plan["history_ops"], int(plan["seed"]))
     checked = check_history(history)
+    grown = feedback_sequences()
+    learned = learn()
+    schedules = interleavings(int(plan["seed"]))
+    rows = covering_rows()
+    game = game_search(profit_calls)
+    reduced = picire(plan["script"], lambda seq: still_profitable(seq, profit_calls))
+    observed_delta = 0
+    for op in plan["history_ops"]:
+        try:
+            observed_delta = max(observed_delta, int(op.get("caller_profit_delta") or 0))
+        except (TypeError, ValueError, AttributeError):
+            continue
     blocks = {
         "syzkaller": {
             "version": pin_version("syzkaller"),
@@ -150,6 +168,47 @@ def apply_adaptations(
             "check": checked,
             "heat_contribution": 0,
         },
+        "randoop": {
+            "version": pin_version("randoop"),
+            "sequences": grown,
+            "legal": all(chain_is_legal(seq) for seq in grown),
+            "heat_contribution": 0,
+        },
+        "learnlib": {
+            "version": pin_version("learnlib"),
+            "states": learned["states"],
+            "accepted": learned["accepted"],
+            "unseen": learned["unseen"],
+            "heat_contribution": 0,
+        },
+        "stateright": {
+            "version": pin_version("stateright"),
+            "seed": int(plan["seed"]),
+            "schedules": schedules,
+            "replay_matches_seed": schedules[:1] == interleavings(int(plan["seed"]), width=1),
+            "caller_profit_delta": 0,
+            "heat_contribution": 0,
+        },
+        "pict": {
+            "version": pin_version("pict"),
+            "rows": rows,
+            "strength": 2,
+            "heat_contribution": 0,
+        },
+        "openspiel": {
+            "version": pin_version("openspiel"),
+            "players": game["players"],
+            "winning_line": game["winning_line"],
+            "value": game["value"],
+            "heat_contribution": 0,
+        },
+        "picire": {
+            "version": pin_version("picire"),
+            "picireny_version": pin_version("picireny"),
+            "minimized_calls": reduced,
+            "caller_profit_delta": 0,
+            "heat_contribution": 0,
+        },
     }
     # A minimized profit script or a history with a positive delta is a witness.
     # It joins the existing gate. The adaptation blocks themselves stay at 0.
@@ -177,6 +236,22 @@ def apply_adaptations(
                 "history",
                 "jepsen",
             ))
+            already = True
+    if observed_delta > 0 and not already:
+        blocks["stateright"]["caller_profit_delta"] = observed_delta
+        extra.append(_witness_finding(observed_delta, "no_caller_profit", "interleaving", "stateright"))
+        already = True
+    if game["winning_line"] and profit_calls and not already:
+        extra.append(_witness_finding(
+            1000,
+            "no_caller_profit",
+            str(game["winning_line"][-1]).split(".")[-1],
+            "openspiel",
+        ))
+        already = True
+    if reduced and profit_calls and not already:
+        blocks["picire"]["caller_profit_delta"] = 1000
+        extra.append(_witness_finding(1000, "no_caller_profit", reduced[-1].split(".")[-1], "picire"))
     if extra:
         from eth_scanner.deep.blend.receipt import dedupe_hits
         merged = dedupe_hits([
