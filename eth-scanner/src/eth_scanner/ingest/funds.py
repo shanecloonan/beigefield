@@ -8,6 +8,7 @@ a short in-process TTL cache. Never sends a transaction.
 from __future__ import annotations
 
 import json
+import os
 import time
 import urllib.parse
 import urllib.request
@@ -48,10 +49,28 @@ PUBLIC_RPCS = (
 )
 
 DEFAULT_MIN_FUNDS_USD = 2_000.0
+# Random/discovery intake only. List 1 and the Lane-B promotion floor stay at
+# DEFAULT_MIN_FUNDS_USD. Override with ETH_SCANNER_DISCOVERY_MIN_USD.
+DEFAULT_DISCOVERY_MIN_USD = 100.0
 PRICE_TTL_S = 300.0
 RPC_TIMEOUT_S = 8.0
 
 _price_cache: dict[str, tuple[float, float]] = {}  # key -> (price, fetched_at)
+
+
+def discovery_min_usd() -> float:
+    """Intake floor for the random/discovery lane. Not the Lane-B promotion floor.
+
+    ``ETH_SCANNER_DISCOVERY_MIN_USD`` wins. Unset means $100, so sub-$2,000
+    contracts are scanned. List 1's band and Lane B stay on their own floors.
+    """
+    raw = os.environ.get("ETH_SCANNER_DISCOVERY_MIN_USD")
+    if raw is None or str(raw).strip() == "":
+        return float(DEFAULT_DISCOVERY_MIN_USD)
+    try:
+        return max(0.0, float(raw))
+    except (TypeError, ValueError):
+        return float(DEFAULT_DISCOVERY_MIN_USD)
 
 
 @dataclass

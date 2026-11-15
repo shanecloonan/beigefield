@@ -106,7 +106,7 @@ def scan_watchlist(
     store: ScanStore,
     *,
     rpc_url: str = "",
-    min_funds_usd: float = 2_000.0,
+    min_funds_usd: Optional[float] = None,
     funds_delta_ratio: float = 0.25,
     limit: int = 1000,
     seed_discoveries: bool = True,
@@ -118,6 +118,9 @@ def scan_watchlist(
 
     Returns (alerts, discovery_stats, discovered_rows).
     """
+    if min_funds_usd is None:
+        from eth_scanner.ingest.funds import discovery_min_usd
+        min_funds_usd = discovery_min_usd()
     rpc = (rpc_url or os.environ.get("ETH_RPC_URL") or "").strip()
     alerts: list[MonitorAlert] = []
     seen = set()

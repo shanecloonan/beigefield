@@ -107,6 +107,8 @@ def run_master_list(
     # Range check only. settings.min_funds_usd stays the heat/engine floor.
     settings.range_min_usd = min_funds
     settings.range_max_usd = max_funds
+    settings.scan_list_id = spec.id  # type: ignore[attr-defined]
+    settings.scan_discovery_source = DISCOVERY_SOURCE  # type: ignore[attr-defined]
     cursor_id = cursor_id_for(spec.id)
     started = time.monotonic()
     deadline = (
@@ -268,8 +270,16 @@ def _default_scan(address: str, settings: Settings) -> FunnelResult:
     local = open_store(settings)
     result = lane_a.run_one(address, settings=settings, store=local)
     if getattr(result, "dropped", False):
+        _journal_intake(
+            local,
+            address,
+            result,
+            discovery_source=str(getattr(settings, "scan_discovery_source", None) or "blend"),
+            list_id=getattr(settings, "scan_list_id", None),
+            status="dropped",
+        )
         return result
-    summary = _run_gauntlet(address, result, settings)
+    summary = _run_gauntlet(address, result, settings, store=local)
     try:
         result.blend_summary = summary  # type: ignore[attr-defined]
     except Exception:  # noqa: BLE001
@@ -379,6 +389,15 @@ def _record_outcome(
             })
 
     _stamp_target(store, cand, result, status=status)
+    if status == "dropped":
+        _journal_intake(
+            store,
+            cand.address,
+            result,
+            discovery_source=DISCOVERY_SOURCE,
+            list_id=progress.list_id or None,
+            status="dropped",
+        )
     ok, fail = _persist_test_run(store, cand, result, progress, status=status, error=err)
     if ok:
         progress.persisted += 1
@@ -1019,22 +1038,36 @@ def _next_pending_list(
 
 
 def random_funds_bounds(settings: Settings) -> tuple[float, Optional[float]]:
-    """Funds-range sanity for a random contract.
+    """Funds-range sanity for a random or discovery contract.
 
-    ``random_scan.min_funds_usd`` / ``max_funds_usd`` in lists.json win when set.
-    Otherwise the scanner floor applies and there is no ceiling.
+    The intake floor is ``ETH_SCANNER_DISCOVERY_MIN_USD`` (default $100), then
+    ``random_scan.min_funds_usd`` in lists.json, and does not use the Lane-B
+    or List 1 floor. The upper bound stays whatever the random config sets,
+    which is no ceiling when that field is absent. An explicit
+    ``ETH_SCANNER_DISCOVERY_MAX_USD`` overrides only when the file has no max.
     """
+    from eth_scanner.ingest.funds import discovery_min_usd
+
     try:
         cfg = random_scan_config()
     except (OSError, ValueError, json.JSONDecodeError):
         cfg = {}
     raw_min = cfg.get("min_funds_usd") if isinstance(cfg, dict) else None
     raw_max = cfg.get("max_funds_usd") if isinstance(cfg, dict) else None
-    if raw_min is None:
-        low = float(getattr(settings, "min_funds_usd", 0.0) or 0.0)
+    env_min = (os.environ.get("ETH_SCANNER_DISCOVERY_MIN_USD") or "").strip()
+    if env_min:
+        low = discovery_min_usd()
+    elif raw_min is None:
+        low = discovery_min_usd()
     else:
         low = float(raw_min)
     high = None if raw_max is None else float(raw_max)
+    env_max = (os.environ.get("ETH_SCANNER_DISCOVERY_MAX_USD") or "").strip()
+    if high is None and env_max:
+        try:
+            high = float(env_max)
+        except ValueError:
+            high = None
     return low, high
 
 
@@ -1100,8 +1133,56 @@ _ADAPTATIONS = (
 )
 
 
-def _run_gauntlet(address: str, result: FunnelResult, settings: Settings) -> dict[str, Any]:
+def _journal_intake(
+    store: ScanStore,
+    address: str,
+    result: FunnelResult,
+    *,
+    discovery_source: str,
+    list_id: Optional[str],
+    status: str,
+) -> None:
+    """Persist an intake row, including contracts dropped before the gauntlet."""
+    from eth_scanner.deep.blend.journal import BlendJournal, PersistError
+
+    journal = BlendJournal.open(
+        store,
+        address=address,
+        funds_usd=result.funds_usd,
+        contract_name=result.contract_name or "",
+        list_id=list_id,
+        discovery_source=discovery_source,
+    )
+    try:
+        journal.open_run(status=status, drop_reason=result.drop_reason)
+        journal.stage("intake", {
+            "address": address,
+            "chain": "ethereum",
+            "discovery_source": discovery_source,
+            "funds_usd": result.funds_usd,
+            "list_id": list_id,
+            "contract_name": result.contract_name or "",
+            "drop_reason": result.drop_reason,
+            "bucket": result.bucket,
+            "heat_contribution": 0,
+            "label": "evidence only",
+            "bug_classes": [result.contract_class] if result.contract_class else [],
+            "findings": [],
+        }, status="dropped" if status == "dropped" else "ok")
+        if status == "dropped":
+            journal.finish_drop(result.drop_reason or "dropped at intake")
+    except PersistError:
+        raise
+
+
+def _run_gauntlet(
+    address: str,
+    result: FunnelResult,
+    settings: Settings,
+    store: Optional[ScanStore] = None,
+) -> dict[str, Any]:
     """Engines plus every adaptation. Does not change result.heat."""
+    from eth_scanner.deep.blend.journal import PersistError
     from eth_scanner.deep.blend.orchestrator import run_blend
 
     source = ""
@@ -1122,8 +1203,22 @@ def _run_gauntlet(address: str, result: FunnelResult, settings: Settings) -> dic
             source=source,
             contracts=[result.contract_name] if result.contract_name else [],
             fork_url=settings.eth_rpc_url or "",
-            list_id=None,
+            list_id=getattr(settings, "scan_list_id", None),
+            store=store if store is not None else open_store(settings),
+            discovery_source=str(getattr(settings, "scan_discovery_source", None) or DISCOVERY_SOURCE),
         )
+    except PersistError as exc:
+        logger = __import__("logging").getLogger("eth_scanner.blend")
+        logger.error("blend gauntlet persist failed for %s: %s", address, exc)
+        return {
+            "ok": False,
+            "note": "blend persist failed: %s" % str(exc)[:160],
+            "engines": [],
+            "adaptations": {name: {"heat_contribution": 0} for name in _ADAPTATIONS},
+            "heat": 0,
+            "caller_profit_gate": False,
+            "persist_error": str(exc)[:240],
+        }
     except Exception as exc:  # noqa: BLE001
         return {
             "ok": False,
@@ -1275,8 +1370,12 @@ def _scan_one_random(
     _touch_cycle(store, _lease_owner(), progress)
     low, high = random_funds_bounds(settings)
     prev_min, prev_max = settings.range_min_usd, settings.range_max_usd
+    prev_source = getattr(settings, "scan_discovery_source", None)
+    prev_list = getattr(settings, "scan_list_id", None)
     settings.range_min_usd = low
     settings.range_max_usd = high
+    settings.scan_discovery_source = RANDOM_SOURCE  # type: ignore[attr-defined]
+    settings.scan_list_id = None  # type: ignore[attr-defined]
     scan = scan_one or (lambda a: _default_scan(a, settings))
     try:
         try:
@@ -1287,6 +1386,8 @@ def _scan_one_random(
     finally:
         settings.range_min_usd = prev_min
         settings.range_max_usd = prev_max
+        settings.scan_discovery_source = prev_source  # type: ignore[attr-defined]
+        settings.scan_list_id = prev_list  # type: ignore[attr-defined]
     if result is None:
         return "stop"
     note = str(getattr(result, "blend_summary", {}).get("note") or "") if isinstance(getattr(result, "blend_summary", None), dict) else ""
