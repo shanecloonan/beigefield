@@ -12,11 +12,9 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from eth_scanner.deep.blend.fixtures import FIXTURES, logs_for
-from eth_scanner.deep.blend.ityfuzz_runner import ityfuzz_argv, local_rpc, resolve_bin
 from eth_scanner.deep.blend.parse import parse_engine_log
 from eth_scanner.deep.blend.receipt import receipt_from_hits
 from eth_scanner.deep.blend.versions import BLEND_ENGINES, FORK_ENGINES, SYMBOLIC_ENGINES, pin_version
-from eth_scanner.deep.runners import echidna_bin, halmos_bin, medusa_bin
 
 Runner = Callable[[dict[str, Any]], "EngineOutput"]
 
@@ -129,37 +127,30 @@ def _skip_all(note: str) -> list[EngineOutput]:
     return [EngineOutput(name, "skipped", note=note) for name in BLEND_ENGINES]
 
 
-def _default_runners(project: Optional[Path], rpc: str) -> dict[str, Runner]:
-    """Shell out only when a binary exists. Missing tools skip. No broadcast."""
+def _default_runners(
+    project: Optional[Path],
+    rpc: str,
+    *,
+    address: str = "",
+    timeout_s: int = 30,
+) -> dict[str, Runner]:
+    """Shell out to the pinned binaries. Missing tools skip. No broadcast."""
+    from eth_scanner.deep.blend.invoke import invoke_engine
 
-    def _medusa(_ctx: dict[str, Any]) -> EngineOutput:
-        if medusa_bin() is None or project is None:
-            return EngineOutput("medusa", "skipped", note="medusa not on PATH" if medusa_bin() is None else "no project")
-        return EngineOutput("medusa", "skipped", note="medusa binary present; campaign not started without a built harness")
+    def make(engine: str) -> Runner:
+        def run(_ctx: dict[str, Any]) -> EngineOutput:
+            if project is None:
+                return EngineOutput(engine, "skipped", note="no project")
+            return invoke_engine(
+                engine,
+                project=project,
+                rpc=rpc,
+                address=address or str(_ctx.get("address") or ""),
+                timeout_s=timeout_s,
+            )
+        return run
 
-    def _echidna(_ctx: dict[str, Any]) -> EngineOutput:
-        if echidna_bin() is None or project is None:
-            return EngineOutput("echidna", "skipped", note="echidna not on PATH" if echidna_bin() is None else "no project")
-        return EngineOutput("echidna", "skipped", note="echidna binary present; campaign not started without a built harness")
-
-    def _halmos(_ctx: dict[str, Any]) -> EngineOutput:
-        if halmos_bin() is None:
-            return EngineOutput("halmos", "skipped", note="halmos not on PATH")
-        return EngineOutput("halmos", "skipped", note="halmos binary present; symbolic campaign needs a compiled check_ harness")
-
-    def _ityfuzz(_ctx: dict[str, Any]) -> EngineOutput:
-        binary = resolve_bin()
-        if not binary:
-            return EngineOutput("ityfuzz", "skipped", note="ityfuzz not on PATH")
-        if not local_rpc(rpc):
-            return EngineOutput("ityfuzz", "skipped", note="ityfuzz skipped — no local anvil fork")
-        try:
-            ityfuzz_argv(binary, ["0x0000000000000000000000000000000000000001"], rpc)
-        except ValueError as exc:
-            return EngineOutput("ityfuzz", "skipped", note=str(exc))
-        return EngineOutput("ityfuzz", "skipped", note="ityfuzz pinned argv checked; campaign waits for a forked harness")
-
-    return {"medusa": _medusa, "echidna": _echidna, "halmos": _halmos, "ityfuzz": _ityfuzz}
+    return {name: make(name) for name in ("medusa", "echidna", "halmos", "ityfuzz")}
 
 
 def run_blend(
@@ -177,7 +168,7 @@ def run_blend(
     timeout_s: int = 90,
 ) -> dict[str, Any]:
     """Run the four engines, or replay fixture/log input through the same receipt."""
-    del timeout_s  # wall clock is owned by each engine runner; fixtures do not block
+    budget_s = max(10, int(timeout_s or 30))
     if fixture:
         spec = FIXTURES.get(fixture)
         if spec is None:
@@ -225,13 +216,25 @@ def run_blend(
             list_id=list_id,
             fixture=None,
         )
-    # A source bundle still does not run a campaign when forge is absent.
-    # That is a skip, never a finding.
-    from eth_scanner.deep.runners import forge_bin
-    if not forge_bin():
-        outputs = _skip_all("forge not on PATH — harness not compiled")
-    else:
-        outputs = schedule(_default_runners(Path("."), fork_url), {"fork_url": fork_url})
+    # Real binaries. A missing tool or a compile/setUp failure is a skip.
+    import tempfile
+
+    from eth_scanner.deep.blend.harness import write_project
+    from eth_scanner.deep.blend.invoke import run_campaign
+
+    label = "".join(ch for ch in (contract_name or "Target") if ch.isalnum() or ch == "_") or "Target"
+    with tempfile.TemporaryDirectory(prefix="blend-") as tmp:
+        project = write_project(Path(tmp), [{
+            "name": label,
+            "source": source,
+            "address": address,
+        }])
+        outputs = run_campaign(
+            project,
+            address=address,
+            fork_url=fork_url,
+            timeout_s=budget_s,
+        )
     return _receipt_for_outputs(
         outputs,
         address=address,

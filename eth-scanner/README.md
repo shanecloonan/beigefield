@@ -146,6 +146,15 @@ python -m eth_scanner blend --fixture leaky
 python -m eth_scanner blend --catalog
 python -m eth_scanner blend --select --list list-2
 
+# Pinned engines. The scan loop shells out to these binaries. A missing one skips.
+#   ityfuzz  nightly-35b7f08962fdd0c2e02df7ef8a43164913d514d9
+#   halmos   0.3.3          (pip install halmos==0.3.3)
+#   medusa   1.5.1
+#   echidna  2.4.0
+bash scripts/install-blend-engines.sh
+# Binaries: ${ETH_SCANNER_BIN_DIR:-$HOME/.local/bin}. Halmos stays on PATH.
+# Pins live in src/eth_scanner/deep/blend/versions.py. Do not use "latest".
+
 # The same receipt also carries the adaptation passes (resource chains,
 # producer/consumer edges, mined invariants, a minimized call list, and a
 # multi-actor history). Those passes do not add heat on their own.
