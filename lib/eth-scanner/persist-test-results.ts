@@ -448,7 +448,7 @@ export async function loadTestScanHistory(
         if (addr) fallbackQ = fallbackQ.eq("address", addr);
       }
       const fallback = await fallbackQ;
-      runs = fallback.data;
+      runs = fallback.data as typeof runs;
       runsErr = fallback.error;
     }
     if (runsErr) {
