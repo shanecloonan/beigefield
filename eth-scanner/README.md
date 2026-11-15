@@ -101,9 +101,9 @@ Vanilla ERC20 `transfer` / `approve` / `transferFrom` are recorded as leads, not
 | `ETH_SCANNER_DRY_RUN=1` | optional | Force local store |
 | `ETH_SCANNER_HEAT_THRESHOLD` | optional | Default `3` |
 | `ETH_SCANNER_TVL_FLOOR` | optional | Default `10000` |
-| `ETH_SCANNER_ETHERSCAN_PER_SECOND` | optional | Calls per second **per key**. Default `5` (current free tier). |
+| `ETH_SCANNER_ETHERSCAN_PER_SECOND` | optional | Calls per second **per key**. Default `3` (current free tier). |
 | `ETH_SCANNER_ETHERSCAN_PER_DAY` | optional | Calls per UTC day **per key**. Default `100000`. The scanner stops before this cap and resumes at the next UTC midnight. |
-| `ETH_SCANNER_ETHERSCAN_PACE` | optional | Fraction of the per-second cap to use. Default `0.95`, so a key stays just under 5/sec. |
+| `ETH_SCANNER_ETHERSCAN_PACE` | optional | Fraction of the per-second cap to use. Default `0.95`, so a key stays at about 2.85/sec. |
 | `ETH_SCANNER_ETHERSCAN_INTERVAL` | optional | Extra delay in seconds. Cannot go faster than the per-second cap. |
 | `ETH_SCANNER_RANDOM_SCAN` | optional | `0` turns off the random phase. Unset follows `data/lists.json` `random_scan.enabled` (default on). |
 
