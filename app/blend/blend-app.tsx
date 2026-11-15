@@ -91,6 +91,7 @@ export default function BlendApp() {
     lists: { id: string; name: string; scanned: number; total: number; unscanned: number; buckets: { drain: number; maybe: number; no: number } }[];
     random_stream: { address: string; bucket: string; heat: number; at: string | null }[];
     connected: boolean;
+    passes?: string[];
   } | null>(null);
 
   const loadLive = useCallback(async () => {
@@ -187,11 +188,11 @@ export default function BlendApp() {
         </p>
         <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-brand-50">Blend</h1>
         <p className="mt-3 max-w-2xl text-sm text-brand-400 leading-relaxed">
-          One automatic gauntlet: Ityfuzz, Halmos, Medusa, Echidna, then the syzkaller, RESTler,
-          Daikon, Lithium, and Jepsen passes. The scheduled jobs walk List 1, then List 2, then
-          random contracts, and pick a list up again when its fingerprint changes. This page watches
-          that loop. Local forks only. Heat moves only when an unprivileged caller ends with more
-          value than they started. The desk stays on <Link href="/test" className="text-gold hover:text-gold/80">/test</Link>.
+          One automatic gauntlet: Ityfuzz, Halmos, Medusa, Echidna, the earlier adaptations, and
+          Randoop, LearnLib, Stateright, PICT, OpenSpiel, and Picire. The scheduled jobs walk List 1,
+          then List 2, then random contracts, and pick a list up again when its fingerprint changes.
+          This page watches that loop. Local forks only. Heat moves only when an unprivileged caller
+          ends with more value than they started. The desk stays on <Link href="/test" className="text-gold hover:text-gold/80">/test</Link>.
         </p>
         <section className="mt-8 rounded-lg border border-brand-800 bg-brand-900/40 p-4" aria-labelledby="live-heading">
           <h2 id="live-heading" className="text-[11px] tracking-[0.2em] uppercase text-gold/80 font-semibold">
@@ -203,6 +204,11 @@ export default function BlendApp() {
           </p>
           <p className="mt-1 text-sm text-brand-400">{live?.message || "Loading the scheduled run."}</p>
           <p className="mt-2 text-[11px] text-brand-500">{live?.schedule}</p>
+          {live?.passes && live.passes.length > 0 && (
+            <p className="mt-2 text-[11px] text-brand-500">
+              Every kept contract runs {live.passes.join(", ")}.
+            </p>
+          )}
           <ul className="mt-3 grid gap-2 sm:grid-cols-2 text-xs text-brand-300">
             {(live?.lists || []).map((list) => (
               <li key={list.id} className="rounded border border-brand-800 px-3 py-2">

@@ -107,5 +107,10 @@ export async function GET() {
     lists,
     random_stream: randomStream,
     connected: Boolean(sb),
+    passes: [
+      "ityfuzz", "halmos", "medusa", "echidna",
+      "syzkaller", "restler", "daikon", "lithium", "jepsen",
+      "randoop", "learnlib", "stateright", "pict", "openspiel", "picire",
+    ],
   });
 }
