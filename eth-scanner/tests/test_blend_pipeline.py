@@ -270,6 +270,54 @@ class RealBinaryInvocation(unittest.TestCase):
             self.assertEqual(proc.returncode, 0)
 
 
+class FullGauntletOnTheDefaultScan(unittest.TestCase):
+    def test_lane_a_then_engines_and_adaptations_do_not_add_heat(self):
+        from eth_scanner.config import Settings
+        from eth_scanner.feed import runner as feed
+        from eth_scanner.types import FunnelResult
+
+        result = FunnelResult(
+            bucket="lane-a-cool",
+            dropped=False,
+            drop_reason=None,
+            heat=0,
+            src_confidence="high",
+            ir_confidence="med",
+            funds_usd=4000.0,
+            contract_name="Target",
+        )
+        report = {
+            "bucket": "no",
+            "heat": 0,
+            "heat_breakdown": {"caller_profit_gate": False, "engine_heat": 0},
+            "engines": [
+                {"engine": name, "status": "ok"}
+                for name in ("ityfuzz", "halmos", "medusa", "echidna")
+            ],
+            "adaptations": {
+                name: {"heat_contribution": 0}
+                for name in ("syzkaller", "restler", "daikon", "lithium", "jepsen")
+            },
+            "findings": [],
+        }
+        settings = Settings(dry_run=True, work_dir=Path("/tmp/blend-gauntlet"))
+        with mock.patch("eth_scanner.lane_a.worker.run_one", return_value=result), \
+             mock.patch("eth_scanner.feed.runner.open_store", return_value=object()), \
+             mock.patch("eth_scanner.deep.blend.orchestrator.run_blend", return_value=report) as blend:
+            out = feed._default_scan("0x" + "11" * 20, settings)
+        blend.assert_called_once()
+        self.assertEqual(out.heat, 0)
+        summary = out.blend_summary
+        self.assertEqual(
+            [row["engine"] for row in summary["engines"]],
+            ["ityfuzz", "halmos", "medusa", "echidna"],
+        )
+        self.assertEqual(summary["adaptations"]["syzkaller"]["heat_contribution"], 0)
+        self.assertEqual(summary["adaptations"]["lithium"]["heat_contribution"], 0)
+        self.assertEqual(summary["adaptations"]["jepsen"]["heat_contribution"], 0)
+        self.assertFalse(summary["caller_profit_gate"])
+
+
 class BlendLists(unittest.TestCase):
     def test_list2_band_and_list1_strong_rules(self):
         rows, dropped = load_list2()

@@ -152,6 +152,9 @@ python -m eth_scanner blend --select --list list-2
 #   medusa   1.5.1
 #   echidna  2.4.0
 bash scripts/install-blend-engines.sh
+# The monitor cron (every 10 minutes) and backfill cron (every 15) run
+# `master-list` with no button: List 1, then List 2, then random contracts,
+# then back to any list whose fingerprint changed. /blend only watches.
 # Binaries: ${ETH_SCANNER_BIN_DIR:-$HOME/.local/bin}. Halmos stays on PATH.
 # Pins live in src/eth_scanner/deep/blend/versions.py. Do not use "latest".
 

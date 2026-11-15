@@ -80,6 +80,24 @@ export default function BlendApp() {
   const [busy, setBusy] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [sample, setSample] = useState<{ address: string; contract_name: string | null } | null>(null);
+  const [live, setLive] = useState<{
+    phase: string;
+    status: string;
+    message: string;
+    current_address: string;
+    random_scanned_this_run: number;
+    random_enabled: boolean;
+    schedule: string;
+    lists: { id: string; name: string; scanned: number; total: number; unscanned: number; buckets: { drain: number; maybe: number; no: number } }[];
+    random_stream: { address: string; bucket: string; heat: number; at: string | null }[];
+    connected: boolean;
+  } | null>(null);
+
+  const loadLive = useCallback(async () => {
+    const res = await fetch("/api/blend/status", { cache: "no-store" });
+    const body = await res.json();
+    if (body.ok) setLive(body);
+  }, []);
 
   const loadCatalog = useCallback(async () => {
     const res = await fetch("/api/blend", { cache: "no-store" });
@@ -96,7 +114,10 @@ export default function BlendApp() {
 
   useEffect(() => {
     void loadCatalog();
-  }, [loadCatalog]);
+    void loadLive();
+    const timer = setInterval(() => void loadLive(), 20000);
+    return () => clearInterval(timer);
+  }, [loadCatalog, loadLive]);
 
   const openList = useCallback(async (id: ScanListId) => {
     setOpen(id);
@@ -166,10 +187,37 @@ export default function BlendApp() {
         </p>
         <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-brand-50">Blend</h1>
         <p className="mt-3 max-w-2xl text-sm text-brand-400 leading-relaxed">
-          One gauntlet for Ityfuzz, Halmos, Medusa, and Echidna. Local forks and symbolic checks only.
-          Heat moves only when an unprivileged caller ends with more value than they started.
-          The full triage desk stays on <Link href="/test" className="text-gold hover:text-gold/80">/test</Link>.
+          One automatic gauntlet: Ityfuzz, Halmos, Medusa, Echidna, then the syzkaller, RESTler,
+          Daikon, Lithium, and Jepsen passes. The scheduled jobs walk List 1, then List 2, then
+          random contracts, and pick a list up again when its fingerprint changes. This page watches
+          that loop. Local forks only. Heat moves only when an unprivileged caller ends with more
+          value than they started. The desk stays on <Link href="/test" className="text-gold hover:text-gold/80">/test</Link>.
         </p>
+        <section className="mt-8 rounded-lg border border-brand-800 bg-brand-900/40 p-4" aria-labelledby="live-heading">
+          <h2 id="live-heading" className="text-[11px] tracking-[0.2em] uppercase text-gold/80 font-semibold">
+            Automatic pipeline
+          </h2>
+          <p className="mt-2 text-sm text-brand-200">
+            {live?.phase || "scheduled"} · {live?.status || "scheduled"}
+            {live?.current_address ? ` · ${live.current_address}` : ""}
+          </p>
+          <p className="mt-1 text-sm text-brand-400">{live?.message || "Loading the scheduled run."}</p>
+          <p className="mt-2 text-[11px] text-brand-500">{live?.schedule}</p>
+          <ul className="mt-3 grid gap-2 sm:grid-cols-2 text-xs text-brand-300">
+            {(live?.lists || []).map((list) => (
+              <li key={list.id} className="rounded border border-brand-800 px-3 py-2">
+                <span className="text-brand-100">{list.name}</span>
+                {" "}{list.scanned}/{list.total} scanned
+                {" · "}drain {list.buckets.drain} · maybe {list.buckets.maybe} · no {list.buckets.no}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-brand-400">
+            Random contracts this run: {live?.random_scanned_this_run ?? 0}
+            {live?.random_enabled === false ? " · random phase off" : ""}
+            {live && !live.connected ? " · desk store not connected, so counts stay at zero until it is" : ""}
+          </p>
+        </section>
         {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
 
         <section className="mt-10" aria-labelledby="lists-heading">
@@ -239,7 +287,7 @@ export default function BlendApp() {
                             onClick={() => void runRow(row)}
                             className="text-[11px] uppercase tracking-wider text-gold hover:text-gold/80 disabled:text-brand-600"
                           >
-                            {busy === row.address ? "Running" : "Run gauntlet"}
+                            {busy === row.address ? "Running" : "Run now"}
                           </button>
                         </td>
                       </tr>
@@ -263,14 +311,27 @@ export default function BlendApp() {
             Scanning random contracts
           </h2>
           <div className="rounded-lg border border-brand-800 bg-brand-900/30 p-4">
-            <p className="text-sm text-brand-300">{random?.reason || "Checking whether a random scan is configured."}</p>
+            <p className="text-sm text-brand-300">
+              Random contracts are pulled by the scheduled loop after both lists have a finished pass.
+              The list below is that stream. Run now is optional and is not how the loop advances.
+            </p>
+            <ul className="mt-3 space-y-1 text-xs">
+              {(live?.random_stream || []).map((row) => (
+                <li key={`${row.at}-${row.address}`} className="font-mono text-brand-300">
+                  {row.address} · {row.bucket} · heat {row.heat}
+                </li>
+              ))}
+              {(live?.random_stream || []).length === 0 && (
+                <li className="text-brand-500">No random contracts recorded yet. The loop adds them after the lists.</li>
+              )}
+            </ul>
             <button
               type="button"
               disabled={!random?.enabled || !random.etherscan_configured || busy === "random"}
               onClick={() => void runRandom()}
-              className="mt-4 rounded-md border border-gold/60 px-4 py-2 text-[11px] uppercase tracking-[0.14em] text-gold disabled:border-brand-700 disabled:text-brand-600"
+              className="mt-4 rounded-md border border-brand-700 px-4 py-2 text-[11px] uppercase tracking-[0.14em] text-brand-300 disabled:text-brand-600"
             >
-              {busy === "random" ? "Sampling" : "Pull one contract"}
+              {busy === "random" ? "Sampling" : "Run now (optional)"}
             </button>
             {sample && (
               <p className="mt-3 text-xs text-brand-400">
