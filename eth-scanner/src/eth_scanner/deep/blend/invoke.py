@@ -14,7 +14,7 @@ import socket
 import subprocess
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from eth_scanner.deep.blend.ityfuzz_runner import ityfuzz_argv, ityfuzz_env, local_rpc
 from eth_scanner.deep.blend.parse import is_setup_or_compile_failure
@@ -212,7 +212,7 @@ def _per_engine_timeout(timeout_s: int) -> int:
     return max(10, min(40, int(timeout_s or 30)))
 
 
-def run_campaign(project: Path, *, address: str, fork_url: str, timeout_s: int) -> list:
+def run_campaign(project: Path, *, address: str, fork_url: str, timeout_s: int, journal: Any = None) -> list:
     """Halmos beside the fork lane. Medusa, Echidna, then Ityfuzz on one anvil."""
     from eth_scanner.deep.blend.orchestrator import schedule
 
@@ -221,13 +221,24 @@ def run_campaign(project: Path, *, address: str, fork_url: str, timeout_s: int) 
     try:
         def make(engine: str):
             def run(_ctx: dict) -> EngineOutput:
-                return invoke_engine(
+                output = invoke_engine(
                     engine,
                     project=project,
                     rpc=rpc,
                     address=address,
                     timeout_s=timeout_s,
                 )
+                # Persist this engine before the next fork engine starts.
+                if journal is not None:
+                    journal.stage("engine-%s" % engine, {
+                        "status": output.status,
+                        "note": output.note,
+                        "heat_contribution": 0,
+                        "label": "evidence only",
+                        "engine": engine,
+                        "findings": [],
+                    }, status=output.status if output.status in {"ok", "skipped", "error"} else "ok")
+                return output
             return run
 
         return schedule(

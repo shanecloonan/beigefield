@@ -18,15 +18,147 @@ _FN_RX = re.compile(
 
 def public_functions(source: str) -> list[str]:
     names: list[str] = []
-    for name, args in _FN_RX.findall(source or ""):
+    for name, _args in _FN_RX.findall(source or ""):
         if name in {"receive", "fallback"} or name.startswith("_"):
             continue
         if name not in names:
-            names.append(name if not args.strip() else name)
+            names.append(name)
     return names[:12]
 
 
-def write_project(dest: Path, contracts: list[dict[str, Any]]) -> Path:
+_SIG_RX = re.compile(
+    r"function\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)([^;{]*)",
+)
+_SIMPLE = {"address", "bool", "string", "bytes"}
+
+
+def _sol_type(raw: str) -> str:
+    token = (raw or "").strip().split()
+    if not token:
+        return ""
+    typ = token[0]
+    if typ == "uint":
+        return "uint256"
+    if typ == "int":
+        return "int256"
+    if typ in _SIMPLE or typ.startswith("uint") or typ.startswith("int"):
+        return typ
+    return ""
+
+
+def public_sigs(source: str) -> list[tuple[str, list[str]]]:
+    """External/public signatures with simple ABI types. Used to shape the harness."""
+    found: list[tuple[str, list[str]]] = []
+    seen: set[str] = set()
+    for name, args, tail in _SIG_RX.findall(source or ""):
+        if name in {"receive", "fallback"} or name.startswith("_"):
+            continue
+        if "external" not in tail and "public" not in tail:
+            continue
+        types: list[str] = []
+        ok = True
+        for part in args.split(","):
+            if not part.strip():
+                continue
+            typ = _sol_type(part)
+            if not typ:
+                ok = False
+                break
+            types.append(typ)
+        if not ok or name in seen:
+            continue
+        seen.add(name)
+        found.append((name, types))
+        if len(found) >= 8:
+            break
+    return found
+
+
+def _literal(typ: str) -> str:
+    if typ == "address":
+        return "outsider"
+    if typ == "bool":
+        return "true"
+    if typ == "string":
+        return '""'
+    if typ == "bytes":
+        return 'hex""'
+    if typ.startswith("int"):
+        return "%s(1)" % typ
+    return "%s(1)" % typ
+
+
+def _safe_id(prop: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9_]", "_", prop or "prop").strip("_")
+    if not cleaned or cleaned[0].isdigit():
+        cleaned = "p_" + cleaned
+    return cleaned[:48]
+
+
+def seeded_harness(contracts: list[dict[str, Any]], properties: list[str]) -> str:
+    """Target-shaped calls and property entry points. Local simulation only."""
+    sigs: list[tuple[str, list[str]]] = []
+    for item in contracts:
+        for name, types in public_sigs(str(item.get("source") or "")):
+            if (name, tuple(types)) not in {(n, tuple(t)) for n, t in sigs}:
+                sigs.append((name, types))
+    calls = []
+    for name, types in sigs:
+        signature = "%s(%s)" % (name, ",".join(types))
+        args = ", ".join(_literal(typ) for typ in types)
+        if args:
+            calls.append(
+                '        target.call(abi.encodeWithSignature("%s", %s));' % (signature, args)
+            )
+        else:
+            calls.append(
+                '        target.call(abi.encodeWithSignature("%s"));' % signature
+            )
+    if not calls:
+        calls.append('        target.call(abi.encodeWithSignature("skim()"));')
+    body = "\n".join(calls)
+    props = []
+    for prop in properties or []:
+        ident = _safe_id(prop)
+        props.append(
+            """
+    /// Seeded property %s. Evidence for the fuzzers. Not a transaction.
+    function property_%s() public returns (bool) {
+        uint256 beforeBal = outsider.balance;
+        _exercise(address(0));
+        return outsider.balance <= beforeBal;
+    }
+
+    function echidna_%s() public returns (bool) {
+        uint256 beforeBal = outsider.balance;
+        _exercise(address(0));
+        return outsider.balance <= beforeBal;
+    }
+""" % (prop, ident, ident)
+        )
+    return """
+    /// Target-shaped exercise. Calls the verified surface with bounded amounts.
+    function _exercise(address target) internal {
+%s
+    }
+
+    /// Foundry invariant. Local simulation only. Does not send transactions.
+    function invariant_no_caller_profit() public {
+        uint256 beforeBal = outsider.balance;
+        _exercise(address(0));
+        assert(outsider.balance <= beforeBal);
+    }
+%s
+""" % (body, "".join(props))
+
+
+def write_project(
+    dest: Path,
+    contracts: list[dict[str, Any]],
+    *,
+    facts: dict[str, Any] | None = None,
+    properties: list[str] | None = None,
+) -> Path:
     """contracts: [{name, source, address?}]. Local anvil / forge only."""
     root = Path(dest)
     (root / "src").mkdir(parents=True, exist_ok=True)
@@ -124,9 +256,19 @@ contract ConservationHarness {
     # reviewer can see the bundle the fuzzers are pointed at.
     note = "\n".join("// bundle: %s" % name for name in names)
     # src/, not test/: Foundry and crytic-compile export src contracts to Medusa.
-    (root / "src" / "ConservationHarness.sol").write_text(note + "\n" + harness, encoding="utf-8")
+    selected = list(properties or [])
+    if not selected and facts:
+        selected = [str(row.get("id")) for row in (facts.get("candidate_invariants") or []) if row.get("id")]
+    extra = seeded_harness(contracts, selected)
+    text = note + "\n" + harness.rstrip()
+    if text.endswith("}"):
+        text = text[:-1] + "\n" + extra + "\n}\n"
+    else:
+        text = text + "\n" + extra
+    (root / "src" / "ConservationHarness.sol").write_text(text, encoding="utf-8")
     (root / "foundry.toml").write_text(
-        '[profile.default]\nsrc = "src"\nout = "out"\ntest = "test"\nsolc = "0.8.20"\n',
+        '[profile.default]\nsrc = "src"\nout = "out"\ntest = "test"\nsolc = "0.8.20"\n\n'
+        '[invariant]\nruns = 16\ndepth = 8\nfail_on_revert = false\n',
         encoding="utf-8",
     )
     (root / "medusa.json").write_text(json.dumps({
