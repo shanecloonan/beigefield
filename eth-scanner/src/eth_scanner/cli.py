@@ -327,8 +327,52 @@ def _run_strong_deep_cli(args: Any, settings: Settings, store) -> int:
 
 
 def _run_master_list_cli(args: Any, settings: Settings, store) -> int:
-    """Primary feed: curated master list, rank order, resumable cursor."""
-    from eth_scanner.feed.runner import run_master_list
+    """Primary feed. Default walks every configured list, then randoms."""
+    from eth_scanner.feed.runner import run_master_list, run_scan_cycle
+
+    list_id = str(getattr(args, "list_id", None) or "all")
+    if list_id == "all":
+        if getattr(args, "list_path", None):
+            print("master_list: --list is ignored when --list-id is all", file=sys.stderr)
+        progress = run_scan_cycle(
+            settings=settings,
+            store=store,
+            workers=int(getattr(args, "workers", 8) or 8),
+            deadline_minutes=float(getattr(args, "deadline_minutes", 40.0) or 40.0),
+            reset=bool(getattr(args, "reset", False)),
+        )
+        print(
+            "scan_cycle status=%s phase=%s lists=%d random_scanned=%d random_enabled=%s duration_s=%s"
+            % (
+                progress.status,
+                progress.phase,
+                len(progress.lists),
+                progress.random_scanned,
+                progress.random_enabled,
+                progress.duration_s,
+            ),
+            file=sys.stderr,
+        )
+        if progress.message:
+            print("scan_cycle %s" % progress.message, file=sys.stderr)
+        for row in progress.lists:
+            print(
+                "scan_cycle list=%s status=%s size=%s processed=%s cursor=%s->%s"
+                % (
+                    row.get("list_id"),
+                    row.get("status"),
+                    row.get("list_size"),
+                    row.get("processed"),
+                    row.get("cursor_start"),
+                    row.get("cursor_next"),
+                ),
+                file=sys.stderr,
+            )
+        if getattr(args, "json", False):
+            print(json.dumps(progress.to_dict(), indent=2))
+        else:
+            print(progress.message or progress.status)
+        return 0 if progress.status in {"running", "done", "noop", "budget"} else 1
 
     min_funds = getattr(args, "min_funds_usd", None)
     max_funds = getattr(args, "max_funds_usd", None)
@@ -340,7 +384,7 @@ def _run_master_list_cli(args: Any, settings: Settings, store) -> int:
         deadline_minutes=float(getattr(args, "deadline_minutes", 40.0) or 40.0),
         min_funds_usd=float(min_funds) if min_funds is not None else None,
         max_funds_usd=float(max_funds) if max_funds is not None else None,
-        list_id=str(getattr(args, "list_id", None) or "list-1"),
+        list_id=list_id,
         reset=bool(getattr(args, "reset", False)),
     )
     print(
@@ -384,7 +428,7 @@ def _run_master_list_cli(args: Any, settings: Settings, store) -> int:
         print(json.dumps(progress.to_dict(), indent=2))
     else:
         print(progress.message or progress.status)
-    return 0 if progress.status in {"running", "done", "noop"} else 1
+    return 0 if progress.status in {"running", "done", "noop", "budget"} else 1
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -502,7 +546,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     mon.add_argument("--reset", action="store_true", help="master-list mode: restart the cursor at rank 1")
     mon.add_argument("--list", dest="list_path", default=None, help="override master_candidates.json path")
-    mon.add_argument("--list-id", default="list-1", help="named master list (list-1 or list-2)")
+    mon.add_argument("--list-id", default="all", help="all (default), list-1, or list-2")
     mon.add_argument(
         "--lookback-hours",
         type=int,
@@ -542,7 +586,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     ml.add_argument("--workers", type=int, default=8, help="parallel Lane A workers (default 8)")
     ml.add_argument("--deadline-minutes", type=float, default=40.0, help="stop after N minutes (default 40)")
-    ml.add_argument("--list-id", default="list-1", help="named master list (list-1 or list-2)")
+    ml.add_argument("--list-id", default="all", help="all (default), list-1, or list-2")
     ml.add_argument("--min-funds-usd", type=float, default=None, help="override the list's configured minimum")
     ml.add_argument("--max-funds-usd", type=float, default=None, help="override the list's configured maximum")
     ml.add_argument("--reset", action="store_true", help="restart the resume cursor at rank 1")
@@ -588,7 +632,7 @@ def main(argv: list[str] | None = None) -> int:
     bf.add_argument("--workers", type=int, default=8)
     bf.add_argument("--deadline-minutes", type=float, default=40.0)
     bf.add_argument("--max-full-scans", type=int, default=200, help="discovery mode only: Lane A cap per job")
-    bf.add_argument("--list-id", default="list-1", help="named master list (list-1 or list-2)")
+    bf.add_argument("--list-id", default="all", help="all (default), list-1, or list-2")
     bf.add_argument("--min-funds-usd", type=float, default=None, help="override the list's configured minimum")
     bf.add_argument("--max-funds-usd", type=float, default=None, help="override the list's configured maximum")
     bf.add_argument("--reset", action="store_true", help="restart the master-list cursor, or the block cursor in --discover mode")

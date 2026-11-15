@@ -16,6 +16,7 @@ from eth_scanner.config import Settings, load_settings
 from eth_scanner.deep.findings import agreement_summary, heat_eligible_clusters
 from eth_scanner.deep.runners import engine_availability, run_all_engines
 from eth_scanner.ingest.etherscan import EtherscanClient, IngestError, RateLimitError, parse_source_result
+from eth_scanner.ingest.quota import DailyBudgetExhausted
 from eth_scanner.ingest.unpack import materialize_source
 from eth_scanner.store.supabase import ScanStore, normalize_address, open_store
 from eth_scanner.types import SourceArtifact
@@ -78,6 +79,8 @@ def _fetch_source(address: str, settings: Settings) -> tuple[Optional[str], Opti
     except RateLimitError as exc:
         notes.append("etherscan rate-limited: %s" % exc)
         return None, None, notes
+    except DailyBudgetExhausted:
+        raise
     except IngestError as exc:
         notes.append("etherscan ingest failed: %s" % exc)
         return None, None, notes

@@ -6,6 +6,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from eth_scanner.ingest.quota import interval_for, read_limits
 from eth_scanner.types import (
     DEFAULT_ETHERSCAN_INTERVAL_S,
     DEFAULT_HEAT_THRESHOLD,
@@ -73,6 +74,10 @@ class Settings:
     range_min_usd: float | None = None
     range_max_usd: float | None = None
     etherscan_min_interval_s: float = DEFAULT_ETHERSCAN_INTERVAL_S
+    # Per key. Several keys sum these budgets. See eth_scanner.ingest.quota.
+    etherscan_per_second: float = 5.0
+    etherscan_per_day: int = 100_000
+    etherscan_pace: float = 0.95
     worker_id: str = "eth-scanner"
     claim_stale_seconds: int = 900
 
@@ -109,11 +114,9 @@ def load_settings() -> Settings:
     except ValueError:
         min_funds = DEFAULT_MIN_FUNDS_USD
     min_funds = max(0.0, min_funds)
-    try:
-        interval = float(os.environ.get("ETH_SCANNER_ETHERSCAN_INTERVAL") or DEFAULT_ETHERSCAN_INTERVAL_S)
-    except ValueError:
-        interval = DEFAULT_ETHERSCAN_INTERVAL_S
-    interval = max(0.2, min(interval, 5.0))
+    per_second, per_day, pace = read_limits()
+    # Just under the per-second cap. An explicit INTERVAL can only slow this down.
+    interval = interval_for(per_second, pace)
     return Settings(
         etherscan_api_keys=_etherscan_keys(),
         supabase_url=url.rstrip("/"),
@@ -125,5 +128,8 @@ def load_settings() -> Settings:
         tvl_floor_usd=tvl,
         min_funds_usd=min_funds,
         etherscan_min_interval_s=interval,
+        etherscan_per_second=per_second,
+        etherscan_per_day=per_day,
+        etherscan_pace=pace,
         worker_id=os.environ.get("ETH_SCANNER_WORKER_ID", "eth-scanner"),
     )

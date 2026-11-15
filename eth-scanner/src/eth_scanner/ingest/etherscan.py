@@ -15,6 +15,7 @@ import urllib.request
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
+from eth_scanner.ingest.quota import DailyBudgetExhausted, active_ledger, key_id
 from eth_scanner.types import DEFAULT_ETHERSCAN_INTERVAL_S, SourceArtifact
 
 ETHERSCAN_V2 = "https://api.etherscan.io/v2/api"
@@ -63,8 +64,17 @@ def _retry_after_s(headers: Any, attempt: int, cap: float = 30.0) -> float:
 
 @dataclass
 class KeyRotator:
+    """Spread calls across keys. Each key waits out its own interval.
+
+    A key at its daily cap is skipped. When every key is capped, raise
+    ``DailyBudgetExhausted`` instead of sleeping until the next UTC day.
+    """
+
     keys: list[str]
     min_interval_s: float = DEFAULT_ETHERSCAN_INTERVAL_S
+    ledger: Any = None
+    clock: Any = time.monotonic
+    sleeper: Any = time.sleep
     _last: dict[str, float] = field(default_factory=dict)
     _i: int = 0
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
@@ -74,27 +84,79 @@ class KeyRotator:
             raise IngestError("ETHERSCAN_API_KEYS is empty — set comma-separated keys or use --source / --dry-run")
         n = len(self.keys)
         while True:
+            chosen: Optional[str] = None
+            wait_for: Optional[float] = None
             with self._lock:
-                key = self.keys[self._i % n]
-                self._i += 1
-                last = self._last.get(key, 0.0)
-                wait = self.min_interval_s - (time.monotonic() - last)
-                if wait <= 0:
-                    self._last[key] = time.monotonic()
-                    return key
-            # Sleep outside the lock so other keys / workers can proceed.
-            time.sleep(wait)
+                exhausted = 0
+                soon: Optional[float] = None
+                start = self._i
+                for step in range(n):
+                    key = self.keys[(start + step) % n]
+                    if self.ledger is not None and not self.ledger.has_budget(key):
+                        exhausted += 1
+                        continue
+                    last = self._last.get(key, 0.0)
+                    wait = self.min_interval_s - (self.clock() - last)
+                    if wait <= 0:
+                        self._last[key] = self.clock()
+                        self._i = start + step + 1
+                        chosen = key
+                        break
+                    if soon is None or wait < soon:
+                        soon = wait
+                if chosen is None and exhausted >= n:
+                    if self.ledger is None:
+                        raise IngestError("etherscan keys exhausted")
+                    raise self.ledger.exhausted(self.keys)
+                if chosen is None:
+                    wait_for = soon if soon is not None else self.min_interval_s
+            if chosen is not None:
+                if self.ledger is not None:
+                    try:
+                        self.ledger.consume(chosen)
+                    except DailyBudgetExhausted:
+                        # Lost the race for this key's last call. Try another key.
+                        if self.ledger is not None and all(
+                            not self.ledger.has_budget(k) for k in self.keys
+                        ):
+                            raise self.ledger.exhausted(self.keys)
+                        continue
+                return chosen
+            # Sleep outside the lock so another key can be taken meanwhile.
+            self.sleeper(max(0.0, float(wait_for or 0.0)))
+
+
+_ROTATORS: dict[tuple[str, ...], KeyRotator] = {}
+_ROTATOR_LOCK = threading.Lock()
+
+
+def shared_key_rotator(keys: list[str], min_interval_s: float) -> KeyRotator:
+    """One rotator per key list + interval so parallel scans share the pace."""
+    ident = tuple(key_id(k) for k in keys) + ("%.6f" % float(min_interval_s),)
+    with _ROTATOR_LOCK:
+        rot = _ROTATORS.get(ident)
+        if rot is None or list(rot.keys) != list(keys):
+            rot = KeyRotator(keys=list(keys), min_interval_s=float(min_interval_s))
+            _ROTATORS[ident] = rot
+        rot.ledger = active_ledger()
+        rot.min_interval_s = float(min_interval_s)
+        return rot
 
 
 class EtherscanClient:
     def __init__(
         self,
         keys: list[str],
-        min_interval_s: float = DEFAULT_ETHERSCAN_INTERVAL_S,
+        min_interval_s: Optional[float] = None,
         timeout_s: float = 20.0,
         max_attempts: int = 8,
     ):
-        self.rotator = KeyRotator(keys=list(keys), min_interval_s=min_interval_s)
+        if min_interval_s is None:
+            from eth_scanner.ingest.quota import interval_for, read_limits
+            per_second, _per_day, pace = read_limits()
+            min_interval_s = interval_for(per_second, pace)
+        # Shared rotator: eight Lane A workers must not each keep their own clock.
+        self.rotator = shared_key_rotator(list(keys), float(min_interval_s))
         self.timeout_s = timeout_s
         self.max_attempts = max(3, int(max_attempts))
 

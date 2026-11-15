@@ -1,5 +1,6 @@
-# Resumable scan of the curated master list (same cursor as eth-scanner-monitor).
-# Cron every 15 minutes. No per-run cap; the Supabase cursor resumes mid-list.
+# Same scan cycle as eth-scanner-monitor (all lists, then randoms). A shared
+# scan-cycle lease makes the two workflows take turns instead of doubling the
+# Etherscan rate. Cron every 15 minutes. No per-run cap.
 # Pass discover=true to opt into the historical create walk (alchemy_getAssetTransfers).
 name: eth-scanner-backfill
 
@@ -151,7 +152,7 @@ jobs:
                 --json
               ;;
             *)
-              echo "master-list mode: rank order, no per-run cap, shared resume cursor"
+              echo "scan-cycle mode: all lists, then randoms; no per-run cap; shared etherscan budget"
               python -m eth_scanner master-list \
                 --workers "${INPUT_WORKERS}" \
                 --deadline-minutes "${INPUT_DEADLINE}" \

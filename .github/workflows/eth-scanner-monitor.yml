@@ -1,7 +1,8 @@
-# Curated master-list feed (default). Every 10 minutes, scan the versioned
-# candidate list in rank order (tier, then USD) with 8 parallel Lane A workers
-# until the deadline. A Supabase cursor resumes the next run. Pass
-# discover=true to opt into alchemy/RPC create discovery.
+# Every 10 minutes: scan every configured list (List 1, then List 2) in order,
+# resume each list from its Supabase cursor, then scan random verified contracts
+# once nothing on those lists is unscanned. The Etherscan pacer stays just under
+# the configured per-second cap and stops at the daily cap. Pass discover=true
+# to opt into alchemy/RPC create discovery instead.
 name: eth-scanner-monitor
 
 on:
@@ -158,7 +159,7 @@ jobs:
                 --persist
               ;;
             *)
-              echo "master-list mode: rank order, no per-run cap, resume via cursor"
+              echo "scan-cycle mode: all lists, then randoms; no per-run cap; shared etherscan budget"
               python -m eth_scanner master-list \
                 --workers "${WORKERS}" \
                 --deadline-minutes "${DEADLINE}" \
