@@ -19,14 +19,29 @@ from eth_scanner.config import Settings
 from eth_scanner.types import FunnelResult, SourceArtifact, Target, to_plain
 
 
-def _addr_or_none(addr: str) -> Optional[str]:
-    text = (addr or "").strip()
-    if not text:
-        return None
-    try:
-        return normalize_address(text)
-    except ValueError:
-        return None
+# eth_scan_results.bucket is NOT NULL and limited to these labels.
+_RESULT_BUCKETS = frozenset({
+    "lane-a-cool",
+    "lane-b-queue",
+    "manual-review",
+    "human-no-candidate",
+    "human-yes-candidate",
+})
+
+
+def persistable_bucket(result: FunnelResult) -> str:
+    """Bucket value that satisfies eth_scan_results.bucket.
+
+    S0 intake drops leave FunnelResult.bucket unset. Those rows are noise,
+    so they archive as lane-a-cool. Any other missing label goes to
+    manual-review rather than inserting NULL.
+    """
+    bucket = getattr(result, "bucket", None)
+    if bucket in _RESULT_BUCKETS:
+        return str(bucket)
+    if getattr(result, "dropped", False):
+        return "lane-a-cool"
+    return "manual-review"
 
 
 def normalize_address(addr: str) -> str:
@@ -36,6 +51,16 @@ def normalize_address(addr: str) -> str:
     if len(a) != 42 or any(c not in "0123456789abcdef" for c in a[2:]):
         raise ValueError("invalid Ethereum address: %s" % addr)
     return a
+
+
+def _addr_or_none(addr: str) -> Optional[str]:
+    text = (addr or "").strip()
+    if not text:
+        return None
+    try:
+        return normalize_address(text)
+    except ValueError:
+        return None
 
 
 class ScanStore(Protocol):
@@ -566,7 +591,7 @@ class SupabaseStore:
         addr = normalize_address(address)
         result_body: dict[str, Any] = {
             "address": addr,
-            "bucket": result.bucket,
+            "bucket": persistable_bucket(result),
             "heat": result.heat,
             "stage_trace": to_plain(result.stage_trace),
             "hypotheses": to_plain(result.hypotheses),

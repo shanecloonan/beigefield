@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from eth_scanner.funnel.s0_s7 import FunnelConfig, FunnelContext, Hypothesis, run_lane_a, run_lane_b
 from eth_scanner.ir.normalize import normalize
 from eth_scanner.lane_a.worker import run_one as lane_a_one
-from eth_scanner.store.supabase import MemoryStore
+from eth_scanner.store.supabase import MemoryStore, persistable_bucket
 from eth_scanner.types import FunctionIR, IRDocument, SourceArtifact, Target
 
 ADDR = "0x" + "11" * 20
@@ -77,6 +77,8 @@ class S0Intake(unittest.TestCase):
         self.assertTrue(r.dropped)
         self.assertIsNone(r.bucket)
         self.assertIn("zero-code", r.drop_reason or "")
+        # The in-memory bucket stays unset. The results table rejects NULL.
+        self.assertEqual(persistable_bucket(r), "lane-a-cool")
 
     def test_non_eth_dropped(self):
         t = _target()
