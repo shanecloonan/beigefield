@@ -24,7 +24,7 @@ def local_rpc(url: str) -> bool:
     return parsed.scheme in {"http", "https"} and host in _LOOPBACK
 
 
-def ityfuzz_argv(bin_path: str, targets: list[str], rpc: str) -> list[str]:
+def ityfuzz_argv(bin_path: str, targets: list[str], rpc: str, block: str = "0") -> list[str]:
     """Build a read-only local-fork command. Raises if rpc is not loopback."""
     if not local_rpc(rpc):
         raise ValueError("ityfuzz refuses a non-local RPC")
@@ -32,6 +32,8 @@ def ityfuzz_argv(bin_path: str, targets: list[str], rpc: str) -> list[str]:
     if not cleaned:
         raise ValueError("ityfuzz needs at least one local target")
     # Pinned invocation. No --flashloan, no broadcast, no exploit printer.
+    # Block 0 is a fresh anvil. A fork passes that anvil's head instead.
+    number = str(block or "0").strip() or "0"
     return [
         bin_path,
         "evm",
@@ -40,7 +42,7 @@ def ityfuzz_argv(bin_path: str, targets: list[str], rpc: str) -> list[str]:
         "-c",
         "local",
         "--onchain-block-number",
-        "1",
+        number,
     ]
 
 

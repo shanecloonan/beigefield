@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import os
+import stat
 import sys
 import tempfile
 import threading
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -161,12 +164,110 @@ class BlendFixtures(unittest.TestCase):
                 {"name": "StrategyVault", "source": "contract StrategyVault { function skim() external {} }"},
                 {"name": "Strategy", "source": "contract Strategy { function skim() external {} }"},
             ])
-            text = (root / "test" / "Conservation.t.sol").read_text(encoding="utf-8")
+            text = (root / "src" / "ConservationHarness.sol").read_text(encoding="utf-8")
             self.assertIn("StrategyVault", text)
             self.assertIn("Strategy", text)
+            self.assertIn("check_no_caller_profit", text)
+            self.assertIn("echidna_no_caller_profit", text)
             self.assertNotIn("broadcast", text.lower())
             self.assertTrue((root / "medusa.json").is_file())
             self.assertTrue((root / "echidna.yaml").is_file())
+
+
+def _tool(path: Path, line: str) -> None:
+    path.write_text(
+        "#!/bin/sh\nprintf '%s\\n' \"$@\" >> \"$BLEND_ARGV\"\n" + line + "\n",
+        encoding="utf-8",
+    )
+    path.chmod(path.stat().st_mode | stat.S_IEXEC)
+
+
+class RealBinaryInvocation(unittest.TestCase):
+    """The campaign shells out. These stand-ins prove the argv and the parser.
+
+    A live pin check runs only when the real binary is already installed.
+    """
+
+    def _run(self, line: str, *, funds: float = 4_000.0):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            argv_log = root / "argv.txt"
+            bins = {}
+            for name in ("medusa", "echidna", "halmos", "ityfuzz"):
+                dest = root / name
+                _tool(dest, line)
+                bins[name] = dest
+            env = {
+                "ETH_SCANNER_MEDUSA_BIN": str(bins["medusa"]),
+                "ETH_SCANNER_ECHIDNA_BIN": str(bins["echidna"]),
+                "ETH_SCANNER_HALMOS_BIN": str(bins["halmos"]),
+                "ETH_SCANNER_ITYFUZZ_BIN": str(bins["ityfuzz"]),
+                "ETH_SCANNER_BLEND_ANVIL": "0",
+                "BLEND_ARGV": str(argv_log),
+            }
+            with mock.patch.dict(os.environ, env, clear=False):
+                report = run_blend(
+                    address="0x" + "11" * 20,
+                    contract_name="Target",
+                    source="contract Target { function skim() external {} }",
+                    funds_usd=funds,
+                    fork_url="http://127.0.0.1:8545",
+                    timeout_s=10,
+                )
+            recorded = argv_log.read_text(encoding="utf-8") if argv_log.is_file() else ""
+            return report, recorded
+
+    def test_shells_out_and_evidence_without_profit_stays_cold(self):
+        report, recorded = self._run("echo '[FAIL] no_third_party_balance_drop caller_profit_delta=0'")
+        notes = " ".join(row.get("note") or "" for row in report["engines"])
+        self.assertIn("invoked", notes)
+        self.assertNotIn("campaign not started", notes)
+        self.assertIn("fuzz", recorded)
+        self.assertIn("ConservationHarness", recorded)
+        self.assertIn("check_no_caller_profit", recorded)
+        self.assertIn("-c", recorded)
+        self.assertIn("local", recorded)
+        self.assertNotIn("flashloan", recorded.lower())
+        self.assertNotIn("broadcast", recorded.lower())
+        self.assertEqual(report["heat"], 0)
+        self.assertTrue(report["findings"])
+        self.assertTrue(all(row["label"] == "evidence only" for row in report["findings"]))
+        self.assertTrue(all(row["heat_contribution"] == 0 for row in report["findings"]))
+
+    def test_shell_out_profit_still_uses_the_caller_profit_gate(self):
+        report, _recorded = self._run(
+            "echo '[FAIL] no_third_party_balance_drop caller_profit_delta=9'",
+            funds=8_000.0,
+        )
+        proofs = [row for row in report["findings"] if row["kind"] == "drain-proof"]
+        self.assertTrue(proofs)
+        self.assertGreater(proofs[0]["caller_profit_delta"], 0)
+        self.assertGreater(report["heat"], 0)
+        self.assertTrue(report["heat_breakdown"]["caller_profit_gate"])
+        self.assertEqual(report["heat_breakdown"]["engine_heat"], 0)
+
+    def test_real_binary_versions_when_installed(self):
+        import shutil
+        import subprocess
+
+        expected = {
+            "medusa": "1.5.1",
+            "echidna": "2.4.0",
+            "halmos": "0.3.3",
+        }
+        for name, version in expected.items():
+            path = shutil.which(name)
+            if not path:
+                continue
+            proc = subprocess.run([path, "--version"], capture_output=True, text=True, timeout=20, check=False)
+            if proc.returncode != 0 and name == "medusa":
+                proc = subprocess.run([path, "version"], capture_output=True, text=True, timeout=20, check=False)
+            blob = (proc.stdout or "") + (proc.stderr or "")
+            self.assertIn(version, blob, name)
+        ity = shutil.which("ityfuzz")
+        if ity:
+            proc = subprocess.run([ity, "--help"], capture_output=True, text=True, timeout=20, check=False)
+            self.assertEqual(proc.returncode, 0)
 
 
 class BlendLists(unittest.TestCase):
