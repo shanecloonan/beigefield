@@ -227,5 +227,24 @@ class CrossContractBundle(unittest.TestCase):
         self.assertGreater(report["heat"], 0)
 
 
+class EnsembleDoesNotHeatAdaptations(unittest.TestCase):
+    def test_layers_and_all_eleven_passes_stay_at_zero_heat(self):
+        report = run_blend(fixture="safe")
+        for name in (
+            "syzkaller", "restler", "daikon", "lithium", "jepsen",
+            "randoop", "learnlib", "stateright", "pict", "openspiel", "picire",
+        ):
+            self.assertEqual(report["adaptations"][name]["heat_contribution"], 0, name)
+        for name, block in report["layers"].items():
+            self.assertEqual(block["heat_contribution"], 0, name)
+            self.assertEqual(block["label"], "evidence only", name)
+        self.assertEqual(report["heat"], 0)
+        self.assertEqual(report["findings"], [])
+        leaked = run_blend(fixture="leaky")
+        self.assertEqual(leaked["findings"][0]["label"], "drain proof")
+        self.assertTrue(all(block["heat_contribution"] == 0 for block in leaked["layers"].values()))
+        self.assertTrue(all(block["heat_contribution"] == 0 for block in leaked["adaptations"].values()))
+
+
 if __name__ == "__main__":
     unittest.main()

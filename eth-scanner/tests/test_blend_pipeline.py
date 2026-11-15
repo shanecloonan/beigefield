@@ -340,5 +340,204 @@ class BlendLists(unittest.TestCase):
         self.assertEqual(demanded[0]["source"], "on-demand")
 
 
+class EnsembleLayers(unittest.TestCase):
+    """New layers are evidence. Heat still requires a caller-profit witness."""
+
+    def _layers(self, report):
+        return report["layers"]
+
+    def test_each_layer_is_cold_without_a_caller_profit_witness(self):
+        report = run_blend(fixture="safe")
+        self.assertEqual(report["heat"], 0)
+        self.assertEqual(report["findings"], [])
+        for name in ("facts", "spec", "symbolic", "fuzz", "mutation", "fusion"):
+            block = self._layers(report)[name]
+            self.assertEqual(block["heat_contribution"], 0, name)
+            self.assertEqual(block["label"], "evidence only", name)
+        self.assertIn("no-unprivileged-caller-profit", report["layers"]["spec"]["selected"])
+        self.assertFalse(report["layers"]["fusion"]["proven_caller_profit"])
+        self.assertGreater(report["drain_probability"], 0)
+
+    def test_evidence_only_stays_labeled_and_cold(self):
+        report = run_blend(fixture="evidence-only")
+        self.assertEqual(report["heat"], 0)
+        self.assertEqual(report["findings"][0]["label"], "evidence only")
+        self.assertEqual(report["findings"][0]["kind"], "evidence-only")
+        self.assertTrue(all(block["heat_contribution"] == 0 for block in report["layers"].values()))
+        self.assertFalse(report["layers"]["fusion"]["proven_caller_profit"])
+
+    def test_drain_proof_label_stays_on_the_witness_and_layers_stay_cold(self):
+        leaky = run_blend(fixture="leaky")
+        safe = run_blend(fixture="safe")
+        proof = leaky["findings"][0]
+        self.assertEqual(proof["kind"], "drain-proof")
+        self.assertEqual(proof["label"], "drain proof")
+        self.assertEqual(proof["agreement_count"], 4)
+        self.assertGreater(leaky["heat"], 0)
+        self.assertTrue(all(block["heat_contribution"] == 0 for block in leaky["layers"].values()))
+        self.assertGreater(leaky["drain_probability"], safe["drain_probability"])
+        self.assertIn("unprivileged-caller-profit", leaky["bug_classes"])
+        self.assertTrue(leaky["layers"]["fusion"]["passes_agreeing"])
+
+    def test_known_safe_contracts_stay_cold(self):
+        from eth_scanner.known_safe import SAFE_ADDRESSES
+
+        sand = "0x3845badade8e6dff049820680d1f14bd3903a5d0"
+        hex_token = "0x2b591e99afe9f32eaa6214f7b7629768c40eeb39"
+        bento = "0xf5bce5077908a1b7370b9ae04adc565ebd643966"
+        for addr in (LINK, sand, hex_token, bento):
+            self.assertIn(addr, SAFE_ADDRESSES)
+        named = (
+            (LINK, "LinkToken"),
+            (sand, "SAND"),
+            (hex_token, "HEX"),
+            (bento, "BentoBoxV1"),
+        )
+        for addr, name in named:
+            report = run_blend(
+                logs=logs_for(FIXTURES["leaky"]),
+                address=addr,
+                contract_name=name,
+                funds_usd=5_000_000,
+            )
+            self.assertEqual(report["heat"], 0, name)
+            self.assertTrue(report["heat_breakdown"]["known_safe"], name)
+            self.assertTrue(all(block["heat_contribution"] == 0 for block in report["layers"].values()), name)
+            self.assertEqual(report["findings"][0]["label"], "drain proof")
+
+    def test_facts_seed_erc4626_properties_and_the_harness(self):
+        from eth_scanner.deep.blend.ensemble.facts import collect_facts
+        from eth_scanner.deep.blend.ensemble.spec import build_spec
+
+        source = (
+            "contract Vault {"
+            " function deposit(uint256 assets, address receiver) external {}"
+            " function withdraw(uint256 assets) external {}"
+            " function convertToAssets(uint256 shares) external view returns (uint256) { return shares; }"
+            "}"
+        )
+        facts = collect_facts(source, "Vault", live=False)
+        self.assertEqual(facts["shape"], "erc4626")
+        self.assertEqual(facts["heat_contribution"], 0)
+        spec = build_spec(facts)
+        self.assertIn("erc4626-share-price", spec["selected"])
+        self.assertIn("no-unprivileged-caller-profit", spec["selected"])
+        self.assertTrue(spec["seeded_by"])
+        self.assertEqual(spec["heat_contribution"], 0)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_project(
+                Path(tmp),
+                [{"name": "Vault", "source": source}],
+                facts=facts,
+                properties=spec["selected"],
+            )
+            text = (root / "src" / "ConservationHarness.sol").read_text(encoding="utf-8")
+            self.assertIn("deposit(uint256,address)", text)
+            self.assertIn("convertToAssets(uint256)", text)
+            self.assertIn("invariant_no_caller_profit", text)
+            self.assertIn("property_erc4626_share_price", text)
+            self.assertNotIn("broadcast", text.lower())
+
+    def test_mutation_without_a_measured_delta_does_not_heat(self):
+        from eth_scanner.deep.blend.ensemble.mutation import run_mutation
+
+        cold = run_mutation(["no-unprivileged-caller-profit"], replay_delta=0)
+        self.assertEqual(cold["heat_contribution"], 0)
+        self.assertTrue(cold["killed"])
+        self.assertEqual(cold["witnesses"], [])
+        self.assertFalse(cold["vacuous"])
+
+    def test_profit_relevant_survivor_is_routed_only_with_a_delta(self):
+        from eth_scanner.deep.blend.ensemble import finalize_ensemble
+        from eth_scanner.deep.blend.ensemble.mutation import run_mutation
+
+        witnessed = run_mutation(["erc4626-share-price"], replay_delta=40)
+        self.assertTrue(witnessed["witnesses"])
+        self.assertEqual(witnessed["heat_contribution"], 0)
+        self.assertTrue(witnessed["survivors"][0]["routed_to_fork_gate"])
+        base = run_blend(fixture="safe")
+        base["target"]["address"] = "0x" + "44" * 20
+        base["target"]["funds_usd"] = 5_000
+        base["target"]["contract_name"] = "OddVault"
+        prepared = {name: base["layers"][name] for name in ("facts", "spec", "symbolic", "fuzz")}
+        prepared["mutation"] = witnessed
+        heated = finalize_ensemble(base, prepared=prepared)
+        self.assertGreater(heated["heat"], 0)
+        self.assertEqual(heated["layers"]["mutation"]["heat_contribution"], 0)
+        self.assertTrue(heated["heat_breakdown"]["caller_profit_gate"])
+        self.assertEqual(heated["findings"][0]["label"], "drain proof")
+
+    def test_smt_and_foundry_skips_are_evidence(self):
+        report = run_blend(fixture="safe")
+        smt = report["layers"]["symbolic"]["smtchecker"]
+        self.assertEqual(smt["heat_contribution"], 0)
+        self.assertEqual(smt["caller_profit_delta"], 0)
+        self.assertIn("chc", smt)
+        self.assertIn("bmc", smt)
+        self.assertEqual(report["layers"]["fuzz"]["foundry"]["heat_contribution"], 0)
+        self.assertEqual(report["layers"]["fuzz"]["foundry"]["caller_profit_delta"], 0)
+
+    def test_discovery_floor_is_100_and_env_configurable(self):
+        from eth_scanner.config import Settings
+        from eth_scanner.feed.runner import random_funds_bounds
+        from eth_scanner.heat import HeatWeights
+        from eth_scanner.ingest.funds import DEFAULT_DISCOVERY_MIN_USD, discovery_min_usd
+
+        self.assertEqual(DEFAULT_DISCOVERY_MIN_USD, 100.0)
+        settings = Settings(dry_run=True, work_dir=Path("/tmp/blend-discovery"), min_funds_usd=2000.0)
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ETH_SCANNER_DISCOVERY_MIN_USD", None)
+            os.environ.pop("ETH_SCANNER_DISCOVERY_MAX_USD", None)
+            self.assertEqual(discovery_min_usd(), 100.0)
+            low, high = random_funds_bounds(settings)
+            self.assertEqual(low, 100.0)
+            self.assertIsNone(high)
+        with mock.patch.dict(os.environ, {"ETH_SCANNER_DISCOVERY_MIN_USD": "250"}, clear=False):
+            self.assertEqual(discovery_min_usd(), 250.0)
+            low, _high = random_funds_bounds(settings)
+            self.assertEqual(low, 250.0)
+        # Lane-B promotion floor stays the separate $2,000 gate.
+        self.assertEqual(HeatWeights().min_funds_for_lane_b, 2000.0)
+
+    def test_each_stage_is_persisted_and_a_failed_write_marks_the_run(self):
+        from eth_scanner.deep.blend.journal import PersistError
+        from eth_scanner.store.supabase import MemoryStore
+
+        store = MemoryStore()
+        report = run_blend(fixture="safe", store=store)
+        stages = [row["stage"] for row in store.blend_stages]
+        for name in ("intake", "facts", "spec", "symbolic", "fuzz", "mutation", "fusion", "decision"):
+            self.assertIn(name, stages, name)
+        for name in ("syzkaller", "restler", "daikon", "lithium", "jepsen", "randoop", "learnlib", "stateright", "pict", "openspiel", "picire"):
+            self.assertIn("adapt-%s" % name, stages)
+        self.assertEqual(report["persistence"]["mode"], "memory")
+        run = next(row for row in store.test_runs if row["dedupe_key"] == report["persistence"]["dedupe_key"])
+        self.assertEqual(run["status"], "done")
+        self.assertEqual(run["discovery_source"], "blend")
+        self.assertEqual(run["funds_usd"], 1000.0)
+        self.assertEqual(run["blend_bucket"], "no")
+        self.assertFalse(run["proven_caller_profit"])
+        self.assertTrue(run["evidence_only"])
+        self.assertIsNotNone(run["started_at"])
+        self.assertTrue(store.test_findings)
+
+        class BoomStore(MemoryStore):
+            def save_blend_stage(self, row):
+                if row.get("stage") == "spec":
+                    raise RuntimeError("supabase write failed")
+                return super().save_blend_stage(row)
+
+        boom = BoomStore()
+        with self.assertRaises(PersistError):
+            run_blend(fixture="safe", store=boom)
+        saved = [row["stage"] for row in boom.blend_stages]
+        self.assertIn("intake", saved)
+        self.assertIn("facts", saved)
+        self.assertNotIn("spec", saved)
+        marked = next(row for row in boom.test_runs if str(row.get("dedupe_key") or "").startswith("blend:"))
+        self.assertEqual(marked["status"], "error")
+        self.assertIn("supabase write failed", marked["error"])
+
+
 if __name__ == "__main__":
     unittest.main()

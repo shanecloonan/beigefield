@@ -40,6 +40,15 @@ def _list1_bounds() -> tuple[float, float]:
 
 
 MIN_USD, MAX_PROTOCOL_TVL = _list1_bounds()
+
+
+def _discovery_floor() -> float:
+    """Random/discovery intake floor. Env wins. Default $100. List 1 min stays MIN_USD."""
+    raw = os.environ.get("ETH_SCANNER_DISCOVERY_MIN_USD", "100")
+    try:
+        return max(0.0, float(raw))
+    except (TypeError, ValueError):
+        return 100.0
 UA = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
@@ -1042,8 +1051,11 @@ def build_output(selected, rows, codes, storage, balances, prices, unresolved_ex
             drop_reason = "eoa-or-empty-code"
         elif token_only:
             drop_reason = "token-only-or-passthrough"
+        elif usd < _discovery_floor():
+            drop_reason = "below-discovery-floor"
         elif usd < MIN_USD:
-            drop_reason = "below-2000-usd-major-tokens"
+            # Kept out of List 1. The discovery lane still scans this band.
+            drop_reason = "discovery-band-below-list1"
 
         rec = {
             "protocol": item["name"],
@@ -1066,6 +1078,8 @@ def build_output(selected, rows, codes, storage, balances, prices, unresolved_ex
         }
         if drop_reason:
             rec["drop_reason"] = drop_reason
+            if drop_reason == "discovery-band-below-list1":
+                rec["discovery_lane"] = True
             dropped.append(rec)
         else:
             candidates.append(rec)

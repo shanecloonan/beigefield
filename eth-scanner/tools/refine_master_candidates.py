@@ -492,8 +492,10 @@ def main() -> None:
             drop = "token-only-or-passthrough"
         elif is_shared_or_misattributed(usd, item["defillama_eth_tvl"]):
             drop = "shared-or-misattributed-exceeds-protocol-tvl"
+        elif usd < b._discovery_floor():
+            drop = "below-discovery-floor"
         elif usd < b.MIN_USD:
-            drop = "below-2000-usd-priced-tokens"
+            drop = "discovery-band-below-list1"
         rec = {
             "protocol": item["name"],
             "slug": item["slug"],

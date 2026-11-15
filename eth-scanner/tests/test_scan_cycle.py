@@ -106,11 +106,11 @@ class ScanCycle(unittest.TestCase):
         self.assertEqual(scanned[2:4], [_addr(3), _addr(4)])
         self.assertEqual(scanned[4], _addr(99))
         self.assertEqual(events[4][0], "pick")
-        # List 2 keeps its own band. Random uses the scanner floor, no ceiling.
+        # List 2 keeps its own band. Random uses the discovery floor ($100), no ceiling.
         self.assertEqual(events[2][2:], (50.0, 1900.0))
         self.assertEqual(events[4][0], "pick")
         random_scan = next(item for item in events if item[0] == "scan" and item[1] == _addr(99))
-        self.assertEqual(random_scan[2:], (2000.0, None))
+        self.assertEqual(random_scan[2:], (100.0, None))
         random_row = next(row for row in self.store.test_runs if row["address"] == _addr(99))
         self.assertEqual(random_row["discovery_source"], "random_scan")
         self.assertIsNone(random_row["list_id"])

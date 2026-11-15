@@ -213,8 +213,12 @@ class MasterListRunner(unittest.TestCase):
         self.assertEqual(first.below_floor, 1)
         self.assertEqual(len(seen), 2)
 
-        runs = list(self.store.test_runs)
+        runs = [row for row in self.store.test_runs if str(row.get("dedupe_key") or "").startswith("master-list:")]
         self.assertEqual(len(runs), 2)
+        dropped = [row for row in self.store.test_runs if row.get("kind") == "blend"]
+        self.assertEqual(len(dropped), 1)
+        self.assertEqual(dropped[0]["status"], "dropped")
+        self.assertTrue(any(row.get("stage") == "intake" for row in self.store.blend_stages))
         for row in runs:
             self.assertEqual(row["discovery_source"], DISCOVERY_SOURCE)
             self.assertIn("candidate_reason", row)

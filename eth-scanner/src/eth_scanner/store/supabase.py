@@ -53,6 +53,16 @@ def normalize_address(addr: str) -> str:
     return a
 
 
+def _addr_or_none(addr: str) -> Optional[str]:
+    text = (addr or "").strip()
+    if not text:
+        return None
+    try:
+        return normalize_address(text)
+    except ValueError:
+        return None
+
+
 class ScanStore(Protocol):
     def upsert_target(self, target: Target) -> Target: ...
     def get_target(self, address: str) -> Optional[dict[str, Any]]: ...
@@ -78,6 +88,7 @@ class MemoryStore:
         self.backfills: dict[str, dict[str, Any]] = {}
         self.test_runs: list[dict[str, Any]] = []
         self.test_findings: list[dict[str, Any]] = []
+        self.blend_stages: list[dict[str, Any]] = []
         if work_dir:
             work_dir.mkdir(parents=True, exist_ok=True)
             self._load()
@@ -394,6 +405,77 @@ class MemoryStore:
         self._flush()
         return n
 
+    def save_blend_run(self, row: dict[str, Any]) -> dict[str, Any]:
+        """Upsert the Blend pipeline run on dedupe_key. Separate from Lane A rows."""
+        if not hasattr(self, "test_runs"):
+            self.test_runs = []
+        key = str(row.get("dedupe_key") or "")
+        if not key:
+            raise ValueError("dedupe_key required")
+        now = _now()
+        stored = dict(row)
+        stored["updated_at"] = now
+        for i, prev in enumerate(self.test_runs):
+            if prev.get("dedupe_key") == key:
+                stored["created_at"] = prev.get("created_at") or now
+                stored["id"] = prev.get("id") or str(uuid.uuid4())
+                stored["started_at"] = prev.get("started_at") or stored.get("started_at") or now
+                self.test_runs[i] = stored
+                self._flush()
+                return stored
+        stored["created_at"] = stored.get("created_at") or now
+        stored["id"] = str(uuid.uuid4())
+        stored.setdefault("started_at", now)
+        self.test_runs.append(stored)
+        self._flush()
+        return stored
+
+    def save_blend_stage(self, row: dict[str, Any]) -> dict[str, Any]:
+        """Upsert one pipeline stage. Earlier stages stay if a later write fails."""
+        if not hasattr(self, "blend_stages"):
+            self.blend_stages = []
+        key = str(row.get("dedupe_key") or "")
+        stage = str(row.get("stage") or "")
+        if not key or not stage:
+            raise ValueError("blend stage requires dedupe_key and stage")
+        stored = dict(row)
+        stored["updated_at"] = _now()
+        for i, prev in enumerate(self.blend_stages):
+            if prev.get("dedupe_key") == key and prev.get("stage") == stage:
+                stored["id"] = prev.get("id") or str(uuid.uuid4())
+                stored["created_at"] = prev.get("created_at") or stored.get("created_at") or _now()
+                self.blend_stages[i] = stored
+                self._flush()
+                return stored
+        stored["id"] = str(uuid.uuid4())
+        stored["created_at"] = stored.get("created_at") or _now()
+        self.blend_stages.append(stored)
+        self._flush()
+        return stored
+
+    def mark_blend_run_error(self, dedupe_key: str, message: str) -> None:
+        if not hasattr(self, "test_runs"):
+            self.test_runs = []
+        found = False
+        for row in self.test_runs:
+            if row.get("dedupe_key") == dedupe_key:
+                row["status"] = "error"
+                row["error"] = message[:500]
+                row["updated_at"] = _now()
+                found = True
+                break
+        if not found:
+            self.test_runs.append({
+                "id": str(uuid.uuid4()),
+                "dedupe_key": dedupe_key,
+                "kind": "blend",
+                "status": "error",
+                "error": message[:500],
+                "created_at": _now(),
+                "updated_at": _now(),
+            })
+        self._flush()
+
     def _path(self) -> Optional[Path]:
         if not self.work_dir:
             return None
@@ -433,6 +515,7 @@ class MemoryStore:
         self.backfills = {r["id"]: r for r in data.get("backfills", []) if r.get("id")}
         self.test_runs = list(data.get("test_runs", []))
         self.test_findings = list(data.get("test_findings", []))
+        self.blend_stages = list(data.get("blend_stages", []))
 
     def _flush(self) -> None:
         p = self._path()
@@ -446,6 +529,7 @@ class MemoryStore:
             "backfills": list(self.backfills.values()),
             "test_runs": list(getattr(self, "test_runs", []) or []),
             "test_findings": list(getattr(self, "test_findings", []) or []),
+            "blend_stages": list(getattr(self, "blend_stages", []) or []),
         }, indent=2), encoding="utf-8")
 
 
@@ -817,6 +901,85 @@ class SupabaseStore:
                 else:
                     raise
         return n
+
+    def save_blend_run(self, row: dict[str, Any]) -> dict[str, Any]:
+        """Upsert a Blend run onto public.test_scan_runs. Raises on HTTP failure."""
+        key = str(row.get("dedupe_key") or "")
+        if not key:
+            raise ValueError("dedupe_key required")
+        addr = _addr_or_none(str(row.get("address") or ""))
+        body: dict[str, Any] = {
+            "dedupe_key": key,
+            "kind": "blend",
+            "chain": row.get("chain") or "ethereum",
+            "address": addr,
+            "contract_name": row.get("contract_name"),
+            "tvl_usd": row.get("tvl_usd") if row.get("tvl_usd") is not None else row.get("funds_usd"),
+            "money_at_risk_usd": row.get("funds_usd"),
+            "funds_usd": row.get("funds_usd"),
+            "discovery_source": row.get("discovery_source") or "blend",
+            "list_id": row.get("list_id"),
+            "heat": int(row.get("heat") or row.get("blend_heat") or 0),
+            "status": row.get("status") if row.get("status") in _RUN_STATUS else "running",
+            "dropped": bool(row.get("dropped")),
+            "drop_reason": row.get("drop_reason"),
+            "known_safe": bool(row.get("known_safe")),
+            "error": row.get("error"),
+            "started_at": row.get("started_at") or _now(),
+            "finished_at": row.get("finished_at"),
+            "live_ingest": True,
+            "persist_remote": True,
+            "raw": row.get("raw") if isinstance(row.get("raw"), dict) else {},
+            "blend_bucket": row.get("blend_bucket"),
+            "blend_heat": row.get("blend_heat"),
+            "proven_caller_profit": row.get("proven_caller_profit"),
+            "evidence_only": row.get("evidence_only"),
+            "drain_probability": row.get("drain_probability"),
+            "agreement_score": row.get("agreement_score"),
+            "engines_agreeing": row.get("engines_agreeing") if row.get("engines_agreeing") is not None else [],
+            "bug_classes": row.get("bug_classes") if row.get("bug_classes") is not None else [],
+            "blend_receipt": row.get("blend_receipt") if isinstance(row.get("blend_receipt"), dict) else {},
+        }
+        saved = self._upsert_test_run(body)
+        return saved
+
+    def save_blend_stage(self, row: dict[str, Any]) -> dict[str, Any]:
+        """Append-or-update one stage in public.blend_pipeline_stages. Raises on failure."""
+        key = str(row.get("dedupe_key") or "")
+        stage = str(row.get("stage") or "")
+        if not key or not stage:
+            raise ValueError("blend stage requires dedupe_key and stage")
+        body = {
+            "run_id": row.get("run_id") or None,
+            "dedupe_key": key,
+            "address": _addr_or_none(str(row.get("address") or "")),
+            "stage": stage,
+            "status": row.get("status") or "ok",
+            "heat_contribution": int(row.get("heat_contribution") or 0),
+            "bug_classes": row.get("bug_classes") if isinstance(row.get("bug_classes"), list) else [],
+            "payload": row.get("payload") if isinstance(row.get("payload"), dict) else {},
+            "error": row.get("error"),
+            "started_at": row.get("started_at") or _now(),
+            "finished_at": row.get("finished_at") or _now(),
+        }
+        rows = self._req(
+            "POST",
+            "blend_pipeline_stages",
+            body,
+            query={"on_conflict": "dedupe_key,stage"},
+            prefer="resolution=merge-duplicates,return=representation",
+        )
+        return rows[0] if rows else body
+
+    def mark_blend_run_error(self, dedupe_key: str, message: str) -> None:
+        """Best-effort error mark. The caller still raises PersistError."""
+        self._req(
+            "PATCH",
+            "test_scan_runs",
+            {"status": "error", "error": (message or "")[:500], "finished_at": _now()},
+            query={"dedupe_key": "eq.%s" % dedupe_key},
+            prefer="return=minimal",
+        )
 
     def _upsert_test_run(self, body: dict[str, Any]) -> dict[str, Any]:
         rows = self._req(
