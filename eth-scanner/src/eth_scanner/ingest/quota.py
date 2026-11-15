@@ -2,7 +2,7 @@
 
 Limits come from the environment, not from source constants:
 
-- ``ETH_SCANNER_ETHERSCAN_PER_SECOND`` (default 5) — free-tier calls per second per key
+- ``ETH_SCANNER_ETHERSCAN_PER_SECOND`` (default 3) — free-tier calls per second per key
 - ``ETH_SCANNER_ETHERSCAN_PER_DAY`` (default 100000) — free-tier calls per UTC day per key
 - ``ETH_SCANNER_ETHERSCAN_PACE`` (default 0.95) — fraction of the per-second cap to actually use
 
@@ -23,7 +23,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 # Defaults match the current Etherscan free tier. Env overrides win.
-DEFAULT_PER_SECOND = 5.0
+DEFAULT_PER_SECOND = 3.0
 DEFAULT_PER_DAY = 100_000
 DEFAULT_PACE = 0.95
 QUOTA_ID = "etherscan-quota"

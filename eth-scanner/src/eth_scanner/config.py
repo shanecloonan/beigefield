@@ -75,7 +75,7 @@ class Settings:
     range_max_usd: float | None = None
     etherscan_min_interval_s: float = DEFAULT_ETHERSCAN_INTERVAL_S
     # Per key. Several keys sum these budgets. See eth_scanner.ingest.quota.
-    etherscan_per_second: float = 5.0
+    etherscan_per_second: float = 3.0
     etherscan_per_day: int = 100_000
     etherscan_pace: float = 0.95
     worker_id: str = "eth-scanner"

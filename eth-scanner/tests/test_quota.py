@@ -57,11 +57,14 @@ class PaceAndCap(unittest.TestCase):
                 per_second, per_day, pace = read_limits()
                 spacing = interval_for(per_second, pace)
                 settings = load_settings()
-        self.assertEqual(per_second, 5.0)
+        self.assertEqual(per_second, 3.0)
         self.assertEqual(per_day, 100_000)
         self.assertEqual(pace, 0.95)
-        self.assertGreater(spacing, 1.0 / 5.0)
-        self.assertLess(1.0 / spacing, 5.0)
+        # 3 * 0.95 = 2.85 calls/sec per key, just under the free-tier cap.
+        self.assertAlmostEqual(1.0 / spacing, 2.85, places=2)
+        self.assertLess(1.0 / spacing, 3.0)
+        self.assertEqual(settings.etherscan_per_second, 3.0)
+        self.assertEqual(settings.etherscan_per_day, 100_000)
         self.assertAlmostEqual(settings.etherscan_min_interval_s, spacing)
 
     def test_explicit_interval_cannot_outrun_the_cap(self):
@@ -71,9 +74,9 @@ class PaceAndCap(unittest.TestCase):
         with mock.patch.dict(os.environ, {"ETH_SCANNER_ETHERSCAN_INTERVAL": "0.5"}, clear=False):
             self.assertAlmostEqual(interval_for(5.0, 0.95), 0.5)
 
-    def test_one_key_sleeps_just_under_five_per_second(self):
+    def test_one_key_sleeps_just_under_three_per_second(self):
         clock = _Clock()
-        spacing = interval_for(5.0, 0.95)
+        spacing = 1.0 / (3.0 * 0.95)
         rot = KeyRotator(
             keys=["k1"],
             min_interval_s=spacing,
@@ -88,8 +91,8 @@ class PaceAndCap(unittest.TestCase):
         self.assertTrue(all(gap + 1e-9 >= spacing for gap in gaps))
         elapsed = stamps[-1] - stamps[0]
         rate = (len(stamps) - 1) / elapsed
-        self.assertLess(rate, 5.0)
-        self.assertGreater(rate, 4.0)
+        self.assertAlmostEqual(rate, 2.85, places=2)
+        self.assertLess(rate, 3.0)
 
     def test_keys_share_the_load_and_sum_daily_budgets(self):
         ledger = QuotaLedger(per_day=2, chunk=2)
