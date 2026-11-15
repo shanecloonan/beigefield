@@ -259,9 +259,31 @@ def run_master_list(
 
 
 def _default_scan(address: str, settings: Settings) -> FunnelResult:
-    """Existing Lane A worker: funds floor, Etherscan source, unchanged funnel."""
+    """Lane A, then the full Blend gauntlet. Heat on the row stays Lane A's.
+
+    The gauntlet runs every engine and every adaptation. Its own receipt heat
+    moves only through the caller-profit gate and is stored beside the row,
+    not added on top of Lane A.
+    """
     local = open_store(settings)
-    return lane_a.run_one(address, settings=settings, store=local)
+    result = lane_a.run_one(address, settings=settings, store=local)
+    if getattr(result, "dropped", False):
+        return result
+    summary = _run_gauntlet(address, result, settings)
+    try:
+        result.blend_summary = summary  # type: ignore[attr-defined]
+    except Exception:  # noqa: BLE001
+        pass
+    note = str((summary or {}).get("note") or "")
+    if note:
+        notes = list(result.notes or [])
+        if note not in notes:
+            notes.append(note)
+        try:
+            result.notes = notes
+        except Exception:  # noqa: BLE001
+            pass
+    return result
 
 
 def _scan_batch(
@@ -487,6 +509,7 @@ def _persist_test_run(
             "drop_reason": result.drop_reason,
             "funds_usd": funds,
             "error": error,
+            "blend": getattr(result, "blend_summary", None),
         },
     }
     try:
@@ -753,6 +776,7 @@ class ScanCycleProgress:
     random_enabled: bool = False
     random_scanned: int = 0
     random_skipped: int = 0
+    current_address: str = ""
     message: str = ""
     duration_s: float = 0.0
     quota: dict[str, Any] = field(default_factory=dict)
@@ -874,20 +898,20 @@ def run_scan_cycle(
                 break
             if outcome == "none":
                 progress.status = "running"
-                progress.message = "lists are scanned; this draw found no new verified contract"
+                progress.message = "lists are scanned; this draw found no new verified contract. The next scheduled run tries again on its own"
                 break
         else:
             if progress.phase == "random":
                 progress.status = "running"
                 progress.message = (
-                    "lists are scanned; random phase recorded %d this run"
+                    "lists are scanned; random phase recorded %d this run. The next scheduled run continues on its own"
                     % progress.random_scanned
                 )
             elif not progress.message:
                 progress.status = "running"
                 progress.message = "deadline reached"
         if progress.status == "running" and progress.phase == "random" and not progress.message:
-            progress.message = "lists are scanned; random phase recorded %d this run" % progress.random_scanned
+            progress.message = "lists are scanned; random phase recorded %d this run. The next scheduled run continues on its own" % progress.random_scanned
     except DailyBudgetExhausted as exc:
         progress.status = "budget"
         progress.message = str(exc)
@@ -929,6 +953,8 @@ def _touch_cycle(store: ScanStore, owner: str, progress: ScanCycleProgress) -> N
     stats = body["stats"]
     stats["phase"] = progress.phase
     stats["random_scanned"] = progress.random_scanned
+    stats["current_address"] = progress.current_address
+    stats["automatic"] = True
     try:
         _write_cursor(store, body)
     except Exception:  # noqa: BLE001
@@ -957,6 +983,8 @@ def _release_cycle(store: ScanStore, owner: str, progress: ScanCycleProgress) ->
     stats = body["stats"]
     stats["phase"] = progress.phase
     stats["random_scanned"] = progress.random_scanned
+    stats["current_address"] = progress.current_address
+    stats["automatic"] = True
     stats["lists"] = [
         {"list_id": row.get("list_id"), "status": row.get("status"), "processed": row.get("processed")}
         for row in progress.lists
@@ -1066,8 +1094,11 @@ def _default_pick(settings: Settings, skip: set[str]) -> Optional[str]:
     return sample_verified_contract(client, skip=skip)
 
 
-def _blend_note(address: str, result: FunnelResult, settings: Settings) -> str:
-    """Run the blend engines. Their receipt heat is not copied onto the scan."""
+_ADAPTATIONS = ("syzkaller", "restler", "daikon", "lithium", "jepsen")
+
+
+def _run_gauntlet(address: str, result: FunnelResult, settings: Settings) -> dict[str, Any]:
+    """Engines plus every adaptation. Does not change result.heat."""
     from eth_scanner.deep.blend.orchestrator import run_blend
 
     source = ""
@@ -1080,22 +1111,61 @@ def _blend_note(address: str, result: FunnelResult, settings: Settings) -> str:
             except OSError:
                 continue
         source = "\n\n".join(parts)
-    report = run_blend(
-        address=address,
-        funds_usd=result.funds_usd,
-        contract_name=result.contract_name or "",
-        source=source,
-        contracts=[result.contract_name] if result.contract_name else [],
-        fork_url=settings.eth_rpc_url or "",
-        list_id=None,
-    )
-    engines = report.get("engines") if isinstance(report, dict) else None
-    bits: list[str] = []
-    if isinstance(engines, list):
-        for row in engines:
-            if isinstance(row, dict):
-                bits.append("%s=%s" % (row.get("engine") or row.get("id") or "?", row.get("status") or "skipped"))
-    return "blend gauntlet: %s" % (", ".join(bits) if bits else "no engines")
+    try:
+        report = run_blend(
+            address=address,
+            funds_usd=result.funds_usd,
+            contract_name=result.contract_name or "",
+            source=source,
+            contracts=[result.contract_name] if result.contract_name else [],
+            fork_url=settings.eth_rpc_url or "",
+            list_id=None,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "ok": False,
+            "note": "blend gauntlet skipped: %s" % str(exc)[:160],
+            "engines": [],
+            "adaptations": {name: {"heat_contribution": 0} for name in _ADAPTATIONS},
+            "heat": 0,
+            "caller_profit_gate": False,
+        }
+    if not isinstance(report, dict):
+        report = {}
+    engines = []
+    for row in report.get("engines") or []:
+        if isinstance(row, dict):
+            engines.append({
+                "engine": row.get("engine") or row.get("id"),
+                "status": row.get("status") or "skipped",
+            })
+    adaptations = report.get("adaptations") if isinstance(report.get("adaptations"), dict) else {}
+    adapt_out = {}
+    for name in _ADAPTATIONS:
+        block = adaptations.get(name) if isinstance(adaptations.get(name), dict) else {}
+        adapt_out[name] = {"heat_contribution": int(block.get("heat_contribution") or 0)}
+    gate = bool((report.get("heat_breakdown") or {}).get("caller_profit_gate")) if isinstance(report.get("heat_breakdown"), dict) else False
+    bits = ["%s=%s" % (row["engine"], row["status"]) for row in engines]
+    adapt_bits = ",".join(_ADAPTATIONS)
+    return {
+        "ok": True,
+        "bucket": report.get("bucket"),
+        "heat": int(report.get("heat") or 0),
+        "caller_profit_gate": gate,
+        "engines": engines,
+        "adaptations": adapt_out,
+        "note": "blend gauntlet: %s; adaptations: %s" % (", ".join(bits) if bits else "no engines", adapt_bits),
+    }
+
+
+def _blend_note(address: str, result: FunnelResult, settings: Settings) -> str:
+    """Compatibility wrapper. The gauntlet heat is not copied onto the scan row."""
+    summary = _run_gauntlet(address, result, settings)
+    try:
+        result.blend_summary = summary  # type: ignore[attr-defined]
+    except Exception:  # noqa: BLE001
+        pass
+    return str(summary.get("note") or "")
 
 
 def _persist_random(
@@ -1168,6 +1238,7 @@ def _persist_random(
             "drop_reason": result.drop_reason,
             "funds_usd": result.funds_usd,
             "blend_note": note,
+            "blend": getattr(result, "blend_summary", None),
         },
     }
     try:
@@ -1197,6 +1268,8 @@ def _scan_one_random(
     if not addr:
         return "none"
     addr = str(addr).strip().lower()
+    progress.current_address = addr
+    _touch_cycle(store, _lease_owner(), progress)
     low, high = random_funds_bounds(settings)
     prev_min, prev_max = settings.range_min_usd, settings.range_max_usd
     settings.range_min_usd = low
@@ -1213,8 +1286,9 @@ def _scan_one_random(
         settings.range_max_usd = prev_max
     if result is None:
         return "stop"
-    note = ""
-    if not result.dropped:
+    note = str(getattr(result, "blend_summary", {}).get("note") or "") if isinstance(getattr(result, "blend_summary", None), dict) else ""
+    # A custom scan_one does not run the gauntlet. The default path already did.
+    if scan_one is not None and not result.dropped:
         try:
             note = _blend_note(addr, result, settings)
         except Exception as exc:  # noqa: BLE001 — gauntlet skip must not sink the scan
@@ -1232,5 +1306,5 @@ def _scan_one_random(
     _persist_random(store, addr, result, note=note)
     _remember_random(store, addr)
     progress.random_scanned += 1
-    progress.message = "lists are scanned; random phase recorded %d this run" % progress.random_scanned
+    progress.message = "lists are scanned; random phase recorded %d this run. The next scheduled run continues on its own" % progress.random_scanned
     return "ok"
