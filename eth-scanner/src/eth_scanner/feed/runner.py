@@ -1,11 +1,13 @@
-"""Iterate a named master list with a resumable Supabase cursor.
+"""Iterate named master lists with a resumable Supabase cursor.
 
 Each address goes through the existing Lane A path: verified source / bytecode
 via Etherscan, a live funds re-check against that list's configured min/max,
 then the unchanged funnel. Heat rules are not touched here.
 
-List 1 is the funded, less-audited curated feed. List 2 is the sketchy
-junk-drawer and uses its own bounds. The range is never a hardcoded floor.
+``run_scan_cycle`` walks every list in ``lists.json`` order (List 1, then
+List 2). A finished pass for the current fingerprint is not repeated. When
+nothing on any list is unscanned, and random scanning is on, the same budget
+picks verified contracts and runs them through Lane A plus the blend gauntlet.
 
 Read-only chain I/O. Never sends a transaction.
 """
@@ -28,15 +30,21 @@ from eth_scanner.feed.lists import (
     cursor_id_for,
     dedupe_key_for,
     get_list_config,
+    list_configs,
     load_named_list,
+    random_phase_enabled,
+    random_scan_config,
 )
+from eth_scanner.ingest.quota import DailyBudgetExhausted, bind_quota, release_quota
 from eth_scanner.feed.master_list import MasterCandidate, list_fingerprint, load_master_candidates
 from eth_scanner.lane_a import worker as lane_a
 from eth_scanner.store.supabase import ScanStore, normalize_address, open_store
 from eth_scanner.types import FunnelResult, Target, to_plain
 
 CURSOR_ID = "master-list"
+CYCLE_CURSOR_ID = "scan-cycle"
 DISCOVERY_SOURCE = "master_list"
+RANDOM_SOURCE = "random_scan"
 # Keep the lease alive across a slow Lane A batch; cleared when the job exits.
 LEASE_BUFFER_S = 900
 
@@ -160,14 +168,21 @@ def run_master_list(
     idx = cursor
     held_lease = True
 
+    budget_hit: Optional[DailyBudgetExhausted] = None
     try:
-        while idx < n and remaining_cap > 0:
+        bind_quota(store, settings)
+        while idx < n and remaining_cap > 0 and budget_hit is None:
             if idx > cursor and time.monotonic() >= deadline:
                 break
             batch_n = min(workers, n - idx, remaining_cap)
             batch = candidates[idx:idx + batch_n]
             outcomes = _scan_batch(batch, scan=scan, workers=workers)
+            attempted: set[str] = set()
             for cand, result, err in outcomes:
+                if isinstance(err, DailyBudgetExhausted):
+                    budget_hit = err
+                    continue
+                attempted.add(cand.address)
                 _record_outcome(
                     store,
                     cand,
@@ -177,8 +192,17 @@ def run_master_list(
                     min_funds=min_funds,
                     max_funds=max_funds,
                 )
-            idx += len(batch)
-            remaining_cap -= len(batch)
+            # Only walk past a contiguous prefix. A later success must not skip
+            # an address the daily cap stopped us from scanning.
+            advance = 0
+            for cand in batch:
+                if cand.address not in attempted:
+                    break
+                advance += 1
+            if advance <= 0:
+                break
+            idx += advance
+            remaining_cap -= advance
             finished_pass = idx >= n
             if finished_pass:
                 passes += 1
@@ -192,14 +216,17 @@ def run_master_list(
                 list_sha=list_sha,
                 passes=passes,
                 progress=progress,
-                last=batch[-1] if batch else None,
+                last=batch[advance - 1] if advance else None,
                 cursor_id=cursor_id,
             )
-            if finished_pass or time.monotonic() >= deadline:
+            if finished_pass or time.monotonic() >= deadline or budget_hit is not None:
                 break
-        if progress.cursor_next == 0 and progress.processed and idx >= n:
+        if budget_hit is not None:
+            progress.status = "budget"
+            progress.message = str(budget_hit)
+        elif progress.cursor_next == 0 and progress.processed and idx >= n:
             progress.status = "done"
-            progress.message = "full master-list pass complete — next run starts at rank 1"
+            progress.message = "full master-list pass complete"
         elif progress.processed == 0 and progress.errors:
             progress.status = "error"
             progress.message = progress.last_error or "master-list batch failed"
@@ -208,15 +235,19 @@ def run_master_list(
             progress.message = "checkpoint saved — resume at index %d/%d" % (
                 progress.cursor_next, n,
             )
-        if progress.processed and progress.persisted == 0 and progress.persist_failed:
+        if progress.status != "budget" and progress.processed and progress.persisted == 0 and progress.persist_failed:
             progress.status = "error"
             progress.last_error = progress.last_error or "test_scan_runs persist failed"
             progress.message = progress.last_error
+    except DailyBudgetExhausted as exc:
+        progress.status = "budget"
+        progress.message = str(exc)
     except Exception as exc:  # noqa: BLE001
         progress.status = "error"
         progress.last_error = str(exc)[:240]
         progress.message = progress.last_error
     finally:
+        release_quota()
         if held_lease:
             _release_lease(
                 store, owner, progress,
@@ -238,13 +269,15 @@ def _scan_batch(
     *,
     scan: Callable[[str], FunnelResult],
     workers: int,
-) -> list[tuple[MasterCandidate, Optional[FunnelResult], Optional[str]]]:
+) -> list[tuple[MasterCandidate, Optional[FunnelResult], Any]]:
     if not batch:
         return []
 
-    def _one(cand: MasterCandidate) -> tuple[MasterCandidate, Optional[FunnelResult], Optional[str]]:
+    def _one(cand: MasterCandidate) -> tuple[MasterCandidate, Optional[FunnelResult], Any]:
         try:
             return cand, scan(cand.address), None
+        except DailyBudgetExhausted as exc:
+            return cand, None, exc
         except Exception as exc:  # noqa: BLE001
             return cand, None, str(exc)[:240]
 
@@ -683,7 +716,7 @@ def _release_lease(
         lease=False,
         cursor_id=cursor_id,
     )
-    body["status"] = progress.status if progress.status in {"done", "error", "running", "noop"} else "running"
+    body["status"] = progress.status if progress.status in {"done", "error", "running", "noop", "budget"} else "running"
     body["fully_scanned"] = progress.processed
     body["heat_positive"] = progress.heat_gt0
     body["funds_below_floor"] = progress.below_floor
@@ -693,3 +726,511 @@ def _release_lease(
         _write_cursor(store, body)
     except Exception:  # noqa: BLE001
         pass
+
+
+def list_pass_complete(row: Optional[dict[str, Any]], n: int, list_sha: str) -> bool:
+    """True when this fingerprint already has a finished pass and nothing is mid-list."""
+    if not row or n <= 0:
+        return False
+    stats = _stats(row)
+    if str(stats.get("list_sha") or "") != list_sha:
+        return False
+    try:
+        passes = int(stats.get("passes_completed") or 0)
+        cur = int(row.get("cursor_block") or 0)
+    except (TypeError, ValueError):
+        return False
+    return passes >= 1 and (cur <= 0 or cur >= n)
+
+
+@dataclass
+class ScanCycleProgress:
+    """One scheduler run: every configured list, then randoms when the lists are done."""
+
+    status: str = "running"  # running | done | noop | error | budget
+    phase: str = ""
+    lists: list[dict[str, Any]] = field(default_factory=list)
+    random_enabled: bool = False
+    random_scanned: int = 0
+    random_skipped: int = 0
+    message: str = ""
+    duration_s: float = 0.0
+    quota: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def run_scan_cycle(
+    *,
+    settings: Optional[Settings] = None,
+    store: Optional[ScanStore] = None,
+    workers: int = 8,
+    deadline_minutes: float = 40.0,
+    deadline_monotonic: Optional[float] = None,
+    reset: bool = False,
+    scan_one: Optional[Callable[[str], FunnelResult]] = None,
+    pick_random: Optional[Callable[[set[str]], Optional[str]]] = None,
+    random_enabled: Optional[bool] = None,
+) -> ScanCycleProgress:
+    """Scan List 1, then List 2, then whatever else ``lists.json`` names.
+
+    A list with a finished pass for its current fingerprint is skipped. A new
+    or reordered address makes the fingerprint change, and that list is scanned
+    again before any random contract. Random scanning follows
+    ``random_scan.enabled`` (default on) unless ``ETH_SCANNER_RANDOM_SCAN`` is set.
+    There is no per-run contract cap. The shared Etherscan ledger still applies.
+    """
+    settings = settings or load_settings()
+    store = store or open_store(settings)
+    started = time.monotonic()
+    deadline = (
+        float(deadline_monotonic)
+        if deadline_monotonic is not None
+        else started + max(1.0, float(deadline_minutes) * 60.0)
+    )
+    progress = ScanCycleProgress()
+    owner = _lease_owner()
+    if random_enabled is None:
+        random_enabled = random_phase_enabled()
+    progress.random_enabled = bool(random_enabled)
+
+    if _cycle_blocked(store, owner):
+        progress.status = "noop"
+        progress.message = "another scan cycle holds the cursor"
+        progress.duration_s = round(time.monotonic() - started, 1)
+        return progress
+    if not _claim_cycle(store, owner):
+        progress.status = "noop"
+        progress.message = "another scan cycle claimed the cursor"
+        progress.duration_s = round(time.monotonic() - started, 1)
+        return progress
+
+    force_reset = {cfg.id for cfg in list_configs()} if reset else set()
+    try:
+        bind_quota(store, settings)
+        while time.monotonic() < deadline:
+            _touch_cycle(store, owner, progress)
+            pending = _next_pending_list(store, force_reset=force_reset)
+            if pending is not None:
+                list_id, _sha, _n = pending
+                progress.phase = list_id
+                part = run_master_list(
+                    settings=settings,
+                    store=store,
+                    workers=workers,
+                    deadline_monotonic=deadline,
+                    list_id=list_id,
+                    reset=list_id in force_reset,
+                    scan_one=scan_one,
+                )
+                force_reset.discard(list_id)
+                progress.lists.append({
+                    "list_id": part.list_id,
+                    "list_name": part.list_name,
+                    "status": part.status,
+                    "list_size": part.list_size,
+                    "processed": part.processed,
+                    "persisted": part.persisted,
+                    "cursor_start": part.cursor_start,
+                    "cursor_next": part.cursor_next,
+                    "passes_completed": part.passes_completed,
+                    "message": part.message,
+                })
+                if part.list_size == 0:
+                    continue
+                if part.status == "budget":
+                    progress.status = "budget"
+                    progress.message = part.message
+                    break
+                if part.status in {"error", "noop"}:
+                    progress.status = part.status
+                    progress.message = part.message or part.last_error
+                    break
+                if part.status != "done":
+                    progress.status = "running"
+                    progress.message = part.message
+                    break
+                continue
+            if not progress.random_enabled:
+                progress.status = "done"
+                progress.phase = "lists"
+                progress.message = "every configured list is scanned; random phase is off"
+                break
+            progress.phase = "random"
+            outcome = _scan_one_random(
+                settings,
+                store,
+                progress,
+                pick_random=pick_random,
+                scan_one=scan_one,
+            )
+            if outcome == "budget":
+                progress.status = "budget"
+                break
+            if outcome == "stop":
+                progress.status = "running"
+                progress.message = progress.message or "random phase paused"
+                break
+            if outcome == "none":
+                progress.status = "running"
+                progress.message = "lists are scanned; this draw found no new verified contract"
+                break
+        else:
+            if progress.phase == "random":
+                progress.status = "running"
+                progress.message = (
+                    "lists are scanned; random phase recorded %d this run"
+                    % progress.random_scanned
+                )
+            elif not progress.message:
+                progress.status = "running"
+                progress.message = "deadline reached"
+        if progress.status == "running" and progress.phase == "random" and not progress.message:
+            progress.message = "lists are scanned; random phase recorded %d this run" % progress.random_scanned
+    except DailyBudgetExhausted as exc:
+        progress.status = "budget"
+        progress.message = str(exc)
+    finally:
+        from eth_scanner.ingest.quota import active_ledger
+        try:
+            progress.quota = active_ledger().snapshot(len(getattr(settings, "etherscan_api_keys", []) or []))
+        except Exception:  # noqa: BLE001
+            progress.quota = {}
+        release_quota()
+        _release_cycle(store, owner, progress)
+        progress.duration_s = round(time.monotonic() - started, 1)
+    return progress
+
+
+def _cycle_blocked(store: ScanStore, owner: str) -> bool:
+    return _lease_blocks(_read_cursor(store, CYCLE_CURSOR_ID), owner)
+
+
+def _claim_cycle(store: ScanStore, owner: str) -> bool:
+    return _claim_lease(
+        store, _read_cursor(store, CYCLE_CURSOR_ID), owner,
+        0, 0, "", 0, CYCLE_CURSOR_ID,
+    )
+
+
+def _touch_cycle(store: ScanStore, owner: str, progress: ScanCycleProgress) -> None:
+    body = _base_row(
+        cursor=progress.random_scanned,
+        list_size=0,
+        list_sha="",
+        passes=0,
+        owner=owner,
+        progress=None,
+        last=None,
+        lease=True,
+        cursor_id=CYCLE_CURSOR_ID,
+    )
+    stats = body["stats"]
+    stats["phase"] = progress.phase
+    stats["random_scanned"] = progress.random_scanned
+    try:
+        _write_cursor(store, body)
+    except Exception:  # noqa: BLE001
+        return
+
+
+def _release_cycle(store: ScanStore, owner: str, progress: ScanCycleProgress) -> None:
+    latest = _read_cursor(store, CYCLE_CURSOR_ID)
+    holder = str(_stats(latest).get("lease_owner") or "")
+    if holder and holder != owner:
+        return
+    body = _base_row(
+        cursor=progress.random_scanned,
+        list_size=0,
+        list_sha="",
+        passes=0,
+        owner=owner,
+        progress=None,
+        last=None,
+        lease=False,
+        cursor_id=CYCLE_CURSOR_ID,
+    )
+    body["status"] = progress.status if progress.status in {"done", "error", "running", "noop", "budget"} else "running"
+    if progress.message:
+        body["last_error"] = progress.message[:240]
+    stats = body["stats"]
+    stats["phase"] = progress.phase
+    stats["random_scanned"] = progress.random_scanned
+    stats["lists"] = [
+        {"list_id": row.get("list_id"), "status": row.get("status"), "processed": row.get("processed")}
+        for row in progress.lists
+    ]
+    try:
+        _write_cursor(store, body)
+    except Exception:  # noqa: BLE001
+        return
+
+
+def _next_pending_list(
+    store: ScanStore,
+    *,
+    force_reset: set[str],
+) -> Optional[tuple[str, str, int]]:
+    """First configured list that still has unscanned rows, in file order."""
+    for cfg in list_configs():
+        try:
+            named = load_named_list(cfg.id)
+        except (OSError, ValueError, KeyError):
+            continue
+        n = len(named.candidates)
+        if n <= 0:
+            continue
+        sha = list_fingerprint(named.candidates)
+        if cfg.id in force_reset:
+            return cfg.id, sha, n
+        row = _read_cursor(store, cursor_id_for(cfg.id))
+        if not list_pass_complete(row, n, sha):
+            return cfg.id, sha, n
+    return None
+
+
+def random_funds_bounds(settings: Settings) -> tuple[float, Optional[float]]:
+    """Funds-range sanity for a random contract.
+
+    ``random_scan.min_funds_usd`` / ``max_funds_usd`` in lists.json win when set.
+    Otherwise the scanner floor applies and there is no ceiling.
+    """
+    try:
+        cfg = random_scan_config()
+    except (OSError, ValueError, json.JSONDecodeError):
+        cfg = {}
+    raw_min = cfg.get("min_funds_usd") if isinstance(cfg, dict) else None
+    raw_max = cfg.get("max_funds_usd") if isinstance(cfg, dict) else None
+    if raw_min is None:
+        low = float(getattr(settings, "min_funds_usd", 0.0) or 0.0)
+    else:
+        low = float(raw_min)
+    high = None if raw_max is None else float(raw_max)
+    return low, high
+
+
+def _list_addresses() -> set[str]:
+    seen: set[str] = set()
+    for cfg in list_configs():
+        try:
+            named = load_named_list(cfg.id)
+        except (OSError, ValueError, KeyError):
+            continue
+        for row in named.candidates:
+            seen.add(row.address.lower())
+    return seen
+
+
+def _random_seen(store: ScanStore) -> set[str]:
+    row = _read_cursor(store, "random-scan")
+    stats = _stats(row)
+    raw = stats.get("seen") or []
+    if not isinstance(raw, list):
+        return set()
+    return {str(addr).lower() for addr in raw if str(addr).startswith("0x")}
+
+
+def _remember_random(store: ScanStore, address: str) -> None:
+    """Remember this random address only. List members stay in their own cursors."""
+    row = _read_cursor(store, "random-scan")
+    stats = _stats(row)
+    ordered = [str(item).lower() for item in (stats.get("seen") or []) if str(item).startswith("0x")]
+    addr = address.lower()
+    if addr not in ordered:
+        ordered.append(addr)
+    ordered = ordered[-2000:]
+    body = {
+        "id": "random-scan",
+        "start_block": 0,
+        "end_block": 0,
+        "cursor_block": len(ordered),
+        "status": "running",
+        "source": RANDOM_SOURCE,
+        "stats": {"seen": ordered, "feed": RANDOM_SOURCE},
+    }
+    try:
+        _write_cursor(store, body)
+    except Exception:  # noqa: BLE001
+        return
+
+
+def _default_pick(settings: Settings, skip: set[str]) -> Optional[str]:
+    keys = list(getattr(settings, "etherscan_api_keys", []) or [])
+    if not keys:
+        return None
+    from eth_scanner.feed.random_feed import sample_verified_contract
+    from eth_scanner.ingest.etherscan import EtherscanClient
+
+    client = EtherscanClient(keys, min_interval_s=settings.etherscan_min_interval_s)
+    return sample_verified_contract(client, skip=skip)
+
+
+def _blend_note(address: str, result: FunnelResult, settings: Settings) -> str:
+    """Run the blend engines. Their receipt heat is not copied onto the scan."""
+    from eth_scanner.deep.blend.orchestrator import run_blend
+
+    source = ""
+    root = settings.work_dir / "sources" / address
+    if root.is_dir():
+        parts: list[str] = []
+        for path in sorted(root.rglob("*.sol"))[:40]:
+            try:
+                parts.append(path.read_text(encoding="utf-8", errors="replace"))
+            except OSError:
+                continue
+        source = "\n\n".join(parts)
+    report = run_blend(
+        address=address,
+        funds_usd=result.funds_usd,
+        contract_name=result.contract_name or "",
+        source=source,
+        contracts=[result.contract_name] if result.contract_name else [],
+        fork_url=settings.eth_rpc_url or "",
+        list_id=None,
+    )
+    engines = report.get("engines") if isinstance(report, dict) else None
+    bits: list[str] = []
+    if isinstance(engines, list):
+        for row in engines:
+            if isinstance(row, dict):
+                bits.append("%s=%s" % (row.get("engine") or row.get("id") or "?", row.get("status") or "skipped"))
+    return "blend gauntlet: %s" % (", ".join(bits) if bits else "no engines")
+
+
+def _persist_random(
+    store: ScanStore,
+    address: str,
+    result: FunnelResult,
+    *,
+    note: str,
+) -> None:
+    from eth_scanner.store.supabase import normalize_address as norm
+
+    addr = norm(address)
+    cand = MasterCandidate(
+        address=addr,
+        protocol=result.contract_name or "random",
+        slug="random",
+        category="random",
+        est_usd_held=float(result.funds_usd or 0.0),
+        candidate_reason="random-verified",
+        tier=99,
+        rank=10**9,
+        source=RANDOM_SOURCE,
+        contract_class=result.contract_class or "",
+    )
+    progress = MasterListProgress(list_id="", list_name="")
+    # Tag the row so /test and /blend do not count it as List 1 or List 2.
+    save = getattr(store, "save_test_scan_run", None)
+    if not callable(save):
+        return
+    notes = list(result.notes or [])
+    if note and note not in notes:
+        notes.append(note)
+    row: dict[str, Any] = {
+        "dedupe_key": "random:%s" % addr,
+        "kind": "lane-a",
+        "chain": "ethereum",
+        "address": addr,
+        "contract_name": result.contract_name,
+        "tvl_usd": result.funds_usd,
+        "money_at_risk_usd": result.funds_usd,
+        "funds_usd": result.funds_usd,
+        "funds_breakdown": list(result.funds_breakdown or []),
+        "funds_status": result.funds_status,
+        "funds_checked_at": result.funds_checked_at,
+        "invariant_results": list(result.invariant_results or []),
+        "heat_breakdown": dict(result.heat_breakdown or {}),
+        "known_safe": bool(result.known_safe),
+        "discovery_source": RANDOM_SOURCE,
+        "list_id": None,
+        "list_name": None,
+        "candidate_reason": "random-verified",
+        "tier": 99,
+        "bucket": result.bucket,
+        "heat": int(result.heat or 0),
+        "status": "dropped" if result.dropped else "done",
+        "dropped": bool(result.dropped),
+        "drop_reason": result.drop_reason,
+        "src_confidence": result.src_confidence,
+        "ir_confidence": result.ir_confidence,
+        "contract_class": result.contract_class or None,
+        "notes": notes,
+        "live_ingest": True,
+        "persist_remote": True,
+        "finished_at": _now(),
+        "raw": {
+            "feed": RANDOM_SOURCE,
+            "candidate": cand.to_dict(),
+            "heat": int(result.heat or 0),
+            "dropped": bool(result.dropped),
+            "drop_reason": result.drop_reason,
+            "funds_usd": result.funds_usd,
+            "blend_note": note,
+        },
+    }
+    try:
+        save(row)
+    except Exception:  # noqa: BLE001
+        return
+
+
+def _scan_one_random(
+    settings: Settings,
+    store: ScanStore,
+    progress: ScanCycleProgress,
+    *,
+    pick_random: Optional[Callable[[set[str]], Optional[str]]],
+    scan_one: Optional[Callable[[str], FunnelResult]],
+) -> str:
+    """Return ok | none | stop | budget."""
+    skip = _list_addresses() | _random_seen(store)
+    try:
+        if pick_random is not None:
+            addr = pick_random(skip)
+        else:
+            addr = _default_pick(settings, skip)
+    except DailyBudgetExhausted as exc:
+        progress.message = str(exc)
+        return "budget"
+    if not addr:
+        return "none"
+    addr = str(addr).strip().lower()
+    low, high = random_funds_bounds(settings)
+    prev_min, prev_max = settings.range_min_usd, settings.range_max_usd
+    settings.range_min_usd = low
+    settings.range_max_usd = high
+    scan = scan_one or (lambda a: _default_scan(a, settings))
+    try:
+        try:
+            result = scan(addr)
+        except DailyBudgetExhausted as exc:
+            progress.message = str(exc)
+            return "budget"
+    finally:
+        settings.range_min_usd = prev_min
+        settings.range_max_usd = prev_max
+    if result is None:
+        return "stop"
+    note = ""
+    if not result.dropped:
+        try:
+            note = _blend_note(addr, result, settings)
+        except Exception as exc:  # noqa: BLE001 — gauntlet skip must not sink the scan
+            note = "blend gauntlet skipped: %s" % str(exc)[:160]
+        if note:
+            notes = list(result.notes or [])
+            if note not in notes:
+                notes.append(note)
+            try:
+                result.notes = notes
+            except Exception:  # noqa: BLE001
+                pass
+    elif result.dropped:
+        progress.random_skipped += 1
+    _persist_random(store, addr, result, note=note)
+    _remember_random(store, addr)
+    progress.random_scanned += 1
+    progress.message = "lists are scanned; random phase recorded %d this run" % progress.random_scanned
+    return "ok"

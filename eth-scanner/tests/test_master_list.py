@@ -352,6 +352,7 @@ class MasterListRunner(unittest.TestCase):
              mock.patch("eth_scanner.cli.load_settings", return_value=self.settings):
             code = main([
                 "monitor",
+                "--list-id", "list-1",
                 "--list", str(self.path),
                 "--workers", "1",
                 "--deadline-minutes", "1",

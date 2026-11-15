@@ -126,6 +126,17 @@ def load_lists_document() -> dict[str, Any]:
     return payload
 
 
+def random_phase_enabled() -> bool:
+    """Loop toggle. File default is on. ``ETH_SCANNER_RANDOM_SCAN`` overrides it."""
+    env = os.environ.get("ETH_SCANNER_RANDOM_SCAN")
+    if env is not None and str(env).strip() != "":
+        return str(env).strip().lower() in {"1", "true", "yes", "on"}
+    try:
+        return bool(random_scan_config().get("enabled", True))
+    except (OSError, ValueError, json.JSONDecodeError):
+        return True
+
+
 def random_scan_config() -> dict[str, Any]:
     """Operational random-scan params. The desk reads these; they are not code constants."""
     doc = load_lists_document()
@@ -145,12 +156,24 @@ def random_scan_config() -> dict[str, Any]:
         session_cap = int(session)
     except (TypeError, ValueError):
         session_cap = 40
-    return {
-        "enabled": bool(raw.get("enabled", True)),
+    out: dict[str, Any] = {
+        "enabled": raw.get("enabled", True) is not False,
         "gap_ms": gap_ms,
         "history_cap": max(1, history_cap),
         "session_cap": max(1, session_cap),
     }
+    # Optional band for the random phase. Absent means "use the scanner floor".
+    if "min_funds_usd" in raw and raw.get("min_funds_usd") not in (None, ""):
+        try:
+            out["min_funds_usd"] = float(raw.get("min_funds_usd"))
+        except (TypeError, ValueError):
+            pass
+    if "max_funds_usd" in raw and raw.get("max_funds_usd") not in (None, ""):
+        try:
+            out["max_funds_usd"] = float(raw.get("max_funds_usd"))
+        except (TypeError, ValueError):
+            pass
+    return out
 
 
 def list_configs() -> list[ListConfig]:
