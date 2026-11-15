@@ -17,6 +17,12 @@ function json(body: unknown, status = 200) {
   });
 }
 
+type CycleRow = {
+  status?: string;
+  stats?: Record<string, unknown> | null;
+  last_error?: string | null;
+};
+
 type RunRow = {
   address?: string;
   bucket?: string;
@@ -32,13 +38,20 @@ type RunRow = {
 export async function GET() {
   const loaded = loadMasterLists();
   const sb = createServiceSupabaseClient();
-  let cycle: { status?: string; stats?: Record<string, unknown>; last_error?: string } | null = null;
+  let cycle: CycleRow | null = null;
   let runs: RunRow[] = [];
   if (sb) {
     try {
       const cursor = await sb.from("eth_scan_backfill").select("id,status,stats,last_error").eq("id", "scan-cycle").limit(1);
       const row = !cursor.error && Array.isArray(cursor.data) ? cursor.data[0] : null;
-      if (row) cycle = row as NonNullable<typeof cycle>;
+      if (row && typeof row === "object") {
+        const record = row as CycleRow;
+        cycle = {
+          status: record.status,
+          stats: record.stats && typeof record.stats === "object" ? record.stats : {},
+          last_error: record.last_error,
+        };
+      }
       const recent = await sb
         .from("test_scan_runs")
         .select("address,bucket,heat,discovery_source,list_id,dedupe_key,created_at,notes,heat_breakdown")
@@ -50,7 +63,7 @@ export async function GET() {
       runs = [];
     }
   }
-  const stats = (cycle?.stats && typeof cycle.stats === "object" ? cycle.stats : {}) as Record<string, unknown>;
+  const stats: Record<string, unknown> = cycle?.stats && typeof cycle.stats === "object" ? cycle.stats : {};
   const lists = loaded.lists.map((list) => {
     const seen = new Set<string>();
     const buckets = { drain: 0, maybe: 0, no: 0 };
