@@ -85,7 +85,13 @@ jobs:
           solc-select install 0.8.20 || true
           solc-select use 0.8.20 || true
           python -m pip install -e ./eth-scanner
-          python -m pip install "slither-analyzer==0.11.6" "mythril==0.24.8" "halmos==0.3.3" "semgrep==1.185.0"
+          # slither 0.11.6 requires eth-abi>=5; mythril 0.24.8 requires eth-abi<5.
+          # One environment cannot satisfy both. Mythril stays in its own venv,
+          # matching the backfill and monitor jobs.
+          python -m pip install "slither-analyzer==0.11.6" "halmos==0.3.3" "semgrep==1.185.0"
+          python -m venv /tmp/mythril-venv
+          /tmp/mythril-venv/bin/pip install -q --upgrade pip
+          /tmp/mythril-venv/bin/pip install -q "mythril==0.24.8"
           solc-select install 0.6.12 0.7.6 0.8.17 0.8.20 0.8.26 || true
           solc-select use 0.8.20 || true
           # Aderyn upstream withdrew official binaries (installer exits 1). Try the
@@ -99,6 +105,17 @@ jobs:
               || echo "aderyn unavailable (upstream binaries withdrawn) — engine will skip"
           fi
           mkdir -p "$HOME/.local/bin"
+          if [ -x /tmp/mythril-venv/bin/myth ]; then
+            MYTH_BIN=/tmp/mythril-venv/bin/myth
+          elif [ -x /tmp/mythril-venv/bin/mythril ]; then
+            MYTH_BIN=/tmp/mythril-venv/bin/mythril
+          else
+            echo "mythril 0.24.8 did not install a myth binary"
+            exit 1
+          fi
+          ln -sfn "$MYTH_BIN" "$HOME/.local/bin/myth"
+          export ETH_SCANNER_MYTHRIL_BIN="$MYTH_BIN"
+          echo "ETH_SCANNER_MYTHRIL_BIN=$MYTH_BIN" >> "$GITHUB_ENV"
           if ! command -v medusa >/dev/null 2>&1; then
             curl -fsSL -o /tmp/medusa.tgz \
               "https://github.com/crytic/medusa/releases/download/v1.5.1/medusa-linux-x64.tar.gz" \
