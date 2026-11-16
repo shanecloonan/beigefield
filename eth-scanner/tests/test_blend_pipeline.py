@@ -496,8 +496,9 @@ class EnsembleLayers(unittest.TestCase):
             self.assertEqual(discovery_min_usd(), 250.0)
             low, _high = random_funds_bounds(settings)
             self.assertEqual(low, 250.0)
-        # Lane-B promotion floor stays the separate $2,000 gate.
-        self.assertEqual(HeatWeights().min_funds_for_lane_b, 2000.0)
+        # Lane-B promotion floor tracks the live scanner floor ($100), and is
+        # a separate knob from ETH_SCANNER_DISCOVERY_MIN_USD.
+        self.assertEqual(HeatWeights().min_funds_for_lane_b, 100.0)
 
     def test_each_stage_is_persisted_and_a_failed_write_marks_the_run(self):
         from eth_scanner.deep.blend.journal import PersistError

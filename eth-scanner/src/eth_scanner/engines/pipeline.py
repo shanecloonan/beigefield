@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from eth_scanner.deep.findings import EngineFinding, is_generic_rule, sanitize_evidence
+from eth_scanner.types import DEFAULT_MIN_FUNDS_USD
 from eth_scanner.deep.runners import EngineRunResult, run_mythril, run_slither
 from eth_scanner.engines.admin_checks import (
     admin_as_confirmed,
@@ -115,7 +116,7 @@ def run_advanced_engines(
     mythril_timeout_s: int = 90,
     fuzz_timeout_s: int = 60,
     halmos_timeout_s: int = 90,
-    min_funds_usd: float = 2_000.0,
+    min_funds_usd: float = DEFAULT_MIN_FUNDS_USD,
     run_fuzz: bool = True,
     run_halmos: bool = True,
 ) -> AdvancedEngineReport:

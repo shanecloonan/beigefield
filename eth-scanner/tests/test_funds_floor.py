@@ -23,8 +23,12 @@ FIXTURE = Path(__file__).resolve().parent / "fixtures" / "gated_vault.sol"
 class FundsFloorFormatTests(unittest.TestCase):
     def test_reason_wording(self) -> None:
         self.assertEqual(
-            format_funds_floor_reason(0.0, 2000.0),
-            "below funds floor ($0 < $2,000)",
+            format_funds_floor_reason(0.0, 100.0),
+            "below funds floor ($0 < $100)",
+        )
+        self.assertEqual(
+            format_funds_floor_reason(12.5, 100.0),
+            "below funds floor ($12.50 < $100)",
         )
         self.assertEqual(
             format_funds_floor_reason(12.5, 2000.0),
@@ -32,7 +36,7 @@ class FundsFloorFormatTests(unittest.TestCase):
         )
 
     def test_default_floor(self) -> None:
-        self.assertEqual(DEFAULT_MIN_FUNDS_USD, 2000.0)
+        self.assertEqual(DEFAULT_MIN_FUNDS_USD, 100.0)
 
 
 class FundsFloorWorkerTests(unittest.TestCase):
@@ -68,7 +72,7 @@ class FundsFloorWorkerTests(unittest.TestCase):
         self.assertFalse(result.dropped)
 
     def test_below_floor_drops_without_source_fetch(self) -> None:
-        settings = Settings(dry_run=True, work_dir=Path("/tmp/eth-scanner-test-funds"), min_funds_usd=2000.0)
+        settings = Settings(dry_run=True, work_dir=Path("/tmp/eth-scanner-test-funds"), min_funds_usd=100.0)
         store = MemoryStore()
         snap = FundsSnapshot(
             status="ok",
@@ -94,7 +98,7 @@ class FundsFloorWorkerTests(unittest.TestCase):
         self.assertEqual(result.stage_trace[0].decision, "drop")
 
     def test_unknown_funds_continues(self) -> None:
-        settings = Settings(dry_run=True, work_dir=Path("/tmp/eth-scanner-test-funds"), min_funds_usd=2000.0)
+        settings = Settings(dry_run=True, work_dir=Path("/tmp/eth-scanner-test-funds"), min_funds_usd=100.0)
         store = MemoryStore()
         snap = FundsSnapshot(
             status="unknown",

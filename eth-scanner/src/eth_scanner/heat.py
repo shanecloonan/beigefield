@@ -42,7 +42,7 @@ class HeatWeights:
     max_heat: int = 12
     # lane-b still needs funds >= floor (from settings); this is the promote bar
     # when evidence fires (failed invariant / privileged / eoa admin)
-    min_funds_for_lane_b: float = 2_000.0
+    min_funds_for_lane_b: float = 100.0
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

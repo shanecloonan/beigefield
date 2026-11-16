@@ -55,7 +55,7 @@ def _result(heat: int = 0, bucket: str = "lane-a-cool", funds: float = 5000.0, d
     return FunnelResult(
         bucket=bucket,  # type: ignore[arg-type]
         dropped=dropped,
-        drop_reason="below funds floor ($10 < $2,000)" if dropped else None,
+        drop_reason="below funds floor ($10 < $100)" if dropped else None,
         heat=heat,
         src_confidence="high",
         ir_confidence="med",

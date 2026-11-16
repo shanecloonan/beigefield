@@ -61,7 +61,7 @@ Configured in `eth-scanner/src/eth_scanner/heat.py` (`ETH_SCANNER_HEAT_*`):
 | Bucket | When |
 |---|---|
 | `lane-a-cool` | Default rank-by-funds; demoted classes; no promote evidence |
-| `lane-b-queue` | Funds ≥ $2k **and** (failed invariant **or** privileged callable **or** EOA admin ≥ $100k) |
+| `lane-b-queue` | Funds ≥ $100 **and** (failed invariant **or** privileged callable **or** EOA admin ≥ $100k) |
 | `manual-review` | Funds ≥ floor with analysis failed, or Lane B ambiguity |
 | `human-*-candidate` | Lane B S7 stubs only — still need human stamp |
 
@@ -197,4 +197,4 @@ After each merge, report:
 6. **Phase E** — optional LLM explain
 7. **Phase F** — upgrade / TVL monitors
 
-Lane A evidence-heat (#37 / #38) and the $2k funds floor (#36) are **prerequisites** already on `main`.
+Lane A evidence-heat (#37 / #38) and the funds floor (#36, now $100) are **prerequisites** already on `main`.

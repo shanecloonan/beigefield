@@ -3,7 +3,7 @@
 Flow per chunk:
   1. Discover CREATE/CREATE2 via Alchemy trace_filter (factory creates included)
   2. Dedupe against existing eth_scan_targets
-  3. Cheap Multicall3 funds floor ($2k) in batches
+  3. Cheap Multicall3 funds floor ($100) in batches
   4. Full Lane A only for funds >= floor (known-safe / token-only drops + evidence heat)
   5. Advance cursor_block and persist stats
 

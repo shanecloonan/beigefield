@@ -48,9 +48,10 @@ PUBLIC_RPCS = (
     "https://eth.llamarpc.com",
 )
 
-DEFAULT_MIN_FUNDS_USD = 2_000.0
-# Random/discovery intake only. List 1 and the Lane-B promotion floor stay at
-# DEFAULT_MIN_FUNDS_USD. Override with ETH_SCANNER_DISCOVERY_MIN_USD.
+DEFAULT_MIN_FUNDS_USD = 100.0
+# Random/discovery intake only. Unset, this also defaults to $100.
+# Override with ETH_SCANNER_DISCOVERY_MIN_USD. List 1's membership band
+# ($2,000–$9,000,000) is independent of the live scanner / Lane-B floor.
 DEFAULT_DISCOVERY_MIN_USD = 100.0
 PRICE_TTL_S = 300.0
 RPC_TIMEOUT_S = 8.0
@@ -59,10 +60,11 @@ _price_cache: dict[str, tuple[float, float]] = {}  # key -> (price, fetched_at)
 
 
 def discovery_min_usd() -> float:
-    """Intake floor for the random/discovery lane. Not the Lane-B promotion floor.
+    """Intake floor for the random/discovery lane.
 
-    ``ETH_SCANNER_DISCOVERY_MIN_USD`` wins. Unset means $100, so sub-$2,000
-    contracts are scanned. List 1's band and Lane B stay on their own floors.
+    ``ETH_SCANNER_DISCOVERY_MIN_USD`` wins. Unset means $100, matching the
+    live scanner / Lane-B funds floor. List 1's membership band stays its own
+    $2,000–$9,000,000 range in lists.json.
     """
     raw = os.environ.get("ETH_SCANNER_DISCOVERY_MIN_USD")
     if raw is None or str(raw).strip() == "":
