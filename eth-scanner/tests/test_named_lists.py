@@ -57,8 +57,11 @@ class ListConfigTests(unittest.TestCase):
         clear_list_cache()
         named = load_named_list("list-1")
         curated = load_master_candidates()
-        self.assertEqual([row.address for row in named.candidates], [row.address for row in curated])
+        # Manual addresses are prepended and not re-ranked; the rest is the curated feed.
+        non_manual = [row for row in named.candidates if row.source != "manual"]
+        self.assertEqual([row.address for row in non_manual], [row.address for row in curated])
         self.assertEqual(named.source, "master_candidates")
+        self.assertGreaterEqual(len(named.candidates), len(curated))
 
 
 class List2SelectionTests(unittest.TestCase):
@@ -93,8 +96,8 @@ class List2SelectionTests(unittest.TestCase):
         named = load_named_list("list-2")
         self.assertEqual(named.source, "list2_candidates")
         self.assertTrue(str(named.source_path).endswith("list2_candidates.json"))
-        self.assertEqual(len(named.candidates), 214)
-        self.assertAlmostEqual(named.total_usd, 127211.03, places=2)
+        self.assertEqual(len(named.candidates), 929)
+        self.assertAlmostEqual(named.total_usd, 255900.81, places=2)
         self.assertEqual(named.config.min_funds_usd, 50.0)
         self.assertEqual(named.config.max_funds_usd, 1900.0)
         for row in named.candidates:
@@ -138,7 +141,11 @@ class List2SelectionTests(unittest.TestCase):
             os.environ.pop("ETH_SCANNER_LIST2", None)
             clear_list_cache()
         self.assertEqual(named.source, "list2_candidates")
-        self.assertEqual([row.address for row in named.candidates], [addr])
+        # Manual addresses stay prepended; the file itself should win over excluded.csv.
+        non_manual = [row for row in named.candidates if row.source != "manual"]
+        self.assertEqual([row.address for row in non_manual], [addr])
+        self.assertTrue(any(row.address == addr for row in named.candidates))
+        self.assertFalse(any(row.protocol == "SushiSwap" for row in named.candidates))
         self.assertAlmostEqual(named.total_usd, 120.0)
 
 

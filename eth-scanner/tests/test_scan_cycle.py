@@ -196,14 +196,14 @@ class ScanCycle(unittest.TestCase):
         )
         list2 = load_named_list("list-2")
         self.assertEqual(list2.source, "list2_candidates")
-        self.assertEqual(len(list2.candidates), 214)
+        self.assertEqual(len(list2.candidates), 929)
         self.assertEqual(len(progress.lists), 1)
         self.assertEqual(progress.lists[0]["list_id"], "list-2")
         self.assertEqual(progress.lists[0]["status"], "done")
-        self.assertEqual(progress.lists[0]["processed"], 214)
-        self.assertEqual(len(seen), 214)
+        self.assertEqual(progress.lists[0]["processed"], 929)
+        self.assertEqual(len(seen), 929)
         rows = [row for row in self.store.test_runs if row.get("list_id") == "list-2"]
-        self.assertEqual(len(rows), 214)
+        self.assertEqual(len(rows), 929)
         self.assertTrue(all(str(row["dedupe_key"]).startswith("master-list:list-2:") for row in rows))
         self.assertEqual(progress.status, "done")
 
@@ -217,7 +217,7 @@ class ScanCycle(unittest.TestCase):
         )
         self.assertEqual(second.status, "done")
         self.assertEqual(second.lists, [])
-        self.assertEqual(len(seen), 214)
+        self.assertEqual(len(seen), 929)
 
 
 if __name__ == "__main__":
