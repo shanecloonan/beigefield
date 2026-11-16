@@ -213,3 +213,217 @@ address,protocol,contract_class,funds_usd,drain_probability,candidate_reason,evi
 0x8ce5aa7812fdd6799d4c2b284a6e9f9b186e3af3,SashimiSwap,amm,110.1,58,abandoned;fork:Uniswap V2;no-audit,SashimiSwap dead Uniswap-V2 fork. Abandoned AMM pair/router residual; obscure Chinese DEX lineage. Holdings: {'SASHIMI': 110.1}. Live ~$110.,excluded+live:blockscout+rpc,False
 0x5c392ea8661f049f231269392bc57c7163a9fb17,SashimiSwap,amm,93.88,58,abandoned;fork:Uniswap V2;no-audit,SashimiSwap dead Uniswap-V2 fork. Abandoned AMM pair/router residual; obscure Chinese DEX lineage. Live common-token pricing returned ~$0; retaining DefiLlama-adapter estimate (likely unpriced underlying/LP). Live ~$94.,excluded+est-unpriced,False
 0xb39399d38761f3bd0f5dc42ad572de1028ace20f,SashimiSwap,amm,71.74,58,abandoned;fork:Uniswap V2;no-audit,SashimiSwap dead Uniswap-V2 fork. Abandoned AMM pair/router residual; obscure Chinese DEX lineage. Live common-token pricing returned ~$0; retaining DefiLlama-adapter estimate (likely unpriced underlying/LP). Live ~$72.,excluded+est-unpriced,False
+0x2dcdca085af2e258654e47204e483127e0d8b277,Inverse Finance Frontier,cdp,1431.39,76,no-audit;past-hack;fork:Compound V2,"Inverse Finance Frontier live-verified $1,431.39.",defillama-adapter:inverse/index.js,False
+0x89ec5df87a5186a0f0fa8cb84edd815de6047357,Inverse Finance Frontier,cdp,1077.51,76,no-audit;past-hack;fork:Compound V2,"Inverse Finance Frontier live-verified $1,077.51.",defillama-adapter:inverse/index.js,False
+0x3e04863dba602713bb5d0edbf7db7c3a9a2b6027,UwU Lend,lending,149.18,76,no-audit;past-hack;fork:Aave V2,UwU Lend live-verified $149.18.,defillama-adapter:uwulend/index.js,False
+0x16de59092dae5ccf4a1e6439d611fd0653f0bd01,Cover Protocol,insurance,191.36,70,past-hack,Cover Protocol live-verified $191.36.,defillama-adapter:cover.js,False
+0xbc396689893d065f41bc2c6ecbee5e0085233447,Ribbon,options-vault,1448.97,70,past-hack;complex:options-perps,"Ribbon live-verified $1,448.97.",defillama-adapter:ribbon/evm.js,False
+0xef82611c6120185d3bf6e020d1993b49471e7da0,Yield Protocol,lending,103.24,70,past-hack,Yield Protocol live-verified $103.24.,defillama-adapter:yieldis/index.js,False
+0x5fd9f73286b7e8683bab45019c94553b93e015cf,zkLink Nova,other,1139.03,70,past-hack;upgradeable-proxy,"zkLink Nova live-verified $1,139.03.",defillama-adapter:zkLink/index.js,False
+0x9565c2036963697786705120fc59310f747bcfd0,9inch V2,amm,502.36,64,no-audit;fork:Uniswap V2,9inch V2 live-verified $502.36.,defillama-adapter:9inch-io/index.js,False
+0x00aa1c57e894c4010fe44cb840ae56432d7ea1d1,Drops,lending,1082.58,64,no-audit;fork:Compound V2,"Drops live-verified $1,082.58.",defillama-adapter:drops/index.js,False
+0x75aaf03cbf330e2b3f0623c55b7a528cfcae8d75,XUSD Money,other,495.13,64,no-audit;fork:Frax;complex:algo-stable,XUSD Money live-verified $495.13.,defillama-adapter:xusdmoney/index.js,False
+0x8f24e100d785daaa70e9ff461a831a0354499f4e,XUSD Money,other,464.28,64,no-audit;fork:Frax;complex:algo-stable,XUSD Money live-verified $464.28.,defillama-adapter:xusdmoney/index.js,False
+0x073ae4eb8aad32756eae3e33902e5b94ed22610a,univ2-fork-unknown,other,105.8,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $105.80.",univ2-fork-allPairs:0x44b7fbd4d87149efa5347c451e74b9fd18e89c55+live:rpc,False
+0x1a9ec5d0855d2af8f504fc4047e2097f09d6e55d,univ2-fork-unknown,other,575.8,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $575.80.",univ2-fork-allPairs:0x5ed3c9089ed0355bc77cf439dc2ed28c4054c8c4+live:rpc,False
+0x233ab72c3a6e03aa3a2e896ab9ec1866dc0a9448,univ2-fork-unknown,other,604.13,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $604.13.",univ2-fork-allPairs:0x44b7fbd4d87149efa5347c451e74b9fd18e89c55+live:rpc,False
+0x338c6807b433a95b2e2347e0cffacd92b97fe8e2,univ2-fork-unknown,other,324.8,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $324.80.",univ2-fork-allPairs:0x5fbe219e88f6c6f214ce6f5b1fcaa0294f31ae1b+live:rpc,False
+0x3750c1fcd35eae956c7a57e773d1496c41d2759a,univ2-fork-unknown,other,203.92,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $203.92.",univ2-fork-allPairs:0x44b7fbd4d87149efa5347c451e74b9fd18e89c55+live:rpc,False
+0x3ed1b76c68f6fd1c645e1e596cec0c77f56711cc,univ2-fork-unknown,other,953.08,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $953.08.",univ2-fork-allPairs:0x75e48c954594d64ef9613aeef97ad85370f13807+live:rpc,False
+0x4429dbcbae70d33895640537b78859c47b0f980b,univ2-fork-unknown,other,352.13,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $352.13.",univ2-fork-allPairs:0x75e48c954594d64ef9613aeef97ad85370f13807+live:rpc,False
+0x4908d3c000a602529b1b21fcb37ddbaa8ef21216,univ2-fork-unknown,other,103.26,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $103.26.",univ2-fork-allPairs:0x44b7fbd4d87149efa5347c451e74b9fd18e89c55+live:rpc,False
+0x5996451816d3789ade9456dd27512895e1312003,univ2-fork-unknown,other,106.97,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $106.97.",univ2-fork-allPairs:0x44b7fbd4d87149efa5347c451e74b9fd18e89c55+live:rpc,False
+0x63671a5625b4923eba647df340a01dcf9db943f5,univ2-fork-unknown,other,103.74,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $103.74.",univ2-fork-allPairs:0x44b7fbd4d87149efa5347c451e74b9fd18e89c55+live:rpc,False
+0x692a2c1dc88b53eed63f852432072a2808d4fd2f,univ2-fork-unknown,other,320.09,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $320.09.",univ2-fork-allPairs:0x75e48c954594d64ef9613aeef97ad85370f13807+live:rpc,False
+0x69f06a51b0b8d9c2f12fcef6e5c89298395e8810,univ2-fork-unknown,other,185.42,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $185.42.",univ2-fork-allPairs:0x5ed3c9089ed0355bc77cf439dc2ed28c4054c8c4+live:rpc,False
+0x7c50e11364ee1811842df7c282a49a8db4b68a7a,univ2-fork-unknown,other,663.39,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $663.39.",univ2-fork-allPairs:0x75e48c954594d64ef9613aeef97ad85370f13807+live:rpc,False
+0x7e8dc7c0fef7bb84304cc5c2dacf5e583198ca4f,univ2-fork-unknown,other,752.53,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $752.53.",univ2-fork-allPairs:0x5ed3c9089ed0355bc77cf439dc2ed28c4054c8c4+live:rpc,False
+0x83d63ce48d772106ae09411f41613d976f247223,univ2-fork-unknown,other,353.13,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $353.13.",univ2-fork-allPairs:0x75e48c954594d64ef9613aeef97ad85370f13807+live:rpc,False
+0x8a02454ca2565d25f65531111b6dcac1e5f1d671,univ2-fork-unknown,other,843.0,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $843.00.",univ2-fork-allPairs:0x44b7fbd4d87149efa5347c451e74b9fd18e89c55+live:rpc,False
+0x8df8447f2b83c66a930e21a49eeac22267612d2d,univ2-fork-unknown,other,784.95,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $784.95.",univ2-fork-allPairs:0xacff9eee0a5522000e7141b77107359a6462e8d2+live:rpc,False
+0x9646684b5a2be6dc024ed60b8383be3650e56f4e,univ2-fork-unknown,other,108.64,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $108.64.",univ2-fork-allPairs:0x44b7fbd4d87149efa5347c451e74b9fd18e89c55+live:rpc,False
+0x9dd78ea2b7a92b6cb5d4a495dac34f8641070ceb,univ2-fork-unknown,other,560.81,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $560.81.",univ2-fork-allPairs:0xacff9eee0a5522000e7141b77107359a6462e8d2+live:rpc,False
+0xa2e0f89d32abf062c39f2205b17a72fa70353bd2,univ2-fork-unknown,other,190.02,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $190.02.",univ2-fork-allPairs:0x44b7fbd4d87149efa5347c451e74b9fd18e89c55+live:rpc,False
+0xa6bb68ff426a57029ec06162cb1a9f7aadde5354,univ2-fork-unknown,other,102.9,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $102.90.",univ2-fork-allPairs:0x44b7fbd4d87149efa5347c451e74b9fd18e89c55+live:rpc,False
+0xab850984c05bd5581f4f6e4bbff9d8cc3d8273d9,univ2-fork-unknown,other,195.28,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $195.28.",univ2-fork-allPairs:0x44b7fbd4d87149efa5347c451e74b9fd18e89c55+live:rpc,False
+0xac10f17627cd6bc22719ceebf1fc524c9cfdc255,univ2-fork-unknown,other,405.56,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $405.56.",univ2-fork-allPairs:0x75e48c954594d64ef9613aeef97ad85370f13807+live:rpc,False
+0xbfa25cac44a4e9a23263c8c11eee5065b7cc18a1,univ2-fork-unknown,other,894.31,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $894.31.",univ2-fork-allPairs:0xacff9eee0a5522000e7141b77107359a6462e8d2+live:rpc,False
+0xc134922a5d9117dbb97904b61fcbe04b803b5c50,univ2-fork-unknown,other,143.39,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $143.39.",univ2-fork-allPairs:0x75e48c954594d64ef9613aeef97ad85370f13807+live:rpc,False
+0xc82b72078878f25dacc5741fd04322d0b5f18991,univ2-fork-unknown,other,124.98,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $124.98.",univ2-fork-allPairs:0xacff9eee0a5522000e7141b77107359a6462e8d2+live:rpc,False
+0xca3d6a94759cb675f0ac10a76fc0da6ee6bf6e7b,univ2-fork-unknown,other,610.56,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $610.56.",univ2-fork-allPairs:0x75e48c954594d64ef9613aeef97ad85370f13807+live:rpc,False
+0xd2606dd09880e94057399e38ea26140e64744a05,univ2-fork-unknown,other,182.55,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $182.55.",univ2-fork-allPairs:0x75e48c954594d64ef9613aeef97ad85370f13807+live:rpc,False
+0xd463517696c888938f1df5b9db6e09ee7d9f0e94,univ2-fork-unknown,other,155.25,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $155.25.",univ2-fork-allPairs:0x75e48c954594d64ef9613aeef97ad85370f13807+live:rpc,False
+0xd911db619c3f563c4471329349882da9afe50580,univ2-fork-unknown,other,926.35,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $926.35.",univ2-fork-allPairs:0x5ed3c9089ed0355bc77cf439dc2ed28c4054c8c4+live:rpc,False
+0xdf5e69fa81f3d2b7b6c14ac9069c4705ee38e95f,univ2-fork-unknown,other,612.2,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $612.20.",univ2-fork-allPairs:0xacff9eee0a5522000e7141b77107359a6462e8d2+live:rpc,False
+0xe1ab8a2e0c647b2f6d564ad64a248766b92f1e2d,univ2-fork-unknown,other,116.99,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $116.99.",univ2-fork-allPairs:0x75e48c954594d64ef9613aeef97ad85370f13807+live:rpc,False
+0xe291b2a982289f0aa01d0c96c916a9f37b11fa8e,univ2-fork-unknown,other,766.2,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $766.20.",univ2-fork-allPairs:0x75e48c954594d64ef9613aeef97ad85370f13807+live:rpc,False
+0xee5ec31ca426135281c661500bb2f1639be81f88,univ2-fork-unknown,other,126.75,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $126.75.",univ2-fork-allPairs:0x44b7fbd4d87149efa5347c451e74b9fd18e89c55+live:rpc,False
+0xf40bc8b92bfb87d8527a2f97538c0ebda4bbed11,univ2-fork-unknown,other,675.36,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $675.36.",univ2-fork-allPairs:0x75e48c954594d64ef9613aeef97ad85370f13807+live:rpc,False
+0xfbbdfe495260a1e711e039ab2cd987cd638bb9b3,univ2-fork-unknown,other,767.47,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $767.47.",univ2-fork-allPairs:0xacff9eee0a5522000e7141b77107359a6462e8d2+live:rpc,False
+0xfc6b05f3e5fcdd27995d6c17a71cf8e7a8f966d2,univ2-fork-unknown,other,159.38,63,below-2000-usd-priced,"univ2-fork-unknown leftover/excluded candidate, live-verified $159.38.",univ2-fork-allPairs:0x44b7fbd4d87149efa5347c451e74b9fd18e89c55+live:rpc,False
+0x498c00e1ccc2afff80f6cc6144eaeb95c46cc3b5,Agility LSD,amm,1393.77,62,no-audit,"Agility LSD live-verified $1,393.77.",defillama-adapter:agilitylsd/index.js,False
+0xb50721bcf8d664c30412cfbc6cf7a15145234ad1,Bitty Vaults,yield-vault,1137.6,62,no-audit;complex:allocator;new-listing,"Bitty Vaults live-verified $1,137.60.",defillama-adapter:bitty-vaults/index.js,False
+0x7ae80418051b2897729cbdf388b07c5158c557a1,DYAD,cdp,1139.04,62,no-audit,"DYAD live-verified $1,139.04.",defillama-adapter:dyad/index.js,False
+0xad48a8261b0690c71b70115035eb14afd9a43242,Diamond Protocol V1,yield-vault,273.04,62,no-audit,Diamond Protocol V1 live-verified $273.04.,defillama-adapter:diamond/index.js,False
+0xc264944e9e7073f8f98fef7338cda973914fca44,Everything,lending,1344.47,62,no-audit;upgradeable-proxy,"Everything live-verified $1,344.47.",defillama-adapter:everything/index.js,False
+0x672c973155c46fc264c077a41218ddc397bb7532,Klondike Finance,options-vault,161.04,62,no-audit;complex:options-perps,Klondike Finance live-verified $161.04.,defillama-adapter:klondike/index.js,False
+0x69cda6eda9986f7fca8a5dba06c819b535f4fc50,Klondike Finance,options-vault,160.38,62,no-audit;complex:options-perps,Klondike Finance live-verified $160.38.,defillama-adapter:klondike/index.js,False
+0x3c769d0e8d21d380228dfb7918c6933bb6ecb6d4,Ledgity Yield,yield-vault,359.4,62,no-audit;upgradeable-proxy,Ledgity Yield live-verified $359.40.,defillama-adapter:ledgity/index.js,False
+0x87b918e76c92818db0c76a4e174447aee6e6d23f,Mover,yield-vault,371.74,62,no-audit,Mover live-verified $371.74.,defillama-adapter:mover/index.js,False
+0x00739d7b2ed5ed3b80d9e10ccbc2468ad1b9c2fd,Skate AMM,amm,610.55,62,no-audit,Skate AMM live-verified $610.55.,defillama-adapter:skate-amm/index.js,False
+0xa0b9cc50c460dde28321c34fcd7161434655a38f,Skate AMM,amm,1016.62,62,no-audit;upgradeable-proxy,"Skate AMM live-verified $1,016.62.",defillama-adapter:skate-amm/index.js,False
+0x15f3ee2f609fbae0bc48e3a071d66dd917c682eb,SuperReturn,yield-vault,919.83,62,no-audit;complex:allocator;upgradeable-proxy,SuperReturn live-verified $919.83.,defillama-adapter:superReturn/index.js,False
+0x3bac111a6f5ed6a554616373d5c7d858d7c10d88,SynStation,lending,427.31,62,no-audit,SynStation live-verified $427.31.,defillama-adapter:synstation/index.js,False
+0x8da513d9b614d0a473eaf294e3e531cd4eea9984,Vailox,lending,444.15,62,no-audit;new-listing,Vailox live-verified $444.15.,defillama-adapter:vailox/index.js,False
+0xa226e2a13e07e750efbd2e5839c5c3be80fe7d4d,Vega Protocol,derivatives,100.67,62,no-audit;complex:options-perps,Vega Protocol live-verified $100.67.,defillama-adapter:vega-protocol/index.js,False
+0xbfdc482616787b420bc6c710212fe3167e7198e9,alphagrowth,yield-vault,216.46,62,no-audit;complex:allocator,alphagrowth live-verified $216.46.,defillama-adapter:alpha-growth/index.js,False
+0xc11d6b78d8c609a6cbf66e89dbfea06b011b0aef,alphagrowth,yield-vault,110.2,62,no-audit;complex:allocator,alphagrowth live-verified $110.20.,defillama-adapter:alpha-growth/index.js,False
+0x3dd46846eed8d147841ae162c8425c08bd8e1b41,mStable V2,cdp,575.84,62,no-audit,mStable V2 live-verified $575.84.,defillama-adapter:mstable-v2/index.js,False
+0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2,mStable V2,cdp,934.23,62,no-audit,mStable V2 live-verified $934.23.,defillama-adapter:mstable-v2/index.js,False
+0x1ddf85abdf165d2360b31d9603b487e0275e3928,OpenDAO,lending,260.43,60,fork:Compound V2;complex:algo-stable,OpenDAO live-verified $260.43.,defillama-adapter:opendao/index.js,False
+0xf9039d4f49686f34936b6937d13bbbe413f910c4,Solid Yield,yield-vault,1099.3,60,fork:Veda,"Solid Yield live-verified $1,099.30.",defillama-adapter:solid-yield/index.js,False
+0x00d76633a1071e9aed6158ae1a5e1c4c5dc75e54,StoneDefi,yield-aggregator,1589.41,60,fork:Yearn Finance,"StoneDefi live-verified $1,589.41.",defillama-adapter:stonedefi/index.js,False
+0x73fddfb941c11d16c827169bb94acc227841c396,ACoconut,yield-vault,545.91,58,upgradeable-proxy;upgradeable-admin,ACoconut live-verified $545.91.,defillama-adapter:acoconut/index.js,False
+0x590f820444fa3638e022776752c5eef34e2f89a6,Alephium Bridge,bridge,663.95,58,below-2000-usd-priced,"Alephium Bridge leftover/excluded candidate, live-verified $663.95.",historical-reprice:dropped_v2.json+live:rpc,False
+0x57eedcb68445355e9c11a90f39012e8d4aaa89fc,Angle,cdp,611.64,58,discovery-band-below-list1,Angle live-verified $611.64.,defillama-adapter:angle/addresses.js,False
+0xc00e94cb662c3520282e6f5717214004a7f26888,Angle,cdp,233.31,58,discovery-band-below-list1,Angle live-verified $233.31.,defillama-adapter:angle/addresses.js,False
+0xdc4e6dfe07efca50a197df15d9200883ef4eb1c8,Angle,cdp,470.48,58,discovery-band-below-list1,Angle live-verified $470.48.,defillama-adapter:angle/addresses.js,False
+0x00000069abbb0b1ad6975bcf753eee15d318a0bf,Asymmetry Finance,amm,1144.83,58,upgradeable-proxy,"Asymmetry Finance live-verified $1,144.83.",defillama-adapter:asymmetry-fi/index.js,False
+0x3d9819210a31b4961b30ef54be2aed79b9c9cd3b,B.Protocol,other,258.06,58,expanded-money-holding,B.Protocol live-verified $258.06.,defillama-adapter:bprotocol/index.js,False
+0x054f76beed60ab6dbeb23502178c52d6c5debe40,BoringDAO,other,499.91,58,below-2000-usd-priced,BoringDAO live-verified $499.91.,bridge-adapter,False
+0x74b23882a30290451a17c44f4f05243b6b58c76d,BoringDAO,bridge,365.91,58,complex:bridge,BoringDAO live-verified $365.91.,defillama-adapter:boringdao/contracts.json,False
+0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9,BoringDAO,bridge,1009.25,58,complex:bridge;upgradeable-proxy;upgradeable-admin,"BoringDAO live-verified $1,009.25.",defillama-adapter:boringdao/contracts.json,False
+0xb5087f95643a9a4069471a28d32c569d9bd57fe4,Bunni v1,other,269.47,58,complex:allocator,Bunni v1 live-verified $269.47.,defillama-adapter:bunni/index.js,False
+0xd1ffa2cbae34ff85cefecdab0b33e7b1dc19024b,CHFRY Finance,lending,1260.14,58,discovery-band-below-list1,"CHFRY Finance live-verified $1,260.14.",defillama-adapter:chfry/index.js,False
+0x39166b36a25a4a98d6b7c21d429f4740c6a5e94c,Clovis,yield-aggregator,329.91,58,low-tvl-list2,Clovis live-verified $329.91.,defillama-adapter:clovis/index.js,False
+0x717170b66654292dfbd89c39f5ae6753d2ac1381,Cryptex V1,amm,841.98,58,discovery-band-below-list1,Cryptex V1 live-verified $841.98.,defillama-adapter:cryptex-finance/index.js,False
+0xc2ba6b8e0ee3cf48b045d966f1dcda767df74833,Cryptex V1,amm,615.32,58,discovery-band-below-list1,Cryptex V1 live-verified $615.32.,defillama-adapter:cryptex-finance/index.js,False
+0xd372a3221021df72eda38f77117d3a95f057e163,DeFIL,lending,901.89,58,discovery-band-below-list1,DeFIL live-verified $901.89.,defillama-adapter:defil/index.js,False
+0x44b77e9ce8a20160290fcbaa44196744f354c1b7,Defi Yield Protocol,yield-vault,858.9,58,low-tvl-list2,Defi Yield Protocol live-verified $858.90.,defillama-adapter:defiyieldprotocol/index.js,False
+0x76911e11fddb742d75b83c9e1f611f48f19234e4,Defi Yield Protocol,yield-vault,1405.23,58,low-tvl-list2,"Defi Yield Protocol live-verified $1,405.23.",defillama-adapter:defiyieldprotocol/index.js,False
+0xabd9c284116b2e757e3d4f6e36c5050aead24e0c,Defi Yield Protocol,yield-vault,534.38,58,low-tvl-list2,Defi Yield Protocol live-verified $534.38.,defillama-adapter:defiyieldprotocol/index.js,False
+0x001f7096a4521c1945543e458798af9233140ed7,ERC-4626 vault,yield-vault,322.27,58,below-2000-usd-priced,ERC-4626 vault live-verified $322.27.,erc4626-deposit-topic-scan,False
+0x00464cc86244aceceb827e66719998c40f95f462,ERC-4626 vault,yield-vault,191.5,58,below-2000-usd-priced,ERC-4626 vault live-verified $191.50.,erc4626-deposit-topic-scan,False
+0x0601b72bef2b3f09e9f48b7d60a8d7d2d3800c6e,ERC-4626 vault,yield-vault,575.53,58,below-2000-usd-priced,ERC-4626 vault live-verified $575.53.,erc4626-deposit-topic-scan,False
+0x062c095f25cc228d860759166383544115a87b24,ERC-4626 vault,yield-vault,195.2,58,below-2000-usd-priced,ERC-4626 vault live-verified $195.20.,erc4626-deposit-topic-scan,False
+0x06ff95bd22769e4c7067b571d92918b066ab145b,ERC-4626 vault,yield-vault,161.36,58,below-2000-usd-priced,ERC-4626 vault live-verified $161.36.,erc4626-deposit-topic-scan,False
+0x0868076663bbc6638cedd27704cc8f0fa53d5b81,ERC-4626 vault,yield-vault,832.55,58,below-2000-usd-priced,ERC-4626 vault live-verified $832.55.,erc4626-deposit-topic-scan,False
+0x090342961b1de565cd76a7be041f57ec446a577c,ERC-4626 vault,yield-vault,113.42,58,below-2000-usd-priced,ERC-4626 vault live-verified $113.42.,erc4626-deposit-topic-scan,False
+0x09580f2305a335218bdb2eb828387d52ed8fc2f4,ERC-4626 vault,yield-vault,1490.63,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,490.63.",erc4626-deposit-topic-scan,False
+0x096a1e4176ca516bced19b15903eab4654f7ee7a,ERC-4626 vault,yield-vault,515.48,58,below-2000-usd-priced,ERC-4626 vault live-verified $515.48.,erc4626-deposit-topic-scan,False
+0x0985c88929a776a2e059615137a48ba5a473e25d,ERC-4626 vault,yield-vault,125.79,58,below-2000-usd-priced,ERC-4626 vault live-verified $125.79.,erc4626-deposit-topic-scan,False
+0x09ace8b2f2fe2189a5b37046bbafa29dce31c920,ERC-4626 vault,yield-vault,1006.28,58,below-2000-usd-priced,"ERC-4626 vault leftover/excluded candidate, live-verified $1,006.28.",erc4626-deposit-topic-scan+live:rpc,False
+0x0a18cc85ab8a9e0f8ede15799287509e327e8c9d,ERC-4626 vault,yield-vault,813.76,58,below-2000-usd-priced,ERC-4626 vault live-verified $813.76.,erc4626-deposit-topic-scan,False
+0x0a4ea2bde8496a878a7ca2772056a8e6fe3245c5,ERC-4626 vault,yield-vault,261.47,58,below-2000-usd-priced,ERC-4626 vault live-verified $261.47.,erc4626-deposit-topic-scan,False
+0x0b2d98bbf3e38df1d1b7be7343732e32e8b1f818,ERC-4626 vault,yield-vault,177.29,58,below-2000-usd-priced,ERC-4626 vault live-verified $177.29.,erc4626-deposit-topic-scan,False
+0x0d2bba9593b9477aa7171de303fb48b2bcd36d29,ERC-4626 vault,yield-vault,1220.83,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,220.83.",erc4626-deposit-topic-scan,False
+0x0fe906e030a44ef24ca8c7dc7b7c53a6c4f00ce9,ERC-4626 vault,yield-vault,799.34,58,below-2000-usd-priced,ERC-4626 vault live-verified $799.34.,erc4626-deposit-topic-scan,False
+0x1112b72d0ab77ecadb016737e9ce452083f4a530,ERC-4626 vault,yield-vault,360.23,58,below-2000-usd-priced,ERC-4626 vault live-verified $360.23.,erc4626-deposit-topic-scan,False
+0x13dda6fd149a4da0f2012f16e70925586ee603b8,ERC-4626 vault,yield-vault,329.74,58,below-2000-usd-priced,ERC-4626 vault live-verified $329.74.,erc4626-deposit-topic-scan,False
+0x1421d53b2fe0c75d034f81738f3149b54891741e,ERC-4626 vault,yield-vault,416.65,58,below-2000-usd-priced,ERC-4626 vault live-verified $416.65.,erc4626-deposit-topic-scan,False
+0x14794665d2f467a6e393e1a7210c49a1aa571d77,ERC-4626 vault,yield-vault,1474.78,58,below-2000-usd-priced,"ERC-4626 vault leftover/excluded candidate, live-verified $1,474.78.",erc4626-deposit-topic-scan+live:rpc,False
+0x180f6e72a19da2a791d40433c619c553fe268d94,ERC-4626 vault,yield-vault,359.3,58,below-2000-usd-priced,"ERC-4626 vault leftover/excluded candidate, live-verified $359.30.",erc4626-deposit-topic-scan+live:rpc,False
+0x190b5eafa5006647871d351284ee2da2ddf2135a,ERC-4626 vault,yield-vault,583.46,58,below-2000-usd-priced,ERC-4626 vault live-verified $583.46.,erc4626-deposit-topic-scan,False
+0x1b4cd53a1a8e5f50ab6320ef34e5fb4d3df7b6f6,ERC-4626 vault,yield-vault,151.9,58,below-2000-usd-priced,ERC-4626 vault live-verified $151.90.,erc4626-deposit-topic-scan,False
+0x1b972d49a9e86e278aa3ddda9857c917e3b4dda9,ERC-4626 vault,yield-vault,172.98,58,below-2000-usd-priced,ERC-4626 vault live-verified $172.98.,erc4626-deposit-topic-scan,False
+0x1c7ce003dccdd769581034394f680964aa94d123,ERC-4626 vault,yield-vault,1230.39,58,below-2000-usd-priced,"ERC-4626 vault leftover/excluded candidate, live-verified $1,230.39.",erc4626-deposit-topic-scan+live:rpc,False
+0x1d1475f9d8d442f828e0fef9fe3f0703ad8a890f,ERC-4626 vault,yield-vault,119.71,58,below-2000-usd-priced,ERC-4626 vault live-verified $119.71.,erc4626-deposit-topic-scan,False
+0x1e46b0289b7e0f710e2db8ab87800dd782d624f7,ERC-4626 vault,yield-vault,575.07,58,below-2000-usd-priced,ERC-4626 vault live-verified $575.07.,erc4626-deposit-topic-scan,False
+0x1ee6db6b89fbf07489ec4cdae89b82c97c7c53ea,ERC-4626 vault,yield-vault,100.11,58,below-2000-usd-priced,ERC-4626 vault live-verified $100.11.,erc4626-deposit-topic-scan,False
+0x206db0a0af10bec57784045e089a418771d20227,ERC-4626 vault,yield-vault,1111.78,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,111.78.",erc4626-deposit-topic-scan,False
+0x2120adcdcf8e0ed9d6dd3df683f076402b79e3bd,ERC-4626 vault,yield-vault,181.35,58,below-2000-usd-priced,ERC-4626 vault live-verified $181.35.,erc4626-deposit-topic-scan,False
+0x21f2eafccf161c4e8db7e45825d7251c52d195bc,ERC-4626 vault,yield-vault,500.91,58,below-2000-usd-priced,ERC-4626 vault live-verified $500.91.,erc4626-deposit-topic-scan,False
+0x23ee3d14f09946a084350cc6a7153fc6eb918817,ERC-4626 vault,yield-vault,165.86,58,below-2000-usd-priced,ERC-4626 vault live-verified $165.86.,erc4626-deposit-topic-scan,False
+0x2643c6731199d36ce3c9533e4c3f7eeab2dac94a,ERC-4626 vault,yield-vault,971.51,58,below-2000-usd-priced,"ERC-4626 vault leftover/excluded candidate, live-verified $971.51.",erc4626-deposit-topic-scan+live:rpc,False
+0x266e5923f6118f8b340ca5a23ae7f71897361476,ERC-4626 vault,yield-vault,1057.27,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,057.27.",erc4626-deposit-topic-scan,False
+0x2718323cce9f40d9b8e8a903628718287b598f7a,ERC-4626 vault,yield-vault,139.48,58,below-2000-usd-priced,ERC-4626 vault live-verified $139.48.,erc4626-deposit-topic-scan,False
+0x279c50b6895126bbbcf9d2ed7c3fb59bdc8a18df,ERC-4626 vault,yield-vault,120.2,58,below-2000-usd-priced,ERC-4626 vault live-verified $120.20.,erc4626-deposit-topic-scan,False
+0x2a542d92f86557218368b17757ba37e82af192d3,ERC-4626 vault,yield-vault,289.3,58,below-2000-usd-priced,ERC-4626 vault live-verified $289.30.,erc4626-deposit-topic-scan,False
+0x2b47c128b35dddcb66ce2fa5b33c95314a7de245,ERC-4626 vault,yield-vault,162.0,58,below-2000-usd-priced,ERC-4626 vault live-verified $162.00.,erc4626-deposit-topic-scan,False
+0x2be901715468c3c5393efa841525a713c583a8ec,ERC-4626 vault,yield-vault,722.87,58,below-2000-usd-priced,ERC-4626 vault live-verified $722.87.,erc4626-deposit-topic-scan,False
+0x2c1ad3b6a7cce8baf2fc070d231cb95f4a607911,ERC-4626 vault,yield-vault,993.3,58,below-2000-usd-priced,ERC-4626 vault live-verified $993.30.,erc4626-deposit-topic-scan,False
+0x2c793f5cb25b35a99648783c01e6cccc200d2096,ERC-4626 vault,yield-vault,168.03,58,below-2000-usd-priced,ERC-4626 vault live-verified $168.03.,erc4626-deposit-topic-scan,False
+0x2cdaeebe9607ee7579bbd69af44f44553fda764f,ERC-4626 vault,yield-vault,922.52,58,below-2000-usd-priced,ERC-4626 vault live-verified $922.52.,erc4626-deposit-topic-scan,False
+0x2d45c2835cea592f75e72e656932aa60d474ddf3,ERC-4626 vault,yield-vault,615.9,58,below-2000-usd-priced,"ERC-4626 vault leftover/excluded candidate, live-verified $615.90.",erc4626-deposit-topic-scan+live:rpc,False
+0x2ef309a441288aec0bc66f497d926e5a07d7f5a0,ERC-4626 vault,yield-vault,542.19,58,below-2000-usd-priced,ERC-4626 vault live-verified $542.19.,erc4626-deposit-topic-scan,False
+0x2f6396db30eeaea8248cd5547da6bed8a13479c9,ERC-4626 vault,yield-vault,1663.33,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,663.33.",erc4626-deposit-topic-scan,False
+0x302f1274e5add0aeee41975ef94c4e8f4eb40a9c,ERC-4626 vault,yield-vault,190.62,58,below-2000-usd-priced,ERC-4626 vault live-verified $190.62.,erc4626-deposit-topic-scan,False
+0x30987adf0b11dc698438a99ba04ec3a1ab2c7eab,ERC-4626 vault,yield-vault,200.22,58,below-2000-usd-priced,"ERC-4626 vault leftover/excluded candidate, live-verified $200.22.",erc4626-deposit-topic-scan+live:rpc,False
+0x30992bff5bd4d2ba21c98198a0fd0c07a7f9dfc9,ERC-4626 vault,yield-vault,1425.7,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,425.70.",erc4626-deposit-topic-scan,False
+0x30c37256cd4dbac733d815ae520f94a9adaff579,ERC-4626 vault,yield-vault,245.09,58,below-2000-usd-priced,ERC-4626 vault live-verified $245.09.,erc4626-deposit-topic-scan,False
+0x30df596b7a411d6479544ebec628fa99609d7c2f,ERC-4626 vault,yield-vault,1192.69,58,below-2000-usd-priced,"ERC-4626 vault leftover/excluded candidate, live-verified $1,192.69.",erc4626-deposit-topic-scan+live:rpc,False
+0x32a338b07de8a9529ea640ba8a5806334d4b0931,ERC-4626 vault,yield-vault,155.85,58,below-2000-usd-priced,ERC-4626 vault live-verified $155.85.,erc4626-deposit-topic-scan,False
+0x32de5cc930a193bdd130e377c38c7053c90eb360,ERC-4626 vault,yield-vault,105.47,58,below-2000-usd-priced,ERC-4626 vault live-verified $105.47.,erc4626-deposit-topic-scan,False
+0x365cc9c28df1663fa37c565a3ac1addc3a219e15,ERC-4626 vault,yield-vault,288.75,58,below-2000-usd-priced,ERC-4626 vault live-verified $288.75.,erc4626-deposit-topic-scan,False
+0x36ea4af0aae6ca7a4244be1650ea94fe8fff965c,ERC-4626 vault,yield-vault,200.3,58,below-2000-usd-priced,ERC-4626 vault live-verified $200.30.,erc4626-deposit-topic-scan,False
+0x3adf08afe804691ca6d76742367cc50a24a1f4a1,ERC-4626 vault,yield-vault,410.38,58,below-2000-usd-priced,ERC-4626 vault live-verified $410.38.,erc4626-deposit-topic-scan,False
+0x3d086b688d7c0362be4f9600d626f622792c4a20,ERC-4626 vault,yield-vault,202.63,58,below-2000-usd-priced,ERC-4626 vault live-verified $202.63.,erc4626-deposit-topic-scan,False
+0x3dfe70b05657949a5db340754ad664810ac63b21,ERC-4626 vault,yield-vault,637.1,58,below-2000-usd-priced,"ERC-4626 vault leftover/excluded candidate, live-verified $637.10.",erc4626-deposit-topic-scan+live:rpc,False
+0x3ee460effbdeb6d5e1e2345435263c19cd68975f,ERC-4626 vault,yield-vault,193.88,58,below-2000-usd-priced,ERC-4626 vault live-verified $193.88.,erc4626-deposit-topic-scan,False
+0x408331f7d44b1e11cdfd9c7aa3dca83013c3a7fd,ERC-4626 vault,yield-vault,1038.8,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,038.80.",erc4626-deposit-topic-scan,False
+0x41ba71cf6b366c7489aa31d2013e9a26f4c3e2d7,ERC-4626 vault,yield-vault,736.06,58,below-2000-usd-priced,ERC-4626 vault live-verified $736.06.,erc4626-deposit-topic-scan,False
+0x41dcf7e9ecdbd3f0bc69cba50b49f1b37ae65ca2,ERC-4626 vault,yield-vault,1230.78,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,230.78.",erc4626-deposit-topic-scan,False
+0x43680abf18cf54898be84c6ef78237cfbd441883,ERC-4626 vault,yield-vault,432.14,58,below-2000-usd-priced,ERC-4626 vault live-verified $432.14.,erc4626-deposit-topic-scan,False
+0x4536d493292e53c5c11defa9e4c6826777502efa,ERC-4626 vault,yield-vault,124.14,58,below-2000-usd-priced,ERC-4626 vault live-verified $124.14.,erc4626-deposit-topic-scan,False
+0x47a87ea37876bb1a618969f5aa907724b219b69d,ERC-4626 vault,yield-vault,134.45,58,below-2000-usd-priced,ERC-4626 vault live-verified $134.45.,erc4626-deposit-topic-scan,False
+0x47b8cdae3bceb0da3236acf2b288a01a81672acc,ERC-4626 vault,yield-vault,1603.84,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,603.84.",erc4626-deposit-topic-scan,False
+0x482cce30cde09292279371956a3c7c57bbe125a9,ERC-4626 vault,yield-vault,1405.53,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,405.53.",erc4626-deposit-topic-scan,False
+0x4c73d4ae490168c57a81822981914e2cc0bb061a,ERC-4626 vault,yield-vault,690.36,58,below-2000-usd-priced,ERC-4626 vault live-verified $690.36.,erc4626-deposit-topic-scan,False
+0x4ce9c93513dff543bc392870d57df8c04e89ba0a,ERC-4626 vault,yield-vault,262.53,58,below-2000-usd-priced,ERC-4626 vault live-verified $262.53.,erc4626-deposit-topic-scan,False
+0x5029db6c80de46b6fea2835cfbfe49b9d97c46eb,ERC-4626 vault,yield-vault,423.82,58,below-2000-usd-priced,ERC-4626 vault live-verified $423.82.,erc4626-deposit-topic-scan,False
+0x5103d3ee6d599984609daaadd3a439152cc0c392,ERC-4626 vault,yield-vault,252.36,58,below-2000-usd-priced,"ERC-4626 vault leftover/excluded candidate, live-verified $252.36.",erc4626-deposit-topic-scan+live:rpc,False
+0x522478b54046ab7197880f2626b74a96d45b9b02,ERC-4626 vault,yield-vault,227.32,58,below-2000-usd-priced,ERC-4626 vault live-verified $227.32.,erc4626-deposit-topic-scan,False
+0x52a396f9b7c498f2743a648d0c3ef18c8108c032,ERC-4626 vault,yield-vault,100.77,58,below-2000-usd-priced,ERC-4626 vault live-verified $100.77.,erc4626-deposit-topic-scan,False
+0x52d7e0a859d979997cb5a8f55f725b443d32a531,ERC-4626 vault,yield-vault,302.74,58,below-2000-usd-priced,ERC-4626 vault live-verified $302.74.,erc4626-deposit-topic-scan,False
+0x534133e3aae4fbee9b1f5f0ac21b0f7c75fcce87,ERC-4626 vault,yield-vault,137.08,58,below-2000-usd-priced,ERC-4626 vault live-verified $137.08.,erc4626-deposit-topic-scan,False
+0x5408a506db076dc330e661ca21e7f84947ef9792,ERC-4626 vault,yield-vault,345.31,58,below-2000-usd-priced,ERC-4626 vault live-verified $345.31.,erc4626-deposit-topic-scan,False
+0x54391921bad1d8a6cf0638f125c86a0846fc6de1,ERC-4626 vault,yield-vault,1332.79,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,332.79.",erc4626-deposit-topic-scan,False
+0x54b8a87c9f85dd2515caae1fad2dd85199900076,ERC-4626 vault,yield-vault,136.38,58,below-2000-usd-priced,"ERC-4626 vault leftover/excluded candidate, live-verified $136.38.",erc4626-deposit-topic-scan+live:rpc,False
+0x554d4b0b4b7b86e17e962df075cb5600af806074,ERC-4626 vault,yield-vault,458.19,58,below-2000-usd-priced,ERC-4626 vault live-verified $458.19.,erc4626-deposit-topic-scan,False
+0x556aef0d155a4d09c9b4bdd3065a3fe8880a7a77,ERC-4626 vault,yield-vault,355.2,58,below-2000-usd-priced,ERC-4626 vault live-verified $355.20.,erc4626-deposit-topic-scan,False
+0x587d6d41443344bd29ffa4bfea40cd42cc9cbbe4,ERC-4626 vault,yield-vault,491.96,58,below-2000-usd-priced,ERC-4626 vault live-verified $491.96.,erc4626-deposit-topic-scan,False
+0x58c14a5e061c9bc6926c5b853445290f296c2f7b,ERC-4626 vault,yield-vault,213.4,58,below-2000-usd-priced,ERC-4626 vault live-verified $213.40.,erc4626-deposit-topic-scan,False
+0x58e7224b989b59ee3d0fcd8066c93b427234e6e7,ERC-4626 vault,yield-vault,1007.06,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,007.06.",erc4626-deposit-topic-scan,False
+0x599619ef081e86439d0ca487d98d0bb346e5bd80,ERC-4626 vault,yield-vault,223.96,58,below-2000-usd-priced,ERC-4626 vault live-verified $223.96.,erc4626-deposit-topic-scan,False
+0x59a84989b2b42c3f17892a21c22a84d6fbc8ff5b,ERC-4626 vault,yield-vault,476.15,58,below-2000-usd-priced,ERC-4626 vault live-verified $476.15.,erc4626-deposit-topic-scan,False
+0x59b7942f7d2afd085691ce65c152e0d38d4eff22,ERC-4626 vault,yield-vault,1604.21,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,604.21.",erc4626-deposit-topic-scan,False
+0x59d675f75f973835b94d02b6d27b8539757dc65f,ERC-4626 vault,yield-vault,515.53,58,below-2000-usd-priced,ERC-4626 vault live-verified $515.53.,erc4626-deposit-topic-scan,False
+0x5a68cfe0dcccfa4991e5a92d2c382b15b41c4119,ERC-4626 vault,yield-vault,117.21,58,below-2000-usd-priced,ERC-4626 vault live-verified $117.21.,erc4626-deposit-topic-scan,False
+0x5b6c72333d56c37a155eb024ee4161ff1c3f04c5,ERC-4626 vault,yield-vault,1532.28,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,532.28.",erc4626-deposit-topic-scan,False
+0x5ddd6436d8b95a97e4e7a5dfd909d005d0e9352e,ERC-4626 vault,yield-vault,406.3,58,below-2000-usd-priced,ERC-4626 vault live-verified $406.30.,erc4626-deposit-topic-scan,False
+0x5f9baab8b2d5f446514546efc48b62500ddce48e,ERC-4626 vault,yield-vault,300.63,58,below-2000-usd-priced,ERC-4626 vault live-verified $300.63.,erc4626-deposit-topic-scan,False
+0x6174a27160f4d7885db4ffed1c0b5fbd66c87f3a,ERC-4626 vault,yield-vault,1281.15,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,281.15.",erc4626-deposit-topic-scan,False
+0x630488ed575f3bb86e7993bbb5ab9152e7e35834,ERC-4626 vault,yield-vault,395.01,58,below-2000-usd-priced,ERC-4626 vault live-verified $395.01.,erc4626-deposit-topic-scan,False
+0x64b02119a901843a6a6d273d40a8c6b9e099c197,ERC-4626 vault,yield-vault,184.42,58,below-2000-usd-priced,ERC-4626 vault live-verified $184.42.,erc4626-deposit-topic-scan,False
+0x6533f0baca244839aebae6e534b73de75ec726bf,ERC-4626 vault,yield-vault,1230.36,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,230.36.",erc4626-deposit-topic-scan,False
+0x655ceb4b4fb4425be6bf978c0e415e81289643a0,ERC-4626 vault,yield-vault,1832.2,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,832.20.",erc4626-deposit-topic-scan,False
+0x666fde8186a463a4c9dcd3594af2ed0059554211,ERC-4626 vault,yield-vault,301.31,58,below-2000-usd-priced,ERC-4626 vault live-verified $301.31.,erc4626-deposit-topic-scan,False
+0x674a0cf2ad6922b87a6726e593c4de5a0dcbcd74,ERC-4626 vault,yield-vault,186.11,58,below-2000-usd-priced,ERC-4626 vault live-verified $186.11.,erc4626-deposit-topic-scan,False
+0x6778d652a0bce658c9a0e27d506ea20d179140e5,ERC-4626 vault,yield-vault,246.73,58,below-2000-usd-priced,ERC-4626 vault live-verified $246.73.,erc4626-deposit-topic-scan,False
+0x67b2328a1ec04fae9b50f0f30e923445eb86ca9b,ERC-4626 vault,yield-vault,1875.34,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,875.34.",erc4626-deposit-topic-scan,False
+0x686c83aa81ba206354fdcbc2cd282b4531365e29,ERC-4626 vault,yield-vault,1881.19,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,881.19.",erc4626-deposit-topic-scan,False
+0x68f857cf994434251f7327a9a76ae07be00907c1,ERC-4626 vault,yield-vault,1788.21,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,788.21.",erc4626-deposit-topic-scan,False
+0x6a0b5d5affa5a0b7dd776db96ee79f609394b5da,ERC-4626 vault,yield-vault,1055.0,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,055.00.",erc4626-deposit-topic-scan,False
+0x6a1792a91c08e9f0bfe7a990871b786643237f0f,ERC-4626 vault,yield-vault,101.0,58,below-2000-usd-priced,ERC-4626 vault live-verified $101.00.,erc4626-deposit-topic-scan,False
+0x6b886076d27a12bb53384ceef3b12bd90cf22397,ERC-4626 vault,yield-vault,1001.78,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,001.78.",erc4626-deposit-topic-scan,False
+0x6d84799f874918a7762625805d68cf3181d8d5f2,ERC-4626 vault,yield-vault,101.68,58,below-2000-usd-priced,ERC-4626 vault live-verified $101.68.,erc4626-deposit-topic-scan,False
+0x6dc3ce9c57b20131347fdc9089d740daf6eb34c5,ERC-4626 vault,yield-vault,260.37,58,below-2000-usd-priced,ERC-4626 vault live-verified $260.37.,erc4626-deposit-topic-scan,False
+0x6e0dccf49d095f8ea8920a8af03d236fa167b7e0,ERC-4626 vault,yield-vault,1372.09,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,372.09.",erc4626-deposit-topic-scan,False
+0x6f9d7ec5b273ff1b744c9ffafd268cc987eecf78,ERC-4626 vault,yield-vault,300.81,58,below-2000-usd-priced,ERC-4626 vault live-verified $300.81.,erc4626-deposit-topic-scan,False
+0x7320cf22ac095ba2a2e0a652f77efb836c2e751b,ERC-4626 vault,yield-vault,1856.7,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,856.70.",erc4626-deposit-topic-scan,False
+0x756ee7fafd2b629641b91e8a2e115e9c4d69078f,ERC-4626 vault,yield-vault,154.53,58,below-2000-usd-priced,ERC-4626 vault live-verified $154.53.,erc4626-deposit-topic-scan,False
+0x770db199e81703ec9a36c8212d9492708b397a3f,ERC-4626 vault,yield-vault,705.85,58,below-2000-usd-priced,ERC-4626 vault live-verified $705.85.,erc4626-deposit-topic-scan,False
+0x772eceebaa6053a82fe66f43a16c90cdef0c4f30,ERC-4626 vault,yield-vault,211.71,58,below-2000-usd-priced,ERC-4626 vault live-verified $211.71.,erc4626-deposit-topic-scan,False
+0x77ce60f2c7378738a51598d06d63bc91a7349482,ERC-4626 vault,yield-vault,900.33,58,below-2000-usd-priced,ERC-4626 vault live-verified $900.33.,erc4626-deposit-topic-scan,False
+0x79787778b129413160f81b4c598d42489edfb7bf,ERC-4626 vault,yield-vault,608.06,58,below-2000-usd-priced,ERC-4626 vault live-verified $608.06.,erc4626-deposit-topic-scan,False
+0x79daac720ebc080e4eec348b2221c6bb876a2129,ERC-4626 vault,yield-vault,1027.81,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,027.81.",erc4626-deposit-topic-scan,False
+0x7a26c6c1628c86788526efb81f37a2ffac243a98,ERC-4626 vault,yield-vault,1066.91,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,066.91.",erc4626-deposit-topic-scan,False
+0x7bfc0e982985556d17539adc630d8bf888d9004a,ERC-4626 vault,yield-vault,167.74,58,below-2000-usd-priced,ERC-4626 vault live-verified $167.74.,erc4626-deposit-topic-scan,False
+0x7cd63e9159d2f6cb7be2fe2a67b67812eb23c7ae,ERC-4626 vault,yield-vault,101.98,58,below-2000-usd-priced,"ERC-4626 vault leftover/excluded candidate, live-verified $101.98.",erc4626-deposit-topic-scan+live:rpc,False
+0x7ce1de4e1ff2b70a710933d550ad4675cf03d5f3,ERC-4626 vault,yield-vault,1863.58,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,863.58.",erc4626-deposit-topic-scan,False
+0x7ed622a8ec6216d4befd65b0704cee53a83d0228,ERC-4626 vault,yield-vault,175.61,58,below-2000-usd-priced,ERC-4626 vault live-verified $175.61.,erc4626-deposit-topic-scan,False
+0x83f8784abf4a93975728e224255d56614ecf43c5,ERC-4626 vault,yield-vault,1793.32,58,below-2000-usd-priced,"ERC-4626 vault live-verified $1,793.32.",erc4626-deposit-topic-scan,False
+0x862c57d48becb45583aeba3f489696d22466ca1b,ERC-4626 vault,yield-vault,156.89,58,below-2000-usd-priced,ERC-4626 vault live-verified $156.89.,erc4626-deposit-topic-scan,False
+0x8670120c32de7bc990e0fe3bbd04704e98492f0a,ERC-4626 vault,yield-vault,554.39,58,below-2000-usd-priced,ERC-4626 vault live-verified $554.39.,erc4626-deposit-topic-scan,False
+0x877bba4238ef1dca9bf574561da633049de3a334,ERC-4626 vault,yield-vault,286.04,58,below-2000-usd-priced,"ERC-4626 vault leftover/excluded candidate, live-verified $286.04.",erc4626-deposit-topic-scan+live:rpc,False
+0x8824f63f990fde4b46c6f2ec26356472db680563,ERC-4626 vault,yield-vault,1878.72,63,below-2000-usd-priced,"ERC-4626 vault priced $1,878.72 in the List 2 band after dropping a pass-through quoter.",erc4626-deposit-topic-scan,False

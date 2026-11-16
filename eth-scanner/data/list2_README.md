@@ -30,3 +30,9 @@ evidence_note, source, already_on_master
 
 Prior is a PRE-SCAN likelihood, NOT a finding. Heat still requires a live-chain rule failure
 or a fork-proven caller-profit invariant break.
+
+## Size
+The committed file is 428 addresses (2× the original 214). New rows were
+live-priced or nofuff-priced into the $50–$1,900 band, preferably at or
+above the $100 engine floor, after the same big-name / canonical filters.
+Existing rows were kept. Addresses were not invented.
