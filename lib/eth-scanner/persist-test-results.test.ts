@@ -102,7 +102,7 @@ describe("persist payload mappers", () => {
         address: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
         bucket: "lane-a-cool",
         dropped: true,
-        drop_reason: "below funds floor ($0 < $2,000)",
+        drop_reason: "below funds floor ($0 < $100)",
         heat: 0,
         src_confidence: "low",
         ir_confidence: "low",

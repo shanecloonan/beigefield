@@ -14,10 +14,16 @@ When ``list2_candidates.json`` (or ``.csv``, same shape as
 ``hand_ranked_candidates``) is present under ``eth-scanner/data/`` or the
 bot store, List 2 loads that file and then applies this filter. Until that
 file exists, List 2 is seeded from ``excluded.csv`` rows dropped for the old
-sub-$2,000 floor. Addresses are never invented.
+sub-$2,000 floor (``list2_rules.below_floor_marker`` still matches that
+historical tag). Addresses are never invented.
+
+The live scanner / Lane-B / advanced-engine funds floor is $100
+(``DEFAULT_MIN_FUNDS_USD``). It is independent of these list membership
+bands, so List 2 contracts at or above $100 are engine-eligible.
 
 Live range checks read min/max from the list a contract belongs to
-(``data/lists.json``). Heat promotion thresholds are unchanged.
+(``data/lists.json``). Heat promotion thresholds are unchanged except that
+the Lane-B funds bar tracks the $100 scanner floor.
 """
 
 from __future__ import annotations

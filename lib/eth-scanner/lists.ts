@@ -6,12 +6,15 @@
  *
  * List 2 is the junk-drawer / sketchy-contract list. It loads
  * list2_candidates.json when that file exists, otherwise excluded.csv rows
- * that were dropped under the old sub-$2,000 floor. Either way it applies
- * its own filter: small-dollar band, no big names, no canonical protocols,
- * ranked for abandoned / unaudited / odd-pattern / previously-hacked lineage.
+ * that were dropped under the old sub-$2,000 floor (below_floor_marker still
+ * matches that historical tag). Either way it applies its own filter:
+ * small-dollar band, no big names, no canonical protocols, ranked for
+ * abandoned / unaudited / odd-pattern / previously-hacked lineage.
  * Dollars are not the sort key.
  *
- * Bounds are per list in eth-scanner/data/lists.json. Heat rules are untouched.
+ * Bounds are per list in eth-scanner/data/lists.json. The live scanner /
+ * Lane-B / engine funds floor is $100, independent of those membership
+ * bands. Heat rules are otherwise untouched.
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";

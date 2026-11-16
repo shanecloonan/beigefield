@@ -43,7 +43,7 @@ BUCKETS: tuple[Bucket, ...] = (
 DEFAULT_HEAT_THRESHOLD = 3
 DEFAULT_TVL_FLOOR_USD = 10_000.0
 # Live funds floor (native + major ERC-20s / vault AUM) checked before ingest.
-DEFAULT_MIN_FUNDS_USD = 2_000.0
+DEFAULT_MIN_FUNDS_USD = 100.0
 MAX_HEAT = 12
 # Fallback spacing only. Live pace is ETH_SCANNER_ETHERSCAN_PER_SECOND (default 3)
 # times ETH_SCANNER_ETHERSCAN_PACE (default 0.95) — just under the free-tier cap.
