@@ -7,6 +7,7 @@ import re
 from typing import Any, Optional
 
 from eth_scanner.deep.findings import EngineFinding, make_finding
+from eth_scanner.research.slither_runner import slither_severity
 
 
 def _safe_json(text: str) -> Any:
@@ -55,7 +56,7 @@ def parse_slither(text: str) -> list[EngineFinding]:
             engine="slither",
             rule=rule,
             title=rule,
-            severity=d.get("impact"),
+            severity=slither_severity(rule, str(d.get("impact") or "")),
             confidence=d.get("confidence"),
             file=sm.get("filename_relative") or sm.get("filename_short"),
             line=int(lines[0]) if lines else None,

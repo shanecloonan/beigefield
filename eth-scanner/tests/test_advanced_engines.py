@@ -11,10 +11,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from eth_scanner.engines.clones import match_known_bad
-from eth_scanner.engines.pipeline import AdvancedEngineReport, run_advanced_engines
+from eth_scanner.engines.pipeline import AdvancedEngineReport, run_advanced_engines, _slither_to_leads
 from eth_scanner.heat import corroborated_heat, evidence_heat
 from eth_scanner.deep.runners import EngineRunResult
-from eth_scanner.deep.findings import EngineFinding
+from eth_scanner.deep.findings import EngineFinding, classify_finding, make_finding
 
 
 class SlitherLeadNoHeat(unittest.TestCase):
@@ -207,6 +207,48 @@ class MonitorEngineRollup(unittest.TestCase):
         self.assertEqual(stats["leads"], 3)
         self.assertEqual(stats["confirmed"], 1)
         self.assertEqual(stats["heat_gt0"], 1)
+
+
+class AllowlistLeads(unittest.TestCase):
+    def test_new_detectors_classify(self):
+        self.assertEqual(classify_finding("weak-prng"), "randomness")
+        self.assertEqual(classify_finding("timestamp"), "randomness")
+        self.assertEqual(classify_finding("calls-loop"), "dos-locked-funds")
+        self.assertEqual(classify_finding("costly-loop"), "dos-locked-funds")
+        self.assertEqual(classify_finding("multiple-constructors"), "access-control")
+        self.assertEqual(classify_finding("protected-vars"), "access-control")
+        self.assertEqual(classify_finding("unprotected-upgrade"), "access-control")
+        self.assertEqual(classify_finding("incorrect-shift"), "arithmetic")
+        self.assertEqual(classify_finding("incorrect-exp"), "arithmetic")
+        self.assertEqual(classify_finding("incorrect-unary"), "arithmetic")
+
+    def test_timestamp_lead_flows_as_generic_info(self):
+        finding = make_finding(
+            engine="slither",
+            rule="timestamp",
+            title="Slither timestamp",
+            severity="low",
+            evidence="block.timestamp used",
+        )
+        self.assertTrue(finding.generic)
+        self.assertEqual(finding.severity, "info")
+        result = EngineRunResult("slither", "ok", findings=[finding])
+        leads = _slither_to_leads(result)
+        self.assertEqual(len(leads), 1)
+        self.assertEqual(leads[0]["rule"], "timestamp")
+        self.assertTrue(leads[0]["generic"])
+        self.assertEqual(leads[0]["severity"], "info")
+
+    def test_naming_convention_still_dropped(self):
+        finding = make_finding(
+            engine="slither",
+            rule="naming-convention",
+            title="style",
+            severity="info",
+            evidence="case",
+        )
+        result = EngineRunResult("slither", "ok", findings=[finding])
+        self.assertEqual(_slither_to_leads(result), [])
 
 
 if __name__ == "__main__":

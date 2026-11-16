@@ -52,6 +52,7 @@ GENERIC_RULES = frozenset({
     "assembly",
     "cache-array-length",
     "costly-operations-loop",
+    "costly-loop",
 })
 
 _CLASS_RULES: list[tuple[re.Pattern[str], str]] = [
@@ -61,15 +62,16 @@ _CLASS_RULES: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"bridge|chain[-_ ]?id|encode[-_ ]?packed|swc-133", re.I), "bridge-message"),
     (re.compile(r"oracle|price[-_ ]?manip|flash[-_ ]?loan|spot[-_ ]?price|twap", re.I), "oracle-manipulation"),
     (re.compile(r"stale|heartbeat|updatedat", re.I), "staleness"),
-    (re.compile(r"tx[-_.]?origin|access|owner|onlyowner|unprotected|arbitrary[-_ ]?send|suicidal|missing[-_ ]?auth|swc-105|swc-106|privilege", re.I), "access-control"),
+    (re.compile(r"tx[-_.]?origin|access|owner|onlyowner|unprotected|protected[-_ ]?vars|arbitrary[-_ ]?send|suicidal|missing[-_ ]?auth|multiple[-_ ]?constructors|swc-105|swc-106|privilege", re.I), "access-control"),
     (re.compile(r"unchecked[-_ ]?(transfer|call|send|lowlevel)|unused[-_ ]?return|swc-104", re.I), "unchecked-call"),
     (re.compile(r"fee[-_ ]?on[-_ ]?transfer|approve|allowance|weird[-_ ]?token|rebasing", re.I), "token-integration"),
-    (re.compile(r"overflow|underflow|downcast|arithmetic|swc-101", re.I), "arithmetic"),
+    (re.compile(r"overflow|underflow|downcast|arithmetic|incorrect[-_ ]?(shift|exp|unary)|swc-101", re.I), "arithmetic"),
     (re.compile(r"divide[-_ ]?before[-_ ]?multiply|precision|rounding|share[-_ ]?inflation", re.I), "rounding"),
     (re.compile(r"slippage|deadline|front[-_ ]?run|sandwich|mev", re.I), "mev-slippage"),
     (re.compile(r"selfdestruct|forced[-_ ]?ether|swc-132", re.I), "selfdestruct-ether"),
     (re.compile(r"random|blockhash|weak[-_ ]?prng|swc-120", re.I), "randomness"),
-    (re.compile(r"locked[-_ ]?ether|dos|denial|unbounded|swc-113|swc-128", re.I), "dos-locked-funds"),
+    (re.compile(r"timestamp|block[-_ ]?timestamp|time[-_ ]?manip|swc-116", re.I), "randomness"),
+    (re.compile(r"locked[-_ ]?ether|dos|denial|unbounded|calls[-_ ]?loop|costly[-_ ]?loop|msg[-_ ]?value[-_ ]?loop|swc-113|swc-128", re.I), "dos-locked-funds"),
     (re.compile(r"invariant|property|solvency|conservation", re.I), "invariant-violation"),
 ]
 
@@ -166,6 +168,13 @@ def make_finding(
     funds_class = class_hint if class_hint in FUNDS_AT_RISK_CLASSES else classify_finding(
         class_hint, rule, title, str(evidence or "")
     )
+    if (engine or "").lower() == "slither":
+        try:
+            from eth_scanner.research.slither_runner import SLITHER_SEVERITY_OVERRIDE
+            if rule in SLITHER_SEVERITY_OVERRIDE:
+                severity = SLITHER_SEVERITY_OVERRIDE[rule]
+        except Exception:  # noqa: BLE001
+            pass
     generic = is_generic_rule(rule)
     rule_family = rule_family_of(rule)
     # Agreement clusters on class + rule family (cross-engine). Location is
