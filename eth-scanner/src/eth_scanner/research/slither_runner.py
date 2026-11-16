@@ -16,6 +16,14 @@ from typing import Any, Optional
 from eth_scanner.research.types import Finding, LayerSkip, _norm_severity
 
 # Curated funds-safety allowlist. No style / naming / pragma noise.
+#
+# Slither 0.11.6 has no generic integer-overflow detector (checked arithmetic
+# is a 0.8+ language feature). Arithmetic coverage is divide-before-multiply,
+# incorrect-equality, incorrect-shift, incorrect-exp, and incorrect-unary.
+# There is no `incorrect-constructor-name` check; `multiple-constructors` is
+# the closest 0.11.6 equivalent (old + new constructor schemes in one contract).
+# There is no front-running / transaction-order detector; `tx-origin` stays as
+# an access-control check (already allowlisted).
 SLITHER_ALLOWLIST = frozenset({
     "reentrancy-eth",
     "reentrancy-no-eth",
@@ -24,28 +32,46 @@ SLITHER_ALLOWLIST = frozenset({
     "arbitrary-send",
     "arbitrary-send-eth",
     "arbitrary-send-erc20",
+    "arbitrary-send-erc20-permit",
     "controlled-delegatecall",
     "uncontrolled-delegatecall",
     "uninitialized-storage",
     "uninitialized-state",
     "suicidal",
     "tx-origin",
+    "unprotected-upgrade",
+    "protected-vars",
+    "multiple-constructors",
     "unchecked-transfer",
     "unchecked-lowlevel",
     "unchecked-send",
     "locked-ether",
     "delegatecall-loop",
+    "calls-loop",
+    "costly-loop",
+    "msg-value-loop",
+    "weak-prng",
+    "timestamp",
     "encode-packed-collision",
     "incorrect-equality",
+    "incorrect-shift",
+    "incorrect-exp",
+    "incorrect-unary",
     "unused-return",
     "mapping-deletion",
     "divide-before-multiply",
-    "msg-value-loop",
     "return-leave",
     "storage-array",
     "array-by-reference",
     "write-after-write",
 })
+
+# Noisy checks still flow through as findings, but are capped so they cannot
+# inflate drain / triage scores on their own.
+SLITHER_SEVERITY_OVERRIDE = {
+    "timestamp": "info",
+    "costly-loop": "info",
+}
 
 _IMPACT_TO_SEV = {
     "informational": "info",
@@ -62,6 +88,18 @@ def slither_available() -> bool:
 
 def _severity_from_impact(impact: str) -> str:
     return _IMPACT_TO_SEV.get((impact or "").strip().lower(), "info")
+
+
+def slither_severity(check: str, impact: str = "") -> str:
+    """Map a Slither check + impact onto the research severity scale.
+
+    Allowlisted noisy detectors (timestamp, costly-loop) are forced to
+    informational regardless of the tool's own impact label.
+    """
+    check = (check or "").strip()
+    if check in SLITHER_SEVERITY_OVERRIDE:
+        return SLITHER_SEVERITY_OVERRIDE[check]  # type: ignore[return-value]
+    return _norm_severity(_severity_from_impact(impact))
 
 
 def parse_slither_json(payload: Any, *, address: str) -> list[Finding]:
@@ -101,7 +139,7 @@ def parse_slither_json(payload: Any, *, address: str) -> list[Finding]:
                 locus = " @ %s:%s" % (fname, lines[0] if lines else "?")
         findings.append(Finding(
             id="L2-slither-%s-%d" % (check, counts[check]),
-            severity=_norm_severity(_severity_from_impact(impact)),
+            severity=slither_severity(check, impact),
             layer="L2",
             title="Slither %s" % check,
             evidence=(desc.strip() + locus)[:2000],

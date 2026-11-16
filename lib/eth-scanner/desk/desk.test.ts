@@ -91,6 +91,17 @@ test("evidence sanitizer elides long hex and caps length", () => {
 test("classification + dedupe + sort", () => {
   assert.equal(classifyFinding("oracle price manipulation"), "oracle-manipulation");
   assert.equal(classifyFinding("delegatecall to untrusted"), "delegatecall-storage");
+  assert.equal(classifyFinding("weak-prng"), "randomness");
+  assert.equal(classifyFinding("timestamp"), "randomness");
+  assert.equal(classifyFinding("calls-loop"), "dos-locked-funds");
+  assert.equal(classifyFinding("costly-loop"), "dos-locked-funds");
+  assert.equal(classifyFinding("multiple-constructors"), "access-control");
+  assert.equal(classifyFinding("protected-vars"), "access-control");
+  assert.equal(classifyFinding("incorrect-shift"), "arithmetic");
+  const ts = makeFinding({ engine: "slither", rule: "timestamp", title: "block timestamp", severity: "low", confidence: "medium", evidence: "now" });
+  assert.equal(ts.severity, "info");
+  const loop = makeFinding({ engine: "slither", rule: "costly-loop", title: "costly loop", severity: "informational", confidence: "medium", evidence: "sstore" });
+  assert.equal(loop.severity, "info");
   const a = makeFinding({ engine: "slither", rule: "r", title: "t", severity: "low", confidence: "high", evidence: "e" });
   const b = makeFinding({ engine: "slither", rule: "r2", title: "t", severity: "critical", confidence: "high", evidence: "e" });
   const sorted = sortFindings(dedupeFindings([a, a, b]));

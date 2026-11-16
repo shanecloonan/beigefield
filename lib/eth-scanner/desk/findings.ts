@@ -76,6 +76,12 @@ export function normalizeSeverity(raw: unknown): Severity {
   return SEVERITY_ALIASES[s] ?? "info";
 }
 
+/** Noisy Slither checks still surface as findings, but cannot inflate triage. */
+export const SLITHER_SEVERITY_OVERRIDE: Partial<Record<string, Severity>> = {
+  timestamp: "info",
+  "costly-loop": "info",
+};
+
 export function normalizeConfidence(raw: unknown): Confidence {
   const s = String(raw ?? "").trim().toLowerCase();
   if (s === "high") return "high";
@@ -91,15 +97,15 @@ const CLASS_RULES: [RegExp, FundsAtRiskClass][] = [
   [/bridge|chain[-_ ]?id|hash[-_ ]?collision|encode[-_ ]?packed|swc-133/i, "bridge-message"],
   [/oracle|price[-_ ]?manip|flash[-_ ]?loan|spot[-_ ]?price|twap/i, "oracle-manipulation"],
   [/stale|heartbeat|updatedat/i, "staleness"],
-  [/tx[-_.]?origin|access|owner|onlyowner|unprotected|arbitrary[-_ ]?send|suicidal|missing[-_ ]?auth|authori[sz]|role|swc-105|swc-106|swc-115|privilege|centrali/i, "access-control"],
+  [/tx[-_.]?origin|access|owner|onlyowner|unprotected|protected[-_ ]?vars|arbitrary[-_ ]?send|suicidal|missing[-_ ]?auth|multiple[-_ ]?constructors|authori[sz]|role|swc-105|swc-106|swc-115|privilege|centrali/i, "access-control"],
   [/unchecked[-_ ]?(transfer|call|send|lowlevel|low-level|return)|low[-_ ]?level|unused[-_ ]?return|swc-104|return[-_ ]?value|no[-_ ]?return/i, "unchecked-call"],
   [/fee[-_ ]?on[-_ ]?transfer|erc20|approve|allowance|decimals|weird[-_ ]?token|rebasing/i, "token-integration"],
-  [/overflow|underflow|downcast|arithmetic|swc-101|integer|truncat/i, "arithmetic"],
+  [/overflow|underflow|downcast|arithmetic|incorrect[-_ ]?(shift|exp|unary)|swc-101|integer|truncat/i, "arithmetic"],
   [/divide[-_ ]?before[-_ ]?multiply|precision|rounding|share[-_ ]?inflation|first[-_ ]?deposit/i, "rounding"],
   [/slippage|deadline|front[-_ ]?run|sandwich|mev|swc-114/i, "mev-slippage"],
   [/selfdestruct|forced[-_ ]?ether|balance[-_ ]?equal|strict[-_ ]?equal|swc-132|swc-106/i, "selfdestruct-ether"],
   [/random|blockhash|timestamp|weak[-_ ]?prng|swc-120|swc-116/i, "randomness"],
-  [/locked[-_ ]?ether|dos|denial|unbounded|gas[-_ ]?limit|swc-113|swc-128|calls[-_ ]?loop|msg[-_ ]?value[-_ ]?loop/i, "dos-locked-funds"],
+  [/locked[-_ ]?ether|dos|denial|unbounded|gas[-_ ]?limit|swc-113|swc-128|calls[-_ ]?loop|costly[-_ ]?loop|msg[-_ ]?value[-_ ]?loop/i, "dos-locked-funds"],
   [/invariant|property|solvency|conservation|echidna_|check_|assert/i, "invariant-violation"],
 ];
 
@@ -146,7 +152,8 @@ export function makeFinding(input: {
     engine: input.engine,
     rule: input.rule,
     title: sanitizeEvidence(input.title).slice(0, 200),
-    severity: normalizeSeverity(input.severity),
+    severity: (input.engine === "slither" && SLITHER_SEVERITY_OVERRIDE[input.rule])
+      || normalizeSeverity(input.severity),
     confidence: normalizeConfidence(input.confidence),
     class: classifyFinding(input.classHint, input.rule, input.title),
     location,

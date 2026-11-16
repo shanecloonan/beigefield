@@ -107,6 +107,12 @@ class SlitherParse(unittest.TestCase):
                     {"check": "reentrancy-eth", "impact": "High", "description": "reenter"},
                     {"check": "naming-convention", "impact": "Informational", "description": "style"},
                     {"check": "tx-origin", "impact": "Medium", "description": "tx.origin"},
+                    {"check": "weak-prng", "impact": "High", "description": "blockhash % n"},
+                    {"check": "timestamp", "impact": "Low", "description": "block.timestamp"},
+                    {"check": "calls-loop", "impact": "Low", "description": "call in loop"},
+                    {"check": "costly-loop", "impact": "Informational", "description": "sstore in loop"},
+                    {"check": "multiple-constructors", "impact": "High", "description": "old and new ctor"},
+                    {"check": "incorrect-shift", "impact": "High", "description": "shl args reversed"},
                 ]
             }
         }
@@ -114,9 +120,20 @@ class SlitherParse(unittest.TestCase):
         checks = {r.detector for r in rows}
         self.assertIn("slither:reentrancy-eth", checks)
         self.assertIn("slither:tx-origin", checks)
+        self.assertIn("slither:weak-prng", checks)
+        self.assertIn("slither:timestamp", checks)
+        self.assertIn("slither:calls-loop", checks)
+        self.assertIn("slither:costly-loop", checks)
+        self.assertIn("slither:multiple-constructors", checks)
+        self.assertIn("slither:incorrect-shift", checks)
         self.assertFalse(any("naming" in c for c in checks))
         self.assertEqual(rows[0].severity, "high")
         self.assertEqual(rows[0].layer, "L2")
+        by = {r.detector: r for r in rows}
+        # Noisy detectors stay in the report but are capped at informational.
+        self.assertEqual(by["slither:timestamp"].severity, "info")
+        self.assertEqual(by["slither:costly-loop"].severity, "info")
+        self.assertEqual(by["slither:weak-prng"].severity, "high")
 
 
 class ForkScaffold(unittest.TestCase):

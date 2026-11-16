@@ -467,9 +467,10 @@ def _slither_to_leads(result: EngineRunResult) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for f in result.findings:
         rule = (f.rule or "").strip()
-        if rule and rule not in SLITHER_ALLOWLIST and is_generic_rule(rule):
-            continue
-        if is_generic_rule(rule):
+        # Style / naming noise stays dropped. Allowlisted checks, including
+        # noisy ones like timestamp, still become leads (marked generic so
+        # they cannot add heat or drain on their own).
+        if is_generic_rule(rule) and rule not in SLITHER_ALLOWLIST:
             continue
         if rule and SLITHER_ALLOWLIST and rule not in SLITHER_ALLOWLIST:
             if f.funds_class in {"other", ""} and f.severity in {"info", "low"}:
