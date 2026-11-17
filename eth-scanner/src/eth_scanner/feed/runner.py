@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
@@ -38,7 +39,7 @@ from eth_scanner.feed.lists import (
 from eth_scanner.ingest.quota import DailyBudgetExhausted, bind_quota, release_quota
 from eth_scanner.feed.master_list import MasterCandidate, list_fingerprint, load_master_candidates
 from eth_scanner.lane_a import worker as lane_a
-from eth_scanner.store.supabase import ScanStore, normalize_address, open_store
+from eth_scanner.store.supabase import ScanStore, normalize_address, open_store, sweep_stale_claims
 from eth_scanner.types import FunnelResult, Target, to_plain
 
 CURSOR_ID = "master-list"
@@ -826,6 +827,24 @@ def run_scan_cycle(
     """
     settings = settings or load_settings()
     store = store or open_store(settings)
+    stale = sweep_stale_claims(
+        store,
+        stale_seconds=getattr(settings, "claim_stale_seconds", None),
+        max_resets=getattr(settings, "stale_claim_max_resets", None),
+    )
+    if stale:
+        released = sum(1 for row in stale if row.get("action") == "released")
+        skipped = sum(1 for row in stale if row.get("action") == "skipped")
+        print(
+            "stale-claim: released=%d skipped=%d (timeout=%ss max_resets=%s)"
+            % (
+                released,
+                skipped,
+                getattr(settings, "claim_stale_seconds", "?"),
+                getattr(settings, "stale_claim_max_resets", "?"),
+            ),
+            file=sys.stderr,
+        )
     started = time.monotonic()
     deadline = (
         float(deadline_monotonic)

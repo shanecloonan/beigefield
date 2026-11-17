@@ -322,7 +322,7 @@ class BlendLists(unittest.TestCase):
     def test_list2_band_and_list1_strong_rules(self):
         rows, dropped = load_list2()
         self.assertEqual(dropped, 0)
-        self.assertEqual(len(rows), 214)
+        self.assertEqual(len(rows), 428)
         self.assertTrue(all(50 <= row["est_usd_held"] <= 1900 for row in rows))
         self.assertTrue(all(row["deep_lane"] for row in rows))
         info = catalog()

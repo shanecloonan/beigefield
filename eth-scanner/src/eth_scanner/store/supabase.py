@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional, Protocol
 
-from eth_scanner.config import Settings
+from eth_scanner.config import Settings, stale_claim_max_resets, stale_claim_seconds
 from eth_scanner.types import FunnelResult, SourceArtifact, Target, to_plain
 
 
@@ -63,6 +63,109 @@ def _addr_or_none(addr: str) -> Optional[str]:
         return None
 
 
+
+# Count of stale-claim releases, stored on the existing heat_breakdown jsonb
+# so we do not need a schema change. A later completed scan may overwrite
+# this object; that row is then done/skipped and the counter no longer matters.
+STALE_CLAIM_RESETS_KEY = "stale_claim_resets"
+STALE_CLAIM_SKIP_REASON = "stale-claim-timeout"
+
+
+def _parse_ts(value: Any) -> Optional[datetime]:
+    if value is None or value == "":
+        return None
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        text = str(value).strip()
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        # Postgres often emits "+00" rather than "+00:00".
+        if len(text) >= 3 and text[-3] in "+-" and text[-3:].replace("+", "").replace("-", "").isdigit():
+            text = text + ":00"
+        if "T" not in text:
+            text = text.replace(" ", "T", 1)
+        try:
+            dt = datetime.fromisoformat(text)
+        except ValueError:
+            return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _claim_age_ts(row: dict[str, Any]) -> Optional[datetime]:
+    """claimed_at, falling back to updated_at when the claim stamp is missing."""
+    return _parse_ts(row.get("claimed_at")) or _parse_ts(row.get("updated_at"))
+
+
+def _stale_reset_count(row: dict[str, Any]) -> int:
+    hb = row.get("heat_breakdown")
+    if not isinstance(hb, dict):
+        return 0
+    try:
+        return max(0, int(hb.get(STALE_CLAIM_RESETS_KEY) or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def plan_stale_claim_release(
+    row: dict[str, Any],
+    *,
+    now: datetime,
+    stale_seconds: int,
+    max_resets: int,
+) -> Optional[dict[str, Any]]:
+    """If a running row is stale, return the patch and a summary; else None."""
+    if str(row.get("status") or "") != "running":
+        return None
+    if stale_seconds <= 0:
+        return None
+    ts = _claim_age_ts(row)
+    if ts is None:
+        return None
+    age = (now - ts).total_seconds()
+    if age < stale_seconds:
+        return None
+    resets = _stale_reset_count(row) + 1
+    hb = dict(row.get("heat_breakdown") or {}) if isinstance(row.get("heat_breakdown"), dict) else {}
+    hb[STALE_CLAIM_RESETS_KEY] = resets
+    if resets > max_resets:
+        status = "skipped"
+        hb["skip_reason"] = STALE_CLAIM_SKIP_REASON
+        action = "skipped"
+    else:
+        status = "pending"
+        action = "released"
+    patch = {
+        "status": status,
+        "claimed_by": None,
+        "claimed_at": None,
+        "heat_breakdown": hb,
+    }
+    return {
+        "address": row.get("address"),
+        "action": action,
+        "resets": resets,
+        "age_seconds": int(age),
+        "patch": patch,
+    }
+
+
+def sweep_stale_claims(
+    store: "ScanStore",
+    *,
+    stale_seconds: Optional[int] = None,
+    max_resets: Optional[int] = None,
+    now: Optional[datetime] = None,
+) -> list[dict[str, Any]]:
+    """Release stale running claims on any store that implements the method."""
+    fn = getattr(store, "release_stale_claims", None)
+    if not callable(fn):
+        return []
+    return fn(stale_seconds=stale_seconds, max_resets=max_resets, now=now)
+
+
 class ScanStore(Protocol):
     def upsert_target(self, target: Target) -> Target: ...
     def get_target(self, address: str) -> Optional[dict[str, Any]]: ...
@@ -70,6 +173,13 @@ class ScanStore(Protocol):
     def save_artifact(self, address: str, kind: str, payload: dict[str, Any], confidence: str) -> None: ...
     def save_result(self, address: str, result: FunnelResult) -> None: ...
     def claim_pending(self, limit: int, worker_id: str) -> list[dict[str, Any]]: ...
+    def release_stale_claims(
+        self,
+        *,
+        stale_seconds: Optional[int] = None,
+        max_resets: Optional[int] = None,
+        now: Optional[datetime] = None,
+    ) -> list[dict[str, Any]]: ...
     def claim_lane_b(self, limit: int, worker_id: str) -> list[dict[str, Any]]: ...
     def list_targets(self, bucket: Optional[str] = None, limit: int = 200) -> list[dict[str, Any]]: ...
     def list_results(self, address: Optional[str] = None, limit: int = 200) -> list[dict[str, Any]]: ...
@@ -211,7 +321,34 @@ class MemoryStore:
         tgt["updated_at"] = _now()
         self._flush()
 
+
+    def release_stale_claims(
+        self,
+        *,
+        stale_seconds: Optional[int] = None,
+        max_resets: Optional[int] = None,
+        now: Optional[datetime] = None,
+    ) -> list[dict[str, Any]]:
+        """Reset stale status=running claims to pending, or skipped after the cap."""
+        seconds = stale_claim_seconds() if stale_seconds is None else int(stale_seconds)
+        cap = stale_claim_max_resets() if max_resets is None else int(max_resets)
+        moment = now or datetime.now(timezone.utc)
+        released: list[dict[str, Any]] = []
+        for row in self.targets.values():
+            plan = plan_stale_claim_release(
+                row, now=moment, stale_seconds=seconds, max_resets=cap,
+            )
+            if not plan:
+                continue
+            row.update(plan["patch"])
+            row["updated_at"] = moment.isoformat()
+            released.append({k: v for k, v in plan.items() if k != "patch"})
+        if released:
+            self._flush()
+        return released
+
     def claim_pending(self, limit: int, worker_id: str) -> list[dict[str, Any]]:
+        self.release_stale_claims()
         claimed: list[dict[str, Any]] = []
         now = _now()
         pending = [r for r in self.targets.values() if r.get("status") == "pending"]
@@ -651,7 +788,45 @@ class SupabaseStore:
             patch["heat_breakdown"] = dict(result.heat_breakdown or {})
         self._req("PATCH", "eth_scan_targets", patch, query={"address": "eq.%s" % addr})
 
+
+    def release_stale_claims(
+        self,
+        *,
+        stale_seconds: Optional[int] = None,
+        max_resets: Optional[int] = None,
+        now: Optional[datetime] = None,
+    ) -> list[dict[str, Any]]:
+        """Reset stale status=running claims to pending, or skipped after the cap."""
+        seconds = stale_claim_seconds() if stale_seconds is None else int(stale_seconds)
+        cap = stale_claim_max_resets() if max_resets is None else int(max_resets)
+        if seconds <= 0:
+            return []
+        moment = now or datetime.now(timezone.utc)
+        rows = self._req("GET", "eth_scan_targets", query={
+            "status": "eq.running",
+            "select": "address,status,claimed_by,claimed_at,updated_at,heat_breakdown",
+            "limit": "2000",
+        })
+        if not isinstance(rows, list) or not rows:
+            return []
+        released: list[dict[str, Any]] = []
+        for row in rows:
+            plan = plan_stale_claim_release(
+                row, now=moment, stale_seconds=seconds, max_resets=cap,
+            )
+            if not plan:
+                continue
+            self._req(
+                "PATCH",
+                "eth_scan_targets",
+                plan["patch"],
+                query={"address": "eq.%s" % row["address"], "status": "eq.running"},
+            )
+            released.append({k: v for k, v in plan.items() if k != "patch"})
+        return released
+
     def claim_pending(self, limit: int, worker_id: str) -> list[dict[str, Any]]:
+        self.release_stale_claims()
         # Newest deployments first; fall back to updated_at when age is missing.
         rows = self._req("GET", "eth_scan_targets", query={
             "status": "eq.pending",
