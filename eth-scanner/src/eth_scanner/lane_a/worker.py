@@ -386,10 +386,25 @@ def run_batch(
     return out
 
 
-def claim_and_run(limit: int = 10, *, settings: Optional[Settings] = None) -> list[tuple[str, FunnelResult]]:
+def _claim_pending(store, limit: int, worker_id: str, discovery_source: Optional[str] = None):
+    """Claim pending rows, optionally restricted to one discovery_source."""
+    if discovery_source:
+        try:
+            return store.claim_pending(limit, worker_id, discovery_source=discovery_source)
+        except TypeError:
+            pass
+    return store.claim_pending(limit, worker_id)
+
+
+def claim_and_run(
+    limit: int = 10,
+    *,
+    settings: Optional[Settings] = None,
+    discovery_source: Optional[str] = None,
+) -> list[tuple[str, FunnelResult]]:
     settings = settings or load_settings()
     store = open_store(settings)
-    claimed = store.claim_pending(limit, settings.worker_id)
+    claimed = _claim_pending(store, limit, settings.worker_id, discovery_source)
     out: list[tuple[str, FunnelResult]] = []
     for row in claimed:
         result = run_one(row["address"], settings=settings, store=store, tvl_usd=_as_float(row.get("tvl_usd")))
@@ -405,6 +420,7 @@ def claim_and_drain(
     settings: Optional[Settings] = None,
     store: Optional[ScanStore] = None,
     batch_size: Optional[int] = None,
+    discovery_source: Optional[str] = None,
 ) -> list[tuple[str, Any]]:
     """Claim pending targets and scan until empty, max_scans, or deadline.
 
@@ -438,7 +454,7 @@ def claim_and_drain(
             if left < headroom:
                 break
         claim_n = min(chunk, remaining)
-        claimed = store.claim_pending(claim_n, settings.worker_id)
+        claimed = _claim_pending(store, claim_n, settings.worker_id, discovery_source)
         if not claimed:
             break
 

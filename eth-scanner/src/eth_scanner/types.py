@@ -84,7 +84,7 @@ class Target:
     # Recent-deployment discovery metadata (prefer newest first).
     deployed_block: Optional[int] = None
     deployed_at: Optional[str] = None  # ISO8601 UTC
-    discovery_source: Optional[str] = None  # rpc-create | etherscan-verified | fallback
+    discovery_source: Optional[str] = None  # fresh-deploy | backfill | master_list | random_scan | rpc-create | etherscan-verified
 
 
 @dataclass

@@ -4,7 +4,8 @@ Each address goes through the existing Lane A path: verified source / bytecode
 via Etherscan, a live funds re-check against that list's configured min/max,
 then the unchanged funnel. Heat rules are not touched here.
 
-``run_scan_cycle`` walks every list in ``lists.json`` order (List 1, then
+``run_scan_cycle`` first drains pending ``fresh-deploy`` targets (brand-new
+mainnet creates), then walks every list in ``lists.json`` order (List 1, then
 List 2). A finished pass for the current fingerprint is not repeated. When
 nothing on any list is unscanned, and random scanning is on, the same budget
 picks verified contracts and runs them through Lane A plus the blend gauntlet.
@@ -39,6 +40,7 @@ from eth_scanner.feed.lists import (
 from eth_scanner.ingest.quota import DailyBudgetExhausted, bind_quota, release_quota
 from eth_scanner.feed.master_list import MasterCandidate, list_fingerprint, load_master_candidates
 from eth_scanner.lane_a import worker as lane_a
+from eth_scanner.discover.fresh import FRESH_SOURCE
 from eth_scanner.store.supabase import ScanStore, normalize_address, open_store, sweep_stale_claims
 from eth_scanner.types import FunnelResult, Target, to_plain
 
@@ -788,11 +790,13 @@ def list_pass_complete(row: Optional[dict[str, Any]], n: int, list_sha: str) -> 
 
 @dataclass
 class ScanCycleProgress:
-    """One scheduler run: every configured list, then randoms when the lists are done."""
+    """One scheduler run: fresh deploys, then every configured list, then randoms."""
 
     status: str = "running"  # running | done | noop | error | budget
     phase: str = ""
     lists: list[dict[str, Any]] = field(default_factory=list)
+    fresh_scanned: int = 0
+    fresh_skipped: int = 0
     random_enabled: bool = False
     random_scanned: int = 0
     random_skipped: int = 0
@@ -817,11 +821,14 @@ def run_scan_cycle(
     pick_random: Optional[Callable[[set[str]], Optional[str]]] = None,
     random_enabled: Optional[bool] = None,
 ) -> ScanCycleProgress:
-    """Scan List 1, then List 2, then whatever else ``lists.json`` names.
+    """Scan fresh deploys, then List 1, then List 2, then whatever else ``lists.json`` names.
 
-    A list with a finished pass for its current fingerprint is skipped. A new
-    or reordered address makes the fingerprint change, and that list is scanned
-    again before any random contract. Random scanning follows
+    Pending ``eth_scan_targets`` with ``discovery_source='fresh-deploy'`` are
+    claimed first so a brand-new contract is not stuck behind a list walk.
+    After each list finishes the cycle checks that queue again. A list with a
+    finished pass for its current fingerprint is skipped. A new or reordered
+    address makes the fingerprint change, and that list is scanned again
+    before any random contract. Random scanning follows
     ``random_scan.enabled`` (default on) unless ``ETH_SCANNER_RANDOM_SCAN`` is set.
     There is no per-run contract cap. The shared Etherscan ledger still applies.
     """
@@ -871,8 +878,38 @@ def run_scan_cycle(
     force_reset = {cfg.id for cfg in list_configs()} if reset else set()
     try:
         bind_quota(store, settings)
+        # Seed the fast lane from the chain head before claiming those rows.
+        # Skips cleanly when ETH_RPC_URL is unset. Custom scan_one hooks
+        # (unit tests) and dry-run runs do not touch the network.
+        if scan_one is None and not bool(getattr(settings, "dry_run", False)):
+            try:
+                from eth_scanner.discover.fresh import run_fresh_deploy_discovery
+
+                disc = run_fresh_deploy_discovery(
+                    store=store,
+                    rpc_url=getattr(settings, "eth_rpc_url", "") or "",
+                )
+                print("fresh-deploys %s" % (disc.message or disc.status), file=sys.stderr)
+            except Exception as exc:  # noqa: BLE001
+                print("fresh-deploys discovery skipped: %s" % str(exc)[:200], file=sys.stderr)
         while time.monotonic() < deadline:
             _touch_cycle(store, owner, progress)
+            progress.phase = "fresh-deploy"
+            fresh_outcome = _scan_one_fresh(
+                settings,
+                store,
+                progress,
+                scan_one=scan_one,
+            )
+            if fresh_outcome == "ok":
+                continue
+            if fresh_outcome == "budget":
+                progress.status = "budget"
+                break
+            if fresh_outcome == "stop":
+                progress.status = "running"
+                progress.message = progress.message or "fresh-deploy phase paused"
+                break
             pending = _next_pending_list(store, force_reset=force_reset)
             if pending is not None:
                 list_id, _sha, _n = pending
@@ -990,6 +1027,7 @@ def _touch_cycle(store: ScanStore, owner: str, progress: ScanCycleProgress) -> N
     )
     stats = body["stats"]
     stats["phase"] = progress.phase
+    stats["fresh_scanned"] = progress.fresh_scanned
     stats["random_scanned"] = progress.random_scanned
     stats["current_address"] = progress.current_address
     stats["automatic"] = True
@@ -1020,6 +1058,7 @@ def _release_cycle(store: ScanStore, owner: str, progress: ScanCycleProgress) ->
         body["last_error"] = progress.message[:240]
     stats = body["stats"]
     stats["phase"] = progress.phase
+    stats["fresh_scanned"] = progress.fresh_scanned
     stats["random_scanned"] = progress.random_scanned
     stats["current_address"] = progress.current_address
     stats["automatic"] = True
@@ -1430,4 +1469,173 @@ def _scan_one_random(
     _remember_random(store, addr)
     progress.random_scanned += 1
     progress.message = "lists are scanned; random phase recorded %d this run. The next scheduled run continues on its own" % progress.random_scanned
+    return "ok"
+
+
+def _claim_fresh_pending(store: ScanStore, worker_id: str) -> Optional[dict[str, Any]]:
+    fn = getattr(store, "claim_pending", None)
+    if not callable(fn):
+        return None
+    try:
+        rows = fn(1, worker_id, discovery_source=FRESH_SOURCE)
+    except TypeError:
+        rows = fn(1, worker_id)
+        rows = [r for r in (rows or []) if str(r.get("discovery_source") or "") == FRESH_SOURCE]
+    if not rows:
+        return None
+    return rows[0]
+
+
+def _persist_fresh(
+    store: ScanStore,
+    address: str,
+    result: FunnelResult,
+    *,
+    note: str,
+    deployed_block: Optional[int] = None,
+) -> None:
+    from eth_scanner.store.supabase import normalize_address as norm
+
+    addr = norm(address)
+    save = getattr(store, "save_test_scan_run", None)
+    notes = list(result.notes or [])
+    if note and note not in notes:
+        notes.append(note)
+    status = "dropped" if result.dropped else "done"
+    if callable(save):
+        row: dict[str, Any] = {
+            "dedupe_key": "fresh-deploy:%s" % addr,
+            "kind": "lane-a",
+            "chain": "ethereum",
+            "address": addr,
+            "contract_name": result.contract_name,
+            "tvl_usd": result.funds_usd,
+            "money_at_risk_usd": result.funds_usd,
+            "funds_usd": result.funds_usd,
+            "funds_breakdown": list(result.funds_breakdown or []),
+            "funds_status": result.funds_status,
+            "funds_checked_at": result.funds_checked_at,
+            "invariant_results": list(result.invariant_results or []),
+            "heat_breakdown": dict(result.heat_breakdown or {}),
+            "known_safe": bool(result.known_safe),
+            "discovery_source": FRESH_SOURCE,
+            "list_id": None,
+            "list_name": None,
+            "candidate_reason": "fresh-deploy",
+            "tier": 1,
+            "bucket": result.bucket,
+            "heat": int(result.heat or 0),
+            "status": status,
+            "dropped": bool(result.dropped),
+            "drop_reason": result.drop_reason,
+            "src_confidence": result.src_confidence,
+            "ir_confidence": result.ir_confidence,
+            "contract_class": result.contract_class or None,
+            "notes": notes,
+            "live_ingest": True,
+            "persist_remote": True,
+            "finished_at": _now(),
+            "raw": {
+                "feed": FRESH_SOURCE,
+                "deployed_block": deployed_block,
+                "heat": int(result.heat or 0),
+                "dropped": bool(result.dropped),
+                "drop_reason": result.drop_reason,
+                "funds_usd": result.funds_usd,
+                "blend_note": note,
+                "blend": getattr(result, "blend_summary", None),
+            },
+        }
+        try:
+            save(row)
+        except Exception:  # noqa: BLE001
+            pass
+    # Close the claim so the next cycle does not pick it up again.
+    try:
+        existing = store.get_target(addr) or {}
+        store.upsert_target(Target(
+            address=addr,
+            status="skipped" if result.dropped else "done",
+            funds_usd=result.funds_usd if result.funds_usd is not None else existing.get("funds_usd"),
+            funds_breakdown=list(result.funds_breakdown or existing.get("funds_breakdown") or []),
+            funds_status=result.funds_status or existing.get("funds_status"),
+            funds_checked_at=result.funds_checked_at or existing.get("funds_checked_at"),
+            tvl_usd=result.funds_usd if result.funds_usd is not None else existing.get("tvl_usd"),
+            deployed_block=existing.get("deployed_block") or deployed_block,
+            deployed_at=existing.get("deployed_at"),
+            discovery_source=FRESH_SOURCE,
+        ))
+    except Exception:  # noqa: BLE001
+        return
+
+
+def _scan_one_fresh(
+    settings: Settings,
+    store: ScanStore,
+    progress: ScanCycleProgress,
+    *,
+    scan_one: Optional[Callable[[str], FunnelResult]],
+) -> str:
+    """Claim and scan one pending fresh-deploy. Return ok | none | stop | budget."""
+    from eth_scanner.ingest.funds import discovery_min_usd
+
+    worker_id = str(getattr(settings, "worker_id", None) or _lease_owner())
+    try:
+        row = _claim_fresh_pending(store, worker_id)
+    except DailyBudgetExhausted as exc:
+        progress.message = str(exc)
+        return "budget"
+    if not row:
+        return "none"
+    addr = normalize_address(str(row.get("address") or ""))
+    if not addr:
+        return "none"
+    progress.current_address = addr
+    _touch_cycle(store, _lease_owner(), progress)
+    low = discovery_min_usd()
+    prev_min, prev_max = settings.range_min_usd, settings.range_max_usd
+    prev_source = getattr(settings, "scan_discovery_source", None)
+    prev_list = getattr(settings, "scan_list_id", None)
+    settings.range_min_usd = low
+    settings.range_max_usd = None
+    settings.scan_discovery_source = FRESH_SOURCE  # type: ignore[attr-defined]
+    settings.scan_list_id = None  # type: ignore[attr-defined]
+    scan = scan_one or (lambda a: _default_scan(a, settings))
+    try:
+        try:
+            result = scan(addr)
+        except DailyBudgetExhausted as exc:
+            progress.message = str(exc)
+            return "budget"
+    finally:
+        settings.range_min_usd = prev_min
+        settings.range_max_usd = prev_max
+        settings.scan_discovery_source = prev_source  # type: ignore[attr-defined]
+        settings.scan_list_id = prev_list  # type: ignore[attr-defined]
+    if result is None:
+        return "stop"
+    note = str(getattr(result, "blend_summary", {}).get("note") or "") if isinstance(getattr(result, "blend_summary", None), dict) else ""
+    if scan_one is not None and not result.dropped:
+        try:
+            note = _blend_note(addr, result, settings)
+        except Exception as exc:  # noqa: BLE001 — gauntlet skip must not sink the scan
+            note = "blend gauntlet skipped: %s" % str(exc)[:160]
+        if note:
+            notes = list(result.notes or [])
+            if note not in notes:
+                notes.append(note)
+            try:
+                result.notes = notes
+            except Exception:  # noqa: BLE001
+                pass
+    elif result.dropped:
+        progress.fresh_skipped += 1
+    deployed_block = row.get("deployed_block")
+    try:
+        deployed_block = int(deployed_block) if deployed_block is not None else None
+    except (TypeError, ValueError):
+        deployed_block = None
+    _persist_fresh(store, addr, result, note=note, deployed_block=deployed_block)
+    progress.fresh_scanned += 1
+    progress.message = "fresh-deploy phase recorded %d this run" % progress.fresh_scanned
     return "ok"

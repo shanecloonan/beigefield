@@ -347,11 +347,19 @@ class MemoryStore:
             self._flush()
         return released
 
-    def claim_pending(self, limit: int, worker_id: str) -> list[dict[str, Any]]:
+    def claim_pending(
+        self,
+        limit: int,
+        worker_id: str,
+        discovery_source: Optional[str] = None,
+    ) -> list[dict[str, Any]]:
         self.release_stale_claims()
         claimed: list[dict[str, Any]] = []
         now = _now()
         pending = [r for r in self.targets.values() if r.get("status") == "pending"]
+        if discovery_source:
+            want = str(discovery_source)
+            pending = [r for r in pending if str(r.get("discovery_source") or "") == want]
         # Prefer newest deployments first; rows without age sort last.
         pending.sort(
             key=lambda r: int(r.get("deployed_block") or 0),
@@ -825,20 +833,31 @@ class SupabaseStore:
             released.append({k: v for k, v in plan.items() if k != "patch"})
         return released
 
-    def claim_pending(self, limit: int, worker_id: str) -> list[dict[str, Any]]:
+    def claim_pending(
+        self,
+        limit: int,
+        worker_id: str,
+        discovery_source: Optional[str] = None,
+    ) -> list[dict[str, Any]]:
         self.release_stale_claims()
         # Newest deployments first; fall back to updated_at when age is missing.
-        rows = self._req("GET", "eth_scan_targets", query={
+        query: dict[str, str] = {
             "status": "eq.pending",
             "order": "deployed_block.desc.nullslast,updated_at.asc",
             "limit": str(limit),
-        })
+        }
+        if discovery_source:
+            query["discovery_source"] = "eq.%s" % discovery_source
+        rows = self._req("GET", "eth_scan_targets", query=query)
         if not isinstance(rows, list) or not rows:
-            rows = self._req("GET", "eth_scan_targets", query={
+            fallback = {
                 "status": "eq.pending",
                 "order": "updated_at.asc",
                 "limit": str(limit),
-            })
+            }
+            if discovery_source:
+                fallback["discovery_source"] = "eq.%s" % discovery_source
+            rows = self._req("GET", "eth_scan_targets", query=fallback)
         return self._mark_running(rows, worker_id)
 
     def claim_lane_b(self, limit: int, worker_id: str) -> list[dict[str, Any]]:
