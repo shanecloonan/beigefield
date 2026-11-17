@@ -14,6 +14,11 @@ from eth_scanner.types import (
     DEFAULT_TVL_FLOOR_USD,
 )
 
+# Stale 'running' claims older than this are released back to pending.
+DEFAULT_STALE_CLAIM_HOURS = 3.0
+DEFAULT_STALE_CLAIM_SECONDS = int(DEFAULT_STALE_CLAIM_HOURS * 3600)
+DEFAULT_STALE_CLAIM_MAX_RESETS = 2
+
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_WORK_DIR = ROOT / "work"
 # No baked-in Supabase project: set SUPABASE_URL in env.
@@ -37,6 +42,56 @@ def _env_bool(name: str, default: bool = False) -> bool:
     if v is None:
         return default
     return v.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_float(name: str, default: float) -> float:
+    raw = os.environ.get(name)
+    if raw is None or not str(raw).strip():
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None or not str(raw).strip():
+        return default
+    try:
+        return int(float(raw))
+    except ValueError:
+        return default
+
+
+def stale_claim_hours() -> float:
+    """Hours a target may stay status=running before the claim is released.
+
+    ``ETH_SCANNER_STALE_CLAIM_HOURS`` wins; ``ETH_SCAN_STALE_CLAIM_HOURS`` is
+    accepted as an alias. Default 3. 0 disables the sweep.
+    """
+    if os.environ.get("ETH_SCANNER_STALE_CLAIM_HOURS") is not None:
+        return max(0.0, _env_float("ETH_SCANNER_STALE_CLAIM_HOURS", DEFAULT_STALE_CLAIM_HOURS))
+    if os.environ.get("ETH_SCAN_STALE_CLAIM_HOURS") is not None:
+        return max(0.0, _env_float("ETH_SCAN_STALE_CLAIM_HOURS", DEFAULT_STALE_CLAIM_HOURS))
+    return DEFAULT_STALE_CLAIM_HOURS
+
+
+def stale_claim_seconds() -> int:
+    return int(round(stale_claim_hours() * 3600))
+
+
+def stale_claim_max_resets() -> int:
+    """How many times a stale running claim may be returned to pending.
+
+    After this many releases, the next stale pass marks the row skipped.
+    ``ETH_SCANNER_STALE_CLAIM_MAX_RESETS`` (default 2).
+    """
+    if os.environ.get("ETH_SCANNER_STALE_CLAIM_MAX_RESETS") is not None:
+        return max(0, _env_int("ETH_SCANNER_STALE_CLAIM_MAX_RESETS", DEFAULT_STALE_CLAIM_MAX_RESETS))
+    if os.environ.get("ETH_SCAN_STALE_CLAIM_MAX_RESETS") is not None:
+        return max(0, _env_int("ETH_SCAN_STALE_CLAIM_MAX_RESETS", DEFAULT_STALE_CLAIM_MAX_RESETS))
+    return DEFAULT_STALE_CLAIM_MAX_RESETS
 
 
 def _load_dotenv() -> None:
@@ -79,7 +134,8 @@ class Settings:
     etherscan_per_day: int = 100_000
     etherscan_pace: float = 0.95
     worker_id: str = "eth-scanner"
-    claim_stale_seconds: int = 900
+    claim_stale_seconds: int = DEFAULT_STALE_CLAIM_SECONDS
+    stale_claim_max_resets: int = DEFAULT_STALE_CLAIM_MAX_RESETS
 
     @property
     def persist_remote(self) -> bool:
@@ -132,4 +188,6 @@ def load_settings() -> Settings:
         etherscan_per_day=per_day,
         etherscan_pace=pace,
         worker_id=os.environ.get("ETH_SCANNER_WORKER_ID", "eth-scanner"),
+        claim_stale_seconds=stale_claim_seconds(),
+        stale_claim_max_resets=stale_claim_max_resets(),
     )
