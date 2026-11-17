@@ -1,0 +1,91 @@
+# Every 5 minutes: walk new mainnet blocks since a stored cursor, cheap-triage
+# brand-new contract creates against the $100 funds floor, and upsert survivors
+# as pending eth_scan_targets with discovery_source=fresh-deploy so the monitor
+# scan cycle picks them up ahead of curated lists and randoms.
+#
+# Skips cleanly when ETH_RPC_URL is unset. Does not fall back to public RPCs
+# and does not spend money on a new provider.
+name: eth-scanner-fresh-deploys
+
+on:
+  schedule:
+    # Shortest GitHub Actions interval.
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      lookback_blocks:
+        description: "First-run lookback in blocks (default 50, ~10 min)"
+        required: false
+        default: "50"
+      max_blocks:
+        description: "Max blocks to walk this run (default 100)"
+        required: false
+        default: "100"
+      scan:
+        description: "After enqueue, scan up to N pending fresh-deploys (0 = enqueue only)"
+        required: false
+        default: "10"
+      reset:
+        description: "true = restart the block cursor at head-lookback"
+        required: false
+        default: "false"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eth-scanner-fresh-deploys
+  cancel-in-progress: false
+
+jobs:
+  fresh-deploys:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install scanner
+        run: python -m pip install -e ./eth-scanner
+      - name: Discover and enqueue fresh deploys
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          ETH_SCANNER_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          ETH_RPC_URL: ${{ secrets.ETH_RPC_URL }}
+          ETHERSCAN_API_KEYS: ${{ secrets.ETHERSCAN_API_KEYS }}
+          INPUT_LOOKBACK: ${{ github.event.inputs.lookback_blocks || '50' }}
+          INPUT_MAX_BLOCKS: ${{ github.event.inputs.max_blocks || '100' }}
+          INPUT_SCAN: ${{ github.event.inputs.scan || '10' }}
+          INPUT_RESET: ${{ github.event.inputs.reset || 'false' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
+            echo "Missing Actions secrets SUPABASE_URL / SUPABASE_SECRET_KEY — skip."
+            exit 0
+          fi
+          if [ -z "${ETH_RPC_URL:-}" ]; then
+            echo "ETH_RPC_URL unset — fresh-deploy discovery skipped (no public RPC fallback)."
+            echo "Configure the existing ETH_RPC_URL Actions secret to enable this lane."
+            exit 0
+          fi
+          RESET_FLAG=""
+          case "${INPUT_RESET}" in
+            true|TRUE|yes|YES|1) RESET_FLAG="--reset" ;;
+          esac
+          SCAN="${INPUT_SCAN}"
+          if [ -z "${ETHERSCAN_API_KEYS:-}" ]; then
+            echo "WARN: ETHERSCAN_API_KEYS unset — enqueue only, no Lane A drain."
+            SCAN="0"
+          fi
+          echo "fresh-deploys lookback=${INPUT_LOOKBACK} max_blocks=${INPUT_MAX_BLOCKS} scan=${SCAN} reset=${INPUT_RESET}"
+          python -m eth_scanner fresh-deploys \
+            --lookback-blocks "${INPUT_LOOKBACK}" \
+            --max-blocks "${INPUT_MAX_BLOCKS}" \
+            --scan "${SCAN}" \
+            --workers 4 \
+            --deadline-minutes 4 \
+            ${RESET_FLAG} \
+            --json

@@ -342,11 +342,12 @@ def _run_master_list_cli(args: Any, settings: Settings, store) -> int:
             reset=bool(getattr(args, "reset", False)),
         )
         print(
-            "scan_cycle status=%s phase=%s lists=%d random_scanned=%d random_enabled=%s duration_s=%s"
+            "scan_cycle status=%s phase=%s lists=%d fresh_scanned=%d random_scanned=%d random_enabled=%s duration_s=%s"
             % (
                 progress.status,
                 progress.phase,
                 len(progress.lists),
+                progress.fresh_scanned,
                 progress.random_scanned,
                 progress.random_enabled,
                 progress.duration_s,
@@ -631,6 +632,20 @@ def main(argv: list[str] | None = None) -> int:
     disc.add_argument("--allow-unverified", action="store_true", help="keep creates even when not verified")
     disc.add_argument("--json", action="store_true")
     disc.add_argument("--dry-run", action="store_true")
+
+    fresh = sub.add_parser(
+        "fresh-deploys",
+        help="Watch the chain head for brand-new contracts and enqueue funded ones (read-only)",
+    )
+    fresh.add_argument("--lookback-blocks", type=int, default=None, help="first-run lookback (default 50, ~10 min)")
+    fresh.add_argument("--max-blocks", type=int, default=None, help="max blocks to walk this run (default 100)")
+    fresh.add_argument("--min-funds-usd", type=float, default=None, help="override the $100 intake floor")
+    fresh.add_argument("--reset", action="store_true", help="restart the block cursor at head-lookback")
+    fresh.add_argument("--scan", type=int, default=0, help="after enqueue, scan up to N pending fresh-deploys")
+    fresh.add_argument("--workers", type=int, default=4, help="parallel Lane A workers when --scan is set")
+    fresh.add_argument("--deadline-minutes", type=float, default=4.0, help="stop starting new scans after N minutes")
+    fresh.add_argument("--json", action="store_true")
+    fresh.add_argument("--dry-run", action="store_true")
 
     bf = sub.add_parser(
         "backfill",
@@ -946,6 +961,58 @@ def main(argv: list[str] | None = None) -> int:
                     % (sample.get("address"), sample.get("heat"), sample.get("contract_class"), sample.get("funds_usd"))
                 )
         return 0 if progress.status in {"running", "done", "noop"} else 1
+
+    if args.cmd == "fresh-deploys":
+        import time as _time
+        from eth_scanner.discover.fresh import FRESH_SOURCE, run_fresh_deploy_discovery
+
+        started = _time.monotonic()
+        stats = run_fresh_deploy_discovery(
+            store=store,
+            rpc_url=getattr(settings, "eth_rpc_url", "") or "",
+            lookback=getattr(args, "lookback_blocks", None),
+            max_blocks=getattr(args, "max_blocks", None),
+            min_funds_usd=getattr(args, "min_funds_usd", None),
+            reset=bool(getattr(args, "reset", False)),
+        )
+        scanned: list = []
+        scan_n = int(getattr(args, "scan", 0) or 0)
+        if scan_n > 0 and stats.status in {"done", "running", "noop"}:
+            deadline_min = float(getattr(args, "deadline_minutes", 4.0) or 4.0)
+            scanned = lane_a.claim_and_drain(
+                max_scans=scan_n,
+                workers=max(1, int(getattr(args, "workers", 4) or 4)),
+                deadline_monotonic=started + max(30.0, deadline_min * 60.0),
+                settings=settings,
+                store=store,
+                discovery_source=FRESH_SOURCE,
+            )
+        payload = {
+            **stats.to_dict(),
+            "scanned": len(scanned),
+            "duration_s": round(_time.monotonic() - started, 1),
+        }
+        print(
+            "fresh-deploys status=%(status)s rpc=%(rpc_configured)s blocks=%(from_block)s-%(to_block)s "
+            "head=%(head_block)s cursor=%(cursor_start)s->%(cursor_next)s creates=%(creates_found)d "
+            "enqueued=%(enqueued)d requeued=%(requeued)d below_floor=%(below_floor)d "
+            "already=%(already_present)d scanned=%(scanned)d source=%(source)s duration_s=%(duration_s)s"
+            % payload,
+            file=sys.stderr,
+        )
+        if stats.message:
+            print("fresh-deploys %s" % stats.message, file=sys.stderr)
+        if args.json:
+            print(json.dumps(payload, indent=2))
+        else:
+            print(stats.message or stats.status)
+            for addr in (stats.enqueued_addresses or [])[:20]:
+                print("enqueued %s" % addr)
+            for addr in (stats.below_floor_addresses or [])[:10]:
+                print("below-floor %s" % addr)
+        if stats.status == "error":
+            return 1
+        return 0
 
     if args.cmd == "discover":
         from eth_scanner.monitor.watch import seed_recent_deployments

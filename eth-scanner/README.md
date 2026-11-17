@@ -154,14 +154,24 @@ python -m eth_scanner blend --select --list list-2
 #   echidna  2.4.0
 bash scripts/install-blend-engines.sh
 # The monitor cron (every 10 minutes) and backfill cron (every 15) run
-# `master-list` with no button: List 1, then List 2, then random contracts,
-# then back to any list whose fingerprint changed. /blend only watches.
+# `master-list` with no button: fresh-deploys first, then List 1, then List 2,
+# then random contracts, then back to any list whose fingerprint changed.
+# The 10-minute monitor cycle also walks new blocks first (same cursor).
+# A dedicated 5-minute workflow lives at
+# github-workflows/eth-scanner-fresh-deploys.yml and should be copied to
+# .github/workflows/ once a token with the `workflow` scope can add it.
+# It no-ops if ETH_RPC_URL is unset.
+# /blend only watches.
 # Binaries: ${ETH_SCANNER_BIN_DIR:-$HOME/.local/bin}. Halmos stays on PATH.
 # Pins live in src/eth_scanner/deep/blend/versions.py. Do not use "latest".
 
 # The same receipt also carries the adaptation passes (resource chains,
 # producer/consumer edges, mined invariants, a minimized call list, and a
 # multi-actor history). Those passes do not add heat on their own.
+
+# Fast lane: walk new blocks and enqueue funded fresh deploys (needs ETH_RPC_URL)
+python -m eth_scanner fresh-deploys --json
+python -m eth_scanner fresh-deploys --scan 10 --deadline-minutes 4
 
 python -m eth_scanner list
 python -m eth_scanner list --results
