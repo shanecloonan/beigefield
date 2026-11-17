@@ -183,6 +183,8 @@ class ScanStore(Protocol):
     def claim_lane_b(self, limit: int, worker_id: str) -> list[dict[str, Any]]: ...
     def list_targets(self, bucket: Optional[str] = None, limit: int = 200) -> list[dict[str, Any]]: ...
     def list_results(self, address: Optional[str] = None, limit: int = 200) -> list[dict[str, Any]]: ...
+    def list_results_by_heat(self, min_heat: int = 8, limit: int = 2) -> list[dict[str, Any]]: ...
+    def patch_fork_verify(self, row: dict[str, Any], patched: dict[str, Any]) -> None: ...
     def list_artifacts(self, address: Optional[str] = None, kind: Optional[str] = None, limit: int = 50) -> list[dict[str, Any]]: ...
 
 
@@ -448,6 +450,41 @@ class MemoryStore:
             rows = [r for r in rows if r.get("address") == addr]
         rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)
         return rows[:limit]
+
+    def list_results_by_heat(self, min_heat: int = 8, limit: int = 2) -> list[dict[str, Any]]:
+        rows = [r for r in self.results if int(r.get("heat") or 0) >= int(min_heat)]
+        rows.sort(key=lambda r: (int(r.get("heat") or 0), str(r.get("created_at") or "")), reverse=True)
+        seen: set[str] = set()
+        out: list[dict[str, Any]] = []
+        for row in rows:
+            addr = str(row.get("address") or "").lower()
+            if not addr or addr in seen:
+                continue
+            seen.add(addr)
+            out.append(row)
+            if len(out) >= limit:
+                break
+        return out
+
+    def patch_fork_verify(self, row: dict[str, Any], patched: dict[str, Any]) -> None:
+        addr = normalize_address(str(patched.get("address") or row.get("address") or ""))
+        rid = row.get("id")
+        for existing in reversed(self.results):
+            if rid and existing.get("id") == rid:
+                existing.update({k: patched[k] for k in ("heat", "bucket", "heat_breakdown", "invariant_results") if k in patched})
+                break
+            if not rid and str(existing.get("address") or "") == addr:
+                existing.update({k: patched[k] for k in ("heat", "bucket", "heat_breakdown", "invariant_results") if k in patched})
+                break
+        tgt = self.targets.get(addr)
+        if tgt is not None:
+            if "heat" in patched:
+                tgt["heat"] = patched["heat"]
+            if "bucket" in patched:
+                tgt["bucket"] = patched["bucket"]
+            if "heat_breakdown" in patched:
+                tgt["heat_breakdown"] = patched["heat_breakdown"]
+        self._flush()
 
     def list_artifacts(self, address: Optional[str] = None, kind: Optional[str] = None, limit: int = 50) -> list[dict[str, Any]]:
         rows = list(self.artifacts)
@@ -956,6 +993,60 @@ class SupabaseStore:
         if address:
             q["address"] = "eq.%s" % normalize_address(address)
         return self._req("GET", "eth_scan_results", query=q)
+
+    def list_results_by_heat(self, min_heat: int = 8, limit: int = 2) -> list[dict[str, Any]]:
+        q = {
+            "select": "id,address,heat,heat_breakdown,bucket,funds_usd,contract_class,invariant_results,created_at",
+            "heat": "gte.%s" % int(min_heat),
+            "order": "heat.desc,created_at.desc",
+            "limit": str(max(int(limit) * 5, int(limit))),
+        }
+        try:
+            rows = list(self._req("GET", "eth_scan_results", query=q) or [])
+        except Exception:  # noqa: BLE001
+            return []
+        seen: set[str] = set()
+        out: list[dict[str, Any]] = []
+        for row in rows:
+            addr = str(row.get("address") or "").lower()
+            if not addr or addr in seen:
+                continue
+            seen.add(addr)
+            out.append(row)
+            if len(out) >= int(limit):
+                break
+        return out
+
+    def patch_fork_verify(self, row: dict[str, Any], patched: dict[str, Any]) -> None:
+        addr = normalize_address(str(patched.get("address") or row.get("address") or ""))
+        body = {
+            k: patched[k]
+            for k in ("heat", "bucket", "heat_breakdown", "invariant_results")
+            if k in patched
+        }
+        if not body:
+            return
+        rid = row.get("id")
+        if rid:
+            try:
+                self._req(
+                    "PATCH",
+                    "eth_scan_results",
+                    body,
+                    query={"id": "eq.%s" % rid},
+                    prefer="return=minimal",
+                )
+            except Exception:  # noqa: BLE001
+                pass
+        tgt = {k: body[k] for k in ("heat", "bucket", "heat_breakdown") if k in body}
+        if tgt:
+            self._req(
+                "PATCH",
+                "eth_scan_targets",
+                tgt,
+                query={"address": "eq.%s" % addr},
+                prefer="return=minimal",
+            )
 
     def list_artifacts(self, address: Optional[str] = None, kind: Optional[str] = None, limit: int = 50) -> list[dict[str, Any]]:
         q: dict[str, str] = {"order": "created_at.desc", "limit": str(limit)}

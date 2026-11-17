@@ -10,7 +10,7 @@ Live desk: [`/test`](https://beigefield.vercel.app/test). Automation emits **buc
 
 | Rule | Meaning |
 |---|---|
-| **Defensive only** | Findings are funds-at-risk signals. No exploit code, drain PoCs, attack transaction sequences, or runnable counterexample scripts. |
+| **Defensive only** | Findings are funds-at-risk signals. No mainnet broadcast and no packaged exploit scripts. A post-heat fork-verify stage may record a *sanitized* Foundry sequence when a conservation invariant breaks on a **local** fork. |
 | **Read-only chain I/O** | `eth_call`, `eth_getCode`, logs, Multicall3. **Never send transactions. Never spend ETH.** |
 | **Free tiers only** | GitHub Actions free minutes, public RPCs / existing keys, free Supabase project. Ask before any paid service. |
 | **Heat from evidence** | Pattern leads (weak auth regex, proxy mentions, fork family, generic detector hits) contribute **zero** heat. They only select which checks to run. |
@@ -140,7 +140,71 @@ Build a contract graph from verified source + on-chain reads:
 - Alert surface on `/test` (no spam: dedupe by address + change fingerprint)
 - Code: `eth_scanner/monitor/`, CLI `monitor`, workflow `eth-scanner-monitor.yml`, table `eth_scan_alerts`
 
+
+### Phase G — Fork-verify (conservation break → proven-drainable)
+
+For contracts already at heat ≥ `ETH_SCANNER_FUZZ_MIN_HEAT` (default 8), run a Foundry invariant campaign on a local anvil (optionally forked from `ETH_RPC_URL`):
+
+- Property: an unprivileged caller cannot increase its ETH balance while the target's ETH balance decreases
+- Engine: Foundry (`forge test --fork-url`) first; no extra install. Medusa is not required.
+- On a break: `heat_breakdown.exploit_poc` (`drainable=true`, sanitized sequence), heat bump (`ETH_SCANNER_HEAT_EXPLOIT_POC`, default 6, capped at 12), bucket promoted to `manual-review` (existing enum; `bucket_hint=proven-drainable`)
+- CLI: `python -m eth_scanner fork-verify --fixture leaky|safe` (no RPC) or `--from-store --min-heat 8 --limit 1`
+- Lane A is opt-in (`ETH_SCANNER_FORK_VERIFY=1`) so the monitor stays fast
+- Deep CI always runs the planted leaky/safe fixtures; live `--from-store` runs only when `ETH_RPC_URL` is set, 1 contract, 60s budget
+- **Do not** broadcast. **Do not** add a paid RPC. Ask before increasing live fork volume.
+
+
 ---
+
+
+CI workflow patches (need a token with the `workflow` scope to commit `.github/workflows/*`; this PR ships the scanner code and these snippets):
+
+Add to `.github/workflows/eth-scanner-deep.yml` after the Phase B Foundry step (Foundry is already installed in that job):
+
+```yaml
+      - name: Fork-verify planted fixtures (no RPC)
+        run: |
+          set -euo pipefail
+          command -v forge && command -v anvil
+          python -m eth_scanner fork-verify --fixture leaky --timeout 90 --json
+          python -m eth_scanner fork-verify --fixture safe --timeout 90 --json
+          cd eth-scanner && PYTHONPATH=src python -m unittest tests.test_fork_verify -q
+```
+
+And after the strong-deep / discovery step:
+
+```yaml
+      - name: Fork-verify high-heat store rows
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          ETH_SCANNER_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          ETH_RPC_URL: ${{ secrets.ETH_RPC_URL }}
+          ETH_SCANNER_FUZZ_MIN_HEAT: "8"
+          ETH_SCANNER_FUZZ_TIMEOUT_S: "60"
+        run: |
+          set -euo pipefail
+          if [ -z "${ETH_RPC_URL:-}" ]; then
+            echo "ETH_RPC_URL unset — skipping live fork-verify (no public RPC fallback; fork campaigns are chatty)."
+            exit 0
+          fi
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
+            echo "Supabase secrets missing — skipping live fork-verify."
+            exit 0
+          fi
+          python -m eth_scanner fork-verify --from-store --min-heat 8 --limit 1 --timeout 60 --json
+```
+
+Add to `.github/workflows/eth-scanner-benchmark.yml` (no Foundry, no RPC):
+
+```yaml
+      - name: Fork-verify unit tests (no RPC / no Foundry)
+        run: |
+          cd eth-scanner && PYTHONPATH=src python -m unittest \
+            tests.test_fork_verify.GateAndConfig \
+            tests.test_fork_verify.SelectorsAndHarness \
+            tests.test_fork_verify.ApplyAndHeat -q
+```
 
 ## Secrets checklist (Phase A)
 
@@ -151,7 +215,7 @@ Add these as **GitHub Actions repository secrets** (Settings → Secrets and var
 | `SUPABASE_URL` | **Yes** | Project URL (same as Vercel `SUPABASE_URL` / `ETH_SCANNER_SUPABASE_URL`) |
 | `SUPABASE_SECRET_KEY` | **Yes** | Service-role / secret key for claim + write (`eth_scan_*`, `test_scan_*`). Prefer secret key over legacy service_role if both exist. |
 | `ETHERSCAN_API_KEYS` | Recommended | Verified-source fetch for claimed addresses (comma-separated). Falls back to free-tier test key if unset. |
-| `ETH_RPC_URL` | Recommended | Read-only mainnet RPC for `eth_call` / fork base. Public RPCs used if unset (rate-limited). |
+| `ETH_RPC_URL` | Recommended | Read-only mainnet RPC for `eth_call` / fork base. Public RPCs used for light reads if unset. **Fork-verify never falls back to a public RPC** (campaigns are chatty); it skips when this secret is missing. |
 | `ETH_SCANNER_SLITHER_BIN` | Optional | Override Slither binary path in the runner image |
 | `ETH_SCANNER_ADERYN_BIN` | Optional | Override Aderyn binary path |
 | `ETH_SCANNER_MYTHRIL_BIN` | Optional | Override Mythril binary path |
