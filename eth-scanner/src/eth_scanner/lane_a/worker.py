@@ -141,11 +141,12 @@ def run_one(
     if funds.status == "unknown":
         result.notes = list(result.notes or []) + list(funds.notes or ["funds lookup unknown — continued"])
 
-    # Advanced engines AFTER funds floor + class: Slither (cached) → Mythril →
-    # read-only corroboration. Leads never add heat alone.
+    # Advanced engines AFTER the funds floor. The class gate lives inside
+    # run_advanced_engines (allowlist|permissive|off). Funnel-dropped rows
+    # can still be analyzed when the class gate allows (e.g. a token with a
+    # risky surface); heat / Lane B promotion stay off for dropped rows.
     if (
-        not result.dropped
-        and artifact.kind == "source"
+        artifact.kind == "source"
         and artifact.src_confidence in {"high", "med"}
         and (target.funds_usd is not None and target.funds_usd >= min_funds)
     ):
@@ -169,86 +170,87 @@ def run_one(
             result.confirmed_findings = list(eng.confirmed)
             result.engine_timing = dict(eng.timing)
             result.notes = list(result.notes or []) + list(eng.notes)
-            # Fuzz/Halmos property failures feed failed_invariant evidence (+ confirmed).
-            inv_rows = (
-                list(result.invariant_results or [])
-                + list(eng.fuzz_invariant_results or [])
-                + list(getattr(eng, "extra_invariant_results", None) or [])
-            )
-            if eng.fuzz_invariant_results or getattr(eng, "extra_invariant_results", None):
-                result.invariant_results = inv_rows
-            # Persist stage proof artifacts (fuzz/symbolic/oracle/admin/storage).
-            save_art = getattr(store, "save_artifact", None)
-            if callable(save_art):
-                arts = list(eng.fuzz_artifacts or []) + list(getattr(eng, "stage_artifacts", None) or [])
-                seen_kinds: set[str] = set()
-                for art in arts:
-                    kind = str(art.get("kind") or "fuzz")
-                    # Avoid double-saving the same fuzz artifact from both lists.
-                    key = kind + ":" + str(art.get("address") or "") + ":" + str(art.get("status") or "")
-                    if key in seen_kinds:
-                        continue
-                    seen_kinds.add(key)
+            if not result.dropped:
+                # Fuzz/Halmos property failures feed failed_invariant evidence (+ confirmed).
+                inv_rows = (
+                    list(result.invariant_results or [])
+                    + list(eng.fuzz_invariant_results or [])
+                    + list(getattr(eng, "extra_invariant_results", None) or [])
+                )
+                if eng.fuzz_invariant_results or getattr(eng, "extra_invariant_results", None):
+                    result.invariant_results = inv_rows
+                # Persist stage proof artifacts (fuzz/symbolic/oracle/admin/storage).
+                save_art = getattr(store, "save_artifact", None)
+                if callable(save_art):
+                    arts = list(eng.fuzz_artifacts or []) + list(getattr(eng, "stage_artifacts", None) or [])
+                    seen_kinds: set[str] = set()
+                    for art in arts:
+                        kind = str(art.get("kind") or "fuzz")
+                        # Avoid double-saving the same fuzz artifact from both lists.
+                        key = kind + ":" + str(art.get("address") or "") + ":" + str(art.get("status") or "")
+                        if key in seen_kinds:
+                            continue
+                        seen_kinds.add(key)
+                        try:
+                            conf = "med" if art.get("failures") or art.get("confirmed") else "low"
+                            save_art(addr, kind, dict(art), conf)
+                        except Exception as exc:  # noqa: BLE001
+                            result.notes = list(result.notes or []) + [
+                                "%s artifact save failed: %s" % (kind, str(exc)[:120])
+                            ]
+                # Recompute evidence heat with corroborations + stage confirmations.
+                priv, eoa = _flags_from_invariant_dicts(inv_rows)
+                priv = bool(priv or getattr(eng, "privileged_callable", False))
+                eoa = bool(eoa or getattr(eng, "eoa_admin", False))
+                heat, heat_bd = evidence_heat(
+                    funds_usd=target.funds_usd,
+                    invariant_results=inv_rows,
+                    privileged_callable=priv,
+                    eoa_admin=eoa,
+                    corroborated=list(eng.confirmed),
+                )
+                heat_bd = dict(heat_bd)
+                heat_bd["engine_leads"] = len(eng.leads)
+                heat_bd["engine_confirmed"] = eng.confirmed_count
+                heat_bd["engine_timing"] = dict(eng.timing)
+                heat_bd["fuzz"] = dict(eng.fuzz or {})
+                heat_bd["oracle"] = dict(getattr(eng, "oracle", None) or {})
+                heat_bd["admin"] = dict(getattr(eng, "admin", None) or {})
+                heat_bd["storage"] = dict(getattr(eng, "storage", None) or {})
+                heat_bd["symbolic"] = dict(getattr(eng, "symbolic", None) or {})
+                result.heat = heat
+                result.heat_breakdown = heat_bd
+                promote, why = should_promote_lane_b(
+                    funds_usd=target.funds_usd,
+                    invariant_results=inv_rows,
+                    privileged_callable=priv,
+                    eoa_admin=eoa,
+                    corroborated=list(eng.confirmed),
+                )
+                if promote and result.bucket == "lane-a-cool":
+                    result.bucket = "lane-b-queue"
+                    result.notes = list(result.notes or []) + ["promoted after corroborated engine lead: %s" % why]
+                # Persist engine findings on the target when the store supports it.
+                patch = getattr(store, "patch_deep_status", None)
+                if callable(patch):
                     try:
-                        conf = "med" if art.get("failures") or art.get("confirmed") else "low"
-                        save_art(addr, kind, dict(art), conf)
-                    except Exception as exc:  # noqa: BLE001
-                        result.notes = list(result.notes or []) + [
-                            "%s artifact save failed: %s" % (kind, str(exc)[:120])
-                        ]
-            # Recompute evidence heat with corroborations + stage confirmations.
-            priv, eoa = _flags_from_invariant_dicts(inv_rows)
-            priv = bool(priv or getattr(eng, "privileged_callable", False))
-            eoa = bool(eoa or getattr(eng, "eoa_admin", False))
-            heat, heat_bd = evidence_heat(
-                funds_usd=target.funds_usd,
-                invariant_results=inv_rows,
-                privileged_callable=priv,
-                eoa_admin=eoa,
-                corroborated=list(eng.confirmed),
-            )
-            heat_bd = dict(heat_bd)
-            heat_bd["engine_leads"] = len(eng.leads)
-            heat_bd["engine_confirmed"] = eng.confirmed_count
-            heat_bd["engine_timing"] = dict(eng.timing)
-            heat_bd["fuzz"] = dict(eng.fuzz or {})
-            heat_bd["oracle"] = dict(getattr(eng, "oracle", None) or {})
-            heat_bd["admin"] = dict(getattr(eng, "admin", None) or {})
-            heat_bd["storage"] = dict(getattr(eng, "storage", None) or {})
-            heat_bd["symbolic"] = dict(getattr(eng, "symbolic", None) or {})
-            result.heat = heat
-            result.heat_breakdown = heat_bd
-            promote, why = should_promote_lane_b(
-                funds_usd=target.funds_usd,
-                invariant_results=inv_rows,
-                privileged_callable=priv,
-                eoa_admin=eoa,
-                corroborated=list(eng.confirmed),
-            )
-            if promote and result.bucket == "lane-a-cool":
-                result.bucket = "lane-b-queue"
-                result.notes = list(result.notes or []) + ["promoted after corroborated engine lead: %s" % why]
-            # Persist engine findings on the target when the store supports it.
-            patch = getattr(store, "patch_deep_status", None)
-            if callable(patch):
-                try:
-                    patch(
-                        addr,
-                        deep_status="inline-engines",
-                        engine_findings=list(eng.leads),
-                        engine_agreement={
-                            "confirmed": list(eng.confirmed),
-                            "timing": dict(eng.timing),
-                            "proxy": dict(eng.proxy),
-                            "fuzz": dict(eng.fuzz or {}),
-                            "oracle": dict(getattr(eng, "oracle", None) or {}),
-                            "admin": dict(getattr(eng, "admin", None) or {}),
-                            "storage": dict(getattr(eng, "storage", None) or {}),
-                            "symbolic": dict(getattr(eng, "symbolic", None) or {}),
-                        },
-                    )
-                except Exception:  # noqa: BLE001
-                    pass
+                        patch(
+                            addr,
+                            deep_status="inline-engines",
+                            engine_findings=list(eng.leads),
+                            engine_agreement={
+                                "confirmed": list(eng.confirmed),
+                                "timing": dict(eng.timing),
+                                "proxy": dict(eng.proxy),
+                                "fuzz": dict(eng.fuzz or {}),
+                                "oracle": dict(getattr(eng, "oracle", None) or {}),
+                                "admin": dict(getattr(eng, "admin", None) or {}),
+                                "storage": dict(getattr(eng, "storage", None) or {}),
+                                "symbolic": dict(getattr(eng, "symbolic", None) or {}),
+                            },
+                        )
+                    except Exception:  # noqa: BLE001
+                        pass
         except Exception as exc:  # noqa: BLE001 — engines must never sink Lane A
             result.notes = list(result.notes or []) + ["advanced engines error: %s" % str(exc)[:160]]
 

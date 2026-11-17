@@ -83,7 +83,8 @@ class PipelineGating(unittest.TestCase):
             verified=True,
         )
         self.assertFalse(report.ran_slither)
-        self.assertIn("not money-at-risk", " ".join(report.notes))
+        notes = " ".join(report.notes)
+        self.assertTrue("not money-at-risk" in notes or "plain token" in notes, notes)
 
     def test_slither_leads_cached_and_not_auto_heat(self):
         finding = EngineFinding(
