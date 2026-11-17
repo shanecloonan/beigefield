@@ -512,6 +512,21 @@ def main(argv: list[str] | None = None) -> int:
     fp.add_argument("--json", action="store_true")
     fp.add_argument("--dry-run", action="store_true")
 
+    fv = sub.add_parser(
+        "fork-verify",
+        help="Post-heat local-fork conservation check (Foundry invariants; no mainnet broadcast)",
+    )
+    fv.add_argument("--address", default="", help="0x… (live target; needs ETH_RPC_URL)")
+    fv.add_argument("--fixture", choices=("leaky", "safe"), default="", help="plant a local anvil fixture (no RPC)")
+    fv.add_argument("--from-store", action="store_true", dest="from_store", help="verify high-heat rows from the scan store")
+    fv.add_argument("--min-heat", type=int, default=None, help="heat gate (default ETH_SCANNER_FUZZ_MIN_HEAT=8)")
+    fv.add_argument("--limit", type=int, default=1, help="with --from-store: max unique addresses (default 1)")
+    fv.add_argument("--timeout", type=int, default=None, help="per-contract seconds (default ETH_SCANNER_FUZZ_TIMEOUT_S=90)")
+    fv.add_argument("--heat", type=int, default=None, help="declared heat for a single --address (default = min-heat)")
+    fv.add_argument("--source", default="", help="optional Solidity used only to collect function selectors")
+    fv.add_argument("--json", action="store_true")
+    fv.add_argument("--dry-run", action="store_true", help="do not persist store patches")
+
     pg = sub.add_parser(
         "protocol-graph",
         help="Phase C protocol context graph + risk factors (read-only)",
@@ -728,6 +743,105 @@ def main(argv: list[str] | None = None) -> int:
                         (rep.get("agreement") or {}).get("multi_engine_clusters"),
                     )
                 )
+        return 0
+
+    if args.cmd == "fork-verify":
+        from eth_scanner.engines.fork_verify import (
+            apply_fork_verify_to_row,
+            fuzz_min_heat,
+            fuzz_timeout_s,
+            list_high_heat_rows,
+            persist_fork_verify,
+            run_fork_verify,
+        )
+        min_heat = int(args.min_heat) if args.min_heat is not None else fuzz_min_heat()
+        timeout = int(args.timeout) if args.timeout is not None else fuzz_timeout_s()
+        rpc = getattr(settings, "eth_rpc_url", "") or ""
+        source_text = ""
+        if args.source:
+            source_text = Path(args.source).read_text(encoding="utf-8", errors="replace")
+        payloads: list[dict] = []
+        if args.fixture:
+            report = run_fork_verify(
+                fixture=args.fixture,
+                work_dir=settings.work_dir / "fork-verify",
+                timeout_s=timeout,
+            )
+            payloads.append(report.to_dict())
+        elif args.from_store:
+            if not rpc:
+                payloads.append({
+                    "skipped": True,
+                    "status": "skipped",
+                    "drainable": False,
+                    "skip_reason": "no ETH_RPC_URL",
+                    "notes": ["fork-verify --from-store skipped — no ETH_RPC_URL"],
+                })
+            else:
+                store = open_store(settings)
+                rows = list_high_heat_rows(store, min_heat=min_heat, limit=max(1, int(args.limit)))
+                if not rows:
+                    payloads.append({
+                        "skipped": True,
+                        "status": "skipped",
+                        "skip_reason": "no store rows at heat >= %s" % min_heat,
+                    })
+                for row in rows:
+                    report = run_fork_verify(
+                        address=str(row.get("address") or ""),
+                        rpc_url=rpc,
+                        heat=int(row.get("heat") or 0),
+                        source=source_text,
+                        work_dir=settings.work_dir / "fork-verify",
+                        timeout_s=timeout,
+                        force=True,
+                    )
+                    item = report.to_dict()
+                    item["store_heat_in"] = row.get("heat")
+                    item["store_bucket_in"] = row.get("bucket")
+                    if not args.dry_run and settings.persist_remote:
+                        patched = apply_fork_verify_to_row(row, report)
+                        persist_fork_verify(store, row, patched)
+                        item["persisted"] = True
+                        item["store_heat_out"] = patched.get("heat")
+                        item["store_bucket_out"] = patched.get("bucket")
+                    else:
+                        item["persisted"] = False
+                    payloads.append(item)
+        else:
+            if not args.address:
+                print("fork-verify: pass --address, --fixture, or --from-store", file=sys.stderr)
+                return 2
+            declared = int(args.heat) if args.heat is not None else min_heat
+            report = run_fork_verify(
+                address=args.address,
+                rpc_url=rpc,
+                heat=declared,
+                source=source_text,
+                work_dir=settings.work_dir / "fork-verify",
+                timeout_s=timeout,
+                force=True,
+            )
+            payloads.append(report.to_dict())
+        if args.json:
+            print(json.dumps(payloads if len(payloads) != 1 else payloads[0], indent=2))
+        else:
+            for item in payloads:
+                print(
+                    "fork-verify status=%s drainable=%s tool=%s heat_in=%s seq=%s"
+                    % (
+                        item.get("status"),
+                        item.get("drainable"),
+                        item.get("tool"),
+                        item.get("heat_in"),
+                        (item.get("sequence") or item.get("skip_reason") or "")[:160],
+                    )
+                )
+        # Fixture true-positive must actually break; otherwise fail CI.
+        if args.fixture == "leaky" and not any(p.get("drainable") for p in payloads):
+            return 1
+        if args.fixture == "safe" and any(p.get("drainable") for p in payloads):
+            return 1
         return 0
 
     if args.cmd == "fork-props":

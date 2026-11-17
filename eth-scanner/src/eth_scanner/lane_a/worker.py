@@ -252,6 +252,21 @@ def run_one(
         except Exception as exc:  # noqa: BLE001 — engines must never sink Lane A
             result.notes = list(result.notes or []) + ["advanced engines error: %s" % str(exc)[:160]]
 
+    # Optional post-heat fork-verify (off unless ETH_SCANNER_FORK_VERIFY=1).
+    # Local-fork conservation check; never broadcasts.
+    try:
+        from eth_scanner.engines.fork_verify import maybe_run_on_result
+        maybe_run_on_result(
+            result,
+            settings=settings,
+            address=addr,
+            source=(artifact.content or "") if artifact else "",
+        )
+    except Exception as exc:  # noqa: BLE001 — must never sink Lane A
+        result.notes = list(result.notes or []) + [
+            "fork-verify error (non-blocking): %s" % str(exc)[:160]
+        ]
+
     store.save_result(addr, result)
     return result
 

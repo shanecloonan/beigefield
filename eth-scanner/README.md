@@ -12,7 +12,7 @@ On Vercel the Node serverless image has no system Python. `next build` (when `VE
 - Read-only explorer / RPC / local source. **No** exploit code, attack payloads, PoCs, theft simulations, or live fund-moving transactions.
 - **Never auto-yes.** **Never auto-no** on low IR or decompile confidence → `manual-review`.
 - Heimdall / Panoramix are hypothesis generators only (`src_confidence=low`).
-- Attack fuzz / local-fork theft sims are out of scope.
+- No mainnet broadcast and no packaged exploit scripts. A post-heat **fork-verify** stage may falsify a conservation invariant on a *local* anvil/Foundry fork (`python -m eth_scanner fork-verify`) and record a sanitized failing sequence in `heat_breakdown.exploit_poc`.
 - Service-role Supabase writes are server-side only. Do not prefix secrets with `NEXT_PUBLIC_`.
 
 Filtration: `docs/ETH_SWEEP_SCANNING_REFERENCE.md` §6.0 (also copied under this package’s parent `docs/`).
@@ -41,7 +41,7 @@ Signals live in `heuristics/scope.py`. Funds-at-risk family tags are checked *be
 
 ## Research stack (Phase 2, beside Lane A)
 
-Lane A stays the picker. A **research audit stack** (`0.2.0`) sits next to it and only runs L2+ on Lane A funds-at-risk venues. Scanner semver stays `0.3.31`.
+Lane A stays the picker. A **research audit stack** (`0.2.0`) sits next to it and only runs L2+ on Lane A funds-at-risk venues. Scanner semver stays `0.3.32`.
 
 ```bash
 python -m eth_scanner.research run --address 0x… --source tests/fixtures/erc4626_vault_like.sol --dry-run
@@ -66,6 +66,7 @@ eth-scanner/
     store/supabase.py        # service-role or local dry-run
     receipt.py               # Markdown scan receipts (downloadable .md)
     cli.py
+    engines/fork_verify.py  # post-heat Foundry conservation check (local fork only)
   research/README.md         # L0–L5 architecture + how to run
   research/invariants/       # Foundry invariant templates (no attacker harness)
   research/fuzz/             # Built-in Foundry + Echidna conservation harness
