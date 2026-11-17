@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from eth_scanner.ingest.quota import interval_for, read_limits
+from eth_scanner.heuristics.class_gate import class_gate_mode
 from eth_scanner.types import (
     DEFAULT_ETHERSCAN_INTERVAL_S,
     DEFAULT_HEAT_THRESHOLD,
@@ -136,6 +137,8 @@ class Settings:
     worker_id: str = "eth-scanner"
     claim_stale_seconds: int = DEFAULT_STALE_CLAIM_SECONDS
     stale_claim_max_resets: int = DEFAULT_STALE_CLAIM_MAX_RESETS
+    # allowlist | permissive | off. Default permissive. See heuristics.class_gate.
+    class_gate_mode: str = "permissive"
 
     @property
     def persist_remote(self) -> bool:
@@ -190,4 +193,5 @@ def load_settings() -> Settings:
         worker_id=os.environ.get("ETH_SCANNER_WORKER_ID", "eth-scanner"),
         claim_stale_seconds=stale_claim_seconds(),
         stale_claim_max_resets=stale_claim_max_resets(),
+        class_gate_mode=class_gate_mode(),
     )

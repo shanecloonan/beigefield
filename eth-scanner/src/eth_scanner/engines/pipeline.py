@@ -52,10 +52,13 @@ from eth_scanner.engines.storage_diff import (
     storage_as_confirmed,
     storage_as_leads,
 )
+from eth_scanner.heuristics.class_gate import ALLOWLIST_CLASSES, class_gate_allows
 from eth_scanner.heuristics.scope import FUNDS_AT_RISK_CLASSES
 from eth_scanner.research.slither_runner import SLITHER_ALLOWLIST
 
-ENGINE_ELIGIBLE_CLASSES = frozenset(FUNDS_AT_RISK_CLASSES | {"custody"})
+# Historical money-at-risk allowlist. The live gate is class_gate_allows()
+# (ETH_SCANNER_CLASS_GATE_MODE, default permissive).
+ENGINE_ELIGIBLE_CLASSES = frozenset(ALLOWLIST_CLASSES | FUNDS_AT_RISK_CLASSES | {"custody"})
 
 _CACHE_LOCK = threading.Lock()
 _MEM_CACHE: dict[str, dict[str, Any]] = {}
@@ -129,8 +132,9 @@ def run_advanced_engines(
         report.notes.append("skip engines — unverified or empty source")
         report.timing["total_ms"] = int((time.monotonic() - t0) * 1000)
         return report
-    if contract_class not in ENGINE_ELIGIBLE_CLASSES:
-        report.notes.append("skip engines — class %s not money-at-risk" % contract_class)
+    allowed, gate_reason = class_gate_allows(contract_class, source=source)
+    if not allowed:
+        report.notes.append("skip engines — %s" % gate_reason)
         report.timing["total_ms"] = int((time.monotonic() - t0) * 1000)
         return report
     if funds_usd is None or float(funds_usd) < float(min_funds_usd):

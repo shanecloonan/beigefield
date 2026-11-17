@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 from eth_scanner.config import Settings, load_settings
+from eth_scanner.heuristics.class_gate import class_gate_allows
 from eth_scanner.heuristics.scope import FUNDS_AT_RISK_CLASSES
 from eth_scanner.lane_a.worker import run_one as lane_a_one
 from eth_scanner.receipt import default_receipt_dir
@@ -31,8 +32,14 @@ from eth_scanner.store.supabase import MemoryStore, ScanStore, normalize_address
 from eth_scanner.types import FunnelResult, SourceArtifact
 
 
-def should_proceed(result: FunnelResult) -> tuple[bool, str]:
-    """Lane A funds-at-risk gate. Only in-scope / family venues continue."""
+def should_proceed(result: FunnelResult, source: str = "") -> tuple[bool, str]:
+    """Whether research / deep analysis should continue after Lane A.
+
+    In-scope and funds-at-risk families still proceed. The class gate
+    (ETH_SCANNER_CLASS_GATE_MODE, default permissive) can also let other
+    classes through. Dropped Lane A rows stay stopped. The $100 funds
+    floor is applied separately by the engine pipeline, not here.
+    """
     if result.dropped:
         return False, result.drop_reason or "lane-a dropped before a bucket"
     scope = result.scope or "unknown"
@@ -44,7 +51,10 @@ def should_proceed(result: FunnelResult) -> tuple[bool, str]:
         return True, "lane-a family %s" % klass
     if "diamond-facets-missing" in signals:
         return True, "lane-a false-keep diamond-facets-missing"
-    return False, "lane-a gated out: scope=%s class=%s" % (scope, klass)
+    ok, reason = class_gate_allows(klass, source=source)
+    if ok:
+        return True, "class gate allows (%s)" % reason
+    return False, "lane-a gated out: scope=%s class=%s (%s)" % (scope, klass, reason)
 
 
 def _pick_artifact(store: ScanStore, address: str) -> Optional[SourceArtifact]:
