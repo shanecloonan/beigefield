@@ -1,0 +1,92 @@
+# Recall benchmark against public known-vulnerable corpora.
+# Fetches SmartBugs Curated, Not So Smart Contracts, and DeFiVulnLabs at
+# pinned commits (Web3Bugs is ~560MB and is not fetched). The job prints a
+# per-corpus catch table and fails only when SmartBugs ungated catch falls
+# below ETH_SCANNER_CORPUS_MIN_SMARTBUGS (default 90/143 — generous so a
+# small wobble does not break main). Detection uses the scanner's Slither
+# allowlist + custom detectors; local fixtures have no on-chain funds, so
+# the $100 funds floor and class gate do not block this catch rate.
+name: eth-scanner-corpus-recall
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ETH_SCANNER_CORPUS_MIN_SMARTBUGS: "90"
+
+jobs:
+  corpus-recall:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install scanner, Slither, and solc-select
+        run: |
+          python -m pip install -U pip
+          python -m pip install -e ./eth-scanner
+          python -m pip install "slither-analyzer==0.11.6" solc-select
+
+      - name: Install pragma-compatible solc versions
+        run: |
+          # Representative set covering SmartBugs / NSSC / DeFiVulnLabs pragmas.
+          # solc-select caches downloads; a missing version only skips that
+          # compiler, it does not fail the install step.
+          for v in 0.4.22 0.4.24 0.4.25 0.4.26 0.5.16 0.5.17 0.6.12 0.7.6 0.8.17 0.8.20 0.8.28; do
+            solc-select install "$v" || echo "WARN: could not install solc $v"
+          done
+          solc-select use 0.8.28 || true
+          solc-select versions
+
+      - name: Fetch corpora at pinned commits
+        env:
+          SMARTBUGS_SHA: 230e649123477eff332742a59a1c7cc6dc286cab
+          NSSC_SHA: 020dbdbde3e0c2e8de5f3944e7455e438b0995d5
+          DVL_SHA: f61f6ee5c3f89eb7685030647f8df19997596f8b
+        run: |
+          set -euo pipefail
+          ROOT="${RUNNER_TEMP}/vulncorpora"
+          mkdir -p "$ROOT"
+          clone_pin() {
+            local url="$1" dest="$2" sha="$3"
+            mkdir -p "$dest"
+            git -C "$dest" init --quiet
+            git -C "$dest" remote add origin "$url"
+            git -C "$dest" fetch --quiet --depth 1 origin "$sha"
+            git -C "$dest" checkout --quiet --detach FETCH_HEAD
+            echo "pinned $(basename "$dest") $(git -C "$dest" rev-parse HEAD)"
+          }
+          clone_pin https://github.com/smartbugs/smartbugs-curated.git "$ROOT/smartbugs-curated" "$SMARTBUGS_SHA"
+          clone_pin https://github.com/crytic/not-so-smart-contracts.git "$ROOT/not-so-smart-contracts" "$NSSC_SHA"
+          clone_pin https://github.com/SunWeb3Sec/DeFiVulnLabs.git "$ROOT/defivulnlabs" "$DVL_SHA"
+          echo "ETH_SCANNER_CORPORA_DIR=$ROOT" >> "$GITHUB_ENV"
+          echo "ETH_SCANNER_CORPORA_OUT=${{ runner.temp }}/corpus-results" >> "$GITHUB_ENV"
+          echo "ETH_SCANNER_CORPORA_WORK=${{ runner.temp }}/corpus-work" >> "$GITHUB_ENV"
+
+      - name: Run corpus recall benchmark
+        run: |
+          mkdir -p "$ETH_SCANNER_CORPORA_OUT" "$ETH_SCANNER_CORPORA_WORK"
+          python eth-scanner/tools/measure_corpora.py \
+            --corpus smartbugs-curated \
+            --corpus not-so-smart-contracts \
+            --corpus defivulnlabs \
+            --min-smartbugs "${ETH_SCANNER_CORPUS_MIN_SMARTBUGS}"
+
+      - name: Upload recall artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corpus-recall-results
+          path: ${{ runner.temp }}/corpus-results
+          if-no-files-found: warn
+          retention-days: 30
