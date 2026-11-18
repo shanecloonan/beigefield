@@ -312,18 +312,5 @@ def _norm_addr(addr: str) -> str:
 
 def fetch_rpc_code(rpc_url: str, address: str, timeout_s: float = 15.0) -> str:
     """Optional read-only eth_getCode. Never sends a transaction."""
-    payload = json.dumps({
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "eth_getCode",
-        "params": [address, "latest"],
-    }).encode("utf-8")
-    req = urllib.request.Request(
-        rpc_url,
-        data=payload,
-        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner/0.3 (defensive; read-only)"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout_s) as resp:
-        body = json.loads(resp.read().decode("utf-8", errors="replace"))
-    return str(body.get("result") or "")
+    from eth_scanner.ingest.rpc_client import rpc_call
+    return str(rpc_call(rpc_url, "eth_getCode", [address, "latest"], timeout_s=timeout_s) or "")

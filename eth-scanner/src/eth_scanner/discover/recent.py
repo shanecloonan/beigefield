@@ -272,15 +272,5 @@ def _pick_rpc(preferred: str) -> str:
 
 
 def _rpc(url: str, method: str, params: list[Any], timeout_s: float = 12.0) -> Any:
-    payload = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
-    req = urllib.request.Request(
-        url,
-        data=payload,
-        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner-discover/0.2"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout_s) as resp:
-        body = json.loads(resp.read().decode("utf-8", errors="replace"))
-    if body.get("error"):
-        raise RuntimeError(str(body["error"])[:200])
-    return body.get("result")
+    from eth_scanner.ingest.rpc_client import rpc_call
+    return rpc_call(url, method, params, timeout_s=timeout_s, user_agent="eth-scanner-discover/0.2")

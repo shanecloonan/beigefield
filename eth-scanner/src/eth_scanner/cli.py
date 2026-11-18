@@ -784,13 +784,15 @@ def main(argv: list[str] | None = None) -> int:
             )
             payloads.append(report.to_dict())
         elif args.from_store:
-            if not rpc:
+            from eth_scanner.ingest.rpc_client import is_rpc_usable, rpc_unusable_reason
+            if not rpc or not is_rpc_usable(rpc):
+                reason = rpc_unusable_reason(rpc) if rpc else "no ETH_RPC_URL"
                 payloads.append({
                     "skipped": True,
                     "status": "skipped",
                     "drainable": False,
-                    "skip_reason": "no ETH_RPC_URL",
-                    "notes": ["fork-verify --from-store skipped — no ETH_RPC_URL"],
+                    "skip_reason": reason,
+                    "notes": ["fork-verify --from-store skipped — %s" % reason],
                 })
             else:
                 store = open_store(settings)

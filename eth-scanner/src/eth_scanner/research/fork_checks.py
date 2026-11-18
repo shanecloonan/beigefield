@@ -6,9 +6,7 @@ transaction, never invents keys. Without RPC, dry-run / mock only.
 
 from __future__ import annotations
 
-import json
 import urllib.error
-import urllib.request
 from typing import Callable, Optional
 
 from eth_scanner.research.keccak import selector4
@@ -18,23 +16,11 @@ RpcCall = Callable[[str, str, str], str]
 
 
 def _eth_call(rpc_url: str, address: str, data: str, timeout_s: float = 15.0) -> str:
-    payload = json.dumps({
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "eth_call",
-        "params": [{"to": address, "data": data}, "latest"],
-    }).encode("utf-8")
-    req = urllib.request.Request(
-        rpc_url,
-        data=payload,
-        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner-research/0.1 (defensive; read-only)"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout_s) as resp:
-        body = json.loads(resp.read().decode("utf-8", errors="replace"))
-    if body.get("error"):
-        raise RuntimeError(str(body["error"]))
-    return str(body.get("result") or "")
+    from eth_scanner.ingest.rpc_client import rpc_call
+    return str(rpc_call(
+        rpc_url, "eth_call", [{"to": address, "data": data}, "latest"],
+        timeout_s=timeout_s, user_agent="eth-scanner-research/0.1 (defensive; read-only)",
+    ) or "")
 
 
 def decode_uint256(word: str) -> Optional[int]:

@@ -7,9 +7,7 @@ Never sends transactions. Alerts are deduped by address + change fingerprint.
 from __future__ import annotations
 
 import hashlib
-import json
 import os
-import urllib.request
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional
 
@@ -42,19 +40,8 @@ class MonitorAlert:
 
 
 def _rpc(url: str, method: str, params: list[Any], timeout_s: float = 12.0) -> Any:
-    payload = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
-    req = urllib.request.Request(
-        url,
-        data=payload,
-        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner-monitor/0.2"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout_s) as resp:
-        body = json.loads(resp.read().decode("utf-8", errors="replace"))
-    if body.get("error"):
-        raise RuntimeError(str(body["error"]))
-    return body.get("result")
-
+    from eth_scanner.ingest.rpc_client import rpc_call
+    return rpc_call(url, method, params, timeout_s=timeout_s)
 
 def read_implementation(rpc_url: str, address: str) -> Optional[str]:
     try:

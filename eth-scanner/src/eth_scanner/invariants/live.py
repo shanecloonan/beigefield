@@ -7,9 +7,6 @@ Never generates exploit / PoC / drain sequences.
 
 from __future__ import annotations
 
-import json
-import urllib.error
-import urllib.request
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional
 
@@ -774,23 +771,8 @@ def _eth_call_soft(rpc: str, to: str, data: str, timeout_s: float, from_addr: st
 
 
 def _rpc(rpc: str, method: str, params: list[Any], timeout_s: float) -> Any:
-    payload = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode("utf-8")
-    req = urllib.request.Request(
-        rpc,
-        data=payload,
-        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner/0.5 (defensive; read-only)"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout_s) as resp:
-        body = json.loads(resp.read().decode("utf-8", errors="replace"))
-    err = body.get("error")
-    if err:
-        msg = str(err.get("message") if isinstance(err, dict) else err)
-        if "revert" in msg.lower() or "execution reverted" in msg.lower():
-            raise _RevertError(msg)
-        raise RuntimeError(msg[:200])
-    return body.get("result")
-
+    from eth_scanner.ingest.rpc_client import rpc_call
+    return rpc_call(rpc, method, params, timeout_s=timeout_s)
 
 def _decode_uint(word: str) -> Optional[int]:
     raw = (word or "").strip().lower()

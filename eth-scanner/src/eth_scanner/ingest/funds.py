@@ -138,6 +138,7 @@ def funds_range_reason(total_usd: float, min_usd: float | None, max_usd: float |
 
 
 def resolve_rpc_urls(preferred: str = "") -> list[str]:
+    from eth_scanner.ingest.rpc_client import is_rpc_usable
     urls: list[str] = []
     pref = (preferred or "").strip()
     if pref:
@@ -145,7 +146,8 @@ def resolve_rpc_urls(preferred: str = "") -> list[str]:
     for u in PUBLIC_RPCS:
         if u not in urls:
             urls.append(u)
-    return urls
+    usable = [u for u in urls if is_rpc_usable(u)]
+    return usable
 
 
 def probe_contract_funds(
@@ -492,18 +494,8 @@ def _fetch_coingecko(coin_id: str) -> Optional[float]:
 
 
 def _rpc_call(rpc: str, method: str, params: list[Any], timeout_s: float) -> str:
-    payload = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode("utf-8")
-    req = urllib.request.Request(
-        rpc,
-        data=payload,
-        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner/0.3 (defensive; read-only)"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout_s) as resp:
-        body = json.loads(resp.read().decode("utf-8", errors="replace"))
-    if body.get("error"):
-        raise RuntimeError(str(body["error"])[:200])
-    result = body.get("result")
+    from eth_scanner.ingest.rpc_client import rpc_call
+    result = rpc_call(rpc, method, params, timeout_s=timeout_s)
     if not isinstance(result, str) or not result.startswith("0x"):
         raise RuntimeError("bad eth_call result")
     return result

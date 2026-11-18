@@ -9,10 +9,7 @@ Never sends a transaction.
 
 from __future__ import annotations
 
-import json
 import time
-import urllib.error
-import urllib.request
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional
 
@@ -295,26 +292,24 @@ def _finalize(rows: list[DiscoveredContract], max_results: int) -> list[Discover
 
 
 def _pick_rpc(preferred: str) -> str:
-    urls = resolve_rpc_urls(preferred)
+    """Use the caller-supplied RPC when one is set; do not silently fall back.
+
+    Fresh-deploy and other tight head-of-chain walks must not pivot onto
+    public endpoints when ETH_RPC_URL is set-but-unusable. Funds probes
+    use resolve_rpc_urls() directly and still may fall back.
+    """
+    from eth_scanner.ingest.rpc_client import RpcUnavailable, is_rpc_usable, rpc_unusable_reason
+    pref = (preferred or "").strip().rstrip("/")
+    if pref:
+        if not is_rpc_usable(pref):
+            raise RpcUnavailable(rpc_unusable_reason(pref) or "ETH_RPC_URL unusable")
+        return pref
+    urls = resolve_rpc_urls("")
     if not urls:
         raise RuntimeError("no RPC URL available")
     return urls[0]
 
 
 def _rpc(url: str, method: str, params: list[Any], timeout_s: float = 30.0) -> Any:
-    payload = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
-    req = urllib.request.Request(
-        url,
-        data=payload,
-        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner-backfill/0.1"},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
-            body = json.loads(resp.read().decode("utf-8", errors="replace"))
-    except urllib.error.HTTPError as exc:
-        err = exc.read().decode("utf-8", errors="replace")[:200]
-        raise RuntimeError("HTTP %s %s" % (exc.code, err)) from exc
-    if body.get("error"):
-        raise RuntimeError(str(body["error"])[:240])
-    return body.get("result")
+    from eth_scanner.ingest.rpc_client import rpc_call
+    return rpc_call(url, method, params, timeout_s=timeout_s, user_agent="eth-scanner-backfill/0.1")
