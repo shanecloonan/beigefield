@@ -9,7 +9,6 @@ facet ABIs from bytecode or constructor literals.
 
 from __future__ import annotations
 
-import json
 import re
 import urllib.error
 import urllib.request
@@ -34,24 +33,8 @@ _ADDR_RX = re.compile(r"0x[a-fA-F0-9]{40}")
 
 
 def _rpc_call(rpc_url: str, method: str, params: list[Any], timeout_s: float = 15.0) -> Any:
-    payload = json.dumps({
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": method,
-        "params": params,
-    }).encode("utf-8")
-    req = urllib.request.Request(
-        rpc_url,
-        data=payload,
-        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner-research/0.2 (defensive; read-only)"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout_s) as resp:
-        body = json.loads(resp.read().decode("utf-8", errors="replace"))
-    if body.get("error"):
-        raise RuntimeError(str(body["error"]))
-    return body.get("result")
-
+    from eth_scanner.ingest.rpc_client import rpc_call
+    return rpc_call(rpc_url, method, params, timeout_s=timeout_s)
 
 def eth_get_storage_at(rpc_url: str, address: str, slot: str, timeout_s: float = 15.0) -> str:
     """Read-only `eth_getStorageAt`. Never sends a transaction."""

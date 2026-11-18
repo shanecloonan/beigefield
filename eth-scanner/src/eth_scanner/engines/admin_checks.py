@@ -7,9 +7,7 @@ privileged_callable for Lane B ($100k+ EOA admin).
 
 from __future__ import annotations
 
-import json
 import time
-import urllib.request
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional
 
@@ -265,18 +263,8 @@ def admin_as_leads(report: AdminReport) -> list[dict[str, Any]]:
 
 
 def _rpc(rpc_url: str, method: str, params: list[Any], timeout_s: float = 10.0) -> Any:
-    payload = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
-    req = urllib.request.Request(
-        rpc_url, data=payload,
-        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner-admin/0.1"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout_s) as resp:
-        body = json.loads(resp.read().decode("utf-8", errors="replace"))
-    if body.get("error"):
-        raise RuntimeError(str(body["error"])[:200])
-    return body.get("result")
-
+    from eth_scanner.ingest.rpc_client import rpc_call
+    return rpc_call(rpc_url, method, params, timeout_s=timeout_s)
 
 def _safe_slot_addr(rpc_url: str, address: str, slot: str) -> Optional[str]:
     try:

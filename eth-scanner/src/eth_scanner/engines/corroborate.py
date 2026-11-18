@@ -8,13 +8,11 @@ sequences beyond a single defensive probe.
 
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import subprocess
 import tempfile
 import time
-import urllib.request
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional
 
@@ -58,19 +56,8 @@ class Corroboration:
 
 
 def _rpc(rpc_url: str, method: str, params: list[Any], timeout_s: float = 12.0) -> Any:
-    payload = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
-    req = urllib.request.Request(
-        rpc_url,
-        data=payload,
-        headers={"Content-Type": "application/json", "User-Agent": "eth-scanner-corroborate/0.1"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout_s) as resp:
-        body = json.loads(resp.read().decode("utf-8", errors="replace"))
-    if body.get("error"):
-        raise RuntimeError(str(body["error"])[:200])
-    return body.get("result")
-
+    from eth_scanner.ingest.rpc_client import rpc_call
+    return rpc_call(rpc_url, method, params, timeout_s=timeout_s)
 
 def head_block(rpc_url: str) -> Optional[int]:
     try:

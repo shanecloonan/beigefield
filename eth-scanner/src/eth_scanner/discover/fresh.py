@@ -6,9 +6,9 @@ each address with the existing funds probe, and upserts survivors into
 ``eth_scan_targets`` with ``discovery_source='fresh-deploy'`` so the scan
 cycle can pick them up ahead of curated lists and randoms.
 
-Read-only. Never sends a transaction. Skips cleanly when ``ETH_RPC_URL``
-is unset — this path does not fall back to public RPCs (those are too
-flaky for a tight head-of-chain walk).
+Read-only. Never sends a transaction. Skips cleanly when ``ETH_RPC_URL`` is unset or unusable (quota/
+auth/repeated 5xx) — this path does not fall back to public RPCs
+(those are too flaky for a tight head-of-chain walk).
 """
 
 from __future__ import annotations
@@ -201,9 +201,11 @@ def run_fresh_deploy_discovery(
 ) -> FreshDeployStats:
     """Walk [cursor+1, head] (capped), triage, upsert, then advance the cursor.
 
-    When ``ETH_RPC_URL`` (or ``rpc_url``) is unset the run is a no-op: the
+    When ``ETH_RPC_URL`` (or ``rpc_url``) is unset *or unusable* (quota
+    exhausted, auth failure, repeated 5xx) the run is a no-op: the
     cursor is left alone and no exception is raised.
     """
+    from eth_scanner.ingest.rpc_client import RpcUnavailable, probe_rpc
     stats = FreshDeployStats()
     rpc = rpc_url_from_env(rpc_url)
     stats.rpc_configured = bool(rpc)
@@ -211,6 +213,15 @@ def run_fresh_deploy_discovery(
         stats.status = "noop"
         stats.message = "ETH_RPC_URL unset — fresh-deploy discovery skipped"
         return stats
+    # Production path probes the RPC first. Tests may inject head_fn and
+    # never touch the network; skip the probe in that case.
+    head_injected = head_fn is not None
+    if not head_injected:
+        ok, reason = probe_rpc(rpc)
+        if not ok:
+            stats.status = "noop"
+            stats.message = "%s — fresh-deploy discovery skipped" % (reason or "ETH_RPC_URL unusable")
+            return stats
 
     floor = discovery_min_usd() if min_funds_usd is None else max(0.0, float(min_funds_usd))
     window = lookback_blocks() if lookback is None else max(1, int(lookback))
@@ -223,6 +234,10 @@ def run_fresh_deploy_discovery(
 
     try:
         head = int(head_fn())
+    except RpcUnavailable as exc:
+        stats.status = "noop"
+        stats.message = "%s — fresh-deploy discovery skipped" % (exc.reason or "ETH_RPC_URL unusable")
+        return stats
     except Exception as exc:  # noqa: BLE001
         stats.status = "error"
         stats.message = "head lookup failed: %s" % str(exc)[:200]

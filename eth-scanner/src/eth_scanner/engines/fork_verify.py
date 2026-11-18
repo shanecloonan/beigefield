@@ -11,8 +11,9 @@ A broken invariant is recorded as heat_breakdown.exploit_poc with
 drainable=true and a sanitized failing sequence. Nothing is broadcast
 to mainnet. No signed transactions, no packaged attack scripts.
 
-If ETH_RPC_URL is unset, live targets skip. Fixture mode (--fixture
-leaky|safe) plants a local contract on anvil and needs no RPC.
+If ETH_RPC_URL is unset or unusable (quota/auth/repeated 5xx), live
+targets skip. Fixture mode (--fixture leaky|safe) plants a local
+contract on anvil and needs no RPC.
 """
 
 from __future__ import annotations
@@ -25,7 +26,6 @@ import socket
 import subprocess
 import tempfile
 import time
-import urllib.request
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Optional
@@ -231,6 +231,9 @@ def should_run_fork_verify(
     if force:
         if not (rpc_url or "").strip():
             return False, "no ETH_RPC_URL"
+        from eth_scanner.ingest.rpc_client import is_rpc_usable, rpc_unusable_reason
+        if not is_rpc_usable(rpc_url):
+            return False, rpc_unusable_reason(rpc_url) or "ETH_RPC_URL unusable"
         return True, "forced"
     if enabled is None:
         enabled = fork_verify_enabled()
@@ -241,6 +244,9 @@ def should_run_fork_verify(
         return False, "heat %s below ETH_SCANNER_FUZZ_MIN_HEAT=%s" % (heat, bar)
     if not (rpc_url or "").strip():
         return False, "no ETH_RPC_URL"
+    from eth_scanner.ingest.rpc_client import is_rpc_usable, rpc_unusable_reason
+    if not is_rpc_usable(rpc_url):
+        return False, rpc_unusable_reason(rpc_url) or "ETH_RPC_URL unusable"
     return True, "ok"
 
 
@@ -375,6 +381,15 @@ def run_fork_verify(
         report.notes.append("fork-verify skipped — %s" % reason)
         report.duration_ms = int((time.monotonic() - t0) * 1000)
         return report
+
+    if not report.fixture and (rpc_url or "").strip():
+        from eth_scanner.ingest.rpc_client import probe_rpc
+        ok_rpc, probe_reason = probe_rpc(rpc_url)
+        if not ok_rpc:
+            report.skip_reason = probe_reason or "ETH_RPC_URL unusable"
+            report.notes.append("fork-verify skipped — %s" % report.skip_reason)
+            report.duration_ms = int((time.monotonic() - t0) * 1000)
+            return report
 
     if not forge_bin() or not anvil_bin():
         report.status = "skipped"
@@ -806,18 +821,8 @@ def _start_anvil_fork_safe(
 
 
 def _rpc(rpc: str, method: str, params: list[Any], timeout: float = 8.0) -> Any:
-    req = urllib.request.Request(
-        rpc,
-        data=json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode(),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        data = json.loads(resp.read().decode())
-    if data.get("error"):
-        raise RuntimeError(str(data["error"])[:200])
-    return data.get("result")
-
+    from eth_scanner.ingest.rpc_client import rpc_call
+    return rpc_call(rpc, method, params, timeout_s=timeout)
 
 def _plant_fixture(rpc: str, kind: str, work: Path) -> str:
     """Compile the in-tree fixture and etch it onto a fixed anvil address. No broadcast."""
@@ -968,7 +973,6 @@ def _run_forge_verify(
             "forge test exit=0 passed=%s failed=0"
             % parsed.get("passed_n")
         )
-
 
 
 def _is_harness_setup_failure(name: str, blob: str) -> bool:

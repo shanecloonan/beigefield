@@ -120,6 +120,12 @@ def run_lead_fuzz(
         report.notes.append("fuzz skipped — no ETH_RPC_URL for anvil fork")
         report.duration_ms = int((time.monotonic() - t0) * 1000)
         return report
+    from eth_scanner.ingest.rpc_client import probe_rpc
+    ok_rpc, probe_reason = probe_rpc(rpc_url)
+    if not ok_rpc:
+        report.notes.append("fuzz skipped — %s" % (probe_reason or "ETH_RPC_URL unusable"))
+        report.duration_ms = int((time.monotonic() - t0) * 1000)
+        return report
 
     base = Path(work_dir) if work_dir else Path(tempfile.gettempdir())
     dest = base / "engine-fuzz" / (address.lower()[-16:] or "target")
