@@ -23,11 +23,29 @@ That writes `scripts/dotcom-availability-results.json` and `.csv`, and prints
 available / taken / unknown lists.
 
 To change the search, edit the `FIRST_WORDS` and `SECOND_WORDS` arrays at the
-top of the script. Words are lowercased and concatenated (`Blue` + `Whale` →
-`bluewhale.com`). Useful flags: `--delay 1.0` (throttle), `--resume` (skip
-domains already in the JSON output), `--recheck-unknown` (re-query uncertain
-rows), `--limit 5` (smoke test).
+top of the script, or pass them on the command line. Words are lowercased and
+concatenated (`Blue` + `Whale` → `bluewhale.com`); duplicate words and
+duplicate combos are dropped.
+
+```bash
+python3 scripts/check_dotcom_availability.py \
+  --first Blue,Red,Gold \
+  --second Whale,Fox,Coin \
+  --out scripts/dotcom-availability-results-batch2 \
+  --seed scripts/dotcom-availability-results.json
+```
+
+Useful flags: `--delay 1.0` (throttle), `--resume` (skip domains already in
+the JSON output), `--seed FILE` (reuse an earlier batch's results),
+`--recheck-unknown` (re-query uncertain rows), `--limit 5` (smoke test).
 
 The client waits between requests, sends a descriptive User-Agent, retries
 rate limits and transient errors with backoff, and marks anything ambiguous
 as `UNKNOWN` rather than available.
+
+Prior runs:
+
+- Batch 1: `scripts/dotcom-availability-results.json` / `.csv`
+- Batch 2: `scripts/dotcom-availability-results-batch2.json` / `.csv`
+- Batch 3: `scripts/dotcom-availability-results-batch3.json` / `.csv`
+- Batch 4: `scripts/dotcom-availability-results-batch4.json` / `.csv`

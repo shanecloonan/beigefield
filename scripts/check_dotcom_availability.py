@@ -21,16 +21,21 @@ Usage (from the repo root or this directory):
 
 Optional flags:
 
+    --first Blue,Red,...  Override the first-word list (comma/space; repeatable)
+    --second Whale,Fox,...
+                          Override the second-word list (comma/space; repeatable)
     --delay 0.75          Seconds to wait between RDAP requests (default 0.75)
     --out scripts/dotcom-availability-results
                           Write <path>.json and <path>.csv
     --resume              Skip domains already present in the JSON output
-    --recheck-unknown     With --resume, re-query rows previously marked UNKNOWN
+    --seed FILE           Also skip domains already present in this results JSON
+                          (repeatable; use to reuse an earlier batch)
+    --recheck-unknown     Re-query rows previously marked UNKNOWN
     --limit N             Check only the first N combos (for a smoke test)
 
-Edit FIRST_WORDS and SECOND_WORDS below to change the lists. Words are
+Edit FIRST_WORDS and SECOND_WORDS below, or pass --first/--second. Words are
 lowercased and concatenated, then given a .com TLD, e.g. Blue + Whale
-→ bluewhale.com.
+→ bluewhale.com. Duplicate words and duplicate combos are dropped.
 """
 
 from __future__ import annotations
@@ -120,17 +125,50 @@ MAX_RETRIES = 5
 STATUSES = ("AVAILABLE", "TAKEN", "UNKNOWN")
 
 
+def dedupe_words(words: list[str]) -> list[str]:
+    """Drop empty entries and case-insensitive duplicates, keeping first seen."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for raw in words:
+        word = raw.strip()
+        if not word:
+            continue
+        key = word.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(word)
+    return out
+
+
+def parse_word_list(values: list[str] | None, default: list[str]) -> list[str]:
+    if not values:
+        return dedupe_words(default)
+    raw: list[str] = []
+    for value in values:
+        raw.extend(part.strip() for part in value.replace(",", " ").split())
+    words = dedupe_words(raw)
+    if not words:
+        raise ValueError("word list is empty after parsing")
+    return words
+
+
 def combinations(first: list[str], second: list[str]) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
+    seen: set[str] = set()
     for a in first:
         for b in second:
             label = f"{a}{b}".lower()
+            domain = f"{label}.com"
+            if domain in seen:
+                continue
+            seen.add(domain)
             rows.append(
                 {
                     "first": a,
                     "second": b,
                     "label": label,
-                    "domain": f"{label}.com",
+                    "domain": domain,
                 }
             )
     return rows
@@ -356,14 +394,16 @@ def _payload(
     started: datetime,
     delay: float,
     results: list[dict[str, Any]],
+    first_words: list[str],
+    second_words: list[str],
 ) -> dict[str, Any]:
     return {
         "checked_at": started.isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "delay_seconds": delay,
         "source_of_truth": "RDAP",
-        "first_words": FIRST_WORDS,
-        "second_words": SECOND_WORDS,
+        "first_words": first_words,
+        "second_words": second_words,
         "counts": {
             status: sum(1 for r in results if r["status"] == status)
             for status in STATUSES
@@ -471,6 +511,28 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Skip the informational DNS-over-HTTPS sanity lookup",
     )
+    parser.add_argument(
+        "--first",
+        action="append",
+        default=None,
+        metavar="WORD",
+        help="First-word list (comma or space separated; repeatable). Defaults to the built-in list.",
+    )
+    parser.add_argument(
+        "--second",
+        action="append",
+        default=None,
+        metavar="WORD",
+        help="Second-word list (comma or space separated; repeatable). Defaults to the built-in list.",
+    )
+    parser.add_argument(
+        "--seed",
+        action="append",
+        default=None,
+        type=Path,
+        metavar="FILE",
+        help="Reuse results from an earlier JSON file (repeatable).",
+    )
     return parser.parse_args()
 
 
@@ -480,7 +542,9 @@ def main() -> int:
         print("--delay must be >= 0", file=sys.stderr)
         return 2
 
-    combos = combinations(FIRST_WORDS, SECOND_WORDS)
+    first_words = parse_word_list(args.first, FIRST_WORDS)
+    second_words = parse_word_list(args.second, SECOND_WORDS)
+    combos = combinations(first_words, second_words)
     if args.limit and args.limit > 0:
         combos = combos[: args.limit]
 
@@ -488,7 +552,12 @@ def main() -> int:
     if out_base.suffix in {".json", ".csv"}:
         out_base = out_base.with_suffix("")
 
-    existing = load_existing(out_base.with_suffix(".json")) if args.resume else {}
+    existing: dict[str, dict[str, Any]] = {}
+    if args.seed:
+        for seed_path in args.seed:
+            existing.update(load_existing(seed_path))
+    if args.resume:
+        existing.update(load_existing(out_base.with_suffix(".json")))
     # Keep already-known rows so a mid-run interrupt cannot shrink the file.
     known: dict[str, dict[str, Any]] = dict(existing)
     started = datetime.now(timezone.utc)
@@ -503,8 +572,8 @@ def main() -> int:
     skip_count = sum(1 for c in combos if should_skip(c["domain"]))
     print(
         f"Checking {len(combos)} .com domains "
-        f"({len(FIRST_WORDS)} × {len(SECOND_WORDS)}) via RDAP. "
-        f"Delay={args.delay}s. Resume skipped={skip_count}."
+        f"({len(first_words)} × {len(second_words)}) via RDAP. "
+        f"Delay={args.delay}s. Cached/skipped={skip_count}."
     )
     sys.stdout.flush()
 
@@ -514,7 +583,12 @@ def main() -> int:
     for index, combo in enumerate(combos, start=1):
         domain = combo["domain"]
         if should_skip(domain):
-            print(f"[{index}/{len(combos)}] {domain}: {known[domain]['status']} (cached)")
+            cached = dict(known[domain])
+            cached["first"] = combo["first"]
+            cached["second"] = combo["second"]
+            cached["domain"] = domain
+            known[domain] = cached
+            print(f"[{index}/{len(combos)}] {domain}: {cached['status']} (cached)")
             sys.stdout.flush()
             continue
 
@@ -555,12 +629,12 @@ def main() -> int:
         print(f"[{index}/{len(combos)}] {domain}: {row['status']}")
         sys.stdout.flush()
 
-        write_outputs(out_base, _payload(started, args.delay, ordered_results()))
+        write_outputs(out_base, _payload(started, args.delay, ordered_results(), first_words, second_words))
         if index < len(combos):
             time.sleep(args.delay)
 
     results = ordered_results()
-    write_outputs(out_base, _payload(started, args.delay, results))
+    write_outputs(out_base, _payload(started, args.delay, results, first_words, second_words))
     print_report(results, out_base)
     counts = {status: sum(1 for r in results if r["status"] == status) for status in STATUSES}
     return 0 if counts["UNKNOWN"] == 0 else 1

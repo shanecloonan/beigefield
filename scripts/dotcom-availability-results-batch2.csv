@@ -1,0 +1,941 @@
+domain,first,second,status,http_status,registrar,expires,dns_resolves,detail,source,checked_at
+bluewhale.com,Blue,Whale,TAKEN,200,"Network Solutions, LLC",2030-03-29T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluewhale.com,2026-11-19T01:51:04.891572+00:00
+bluemonkey.com,Blue,Monkey,TAKEN,200,"GoDaddy.com, LLC",2029-06-09T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluemonkey.com,2026-11-19T01:51:05.677370+00:00
+bluebird.com,Blue,Bird,TAKEN,200,"CSC Corporate Domains, Inc.",2027-07-06T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluebird.com,2026-11-19T01:51:06.461439+00:00
+bluerabbit.com,Blue,Rabbit,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-10-06T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluerabbit.com,2026-11-19T01:51:07.247346+00:00
+bluecoyote.com,Blue,Coyote,TAKEN,200,"GoDaddy.com, LLC",2027-06-02T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluecoyote.com,2026-11-19T01:51:08.035136+00:00
+bluefox.com,Blue,Fox,TAKEN,200,"CSC Corporate Domains, Inc.",2027-01-28T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluefox.com,2026-11-19T01:51:08.914165+00:00
+bluedeer.com,Blue,Deer,TAKEN,200,"GoDaddy.com, LLC",2031-05-23T18:26:23Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluedeer.com,2026-11-19T01:51:09.697115+00:00
+bluebuck.com,Blue,Buck,TAKEN,200,Tucows Domains Inc.,2027-06-18T18:31:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluebuck.com,2026-11-19T01:51:10.479416+00:00
+blueape.com,Blue,Ape,TAKEN,200,"GoDaddy.com, LLC",2027-07-05T18:23:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/blueape.com,2026-11-19T01:51:11.263206+00:00
+blueparrot.com,Blue,Parrot,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-10-07T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/blueparrot.com,2026-11-19T01:51:12.113121+00:00
+bluefrog.com,Blue,Frog,TAKEN,200,Tucows Domains Inc.,2031-03-28T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluefrog.com,2026-11-19T01:51:12.897011+00:00
+bluelion.com,Blue,Lion,TAKEN,200,"GoDaddy.com, LLC",2029-04-19T03:16:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluelion.com,2026-11-19T01:51:13.756382+00:00
+bluetiger.com,Blue,Tiger,TAKEN,200,"GoDaddy.com, LLC",2027-04-16T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluetiger.com,2026-11-19T01:51:14.661897+00:00
+blueelephant.com,Blue,Elephant,TAKEN,200,Easyspace Limited,2027-02-08T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/blueelephant.com,2026-11-19T01:51:15.540656+00:00
+bluedolphin.com,Blue,Dolphin,TAKEN,200,"GoDaddy.com, LLC",2027-08-16T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluedolphin.com,2026-11-19T01:51:16.367840+00:00
+blueoctopus.com,Blue,Octopus,TAKEN,200,"GoDaddy.com, LLC",2027-09-12T20:14:51Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/blueoctopus.com,2026-11-19T01:51:17.151995+00:00
+bluebook.com,Blue,Book,TAKEN,200,"CSC Corporate Domains, Inc.",2027-03-21T17:14:10Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluebook.com,2026-11-19T01:51:17.933653+00:00
+bluenote.com,Blue,Note,TAKEN,200,"CSC Corporate Domains, Inc.",2027-04-24T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluenote.com,2026-11-19T01:51:18.770319+00:00
+bluesite.com,Blue,Site,TAKEN,200,"NameCheap, Inc.",2027-03-15T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluesite.com,2026-11-19T01:51:19.592853+00:00
+bluelottery.com,Blue,Lottery,TAKEN,200,"GoDaddy.com, LLC",2027-09-11T18:13:10Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluelottery.com,2026-11-19T01:51:20.434917+00:00
+bluemoney.com,Blue,Money,TAKEN,200,"GoDaddy.com, LLC",2027-05-13T18:15:10Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluemoney.com,2026-11-19T01:51:21.269662+00:00
+bluecash.com,Blue,Cash,TAKEN,200,"Network Solutions, LLC",2027-10-06T18:58:58Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluecash.com,2026-11-19T01:51:22.048469+00:00
+bluebill.com,Blue,Bill,TAKEN,200,"GoDaddy.com, LLC",2027-07-15T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluebill.com,2026-11-19T01:51:22.834291+00:00
+bluecloud.com,Blue,Cloud,TAKEN,200,"GoDaddy.com, LLC",2035-02-19T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluecloud.com,2026-11-19T01:51:23.679620+00:00
+bluescience.com,Blue,Science,TAKEN,200,"GoDaddy.com, LLC",2027-05-29T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluescience.com,2026-11-19T01:51:24.463706+00:00
+bluebio.com,Blue,Bio,TAKEN,200,Alibaba Cloud Computing Ltd. d/b/a HiChina (www.net.cn),2027-11-21T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluebio.com,2026-11-19T01:51:25.251723+00:00
+bluebiology.com,Blue,Biology,TAKEN,200,"NameCheap, Inc.",2027-01-25T21:22:01Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluebiology.com,2026-11-19T01:51:26.122953+00:00
+bluecom.com,Blue,Com,TAKEN,200,Unstoppable Domains Inc.,2027-10-23T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluecom.com,2026-11-19T01:51:26.966748+00:00
+bluecompany.com,Blue,Company,TAKEN,200,"GoDaddy.com, LLC",2027-09-16T21:09:20Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluecompany.com,2026-11-19T01:51:27.940932+00:00
+bluecoin.com,Blue,Coin,TAKEN,200,"Gabia, Inc.",2027-09-02T09:51:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluecoin.com,2026-11-19T01:51:28.721406+00:00
+bluechain.com,Blue,Chain,TAKEN,200,Gandi SAS,2027-09-21T13:23:45Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluechain.com,2026-11-19T01:51:29.500246+00:00
+blueblock.com,Blue,Block,TAKEN,200,"Name.com, Inc.",2027-02-14T19:31:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/blueblock.com,2026-11-19T01:51:30.284826+00:00
+bluenews.com,Blue,News,TAKEN,200,"Gabia, Inc.",2027-10-08T14:56:39Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/bluenews.com,2026-11-19T02:02:01.508285+00:00
+blueapp.com,Blue,App,TAKEN,200,"NameCheap, Inc.",2027-03-14T19:14:21Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/blueapp.com,2026-11-19T02:02:02.497865+00:00
+bluetech.com,Blue,Tech,TAKEN,200,"Network Solutions, LLC",2027-04-12T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluetech.com,2026-11-19T02:02:03.404165+00:00
+bluenetwork.com,Blue,Network,TAKEN,200,"Gabia, Inc.",2027-05-13T18:29:21Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluenetwork.com,2026-11-19T02:02:04.570712+00:00
+bluelake.com,Blue,Lake,TAKEN,200,"GoDaddy.com, LLC",2027-12-04T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluelake.com,2026-11-19T02:02:05.516306+00:00
+bluewater.com,Blue,Water,TAKEN,200,Hosting Concepts B.V. d/b/a Registrar.eu,2028-03-14T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluewater.com,2026-11-19T02:02:06.378027+00:00
+bluecapital.com,Blue,Capital,TAKEN,200,"eName Technology Co., Ltd.",2027-03-07T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluecapital.com,2026-11-19T02:02:07.592927+00:00
+bluefish.com,Blue,Fish,TAKEN,200,Key-Systems GmbH,2027-03-09T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluefish.com,2026-11-19T02:02:08.687104+00:00
+bluebrands.com,Blue,Brands,TAKEN,200,Key-Systems GmbH,2027-06-12T03:16:09Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluebrands.com,2026-11-19T02:02:30.861068+00:00
+blueproducts.com,Blue,Products,TAKEN,200,"GoDaddy.com, LLC",2027-09-04T20:10:36Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/blueproducts.com,2026-11-19T02:02:33.716721+00:00
+bluevault.com,Blue,Vault,TAKEN,200,"Network Solutions, LLC",2027-11-01T11:00:46Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluevault.com,2026-11-19T02:02:34.641690+00:00
+bluesafe.com,Blue,Safe,TAKEN,200,Gandi SAS,2028-07-10T07:29:52Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/bluesafe.com,2026-11-19T02:02:35.679561+00:00
+blueguard.com,Blue,Guard,TAKEN,200,"Megazone Corp., dba HOSTING.KR",2027-09-14T17:04:46Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/blueguard.com,2026-11-19T02:02:36.556776+00:00
+bluebrain.com,Blue,Brain,TAKEN,200,"GoDaddy.com, LLC",2027-03-22T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluebrain.com,2026-11-19T02:02:37.551436+00:00
+bluesports.com,Blue,Sports,TAKEN,200,"Inames Co., Ltd.",2027-03-29T12:08:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bluesports.com,2026-11-19T02:02:38.660493+00:00
+redwhale.com,Red,Whale,TAKEN,200,"GoDaddy.com, LLC",2027-08-06T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redwhale.com,2026-11-19T01:51:31.159576+00:00
+redmonkey.com,Red,Monkey,TAKEN,200,123-Reg Limited,2031-02-26T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redmonkey.com,2026-11-19T01:51:31.946630+00:00
+redbird.com,Red,Bird,TAKEN,200,Dynadot Inc,2028-08-13T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redbird.com,2026-11-19T01:51:32.876492+00:00
+redrabbit.com,Red,Rabbit,TAKEN,200,"Network Solutions, LLC",2027-11-17T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redrabbit.com,2026-11-19T01:51:33.722863+00:00
+redcoyote.com,Red,Coyote,TAKEN,200,IONOS SE,2027-06-02T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redcoyote.com,2026-11-19T01:51:34.563400+00:00
+redfox.com,Red,Fox,TAKEN,200,Bluehost Inc.,2027-01-23T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redfox.com,2026-11-19T01:51:35.402185+00:00
+reddeer.com,Red,Deer,TAKEN,200,"GoDaddy.com, LLC",2034-05-04T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/reddeer.com,2026-11-19T01:51:36.185877+00:00
+redbuck.com,Red,Buck,TAKEN,200,"GoDaddy.com, LLC",2027-06-16T14:55:01Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redbuck.com,2026-11-19T01:51:36.965599+00:00
+redape.com,Red,Ape,TAKEN,200,Squarespace Domains II LLC,2027-03-23T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redape.com,2026-11-19T01:51:37.812455+00:00
+redparrot.com,Red,Parrot,TAKEN,200,"GoDaddy.com, LLC",2027-03-26T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redparrot.com,2026-11-19T01:51:38.591790+00:00
+redfrog.com,Red,Frog,TAKEN,200,123-Reg Limited,2033-10-10T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redfrog.com,2026-11-19T01:51:39.427872+00:00
+redlion.com,Red,Lion,TAKEN,200,"CSC Corporate Domains, Inc.",2027-02-01T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redlion.com,2026-11-19T01:51:40.254870+00:00
+redtiger.com,Red,Tiger,TAKEN,200,"Ascio Technologies, Inc. Danmark - Filial af Ascio technologies, Inc. USA",2027-01-06T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redtiger.com,2026-11-19T01:51:41.037985+00:00
+redelephant.com,Red,Elephant,TAKEN,200,"Amazon Registrar, Inc.",2028-10-08T18:02:13Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redelephant.com,2026-11-19T01:51:41.818645+00:00
+reddolphin.com,Red,Dolphin,TAKEN,200,"GoDaddy.com, LLC",2028-02-12T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/reddolphin.com,2026-11-19T01:51:42.728368+00:00
+redoctopus.com,Red,Octopus,TAKEN,200,Atom.com Domains LLC,2029-06-02T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redoctopus.com,2026-11-19T01:51:43.525314+00:00
+redbook.com,Red,Book,TAKEN,200,"CSC Corporate Domains, Inc.",2027-08-18T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redbook.com,2026-11-19T01:51:44.544043+00:00
+rednote.com,Red,Note,TAKEN,200,Dominet (HK) Limited,2028-05-18T23:39:54Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/rednote.com,2026-11-19T01:51:45.338652+00:00
+redsite.com,Red,Site,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-11-25T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redsite.com,2026-11-19T01:51:46.212715+00:00
+redlottery.com,Red,Lottery,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2028-01-12T19:50:35Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redlottery.com,2026-11-19T01:51:47.000425+00:00
+redmoney.com,Red,Money,TAKEN,200,"GoDaddy.com, LLC",2028-12-24T04:57:43Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redmoney.com,2026-11-19T01:51:47.784413+00:00
+redcash.com,Red,Cash,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-08-27T18:08:23Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redcash.com,2026-11-19T01:51:48.664353+00:00
+redbill.com,Red,Bill,TAKEN,200,"Gabia, Inc.",2027-02-13T19:31:25Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redbill.com,2026-11-19T01:51:49.451774+00:00
+redcloud.com,Red,Cloud,TAKEN,200,"GoDaddy.com, LLC",2027-06-30T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redcloud.com,2026-11-19T01:51:50.238769+00:00
+redscience.com,Red,Science,TAKEN,200,"GoDaddy.com, LLC",2027-08-24T11:48:07Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redscience.com,2026-11-19T01:51:51.092787+00:00
+redbio.com,Red,Bio,TAKEN,200,PDR Ltd. d/b/a PublicDomainRegistry.com,2028-11-27T19:13:46Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redbio.com,2026-11-19T01:51:51.937201+00:00
+redbiology.com,Red,Biology,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/redbiology.com,2026-11-19T01:59:01.084090+00:00
+redcom.com,Red,Com,TAKEN,200,"NameCheap, Inc.",2028-02-24T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redcom.com,2026-11-19T01:51:53.635463+00:00
+redcompany.com,Red,Company,TAKEN,200,"GoDaddy.com, LLC",2035-06-05T18:26:02Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redcompany.com,2026-11-19T01:51:54.418198+00:00
+redcoin.com,Red,Coin,TAKEN,200,"NameCheap, Inc.",2027-01-27T03:35:46Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redcoin.com,2026-11-19T01:51:55.340798+00:00
+redchain.com,Red,Chain,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-04-08T01:22:17Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redchain.com,2026-11-19T01:51:56.126147+00:00
+redblock.com,Red,Block,TAKEN,200,Squarespace Domains II LLC,2027-05-22T19:07:51Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redblock.com,2026-11-19T01:51:56.969778+00:00
+rednews.com,Red,News,TAKEN,200,"GoDaddy.com, LLC",2027-08-26T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/rednews.com,2026-11-19T02:02:39.515628+00:00
+redapp.com,Red,App,TAKEN,200,"Inames Co., Ltd.",2027-04-23T18:32:56Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redapp.com,2026-11-19T02:02:40.501641+00:00
+redtech.com,Red,Tech,TAKEN,200,"GoDaddy.com, LLC",2030-12-10T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redtech.com,2026-11-19T02:02:41.425406+00:00
+rednetwork.com,Red,Network,TAKEN,200,"GoDaddy.com, LLC",2027-03-06T11:40:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/rednetwork.com,2026-11-19T02:02:42.340072+00:00
+redlake.com,Red,Lake,TAKEN,200,Key-Systems GmbH,2027-05-16T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redlake.com,2026-11-19T02:02:43.221388+00:00
+redwater.com,Red,Water,TAKEN,200,"GoDaddy.com, LLC",2027-01-20T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redwater.com,2026-11-19T02:02:44.224783+00:00
+redcapital.com,Red,Capital,TAKEN,200,Dynadot Inc,2029-09-07T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redcapital.com,2026-11-19T02:02:45.083050+00:00
+redfish.com,Red,Fish,TAKEN,200,"Domain.com - Network Solutions, LLC",2027-10-27T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redfish.com,2026-11-19T02:02:46.033140+00:00
+redbrands.com,Red,Brands,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-06-09T23:55:54Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redbrands.com,2026-11-19T02:02:46.973827+00:00
+redproducts.com,Red,Products,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2028-02-15T18:49:41Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redproducts.com,2026-11-19T02:02:47.956312+00:00
+redvault.com,Red,Vault,TAKEN,200,"NameSilo, LLC",2027-06-10T06:24:44Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redvault.com,2026-11-19T02:02:48.880905+00:00
+redsafe.com,Red,Safe,TAKEN,200,Infomaniak Network SA,2029-08-22T18:33:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redsafe.com,2026-11-19T02:02:49.927349+00:00
+redguard.com,Red,Guard,TAKEN,200,IONOS SE,2027-09-26T10:48:38Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redguard.com,2026-11-19T02:02:50.829428+00:00
+redbrain.com,Red,Brain,TAKEN,200,"GoDaddy.com, LLC",2029-10-05T14:18:19Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redbrain.com,2026-11-19T02:02:51.757470+00:00
+redsports.com,Red,Sports,TAKEN,200,"GoDaddy.com, LLC",2027-03-26T18:39:22Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/redsports.com,2026-11-19T02:02:52.781664+00:00
+orangewhale.com,Orange,Whale,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2028-02-24T11:04:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangewhale.com,2026-11-19T01:51:57.847735+00:00
+orangemonkey.com,Orange,Monkey,TAKEN,200,Moniker Online Services LLC,2027-07-26T18:23:32Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangemonkey.com,2026-11-19T01:51:58.630997+00:00
+orangebird.com,Orange,Bird,TAKEN,200,"GoDaddy.com, LLC",2027-08-20T18:05:29Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangebird.com,2026-11-19T01:51:59.412503+00:00
+orangerabbit.com,Orange,Rabbit,TAKEN,200,"NameSilo, LLC",2027-06-10T09:20:32Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangerabbit.com,2026-11-19T01:52:00.249939+00:00
+orangecoyote.com,Orange,Coyote,TAKEN,200,"GoDaddy.com, LLC",2027-11-08T00:45:40Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangecoyote.com,2026-11-19T01:52:01.141761+00:00
+orangefox.com,Orange,Fox,TAKEN,200,"GoDaddy.com, LLC",2027-09-27T22:34:19Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangefox.com,2026-11-19T01:52:02.061271+00:00
+orangedeer.com,Orange,Deer,TAKEN,200,"Regional Network Information Center, JSC dba RU-CENTER",2027-01-10T17:30:45Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangedeer.com,2026-11-19T01:52:02.849603+00:00
+orangebuck.com,Orange,Buck,TAKEN,200,Atom.com Domains LLC,2027-08-29T02:23:45Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangebuck.com,2026-11-19T01:52:03.632158+00:00
+orangeape.com,Orange,Ape,TAKEN,200,123-Reg Limited,2027-03-19T18:38:42Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangeape.com,2026-11-19T01:52:04.416967+00:00
+orangeparrot.com,Orange,Parrot,TAKEN,200,"GoDaddy.com, LLC",2027-02-23T20:04:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangeparrot.com,2026-11-19T01:52:05.209236+00:00
+orangefrog.com,Orange,Frog,TAKEN,200,"Amazon Registrar, Inc.",2027-01-29T19:35:38Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangefrog.com,2026-11-19T01:52:05.996065+00:00
+orangelion.com,Orange,Lion,TAKEN,200,Tucows Domains Inc.,2027-02-05T19:26:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangelion.com,2026-11-19T01:52:06.857164+00:00
+orangetiger.com,Orange,Tiger,TAKEN,200,"NameCheap, Inc.",2029-01-18T16:34:14Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangetiger.com,2026-11-19T01:52:07.637708+00:00
+orangeelephant.com,Orange,Elephant,TAKEN,200,"GoDaddy.com, LLC",2027-03-26T18:31:09Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangeelephant.com,2026-11-19T01:52:08.422283+00:00
+orangedolphin.com,Orange,Dolphin,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-08-24T18:45:42Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangedolphin.com,2026-11-19T01:52:09.208472+00:00
+orangeoctopus.com,Orange,Octopus,TAKEN,200,Alpine Domains Inc.,2029-03-22T16:50:10Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangeoctopus.com,2026-11-19T01:52:10.062644+00:00
+orangebook.com,Orange,Book,TAKEN,200,"NameCheap, Inc.",2027-01-24T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangebook.com,2026-11-19T01:52:10.847116+00:00
+orangenote.com,Orange,Note,TAKEN,200,"Japan Registry Services Co., Ltd.",2028-07-02T01:13:04Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangenote.com,2026-11-19T01:52:11.632849+00:00
+orangesite.com,Orange,Site,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-03-11T19:54:17Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangesite.com,2026-11-19T01:52:12.491520+00:00
+orangelottery.com,Orange,Lottery,TAKEN,200,Dynadot Inc,2027-01-24T19:04:40Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangelottery.com,2026-11-19T01:52:13.334678+00:00
+orangemoney.com,Orange,Money,TAKEN,200,"DreamHost, LLC",2026-12-26T15:09:28Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangemoney.com,2026-11-19T01:52:14.123044+00:00
+orangecash.com,Orange,Cash,TAKEN,200,Squarespace Domains II LLC,2027-02-17T21:02:43Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangecash.com,2026-11-19T01:52:14.909003+00:00
+orangebill.com,Orange,Bill,TAKEN,200,"GoDaddy.com, LLC",2027-08-17T18:11:06Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangebill.com,2026-11-19T01:52:15.733010+00:00
+orangecloud.com,Orange,Cloud,TAKEN,200,Alibaba Cloud Computing Ltd. d/b/a HiChina (www.net.cn),2027-05-10T05:49:15Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangecloud.com,2026-11-19T01:52:16.603260+00:00
+orangescience.com,Orange,Science,TAKEN,200,"Name.com, Inc.",2027-10-09T09:41:09Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangescience.com,2026-11-19T01:52:17.386661+00:00
+orangebio.com,Orange,Bio,TAKEN,200,"GoDaddy.com, LLC",2027-06-15T18:44:35Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangebio.com,2026-11-19T01:52:18.167617+00:00
+orangebiology.com,Orange,Biology,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/orangebiology.com,2026-11-19T01:59:01.986852+00:00
+orangecom.com,Orange,Com,TAKEN,200,"GKG.Net, Inc.",2027-01-01T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangecom.com,2026-11-19T01:52:19.795708+00:00
+orangecompany.com,Orange,Company,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-07-06T18:22:55Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangecompany.com,2026-11-19T01:52:20.583135+00:00
+orangecoin.com,Orange,Coin,TAKEN,200,"GoDaddy.com, LLC",2027-11-01T18:24:54Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangecoin.com,2026-11-19T01:52:21.368095+00:00
+orangechain.com,Orange,Chain,TAKEN,200,Diamatrix C.C.,2027-10-23T12:28:07Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangechain.com,2026-11-19T01:52:22.210305+00:00
+orangeblock.com,Orange,Block,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-07-12T18:42:45Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangeblock.com,2026-11-19T01:52:23.045626+00:00
+orangenews.com,Orange,News,TAKEN,200,Tucows Domains Inc.,2027-02-08T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangenews.com,2026-11-19T02:02:53.713893+00:00
+orangeapp.com,Orange,App,TAKEN,200,"GoDaddy.com, LLC",2027-06-29T23:37:27Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangeapp.com,2026-11-19T02:02:54.585265+00:00
+orangetech.com,Orange,Tech,TAKEN,200,Dynadot Inc,2027-04-18T10:42:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangetech.com,2026-11-19T02:02:55.525122+00:00
+orangenetwork.com,Orange,Network,TAKEN,200,"GoDaddy.com, LLC",2027-05-17T18:10:05Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangenetwork.com,2026-11-19T02:02:56.468506+00:00
+orangelake.com,Orange,Lake,TAKEN,200,"Network Solutions, LLC",2028-09-19T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangelake.com,2026-11-19T02:02:57.672922+00:00
+orangewater.com,Orange,Water,TAKEN,200,"eNom, LLC",2027-08-21T14:41:36Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangewater.com,2026-11-19T02:02:58.558519+00:00
+orangecapital.com,Orange,Capital,TAKEN,200,"GoDaddy.com, LLC",2027-12-07T13:06:24Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/orangecapital.com,2026-11-19T02:02:59.433685+00:00
+orangefish.com,Orange,Fish,TAKEN,200,"GoDaddy.com, LLC",2027-02-10T19:15:37Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangefish.com,2026-11-19T02:03:00.714726+00:00
+orangebrands.com,Orange,Brands,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-02-22T00:35:34Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangebrands.com,2026-11-19T02:03:01.640630+00:00
+orangeproducts.com,Orange,Products,TAKEN,200,"NameCheap, Inc.",2028-06-25T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangeproducts.com,2026-11-19T02:03:02.633853+00:00
+orangevault.com,Orange,Vault,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-05-02T23:39:27Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangevault.com,2026-11-19T02:03:03.617299+00:00
+orangesafe.com,Orange,Safe,TAKEN,200,Alibaba Cloud Computing Ltd. d/b/a HiChina (www.net.cn),2027-05-09T18:13:43Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangesafe.com,2026-11-19T02:03:04.547570+00:00
+orangeguard.com,Orange,Guard,TAKEN,200,"Network Solutions, LLC",2027-08-11T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangeguard.com,2026-11-19T02:03:05.409589+00:00
+orangebrain.com,Orange,Brain,TAKEN,200,"GoDaddy.com, LLC",2028-06-03T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangebrain.com,2026-11-19T02:03:07.409952+00:00
+orangesports.com,Orange,Sports,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-08-16T18:28:48Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/orangesports.com,2026-11-19T02:03:08.333429+00:00
+purplewhale.com,Purple,Whale,TAKEN,200,Alpine Domains Inc.,2028-12-04T14:04:09Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplewhale.com,2026-11-19T01:52:24.020726+00:00
+purplemonkey.com,Purple,Monkey,TAKEN,200,"Network Solutions, LLC",2031-02-17T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplemonkey.com,2026-11-19T01:52:24.884979+00:00
+purplebird.com,Purple,Bird,TAKEN,200,Dynadot Inc,2027-07-30T13:21:41Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplebird.com,2026-11-19T01:52:25.735662+00:00
+purplerabbit.com,Purple,Rabbit,TAKEN,200,"Amazon Registrar, Inc.",2028-09-27T07:23:22Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplerabbit.com,2026-11-19T01:52:26.517011+00:00
+purplecoyote.com,Purple,Coyote,TAKEN,200,Bluehost Inc.,2027-06-06T13:34:17Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplecoyote.com,2026-11-19T01:52:27.362106+00:00
+purplefox.com,Purple,Fox,TAKEN,200,"NameCheap, Inc.",2027-11-20T17:28:45Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplefox.com,2026-11-19T01:52:28.246277+00:00
+purpledeer.com,Purple,Deer,TAKEN,200,"Spaceship, Inc.",2027-10-12T06:54:53Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purpledeer.com,2026-11-19T01:52:29.162116+00:00
+purplebuck.com,Purple,Buck,TAKEN,200,"GoDaddy.com, LLC",2028-04-03T09:56:38Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplebuck.com,2026-11-19T01:52:29.953502+00:00
+purpleape.com,Purple,Ape,TAKEN,200,"GoDaddy.com, LLC",2031-09-28T00:56:46Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purpleape.com,2026-11-19T01:52:30.743315+00:00
+purpleparrot.com,Purple,Parrot,TAKEN,200,"GoDaddy.com, LLC",2027-11-23T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purpleparrot.com,2026-11-19T01:52:31.609855+00:00
+purplefrog.com,Purple,Frog,TAKEN,200,easyDNS Technologies Inc.,2027-03-04T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplefrog.com,2026-11-19T01:52:32.686893+00:00
+purplelion.com,Purple,Lion,TAKEN,200,"GoDaddy.com, LLC",2027-04-04T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplelion.com,2026-11-19T01:52:33.557085+00:00
+purpletiger.com,Purple,Tiger,TAKEN,200,"GoDaddy.com, LLC",2028-02-01T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purpletiger.com,2026-11-19T01:52:34.337687+00:00
+purpleelephant.com,Purple,Elephant,TAKEN,200,"GoDaddy.com, LLC",2027-04-04T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purpleelephant.com,2026-11-19T01:52:35.174301+00:00
+purpledolphin.com,Purple,Dolphin,TAKEN,200,Dynadot Inc,2027-10-22T05:38:21Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purpledolphin.com,2026-11-19T01:52:36.008857+00:00
+purpleoctopus.com,Purple,Octopus,TAKEN,200,Moniker Online Services LLC,2027-05-29T13:51:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purpleoctopus.com,2026-11-19T01:52:36.822158+00:00
+purplebook.com,Purple,Book,TAKEN,200,"NameCheap, Inc.",2027-04-25T19:01:56Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplebook.com,2026-11-19T01:52:37.712172+00:00
+purplenote.com,Purple,Note,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-11-28T04:24:36Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplenote.com,2026-11-19T01:52:38.500493+00:00
+purplesite.com,Purple,Site,TAKEN,200,"GoDaddy.com, LLC",2027-11-14T19:27:03Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplesite.com,2026-11-19T01:52:39.467917+00:00
+purplelottery.com,Purple,Lottery,TAKEN,200,"Network Solutions, LLC",2026-12-23T15:30:39Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplelottery.com,2026-11-19T01:52:40.249766+00:00
+purplemoney.com,Purple,Money,TAKEN,200,"GoDaddy.com, LLC",2035-04-08T20:02:06Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplemoney.com,2026-11-19T01:52:41.033399+00:00
+purplecash.com,Purple,Cash,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-07-04T18:37:12Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplecash.com,2026-11-19T01:52:41.886924+00:00
+purplebill.com,Purple,Bill,TAKEN,200,"GoDaddy.com, LLC",2027-01-19T17:29:07Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplebill.com,2026-11-19T01:52:42.724394+00:00
+purplecloud.com,Purple,Cloud,TAKEN,200,"GoDaddy.com, LLC",2029-06-02T10:10:09Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplecloud.com,2026-11-19T01:52:43.510892+00:00
+purplescience.com,Purple,Science,TAKEN,200,"Spaceship, Inc.",2027-02-05T02:35:28Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplescience.com,2026-11-19T01:52:44.293098+00:00
+purplebio.com,Purple,Bio,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-05-01T17:27:47Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplebio.com,2026-11-19T01:52:45.081100+00:00
+purplebiology.com,Purple,Biology,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/purplebiology.com,2026-11-19T01:59:02.857989+00:00
+purplecom.com,Purple,Com,TAKEN,200,Domreg Ltd,2027-03-27T23:00:19Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplecom.com,2026-11-19T01:52:46.661264+00:00
+purplecompany.com,Purple,Company,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-12-08T19:26:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplecompany.com,2026-11-19T01:52:47.440270+00:00
+purplecoin.com,Purple,Coin,TAKEN,200,"Inames Co., Ltd.",2026-12-30T19:28:40Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplecoin.com,2026-11-19T01:52:48.248161+00:00
+purplechain.com,Purple,Chain,TAKEN,200,"GoDaddy.com, LLC",2028-02-10T19:39:14Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplechain.com,2026-11-19T01:52:49.211038+00:00
+purpleblock.com,Purple,Block,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-12-19T19:28:17Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purpleblock.com,2026-11-19T01:52:50.049077+00:00
+purplenews.com,Purple,News,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2028-02-07T19:09:09Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplenews.com,2026-11-19T02:03:09.203917+00:00
+purpleapp.com,Purple,App,TAKEN,200,"GoDaddy.com, LLC",2027-02-24T19:34:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purpleapp.com,2026-11-19T02:03:10.211497+00:00
+purpletech.com,Purple,Tech,TAKEN,200,1API GmbH,2027-11-01T04:00:00Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purpletech.com,2026-11-19T02:03:15.079851+00:00
+purplenetwork.com,Purple,Network,TAKEN,200,"GoDaddy.com, LLC",2027-05-19T18:21:06Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplenetwork.com,2026-11-19T02:03:15.950661+00:00
+purplelake.com,Purple,Lake,TAKEN,200,Tucows Domains Inc.,2027-07-04T14:59:13Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplelake.com,2026-11-19T02:03:17.107539+00:00
+purplewater.com,Purple,Water,TAKEN,200,"GoDaddy.com, LLC",2027-01-03T19:51:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplewater.com,2026-11-19T02:03:17.978929+00:00
+purplecapital.com,Purple,Capital,TAKEN,200,Lexsynergy Limited,2027-01-12T15:26:36Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplecapital.com,2026-11-19T02:03:19.077907+00:00
+purplefish.com,Purple,Fish,TAKEN,200,"Cloudflare, Inc.",2028-03-04T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplefish.com,2026-11-19T02:03:20.007857+00:00
+purplebrands.com,Purple,Brands,TAKEN,200,"Wild West Domains, LLC",2027-02-22T00:35:36Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplebrands.com,2026-11-19T02:03:20.939168+00:00
+purpleproducts.com,Purple,Products,TAKEN,200,"GoDaddy.com, LLC",2026-12-13T15:57:26Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purpleproducts.com,2026-11-19T02:03:21.855608+00:00
+purplevault.com,Purple,Vault,TAKEN,200,"GoDaddy.com, LLC",2029-04-16T15:03:02Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplevault.com,2026-11-19T02:03:22.813579+00:00
+purplesafe.com,Purple,Safe,TAKEN,200,NordNet SA,2027-08-11T16:41:32Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplesafe.com,2026-11-19T02:03:27.945614+00:00
+purpleguard.com,Purple,Guard,TAKEN,200,Porkbun LLC,2027-11-16T00:40:52Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purpleguard.com,2026-11-19T02:03:28.893984+00:00
+purplebrain.com,Purple,Brain,TAKEN,200,"GoDaddy.com, LLC",2027-07-20T14:57:12Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/purplebrain.com,2026-11-19T02:03:29.768890+00:00
+purplesports.com,Purple,Sports,TAKEN,200,"Cloudflare, Inc.",2027-04-19T09:41:57Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/purplesports.com,2026-11-19T02:03:30.738792+00:00
+greenwhale.com,Green,Whale,TAKEN,200,"Megazone Corp., dba HOSTING.KR",2027-01-02T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenwhale.com,2026-11-19T01:52:50.985571+00:00
+greenmonkey.com,Green,Monkey,TAKEN,200,"GoDaddy.com, LLC",2031-04-09T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenmonkey.com,2026-11-19T01:52:51.765027+00:00
+greenbird.com,Green,Bird,TAKEN,200,Domeneshop AS dba domainnameshop.com,2027-04-15T18:23:32Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenbird.com,2026-11-19T01:52:52.607822+00:00
+greenrabbit.com,Green,Rabbit,TAKEN,200,"GoDaddy.com, LLC",2029-05-12T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenrabbit.com,2026-11-19T01:52:53.489941+00:00
+greencoyote.com,Green,Coyote,TAKEN,200,"Spaceship, Inc.",2028-01-14T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greencoyote.com,2026-11-19T01:52:54.330854+00:00
+greenfox.com,Green,Fox,TAKEN,200,Name SRS AB,2027-01-22T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenfox.com,2026-11-19T01:52:55.166077+00:00
+greendeer.com,Green,Deer,TAKEN,200,"GoDaddy.com, LLC",2027-09-18T18:57:03Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greendeer.com,2026-11-19T01:52:56.053129+00:00
+greenbuck.com,Green,Buck,TAKEN,200,"Wild West Domains, LLC",2027-03-06T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenbuck.com,2026-11-19T01:52:56.840809+00:00
+greenape.com,Green,Ape,TAKEN,200,"Amazon Registrar, Inc.",2026-12-26T05:41:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenape.com,2026-11-19T01:52:57.635704+00:00
+greenparrot.com,Green,Parrot,TAKEN,200,"GoDaddy.com, LLC",2029-06-30T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenparrot.com,2026-11-19T01:52:58.529414+00:00
+greenfrog.com,Green,Frog,TAKEN,200,"Network Solutions, LLC",2031-10-19T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenfrog.com,2026-11-19T01:52:59.315862+00:00
+greenlion.com,Green,Lion,TAKEN,200,"GoDaddy.com, LLC",2027-03-10T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenlion.com,2026-11-19T01:53:00.101187+00:00
+greentiger.com,Green,Tiger,TAKEN,200,"GoDaddy.com, LLC",2027-01-28T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greentiger.com,2026-11-19T01:53:00.954086+00:00
+greenelephant.com,Green,Elephant,TAKEN,200,"GoDaddy.com, LLC",2027-04-08T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenelephant.com,2026-11-19T01:53:01.790116+00:00
+greendolphin.com,Green,Dolphin,TAKEN,200,"GoDaddy.com, LLC",2031-02-24T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greendolphin.com,2026-11-19T01:53:02.637941+00:00
+greenoctopus.com,Green,Octopus,TAKEN,200,IONOS SE,2027-05-04T12:20:05Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenoctopus.com,2026-11-19T01:53:03.613290+00:00
+greenbook.com,Green,Book,TAKEN,200,Squarespace Domains LLC,2027-03-07T18:39:16Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenbook.com,2026-11-19T01:53:04.408347+00:00
+greennote.com,Green,Note,TAKEN,200,"GoDaddy.com, LLC",2027-07-29T10:57:40Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greennote.com,2026-11-19T01:53:05.197354+00:00
+greensite.com,Green,Site,TAKEN,200,"GoDaddy.com, LLC",2029-06-02T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greensite.com,2026-11-19T01:53:05.987614+00:00
+greenlottery.com,Green,Lottery,TAKEN,200,"GoDaddy.com, LLC",2027-12-11T19:39:57Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenlottery.com,2026-11-19T01:53:06.865655+00:00
+greenmoney.com,Green,Money,TAKEN,200,"Network Solutions, LLC",2027-08-09T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenmoney.com,2026-11-19T01:53:07.772154+00:00
+greencash.com,Green,Cash,TAKEN,200,"Domain.com - Network Solutions, LLC",2026-12-30T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greencash.com,2026-11-19T01:53:08.554175+00:00
+greenbill.com,Green,Bill,TAKEN,200,Porkbun LLC,2027-05-16T20:54:37Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenbill.com,2026-11-19T01:53:09.424233+00:00
+greencloud.com,Green,Cloud,TAKEN,200,"CSC Corporate Domains, Inc.",2027-08-12T03:35:32Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greencloud.com,2026-11-19T01:53:10.266795+00:00
+greenscience.com,Green,Science,TAKEN,200,"GoDaddy.com, LLC",2027-07-11T18:45:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenscience.com,2026-11-19T01:53:11.051400+00:00
+greenbio.com,Green,Bio,TAKEN,200,Atom.com Domains LLC,2032-02-28T19:29:46Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenbio.com,2026-11-19T01:53:11.841202+00:00
+greenbiology.com,Green,Biology,TAKEN,200,"GoDaddy.com, LLC",2027-05-07T02:53:57Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenbiology.com,2026-11-19T01:53:12.667029+00:00
+greencom.com,Green,Com,TAKEN,200,"GoDaddy.com, LLC",2027-04-18T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greencom.com,2026-11-19T01:53:13.457514+00:00
+greencompany.com,Green,Company,TAKEN,200,"Network Solutions, LLC",2030-07-06T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greencompany.com,2026-11-19T01:53:14.308999+00:00
+greencoin.com,Green,Coin,TAKEN,200,"GoDaddy.com, LLC",2027-07-21T15:11:23Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greencoin.com,2026-11-19T01:53:15.148863+00:00
+greenchain.com,Green,Chain,TAKEN,200,"GoDaddy.com, LLC",2028-07-24T18:25:04Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenchain.com,2026-11-19T01:53:15.992090+00:00
+greenblock.com,Green,Block,TAKEN,200,"GoDaddy.com, LLC",2026-11-20T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenblock.com,2026-11-19T01:53:16.774209+00:00
+greennews.com,Green,News,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-12-16T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greennews.com,2026-11-19T02:03:31.663575+00:00
+greenapp.com,Green,App,TAKEN,200,"GoDaddy.com, LLC",2027-08-15T15:34:37Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenapp.com,2026-11-19T02:03:32.694213+00:00
+greentech.com,Green,Tech,TAKEN,200,"Network Solutions, LLC",2031-08-10T10:35:01Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greentech.com,2026-11-19T02:03:33.683104+00:00
+greennetwork.com,Green,Network,TAKEN,200,"GoDaddy.com, LLC",2026-12-22T04:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greennetwork.com,2026-11-19T02:03:34.608213+00:00
+greenlake.com,Green,Lake,TAKEN,200,MarkMonitor Inc.,2027-07-06T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenlake.com,2026-11-19T02:03:35.500122+00:00
+greenwater.com,Green,Water,TAKEN,200,Atom.com Domains LLC,2032-05-16T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenwater.com,2026-11-19T02:03:36.475151+00:00
+greencapital.com,Green,Capital,TAKEN,200,Dynadot Inc,2029-01-02T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greencapital.com,2026-11-19T02:03:37.457748+00:00
+greenfish.com,Green,Fish,TAKEN,200,"GoDaddy.com, LLC",2027-05-20T18:24:46Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenfish.com,2026-11-19T02:03:38.450621+00:00
+greenbrands.com,Green,Brands,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-06-30T05:48:35Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenbrands.com,2026-11-19T02:03:39.374633+00:00
+greenproducts.com,Green,Products,TAKEN,200,"GoDaddy.com, LLC",2028-10-12T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenproducts.com,2026-11-19T02:03:40.351193+00:00
+greenvault.com,Green,Vault,TAKEN,200,"Megazone Corp., dba HOSTING.KR",2027-03-08T19:04:54Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenvault.com,2026-11-19T02:03:41.417030+00:00
+greensafe.com,Green,Safe,TAKEN,200,"Gabia, Inc.",2027-08-16T00:48:45Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greensafe.com,2026-11-19T02:03:43.005086+00:00
+greenguard.com,Green,Guard,TAKEN,200,"Network Solutions, LLC",2030-04-02T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenguard.com,2026-11-19T02:03:43.919796+00:00
+greenbrain.com,Green,Brain,TAKEN,200,"NameCheap, Inc.",2027-09-30T18:21:27Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greenbrain.com,2026-11-19T02:03:44.839653+00:00
+greensports.com,Green,Sports,TAKEN,200,"GoDaddy.com, LLC",2027-08-11T18:05:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/greensports.com,2026-11-19T02:03:45.748182+00:00
+yellowwhale.com,Yellow,Whale,TAKEN,200,"GoDaddy.com, LLC",2030-05-12T18:01:57Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowwhale.com,2026-11-19T01:53:17.552554+00:00
+yellowmonkey.com,Yellow,Monkey,TAKEN,200,"eNom, LLC",2027-09-11T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowmonkey.com,2026-11-19T01:53:18.337386+00:00
+yellowbird.com,Yellow,Bird,TAKEN,200,"Network Solutions, LLC",2028-09-01T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowbird.com,2026-11-19T01:53:19.126317+00:00
+yellowrabbit.com,Yellow,Rabbit,TAKEN,200,"eNom, LLC",2027-02-24T19:18:24Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowrabbit.com,2026-11-19T01:53:19.994016+00:00
+yellowcoyote.com,Yellow,Coyote,TAKEN,200,Dynadot Inc,2027-05-09T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowcoyote.com,2026-11-19T01:53:20.781698+00:00
+yellowfox.com,Yellow,Fox,TAKEN,200,DropCatch.com 1496 LLC,2027-08-27T18:00:14Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowfox.com,2026-11-19T01:53:21.567524+00:00
+yellowdeer.com,Yellow,Deer,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2028-02-01T19:08:15Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowdeer.com,2026-11-19T01:53:22.423627+00:00
+yellowbuck.com,Yellow,Buck,TAKEN,200,"Spaceship, Inc.",2027-01-13T10:14:25Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowbuck.com,2026-11-19T01:53:23.207411+00:00
+yellowape.com,Yellow,Ape,TAKEN,200,"NameCheap, Inc.",2028-03-26T13:58:04Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowape.com,2026-11-19T01:53:23.992005+00:00
+yellowparrot.com,Yellow,Parrot,TAKEN,200,"GoDaddy.com, LLC",2028-02-25T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowparrot.com,2026-11-19T01:53:24.787930+00:00
+yellowfrog.com,Yellow,Frog,TAKEN,200,Tucows Domains Inc.,2027-07-08T07:27:17Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowfrog.com,2026-11-19T01:53:25.572382+00:00
+yellowlion.com,Yellow,Lion,TAKEN,200,"GoDaddy.com, LLC",2028-04-25T14:20:27Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowlion.com,2026-11-19T01:53:26.415923+00:00
+yellowtiger.com,Yellow,Tiger,TAKEN,200,Dynadot Inc,2027-10-18T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowtiger.com,2026-11-19T01:53:27.261991+00:00
+yellowelephant.com,Yellow,Elephant,TAKEN,200,"NameCheap, Inc.",2036-07-20T22:28:21Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowelephant.com,2026-11-19T01:53:28.126837+00:00
+yellowdolphin.com,Yellow,Dolphin,TAKEN,200,"GoDaddy.com, LLC",2027-02-24T11:04:15Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowdolphin.com,2026-11-19T01:53:28.982959+00:00
+yellowoctopus.com,Yellow,Octopus,TAKEN,200,"Spaceship, Inc.",2028-05-12T18:02:03Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowoctopus.com,2026-11-19T01:53:29.835956+00:00
+yellowbook.com,Yellow,Book,TAKEN,200,"CSC Corporate Domains, Inc.",2027-08-31T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowbook.com,2026-11-19T01:53:30.620905+00:00
+yellownote.com,Yellow,Note,TAKEN,200,"GoDaddy.com, LLC",2027-03-20T18:02:05Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellownote.com,2026-11-19T01:53:31.409351+00:00
+yellowsite.com,Yellow,Site,TAKEN,200,"Gabia, Inc.",2027-07-01T10:56:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowsite.com,2026-11-19T01:53:32.193261+00:00
+yellowlottery.com,Yellow,Lottery,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/yellowlottery.com,2026-11-19T01:59:03.822593+00:00
+yellowmoney.com,Yellow,Money,TAKEN,200,Atom.com Domains LLC,2029-09-30T12:57:29Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowmoney.com,2026-11-19T01:53:33.891625+00:00
+yellowcash.com,Yellow,Cash,TAKEN,200,Atom.com Domains LLC,2029-11-22T19:50:33Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowcash.com,2026-11-19T01:53:34.677235+00:00
+yellowbill.com,Yellow,Bill,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-11-12T19:02:55Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowbill.com,2026-11-19T01:53:35.456899+00:00
+yellowcloud.com,Yellow,Cloud,TAKEN,200,"Domain.com - Network Solutions, LLC",2027-04-27T12:48:40Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowcloud.com,2026-11-19T01:53:36.364908+00:00
+yellowscience.com,Yellow,Science,TAKEN,200,"GoDaddy.com, LLC",2028-02-28T16:12:33Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowscience.com,2026-11-19T01:53:37.149591+00:00
+yellowbio.com,Yellow,Bio,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-04-30T18:40:45Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowbio.com,2026-11-19T01:53:37.990807+00:00
+yellowbiology.com,Yellow,Biology,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/yellowbiology.com,2026-11-19T01:59:04.690013+00:00
+yellowcom.com,Yellow,Com,TAKEN,200,DropCatch.com 493 LLC,2027-01-02T19:17:07Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowcom.com,2026-11-19T01:53:39.747132+00:00
+yellowcompany.com,Yellow,Company,TAKEN,200,"Megazone Corp., dba HOSTING.KR",2026-12-07T05:45:26Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowcompany.com,2026-11-19T01:53:40.529417+00:00
+yellowcoin.com,Yellow,Coin,TAKEN,200,Dynadot Inc,2028-09-07T18:27:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowcoin.com,2026-11-19T01:53:41.378729+00:00
+yellowchain.com,Yellow,Chain,TAKEN,200,"GoDaddy.com, LLC",2027-08-15T18:52:11Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowchain.com,2026-11-19T01:53:42.167588+00:00
+yellowblock.com,Yellow,Block,TAKEN,200,"GoDaddy.com, LLC",2027-05-07T18:35:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowblock.com,2026-11-19T01:53:43.015883+00:00
+yellownews.com,Yellow,News,TAKEN,200,"GoDaddy.com, LLC",2027-06-06T05:58:26Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellownews.com,2026-11-19T02:03:48.716804+00:00
+yellowapp.com,Yellow,App,TAKEN,200,Dynadot Inc,2027-06-16T21:09:38Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowapp.com,2026-11-19T02:03:49.852536+00:00
+yellowtech.com,Yellow,Tech,TAKEN,200,"GoDaddy.com, LLC",2027-03-12T18:07:29Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowtech.com,2026-11-19T02:03:50.876402+00:00
+yellownetwork.com,Yellow,Network,TAKEN,200,Atom.com Domains LLC,2027-11-02T07:15:54Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellownetwork.com,2026-11-19T02:03:51.799817+00:00
+yellowlake.com,Yellow,Lake,TAKEN,200,"GoDaddy.com, LLC",2028-06-16T18:46:10Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowlake.com,2026-11-19T02:03:52.671278+00:00
+yellowwater.com,Yellow,Water,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2028-01-19T19:25:15Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowwater.com,2026-11-19T02:03:53.573089+00:00
+yellowcapital.com,Yellow,Capital,TAKEN,200,"Name.com, Inc.",2027-06-04T23:32:06Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowcapital.com,2026-11-19T02:03:54.534298+00:00
+yellowfish.com,Yellow,Fish,TAKEN,200,Mesh Digital Limited,2031-04-20T06:59:40Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowfish.com,2026-11-19T02:03:55.489670+00:00
+yellowbrands.com,Yellow,Brands,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-06-09T23:55:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowbrands.com,2026-11-19T02:03:56.364308+00:00
+yellowproducts.com,Yellow,Products,TAKEN,200,"NameCheap, Inc.",2027-02-04T14:08:11Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowproducts.com,2026-11-19T02:03:57.296140+00:00
+yellowvault.com,Yellow,Vault,TAKEN,200,Realtime Register B.V.,2027-02-07T00:19:56Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowvault.com,2026-11-19T02:03:58.246751+00:00
+yellowsafe.com,Yellow,Safe,TAKEN,200,"GoDaddy.com, LLC",2027-05-30T16:03:06Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowsafe.com,2026-11-19T02:03:59.113936+00:00
+yellowguard.com,Yellow,Guard,TAKEN,200,Tucows Domains Inc.,2028-01-23T23:21:56Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowguard.com,2026-11-19T02:04:00.045522+00:00
+yellowbrain.com,Yellow,Brain,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-04-17T16:05:46Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowbrain.com,2026-11-19T02:04:00.997225+00:00
+yellowsports.com,Yellow,Sports,TAKEN,200,"GoDaddy.com, LLC",2027-07-29T20:57:43Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/yellowsports.com,2026-11-19T02:04:02.070874+00:00
+bigwhale.com,Big,Whale,TAKEN,200,"Spaceship, Inc.",2035-07-16T10:49:35Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigwhale.com,2026-11-19T01:53:43.909943+00:00
+bigmonkey.com,Big,Monkey,TAKEN,200,"GoDaddy.com, LLC",2027-05-07T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigmonkey.com,2026-11-19T01:53:44.758603+00:00
+bigbird.com,Big,Bird,TAKEN,200,"GoDaddy.com, LLC",2027-03-01T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigbird.com,2026-11-19T01:53:45.611612+00:00
+bigrabbit.com,Big,Rabbit,TAKEN,200,Interstellar Registrar Limited,2027-08-31T19:04:13Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigrabbit.com,2026-11-19T01:53:46.391884+00:00
+bigcoyote.com,Big,Coyote,TAKEN,200,"GoDaddy.com, LLC",2027-07-19T19:56:53Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigcoyote.com,2026-11-19T01:53:47.270632+00:00
+bigfox.com,Big,Fox,TAKEN,200,Unstoppable Domains Inc.,2027-05-20T10:37:16Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigfox.com,2026-11-19T01:53:48.049705+00:00
+bigdeer.com,Big,Deer,TAKEN,200,"GoDaddy.com, LLC",2027-07-09T03:19:38Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigdeer.com,2026-11-19T01:53:48.900861+00:00
+bigbuck.com,Big,Buck,TAKEN,200,"GoDaddy.com, LLC",2028-03-12T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigbuck.com,2026-11-19T01:53:49.687339+00:00
+bigape.com,Big,Ape,TAKEN,200,"GoDaddy.com, LLC",2034-04-16T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigape.com,2026-11-19T01:53:50.744970+00:00
+bigparrot.com,Big,Parrot,TAKEN,200,"GoDaddy.com, LLC",2026-12-08T19:23:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigparrot.com,2026-11-19T01:53:51.657144+00:00
+bigfrog.com,Big,Frog,TAKEN,200,"Wild West Domains, LLC",2029-03-20T19:14:11Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigfrog.com,2026-11-19T01:53:52.443574+00:00
+biglion.com,Big,Lion,TAKEN,200,"GoDaddy.com, LLC",2032-03-13T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/biglion.com,2026-11-19T01:53:53.292693+00:00
+bigtiger.com,Big,Tiger,TAKEN,200,"Network Solutions, LLC",2027-03-24T19:27:21Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigtiger.com,2026-11-19T01:53:54.147958+00:00
+bigelephant.com,Big,Elephant,TAKEN,200,"GoDaddy.com, LLC",2031-08-15T10:19:29Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigelephant.com,2026-11-19T01:53:54.930631+00:00
+bigdolphin.com,Big,Dolphin,TAKEN,200,Atom.com Domains LLC,2027-12-17T19:48:55Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigdolphin.com,2026-11-19T01:53:55.717308+00:00
+bigoctopus.com,Big,Octopus,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-05-24T18:31:06Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigoctopus.com,2026-11-19T01:53:56.628441+00:00
+bigbook.com,Big,Book,TAKEN,200,"CSC Corporate Domains, Inc.",2027-09-02T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigbook.com,2026-11-19T01:53:57.414993+00:00
+bignote.com,Big,Note,TAKEN,200,"GoDaddy.com, LLC",2027-12-18T19:39:51Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bignote.com,2026-11-19T01:53:58.252077+00:00
+bigsite.com,Big,Site,TAKEN,200,Internet Domain Service BS Corp,2027-11-01T10:32:38Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigsite.com,2026-11-19T01:53:59.034759+00:00
+biglottery.com,Big,Lottery,TAKEN,200,"Register.com - Network Solutions, LLC",2027-03-19T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/biglottery.com,2026-11-19T01:53:59.815404+00:00
+bigmoney.com,Big,Money,TAKEN,200,"Gabia, Inc.",2027-11-14T19:04:31Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigmoney.com,2026-11-19T01:54:00.606897+00:00
+bigcash.com,Big,Cash,TAKEN,200,"GoDaddy.com, LLC",2029-11-01T03:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigcash.com,2026-11-19T01:54:01.391698+00:00
+bigbill.com,Big,Bill,TAKEN,200,"Wild West Domains, LLC",2031-05-02T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigbill.com,2026-11-19T01:54:02.175871+00:00
+bigcloud.com,Big,Cloud,TAKEN,200,"Network Solutions, LLC",2029-02-18T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigcloud.com,2026-11-19T01:54:03.041778+00:00
+bigscience.com,Big,Science,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-08-07T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigscience.com,2026-11-19T01:54:03.823823+00:00
+bigbio.com,Big,Bio,TAKEN,200,"NameCheap, Inc.",2027-11-18T19:32:25Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigbio.com,2026-11-19T01:54:04.673706+00:00
+bigbiology.com,Big,Biology,TAKEN,200,"GoDaddy.com, LLC",2027-02-26T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigbiology.com,2026-11-19T01:54:05.459422+00:00
+bigcom.com,Big,Com,TAKEN,200,"GoDaddy.com, LLC",2026-12-07T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigcom.com,2026-11-19T01:54:06.297784+00:00
+bigcompany.com,Big,Company,TAKEN,200,"GoDaddy.com, LLC",2027-08-24T18:07:51Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigcompany.com,2026-11-19T01:54:07.161688+00:00
+bigcoin.com,Big,Coin,TAKEN,200,PDR Ltd. d/b/a PublicDomainRegistry.com,2026-12-09T15:13:03Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigcoin.com,2026-11-19T01:54:07.945042+00:00
+bigchain.com,Big,Chain,TAKEN,200,Porkbun LLC,2026-12-15T19:24:54Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigchain.com,2026-11-19T01:54:08.728330+00:00
+bigblock.com,Big,Block,TAKEN,200,"GoDaddy.com, LLC",2027-06-19T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigblock.com,2026-11-19T01:54:09.571114+00:00
+bignews.com,Big,News,TAKEN,200,"GoDaddy.com, LLC",2027-02-08T05:00:00Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bignews.com,2026-11-19T02:04:07.945454+00:00
+bigapp.com,Big,App,TAKEN,200,123-Reg Limited,2027-03-22T04:35:14Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigapp.com,2026-11-19T02:04:08.829122+00:00
+bigtech.com,Big,Tech,TAKEN,200,TLDS L.L.C. d/b/a SRSPlus,2030-11-19T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigtech.com,2026-11-19T02:04:09.747912+00:00
+bignetwork.com,Big,Network,TAKEN,200,Squarespace Domains II LLC,2030-10-02T18:27:30Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bignetwork.com,2026-11-19T02:04:10.661587+00:00
+biglake.com,Big,Lake,TAKEN,200,"eNom, LLC",2027-10-09T17:11:20Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/biglake.com,2026-11-19T02:04:11.632213+00:00
+bigwater.com,Big,Water,TAKEN,200,"GoDaddy.com, LLC",2027-05-22T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigwater.com,2026-11-19T02:04:12.560693+00:00
+bigcapital.com,Big,Capital,TAKEN,200,"GoDaddy.com, LLC",2027-05-12T04:38:45Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigcapital.com,2026-11-19T02:04:13.487936+00:00
+bigfish.com,Big,Fish,TAKEN,200,"CSC Corporate Domains, Inc.",2027-05-15T04:00:00Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigfish.com,2026-11-19T02:04:19.456123+00:00
+bigbrands.com,Big,Brands,TAKEN,200,"GoDaddy.com, LLC",2029-12-17T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigbrands.com,2026-11-19T02:04:20.486578+00:00
+bigproducts.com,Big,Products,TAKEN,200,"GoDaddy.com, LLC",2027-06-23T14:14:34Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigproducts.com,2026-11-19T02:04:21.355891+00:00
+bigvault.com,Big,Vault,TAKEN,200,"GoDaddy.com, LLC",2027-04-23T18:40:26Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigvault.com,2026-11-19T02:04:22.224845+00:00
+bigsafe.com,Big,Safe,TAKEN,200,"GoDaddy.com, LLC",2027-08-19T18:25:36Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigsafe.com,2026-11-19T02:04:23.142293+00:00
+bigguard.com,Big,Guard,TAKEN,200,"GoDaddy.com, LLC",2027-01-26T19:11:23Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigguard.com,2026-11-19T02:04:24.211355+00:00
+bigbrain.com,Big,Brain,TAKEN,200,"GoDaddy.com, LLC",2030-12-01T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigbrain.com,2026-11-19T02:04:25.100764+00:00
+bigsports.com,Big,Sports,TAKEN,200,"GoDaddy.com, LLC",2027-02-08T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bigsports.com,2026-11-19T02:04:25.957532+00:00
+smallwhale.com,Small,Whale,TAKEN,200,"Spaceship, Inc.",2028-03-14T18:17:16Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallwhale.com,2026-11-19T01:54:10.417735+00:00
+smallmonkey.com,Small,Monkey,TAKEN,200,"GMO Internet Group, Inc. d/b/a Onamae.com",2027-07-03T06:53:29Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallmonkey.com,2026-11-19T01:54:11.255828+00:00
+smallbird.com,Small,Bird,TAKEN,200,"Register.com - Network Solutions, LLC",2027-05-30T23:43:13Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallbird.com,2026-11-19T01:54:12.038683+00:00
+smallrabbit.com,Small,Rabbit,TAKEN,200,Annulet LLC,2027-09-03T18:38:20Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallrabbit.com,2026-11-19T01:54:12.905976+00:00
+smallcoyote.com,Small,Coyote,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/smallcoyote.com,2026-11-19T01:59:05.597475+00:00
+smallfox.com,Small,Fox,TAKEN,200,"GoDaddy.com, LLC",2027-02-03T09:22:19Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallfox.com,2026-11-19T01:54:14.526354+00:00
+smalldeer.com,Small,Deer,TAKEN,200,"Network Solutions, LLC",2027-07-26T21:42:38Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smalldeer.com,2026-11-19T01:54:15.372717+00:00
+smallbuck.com,Small,Buck,TAKEN,200,"DreamHost, LLC",2027-05-13T16:59:42Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallbuck.com,2026-11-19T01:54:16.159026+00:00
+smallape.com,Small,Ape,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-07-31T18:05:26Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallape.com,2026-11-19T01:54:16.941745+00:00
+smallparrot.com,Small,Parrot,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/smallparrot.com,2026-11-19T01:59:06.450719+00:00
+smallfrog.com,Small,Frog,TAKEN,200,"Register.com - Network Solutions, LLC",2027-08-02T03:07:21Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallfrog.com,2026-11-19T01:54:18.527600+00:00
+smalllion.com,Small,Lion,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-11-10T19:43:28Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smalllion.com,2026-11-19T01:54:19.308294+00:00
+smalltiger.com,Small,Tiger,TAKEN,200,"GoDaddy.com, LLC",2027-06-03T18:09:55Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smalltiger.com,2026-11-19T01:54:20.148703+00:00
+smallelephant.com,Small,Elephant,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2028-01-02T19:08:20Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallelephant.com,2026-11-19T01:54:20.993607+00:00
+smalldolphin.com,Small,Dolphin,TAKEN,200,DOMAIN NAME NETWORK PTY LTD,2027-09-11T13:05:17Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smalldolphin.com,2026-11-19T01:54:21.933753+00:00
+smalloctopus.com,Small,Octopus,TAKEN,200,Cloud Yuqu LLC,2027-03-17T09:11:38Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smalloctopus.com,2026-11-19T01:54:22.792920+00:00
+smallbook.com,Small,Book,TAKEN,200,Dynadot Inc,2027-04-18T10:48:53Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallbook.com,2026-11-19T01:54:23.616010+00:00
+smallnote.com,Small,Note,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-11-11T19:28:05Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallnote.com,2026-11-19T01:54:24.457756+00:00
+smallsite.com,Small,Site,TAKEN,200,"GoDaddy.com, LLC",2027-03-27T18:31:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallsite.com,2026-11-19T01:54:25.249206+00:00
+smalllottery.com,Small,Lottery,TAKEN,200,"22net, Inc.",2027-05-06T06:02:29Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smalllottery.com,2026-11-19T01:54:26.033428+00:00
+smallmoney.com,Small,Money,TAKEN,200,"Spaceship, Inc.",2027-05-05T09:44:28Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallmoney.com,2026-11-19T01:54:26.820285+00:00
+smallcash.com,Small,Cash,TAKEN,200,"GoDaddy.com, LLC",2027-02-15T01:13:26Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallcash.com,2026-11-19T01:54:27.609382+00:00
+smallbill.com,Small,Bill,TAKEN,200,"Cloudflare, Inc.",2027-01-12T17:18:33Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallbill.com,2026-11-19T01:54:28.463556+00:00
+smallcloud.com,Small,Cloud,TAKEN,200,"NameCheap, Inc.",2027-08-19T10:12:40Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallcloud.com,2026-11-19T01:54:29.322342+00:00
+smallscience.com,Small,Science,TAKEN,200,"GoDaddy.com, LLC",2027-05-03T18:06:40Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallscience.com,2026-11-19T01:54:30.423558+00:00
+smallbio.com,Small,Bio,TAKEN,200,Dynadot Inc,2027-04-02T08:50:44Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallbio.com,2026-11-19T01:54:31.272261+00:00
+smallbiology.com,Small,Biology,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/smallbiology.com,2026-11-19T01:59:07.428380+00:00
+smallcom.com,Small,Com,TAKEN,200,"Spaceship, Inc.",2028-01-22T10:09:31Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallcom.com,2026-11-19T01:54:32.838147+00:00
+smallcompany.com,Small,Company,TAKEN,200,"GoDaddy.com, LLC",2027-02-08T19:19:37Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallcompany.com,2026-11-19T01:54:33.625704+00:00
+smallcoin.com,Small,Coin,TAKEN,200,"GoDaddy.com, LLC",2026-12-02T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallcoin.com,2026-11-19T01:54:34.480667+00:00
+smallchain.com,Small,Chain,TAKEN,200,"GoDaddy.com, LLC",2027-01-20T08:43:19Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallchain.com,2026-11-19T01:54:35.265832+00:00
+smallblock.com,Small,Block,TAKEN,200,"GoDaddy.com, LLC",2027-11-15T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallblock.com,2026-11-19T01:54:36.049724+00:00
+smallnews.com,Small,News,TAKEN,200,"NameSilo, LLC",2027-09-13T18:24:31Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallnews.com,2026-11-19T02:04:26.908928+00:00
+smallapp.com,Small,App,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-09-10T21:26:07Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallapp.com,2026-11-19T02:04:27.819407+00:00
+smalltech.com,Small,Tech,TAKEN,200,"GoDaddy.com, LLC",2031-03-08T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smalltech.com,2026-11-19T02:04:31.896643+00:00
+smallnetwork.com,Small,Network,TAKEN,200,"GoDaddy.com, LLC",2027-09-14T01:34:09Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallnetwork.com,2026-11-19T02:04:32.778437+00:00
+smalllake.com,Small,Lake,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-12-18T19:34:43Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smalllake.com,2026-11-19T02:04:33.680222+00:00
+smallwater.com,Small,Water,TAKEN,200,"GoDaddy.com, LLC",2028-04-05T10:43:12Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallwater.com,2026-11-19T02:04:36.624708+00:00
+smallcapital.com,Small,Capital,TAKEN,200,"GoDaddy.com, LLC",2027-04-14T18:29:20Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallcapital.com,2026-11-19T02:04:37.659945+00:00
+smallfish.com,Small,Fish,TAKEN,200,EuroDNS S.A.,2027-07-30T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallfish.com,2026-11-19T02:04:38.543025+00:00
+smallbrands.com,Small,Brands,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-09-21T07:34:27Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallbrands.com,2026-11-19T02:04:39.472702+00:00
+smallproducts.com,Small,Products,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-11-15T19:17:26Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallproducts.com,2026-11-19T02:04:40.397222+00:00
+smallvault.com,Small,Vault,TAKEN,200,Unstoppable Domains Inc.,2026-12-17T19:27:44Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallvault.com,2026-11-19T02:04:41.394581+00:00
+smallsafe.com,Small,Safe,TAKEN,200,"GoDaddy.com, LLC",2027-07-10T18:18:51Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallsafe.com,2026-11-19T02:04:42.354517+00:00
+smallguard.com,Small,Guard,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-04-26T18:43:20Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallguard.com,2026-11-19T02:04:43.302410+00:00
+smallbrain.com,Small,Brain,TAKEN,200,"Megazone Corp., dba HOSTING.KR",2027-03-03T19:28:48Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallbrain.com,2026-11-19T02:04:44.281436+00:00
+smallsports.com,Small,Sports,TAKEN,200,"GoDaddy.com, LLC",2027-08-10T18:05:40Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smallsports.com,2026-11-19T02:04:45.152525+00:00
+goldwhale.com,Gold,Whale,TAKEN,200,"Cloudflare, Inc.",2026-12-20T19:29:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldwhale.com,2026-11-19T01:54:36.884922+00:00
+goldmonkey.com,Gold,Monkey,TAKEN,200,"Network Solutions, LLC",2031-04-29T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldmonkey.com,2026-11-19T01:54:37.751732+00:00
+goldbird.com,Gold,Bird,TAKEN,200,"GoDaddy.com, LLC",2027-03-12T18:02:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldbird.com,2026-11-19T01:54:38.534771+00:00
+goldrabbit.com,Gold,Rabbit,TAKEN,200,"GoDaddy.com, LLC",2027-08-23T16:26:54Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldrabbit.com,2026-11-19T01:54:39.406721+00:00
+goldcoyote.com,Gold,Coyote,TAKEN,200,Squarespace Domains II LLC,2027-11-20T19:27:46Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldcoyote.com,2026-11-19T01:54:40.246842+00:00
+goldfox.com,Gold,Fox,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-11-04T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldfox.com,2026-11-19T01:54:41.092663+00:00
+golddeer.com,Gold,Deer,TAKEN,200,Alibaba Cloud Computing Ltd. d/b/a HiChina (www.net.cn),2028-02-10T19:26:54Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/golddeer.com,2026-11-19T01:54:41.950717+00:00
+goldbuck.com,Gold,Buck,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-10-10T14:19:44Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldbuck.com,2026-11-19T01:54:42.733214+00:00
+goldape.com,Gold,Ape,TAKEN,200,"Eagle Eye Domains, LLC",2027-09-24T18:14:22Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldape.com,2026-11-19T01:54:43.576508+00:00
+goldparrot.com,Gold,Parrot,TAKEN,200,Squarespace Domains II LLC,2027-11-09T14:47:31Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldparrot.com,2026-11-19T01:54:44.362632+00:00
+goldfrog.com,Gold,Frog,TAKEN,200,"GoDaddy.com, LLC",2027-07-01T13:37:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldfrog.com,2026-11-19T01:54:45.208774+00:00
+goldlion.com,Gold,Lion,TAKEN,200,"Network Solutions, LLC",2035-05-31T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldlion.com,2026-11-19T01:54:46.065560+00:00
+goldtiger.com,Gold,Tiger,TAKEN,200,"Name.com, Inc.",2027-02-13T13:14:29Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldtiger.com,2026-11-19T01:54:46.850815+00:00
+goldelephant.com,Gold,Elephant,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-03-14T10:48:52Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldelephant.com,2026-11-19T01:54:47.721219+00:00
+golddolphin.com,Gold,Dolphin,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-09-23T17:32:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/golddolphin.com,2026-11-19T01:54:48.517426+00:00
+goldoctopus.com,Gold,Octopus,TAKEN,200,"GoDaddy.com, LLC",2028-02-26T00:10:30Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldoctopus.com,2026-11-19T01:54:49.397027+00:00
+goldbook.com,Gold,Book,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2028-11-03T19:05:23Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldbook.com,2026-11-19T01:54:50.253374+00:00
+goldnote.com,Gold,Note,TAKEN,200,Moniker Online Services LLC,2026-12-25T19:26:20Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldnote.com,2026-11-19T01:54:51.037010+00:00
+goldsite.com,Gold,Site,TAKEN,200,TLD Registrar Solutions Ltd.,2027-05-07T18:35:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldsite.com,2026-11-19T01:54:51.819954+00:00
+goldlottery.com,Gold,Lottery,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-01-17T18:01:02Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldlottery.com,2026-11-19T01:54:52.687046+00:00
+goldmoney.com,Gold,Money,TAKEN,200,"Amazon Registrar, Inc.",2027-07-10T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldmoney.com,2026-11-19T01:54:53.521386+00:00
+goldcash.com,Gold,Cash,TAKEN,200,"Sea Wasp, LLC",2034-01-31T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldcash.com,2026-11-19T01:54:54.307073+00:00
+goldbill.com,Gold,Bill,TAKEN,200,"GoDaddy.com, LLC",2027-07-18T18:25:24Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldbill.com,2026-11-19T01:54:55.089223+00:00
+goldcloud.com,Gold,Cloud,TAKEN,200,"GoDaddy.com, LLC",2027-01-02T04:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldcloud.com,2026-11-19T01:54:55.875621+00:00
+goldscience.com,Gold,Science,TAKEN,200,Moniker Online Services LLC,2026-12-25T19:18:45Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldscience.com,2026-11-19T01:54:56.723411+00:00
+goldbio.com,Gold,Bio,TAKEN,200,"Network Solutions, LLC",2032-09-30T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldbio.com,2026-11-19T01:54:57.507288+00:00
+goldbiology.com,Gold,Biology,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/goldbiology.com,2026-11-19T01:59:08.284417+00:00
+goldcom.com,Gold,Com,TAKEN,200,Unstoppable Domains Inc.,2028-02-19T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldcom.com,2026-11-19T01:54:59.119453+00:00
+goldcompany.com,Gold,Company,TAKEN,200,"GoDaddy.com, LLC",2027-06-09T18:07:14Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldcompany.com,2026-11-19T01:54:59.986014+00:00
+goldcoin.com,Gold,Coin,TAKEN,200,"NameCheap, Inc.",2031-04-25T01:29:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldcoin.com,2026-11-19T01:55:00.844253+00:00
+goldchain.com,Gold,Chain,TAKEN,200,"Network Solutions, LLC",2030-10-20T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldchain.com,2026-11-19T01:55:01.683357+00:00
+goldblock.com,Gold,Block,TAKEN,200,"GoDaddy.com, LLC",2027-02-01T14:03:28Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldblock.com,2026-11-19T01:55:02.527815+00:00
+goldnews.com,Gold,News,TAKEN,200,"Cloudflare, Inc.",2027-04-25T20:10:17Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldnews.com,2026-11-19T02:04:46.137048+00:00
+goldapp.com,Gold,App,TAKEN,200,Squarespace Domains II LLC,2027-05-22T22:48:27Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldapp.com,2026-11-19T02:04:58.312690+00:00
+goldtech.com,Gold,Tech,TAKEN,200,"GoDaddy.com, LLC",2031-10-02T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldtech.com,2026-11-19T02:04:59.250676+00:00
+goldnetwork.com,Gold,Network,TAKEN,200,"NameCheap, Inc.",2032-09-10T17:17:10Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldnetwork.com,2026-11-19T02:05:00.136887+00:00
+goldlake.com,Gold,Lake,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-08-04T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldlake.com,2026-11-19T02:05:01.211163+00:00
+goldwater.com,Gold,Water,TAKEN,200,DomainSpot LLC,2027-08-18T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldwater.com,2026-11-19T02:05:02.135465+00:00
+goldcapital.com,Gold,Capital,TAKEN,200,Dynadot Inc,2027-07-12T18:29:40Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldcapital.com,2026-11-19T02:05:03.114635+00:00
+goldfish.com,Gold,Fish,TAKEN,200,"CSC Corporate Domains, Inc.",2027-08-11T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldfish.com,2026-11-19T02:05:04.023467+00:00
+goldbrands.com,Gold,Brands,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-09-11T18:31:48Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldbrands.com,2026-11-19T02:05:04.954425+00:00
+goldproducts.com,Gold,Products,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2028-07-06T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldproducts.com,2026-11-19T02:05:05.913564+00:00
+goldvault.com,Gold,Vault,TAKEN,200,"Amazon Registrar, Inc.",2027-09-08T15:04:26Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/goldvault.com,2026-11-19T02:05:06.886762+00:00
+goldsafe.com,Gold,Safe,TAKEN,200,"GoDaddy.com, LLC",2027-04-30T18:01:38Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldsafe.com,2026-11-19T02:05:08.075430+00:00
+goldguard.com,Gold,Guard,TAKEN,200,"eNom, LLC",2027-05-16T18:26:27Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldguard.com,2026-11-19T02:05:08.931528+00:00
+goldbrain.com,Gold,Brain,TAKEN,200,"Spaceship, Inc.",2027-01-16T16:57:28Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/goldbrain.com,2026-11-19T02:05:09.868942+00:00
+goldsports.com,Gold,Sports,TAKEN,200,"GoDaddy.com, LLC",2027-09-28T18:37:17Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/goldsports.com,2026-11-19T02:05:10.876291+00:00
+silverwhale.com,Silver,Whale,TAKEN,200,Alibaba Cloud Computing Ltd. d/b/a HiChina (www.net.cn),2028-04-19T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverwhale.com,2026-11-19T01:55:03.435492+00:00
+silvermonkey.com,Silver,Monkey,TAKEN,200,PDR Ltd. d/b/a PublicDomainRegistry.com,2027-04-29T18:13:54Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silvermonkey.com,2026-11-19T01:55:04.224460+00:00
+silverbird.com,Silver,Bird,TAKEN,200,123-Reg Limited,2027-05-21T18:06:21Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverbird.com,2026-11-19T01:55:05.008365+00:00
+silverrabbit.com,Silver,Rabbit,TAKEN,200,"Blue Razor Domains, LLC",2027-07-17T18:52:03Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverrabbit.com,2026-11-19T01:55:05.801791+00:00
+silvercoyote.com,Silver,Coyote,TAKEN,200,Tucows Domains Inc.,2030-02-28T01:11:34Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silvercoyote.com,2026-11-19T01:55:06.681870+00:00
+silverfox.com,Silver,Fox,TAKEN,200,Bluehost Inc.,2027-05-31T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverfox.com,2026-11-19T01:55:07.468391+00:00
+silverdeer.com,Silver,Deer,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-06-10T01:09:25Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverdeer.com,2026-11-19T01:55:08.253781+00:00
+silverbuck.com,Silver,Buck,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2026-12-21T19:40:04Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverbuck.com,2026-11-19T01:55:09.094034+00:00
+silverape.com,Silver,Ape,TAKEN,200,"GoDaddy.com, LLC",2027-11-03T10:47:28Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverape.com,2026-11-19T01:55:09.920320+00:00
+silverparrot.com,Silver,Parrot,TAKEN,200,"Network Solutions, LLC",2027-09-16T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverparrot.com,2026-11-19T01:55:10.761582+00:00
+silverfrog.com,Silver,Frog,TAKEN,200,"Network Solutions, LLC",2030-06-23T13:52:29Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverfrog.com,2026-11-19T01:55:11.543813+00:00
+silverlion.com,Silver,Lion,TAKEN,200,Tucows Domains Inc.,2029-12-23T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverlion.com,2026-11-19T01:55:12.328257+00:00
+silvertiger.com,Silver,Tiger,TAKEN,200,"Sea Wasp, LLC",2027-03-12T18:02:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silvertiger.com,2026-11-19T01:55:13.109805+00:00
+silverelephant.com,Silver,Elephant,TAKEN,200,"NameSilo, LLC",2027-07-27T22:21:04Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverelephant.com,2026-11-19T01:55:13.889200+00:00
+silverdolphin.com,Silver,Dolphin,TAKEN,200,"GoDaddy.com, LLC",2027-08-06T10:37:29Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverdolphin.com,2026-11-19T01:55:14.677292+00:00
+silveroctopus.com,Silver,Octopus,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-09-09T18:19:06Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silveroctopus.com,2026-11-19T01:55:15.462163+00:00
+silverbook.com,Silver,Book,TAKEN,200,"Spaceship, Inc.",2028-11-15T19:03:52Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverbook.com,2026-11-19T01:55:16.246145+00:00
+silvernote.com,Silver,Note,TAKEN,200,"Gabia, Inc.",2029-08-18T11:00:27Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silvernote.com,2026-11-19T01:55:17.033265+00:00
+silversite.com,Silver,Site,TAKEN,200,"NameCheap, Inc.",2027-11-11T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silversite.com,2026-11-19T01:55:17.816407+00:00
+silverlottery.com,Silver,Lottery,TAKEN,200,"Cloudflare, Inc.",2028-07-29T18:53:10Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverlottery.com,2026-11-19T01:55:18.670809+00:00
+silvermoney.com,Silver,Money,TAKEN,200,"GoDaddy.com, LLC",2028-04-25T18:18:25Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silvermoney.com,2026-11-19T01:55:19.537368+00:00
+silvercash.com,Silver,Cash,TAKEN,200,"DNC Holdings, Inc.",2027-04-22T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silvercash.com,2026-11-19T01:55:20.466113+00:00
+silverbill.com,Silver,Bill,TAKEN,200,"GoDaddy.com, LLC",2027-06-06T00:41:21Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverbill.com,2026-11-19T01:55:21.334156+00:00
+silvercloud.com,Silver,Cloud,TAKEN,200,"Network Solutions, LLC",2030-08-30T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silvercloud.com,2026-11-19T01:55:22.172231+00:00
+silverscience.com,Silver,Science,TAKEN,200,"GoDaddy.com, LLC",2027-07-05T18:41:45Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverscience.com,2026-11-19T01:55:22.955398+00:00
+silverbio.com,Silver,Bio,TAKEN,200,"GoDaddy.com, LLC",2027-01-14T21:27:32Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverbio.com,2026-11-19T01:55:23.791949+00:00
+silverbiology.com,Silver,Biology,TAKEN,200,Iconicnames LLC,2026-12-28T19:38:03Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverbiology.com,2026-11-19T01:55:24.578961+00:00
+silvercom.com,Silver,Com,TAKEN,200,"eNom, LLC",2027-06-26T18:41:42Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silvercom.com,2026-11-19T01:55:25.368715+00:00
+silvercompany.com,Silver,Company,TAKEN,200,Tucows Domains Inc.,2027-01-01T04:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silvercompany.com,2026-11-19T01:55:26.208181+00:00
+silvercoin.com,Silver,Coin,TAKEN,200,"NameCheap, Inc.",2031-02-21T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silvercoin.com,2026-11-19T01:55:27.003442+00:00
+silverchain.com,Silver,Chain,TAKEN,200,"Network Solutions, LLC",2027-04-08T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverchain.com,2026-11-19T01:55:27.786761+00:00
+silverblock.com,Silver,Block,TAKEN,200,"GoDaddy.com, LLC",2027-12-25T07:05:05Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverblock.com,2026-11-19T01:55:28.611452+00:00
+silvernews.com,Silver,News,TAKEN,200,"Cloudflare, Inc.",2027-08-31T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silvernews.com,2026-11-19T02:05:11.906801+00:00
+silverapp.com,Silver,App,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-07-12T22:01:11Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverapp.com,2026-11-19T02:05:12.796247+00:00
+silvertech.com,Silver,Tech,TAKEN,200,Tucows Domains Inc.,2027-05-02T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silvertech.com,2026-11-19T02:05:13.652150+00:00
+silvernetwork.com,Silver,Network,TAKEN,200,"GoDaddy.com, LLC",2029-02-10T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silvernetwork.com,2026-11-19T02:05:14.608835+00:00
+silverlake.com,Silver,Lake,TAKEN,200,MarkMonitor Inc.,2034-08-14T04:17:05Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverlake.com,2026-11-19T02:05:15.596727+00:00
+silverwater.com,Silver,Water,TAKEN,200,"GoDaddy.com, LLC",2027-04-07T13:50:10Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverwater.com,2026-11-19T02:05:16.579201+00:00
+silvercapital.com,Silver,Capital,TAKEN,200,DomainSpot LLC,2029-01-25T11:47:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silvercapital.com,2026-11-19T02:05:17.440822+00:00
+silverfish.com,Silver,Fish,TAKEN,200,"007Names, Inc.",2029-12-30T05:00:00Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverfish.com,2026-11-19T02:05:23.328598+00:00
+silverbrands.com,Silver,Brands,TAKEN,200,"GoDaddy.com, LLC",2027-10-13T08:36:10Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverbrands.com,2026-11-19T02:05:24.652958+00:00
+silverproducts.com,Silver,Products,TAKEN,200,"GoDaddy.com, LLC",2027-04-06T15:17:06Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverproducts.com,2026-11-19T02:05:25.650111+00:00
+silvervault.com,Silver,Vault,TAKEN,200,"GoDaddy.com, LLC",2027-06-16T18:07:10Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silvervault.com,2026-11-19T02:05:26.535560+00:00
+silversafe.com,Silver,Safe,TAKEN,200,1API GmbH,2030-06-01T18:19:15Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/silversafe.com,2026-11-19T02:05:27.447200+00:00
+silverguard.com,Silver,Guard,TAKEN,200,"Network Solutions, LLC",2027-01-28T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silverguard.com,2026-11-19T02:05:28.297516+00:00
+silverbrain.com,Silver,Brain,TAKEN,200,InterNetX GmbH,2026-11-24T05:00:00Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/silverbrain.com,2026-11-19T02:05:29.314853+00:00
+silversports.com,Silver,Sports,TAKEN,200,"GoDaddy.com, LLC",2027-09-21T18:32:08Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/silversports.com,2026-11-19T02:05:30.360934+00:00
+royalwhale.com,Royal,Whale,TAKEN,200,"GoDaddy.com, LLC",2027-04-12T18:23:43Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalwhale.com,2026-11-19T01:55:29.527180+00:00
+royalmonkey.com,Royal,Monkey,TAKEN,200,Key-Systems GmbH,2027-08-18T04:19:13Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalmonkey.com,2026-11-19T01:55:30.309663+00:00
+royalbird.com,Royal,Bird,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-10-18T18:48:15Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalbird.com,2026-11-19T01:55:31.148179+00:00
+royalrabbit.com,Royal,Rabbit,TAKEN,200,"GoDaddy.com, LLC",2028-04-15T19:04:15Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalrabbit.com,2026-11-19T01:55:31.931578+00:00
+royalcoyote.com,Royal,Coyote,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2026-12-01T19:23:57Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalcoyote.com,2026-11-19T01:55:32.714826+00:00
+royalfox.com,Royal,Fox,TAKEN,200,Tucows Domains Inc.,2029-02-23T03:31:22Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalfox.com,2026-11-19T01:55:33.498176+00:00
+royaldeer.com,Royal,Deer,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-05-25T18:07:21Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royaldeer.com,2026-11-19T01:55:34.333484+00:00
+royalbuck.com,Royal,Buck,TAKEN,200,"GoDaddy.com, LLC",2027-07-05T18:14:38Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalbuck.com,2026-11-19T01:55:35.203116+00:00
+royalape.com,Royal,Ape,TAKEN,200,"GoDaddy.com, LLC",2027-11-13T22:44:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalape.com,2026-11-19T01:55:36.083771+00:00
+royalparrot.com,Royal,Parrot,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-02-07T19:18:50Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalparrot.com,2026-11-19T01:55:36.865949+00:00
+royalfrog.com,Royal,Frog,TAKEN,200,"GoDaddy.com, LLC",2027-05-08T22:08:14Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalfrog.com,2026-11-19T01:55:37.654151+00:00
+royallion.com,Royal,Lion,TAKEN,200,"NameSilo, LLC",2027-05-09T20:03:37Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royallion.com,2026-11-19T01:55:38.543906+00:00
+royaltiger.com,Royal,Tiger,TAKEN,200,"Network Solutions, LLC",2027-02-07T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royaltiger.com,2026-11-19T01:55:39.347975+00:00
+royalelephant.com,Royal,Elephant,TAKEN,200,"GoDaddy.com, LLC",2028-09-25T23:43:09Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalelephant.com,2026-11-19T01:55:40.208573+00:00
+royaldolphin.com,Royal,Dolphin,TAKEN,200,"GoDaddy.com, LLC",2027-10-25T10:42:24Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royaldolphin.com,2026-11-19T01:55:41.006805+00:00
+royaloctopus.com,Royal,Octopus,TAKEN,200,"Spaceship, Inc.",2027-10-04T18:18:02Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royaloctopus.com,2026-11-19T01:55:41.789737+00:00
+royalbook.com,Royal,Book,TAKEN,200,"Megazone Corp., dba HOSTING.KR",2026-11-19T19:02:22Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalbook.com,2026-11-19T01:55:42.658055+00:00
+royalnote.com,Royal,Note,TAKEN,200,"GoDaddy.com, LLC",2027-03-13T08:02:54Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalnote.com,2026-11-19T01:55:43.521858+00:00
+royalsite.com,Royal,Site,TAKEN,200,"BRANDON GRAY INTERNET SERVICES INC. (dba ""NameJuice.com"")",2027-08-26T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalsite.com,2026-11-19T01:55:44.391871+00:00
+royallottery.com,Royal,Lottery,TAKEN,200,"GoDaddy.com, LLC",2027-08-07T15:08:27Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royallottery.com,2026-11-19T01:55:45.173698+00:00
+royalmoney.com,Royal,Money,TAKEN,200,Atom.com Domains LLC,2027-10-29T18:01:31Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalmoney.com,2026-11-19T01:55:45.962841+00:00
+royalcash.com,Royal,Cash,TAKEN,200,Internet Domain Service BS Corp,2027-01-26T22:23:51Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalcash.com,2026-11-19T01:55:46.752496+00:00
+royalbill.com,Royal,Bill,TAKEN,200,Dynadot Inc,2027-05-30T14:05:53Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalbill.com,2026-11-19T01:55:47.591986+00:00
+royalcloud.com,Royal,Cloud,TAKEN,200,Dynadot Inc,2027-11-23T22:45:55Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalcloud.com,2026-11-19T01:55:48.444021+00:00
+royalscience.com,Royal,Science,TAKEN,200,"GoDaddy.com, LLC",2027-07-06T03:58:38Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalscience.com,2026-11-19T01:55:49.231429+00:00
+royalbio.com,Royal,Bio,TAKEN,200,IONOS SE,2027-05-18T00:49:12Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalbio.com,2026-11-19T01:55:50.012108+00:00
+royalbiology.com,Royal,Biology,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/royalbiology.com,2026-11-19T01:59:09.202095+00:00
+royalcom.com,Royal,Com,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-03-29T13:24:25Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalcom.com,2026-11-19T01:55:51.589972+00:00
+royalcompany.com,Royal,Company,TAKEN,200,"Gabia, Inc.",2027-08-05T10:47:39Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalcompany.com,2026-11-19T01:55:52.376333+00:00
+royalcoin.com,Royal,Coin,TAKEN,200,"Network Solutions, LLC",2029-12-02T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalcoin.com,2026-11-19T01:55:53.249799+00:00
+royalchain.com,Royal,Chain,TAKEN,200,"Network Solutions, LLC",2027-09-24T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalchain.com,2026-11-19T01:55:54.038275+00:00
+royalblock.com,Royal,Block,TAKEN,200,"Sav.com, LLC",2027-06-09T19:07:16Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalblock.com,2026-11-19T01:55:54.897553+00:00
+royalnews.com,Royal,News,TAKEN,200,"GoDaddy.com, LLC",2027-10-19T18:09:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalnews.com,2026-11-19T02:05:31.370650+00:00
+royalapp.com,Royal,App,TAKEN,200,"GoDaddy.com, LLC",2027-07-12T20:44:12Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalapp.com,2026-11-19T02:05:32.277243+00:00
+royaltech.com,Royal,Tech,TAKEN,200,Atom.com Domains LLC,2027-09-13T22:09:53Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royaltech.com,2026-11-19T02:05:33.249891+00:00
+royalnetwork.com,Royal,Network,TAKEN,200,Porkbun LLC,2028-06-30T10:35:48Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/royalnetwork.com,2026-11-19T02:05:34.154882+00:00
+royallake.com,Royal,Lake,TAKEN,200,"DomainAdministration.com, LLC",2027-10-09T18:15:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royallake.com,2026-11-19T02:05:35.028109+00:00
+royalwater.com,Royal,Water,TAKEN,200,Whois Corp.,2032-10-25T01:44:36Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalwater.com,2026-11-19T02:05:36.135112+00:00
+royalcapital.com,Royal,Capital,TAKEN,200,"GoDaddy.com, LLC",2027-03-25T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalcapital.com,2026-11-19T02:05:37.101090+00:00
+royalfish.com,Royal,Fish,TAKEN,200,Dynadot Inc,2027-05-16T18:40:02Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalfish.com,2026-11-19T02:05:42.031205+00:00
+royalbrands.com,Royal,Brands,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-05-13T19:09:17Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalbrands.com,2026-11-19T02:05:42.991771+00:00
+royalproducts.com,Royal,Products,TAKEN,200,"Network Solutions, LLC",2034-03-05T11:38:05Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalproducts.com,2026-11-19T02:05:43.968259+00:00
+royalvault.com,Royal,Vault,TAKEN,200,"GoDaddy.com, LLC",2027-12-01T00:13:15Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalvault.com,2026-11-19T02:05:44.845694+00:00
+royalsafe.com,Royal,Safe,TAKEN,200,"GoDaddy.com, LLC",2027-08-11T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalsafe.com,2026-11-19T02:05:45.800721+00:00
+royalguard.com,Royal,Guard,TAKEN,200,"NameSilo, LLC",2027-03-27T18:04:24Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalguard.com,2026-11-19T02:05:46.872003+00:00
+royalbrain.com,Royal,Brain,TAKEN,200,"Megazone Corp., dba HOSTING.KR",2027-01-10T03:20:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalbrain.com,2026-11-19T02:05:47.758428+00:00
+royalsports.com,Royal,Sports,TAKEN,200,"GMO Internet Group, Inc. d/b/a Onamae.com",2027-10-12T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/royalsports.com,2026-11-19T02:05:48.792744+00:00
+smartwhale.com,Smart,Whale,TAKEN,200,"Alibaba Cloud Computing (Beijing) Co., Ltd.",2033-03-21T07:42:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartwhale.com,2026-11-19T01:55:55.743452+00:00
+smartmonkey.com,Smart,Monkey,TAKEN,200,Tucows Domains Inc.,2029-02-27T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartmonkey.com,2026-11-19T01:55:56.528840+00:00
+smartbird.com,Smart,Bird,TAKEN,200,"GoDaddy.com, LLC",2027-05-19T03:32:43Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartbird.com,2026-11-19T01:55:57.314023+00:00
+smartrabbit.com,Smart,Rabbit,TAKEN,200,"GoDaddy.com, LLC",2027-05-12T18:56:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartrabbit.com,2026-11-19T01:55:58.153632+00:00
+smartcoyote.com,Smart,Coyote,TAKEN,200,"GoDaddy.com, LLC",2027-10-26T15:39:23Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartcoyote.com,2026-11-19T01:55:59.003426+00:00
+smartfox.com,Smart,Fox,TAKEN,200,OVH sas,2027-06-08T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartfox.com,2026-11-19T01:55:59.791487+00:00
+smartdeer.com,Smart,Deer,TAKEN,200,"GoDaddy.com, LLC",2027-01-26T06:43:35Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartdeer.com,2026-11-19T01:56:00.578265+00:00
+smartbuck.com,Smart,Buck,TAKEN,200,Dynadot Inc,2026-12-15T04:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartbuck.com,2026-11-19T01:56:01.367601+00:00
+smartape.com,Smart,Ape,TAKEN,200,"Sea Wasp, LLC",2029-04-11T18:11:44Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartape.com,2026-11-19T01:56:02.149726+00:00
+smartparrot.com,Smart,Parrot,TAKEN,200,"GoDaddy.com, LLC",2027-03-09T18:39:44Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartparrot.com,2026-11-19T01:56:02.935030+00:00
+smartfrog.com,Smart,Frog,TAKEN,200,"COREhub, S.R.L.",2026-12-11T04:52:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartfrog.com,2026-11-19T01:56:03.717501+00:00
+smartlion.com,Smart,Lion,TAKEN,200,"Network Solutions, LLC",2027-06-04T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartlion.com,2026-11-19T01:56:04.593508+00:00
+smarttiger.com,Smart,Tiger,TAKEN,200,Moniker Online Services LLC,2027-04-17T18:07:47Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smarttiger.com,2026-11-19T01:56:05.436359+00:00
+smartelephant.com,Smart,Elephant,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-11-22T00:20:13Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartelephant.com,2026-11-19T01:56:06.251519+00:00
+smartdolphin.com,Smart,Dolphin,TAKEN,200,"pair Networks, Inc. d/b/a pair Domains",2027-10-20T18:18:48Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartdolphin.com,2026-11-19T01:56:07.105030+00:00
+smartoctopus.com,Smart,Octopus,TAKEN,200,"GoDaddy.com, LLC",2027-06-11T18:36:44Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartoctopus.com,2026-11-19T01:56:07.953645+00:00
+smartbook.com,Smart,Book,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2030-04-29T18:06:30Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartbook.com,2026-11-19T01:56:08.739293+00:00
+smartnote.com,Smart,Note,TAKEN,200,"GoDaddy.com, LLC",2027-01-16T06:10:39Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartnote.com,2026-11-19T01:56:09.589898+00:00
+smartsite.com,Smart,Site,TAKEN,200,Tucows Domains Inc.,2027-09-14T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartsite.com,2026-11-19T01:56:10.373365+00:00
+smartlottery.com,Smart,Lottery,TAKEN,200,Alibaba Cloud Computing Ltd. d/b/a HiChina (www.net.cn),2027-03-08T19:10:05Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartlottery.com,2026-11-19T01:56:11.158714+00:00
+smartmoney.com,Smart,Money,TAKEN,200,"CSC Corporate Domains, Inc.",2027-11-02T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartmoney.com,2026-11-19T01:56:11.942136+00:00
+smartcash.com,Smart,Cash,TAKEN,200,Tucows Domains Inc.,2027-09-02T20:58:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartcash.com,2026-11-19T01:56:12.728127+00:00
+smartbill.com,Smart,Bill,TAKEN,200,"GoDaddy.com, LLC",2027-09-15T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartbill.com,2026-11-19T01:56:13.511852+00:00
+smartcloud.com,Smart,Cloud,TAKEN,200,"CSC Corporate Domains, Inc.",2027-06-24T18:18:03Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartcloud.com,2026-11-19T01:56:14.298244+00:00
+smartscience.com,Smart,Science,TAKEN,200,"GoDaddy.com, LLC",2027-04-02T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartscience.com,2026-11-19T01:56:15.088494+00:00
+smartbio.com,Smart,Bio,TAKEN,200,"GoDaddy.com, LLC",2027-04-30T10:27:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartbio.com,2026-11-19T01:56:15.868898+00:00
+smartbiology.com,Smart,Biology,TAKEN,200,"GoDaddy.com, LLC",2029-11-14T20:43:13Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartbiology.com,2026-11-19T01:56:16.737085+00:00
+smartcom.com,Smart,Com,TAKEN,200,DomainSpot LLC,2028-05-25T21:21:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartcom.com,2026-11-19T01:56:17.601918+00:00
+smartcompany.com,Smart,Company,TAKEN,200,"GoDaddy.com, LLC",2027-08-05T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartcompany.com,2026-11-19T01:56:18.387437+00:00
+smartcoin.com,Smart,Coin,TAKEN,200,Dynadot Inc,2029-06-08T06:47:53Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartcoin.com,2026-11-19T01:56:19.210721+00:00
+smartchain.com,Smart,Chain,TAKEN,200,"Sea Wasp, LLC",2029-08-04T14:10:10Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartchain.com,2026-11-19T01:56:20.098026+00:00
+smartblock.com,Smart,Block,TAKEN,200,"Sea Wasp, LLC",2036-06-10T22:44:45Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartblock.com,2026-11-19T01:56:20.940875+00:00
+smartnews.com,Smart,News,TAKEN,200,"GoDaddy.com, LLC",2027-03-09T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartnews.com,2026-11-19T02:05:49.763876+00:00
+smartapp.com,Smart,App,TAKEN,200,"Wild West Domains, LLC",2029-12-28T04:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartapp.com,2026-11-19T02:05:50.696052+00:00
+smarttech.com,Smart,Tech,TAKEN,200,"GoDaddy.com, LLC",2035-08-28T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smarttech.com,2026-11-19T02:05:51.726216+00:00
+smartnetwork.com,Smart,Network,TAKEN,200,"CSC Corporate Domains, Inc.",2033-12-09T19:03:41Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartnetwork.com,2026-11-19T02:05:52.982768+00:00
+smartlake.com,Smart,Lake,TAKEN,200,"Network Solutions, LLC",2027-08-22T11:33:40Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/smartlake.com,2026-11-19T02:05:53.873936+00:00
+smartwater.com,Smart,Water,TAKEN,200,"Network Solutions, LLC",2027-03-07T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartwater.com,2026-11-19T02:05:54.771666+00:00
+smartcapital.com,Smart,Capital,TAKEN,200,"GoDaddy.com, LLC",2029-03-13T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartcapital.com,2026-11-19T02:05:55.664984+00:00
+smartfish.com,Smart,Fish,TAKEN,200,"GoDaddy.com, LLC",2027-06-15T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartfish.com,2026-11-19T02:05:56.699023+00:00
+smartbrands.com,Smart,Brands,TAKEN,200,"GoDaddy.com, LLC",2026-12-29T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartbrands.com,2026-11-19T02:05:57.623679+00:00
+smartproducts.com,Smart,Products,TAKEN,200,"Network Solutions, LLC",2027-09-10T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartproducts.com,2026-11-19T02:05:58.543832+00:00
+smartvault.com,Smart,Vault,TAKEN,200,"GoDaddy.com, LLC",2028-08-05T18:01:35Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartvault.com,2026-11-19T02:05:59.395571+00:00
+smartsafe.com,Smart,Safe,TAKEN,200,"GoDaddy.com, LLC",2027-09-14T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartsafe.com,2026-11-19T02:06:00.295016+00:00
+smartguard.com,Smart,Guard,TAKEN,200,"GoDaddy.com, LLC",2027-08-10T10:52:45Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartguard.com,2026-11-19T02:06:01.276040+00:00
+smartbrain.com,Smart,Brain,TAKEN,200,"OnlineNIC, Inc.",2030-04-15T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartbrain.com,2026-11-19T02:06:02.460350+00:00
+smartsports.com,Smart,Sports,TAKEN,200,"Network Solutions, LLC",2027-09-14T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/smartsports.com,2026-11-19T02:06:03.420874+00:00
+fastwhale.com,Fast,Whale,TAKEN,200,"GoDaddy.com, LLC",2027-11-15T19:15:04Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastwhale.com,2026-11-19T02:06:04.344192+00:00
+fastmonkey.com,Fast,Monkey,TAKEN,200,"Wild West Domains, LLC",2027-07-15T04:13:23Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastmonkey.com,2026-11-19T02:06:05.333615+00:00
+fastbird.com,Fast,Bird,TAKEN,200,"Alibaba Cloud Computing (Beijing) Co., Ltd.",2027-01-20T18:38:17Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastbird.com,2026-11-19T02:06:06.451639+00:00
+fastrabbit.com,Fast,Rabbit,TAKEN,200,"GoDaddy.com, LLC",2028-08-28T18:41:55Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastrabbit.com,2026-11-19T02:06:07.330803+00:00
+fastcoyote.com,Fast,Coyote,TAKEN,200,Realtime Register B.V.,2027-04-14T00:41:32Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastcoyote.com,2026-11-19T02:06:08.217321+00:00
+fastfox.com,Fast,Fox,TAKEN,200,"GoDaddy.com, LLC",2027-12-31T11:59:59Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/fastfox.com,2026-11-19T02:06:09.149950+00:00
+fastdeer.com,Fast,Deer,TAKEN,200,"Xiamen 35.com Information Co., Ltd.",2027-07-11T07:10:44Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastdeer.com,2026-11-19T02:06:10.286599+00:00
+fastbuck.com,Fast,Buck,TAKEN,200,Domreg Ltd,2027-09-26T10:40:37Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastbuck.com,2026-11-19T02:06:11.239270+00:00
+fastape.com,Fast,Ape,TAKEN,200,"Spaceship, Inc.",2027-05-29T18:43:19Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastape.com,2026-11-19T02:06:12.103167+00:00
+fastparrot.com,Fast,Parrot,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-06-06T18:14:24Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastparrot.com,2026-11-19T02:06:13.080124+00:00
+fastfrog.com,Fast,Frog,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-09-03T18:25:08Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastfrog.com,2026-11-19T02:06:13.954738+00:00
+fastlion.com,Fast,Lion,TAKEN,200,"Alibaba Cloud Computing (Beijing) Co., Ltd.",2030-09-05T18:28:55Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastlion.com,2026-11-19T02:06:15.112427+00:00
+fasttiger.com,Fast,Tiger,TAKEN,200,"GoDaddy.com, LLC",2028-03-31T18:46:10Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fasttiger.com,2026-11-19T02:06:16.033341+00:00
+fastelephant.com,Fast,Elephant,TAKEN,200,Dynadot Inc,2027-04-06T05:18:04Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastelephant.com,2026-11-19T02:06:16.898788+00:00
+fastdolphin.com,Fast,Dolphin,TAKEN,200,Tucows Domains Inc.,2027-08-30T20:05:24Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastdolphin.com,2026-11-19T02:06:17.846014+00:00
+fastoctopus.com,Fast,Octopus,TAKEN,200,"GoDaddy.com, LLC",2027-10-28T12:24:35Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastoctopus.com,2026-11-19T02:06:18.813142+00:00
+fastbook.com,Fast,Book,TAKEN,200,"DNC Holdings, Inc.",2028-02-05T11:31:47Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastbook.com,2026-11-19T02:06:19.740187+00:00
+fastnote.com,Fast,Note,TAKEN,200,"GoDaddy.com, LLC",2028-03-14T10:45:10Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastnote.com,2026-11-19T02:06:20.593469+00:00
+fastsite.com,Fast,Site,TAKEN,200,"GoDaddy.com, LLC",2028-02-21T19:35:30Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastsite.com,2026-11-19T02:06:21.551144+00:00
+fastlottery.com,Fast,Lottery,TAKEN,200,"NameCheap, Inc.",2027-09-04T18:25:07Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastlottery.com,2026-11-19T02:06:22.481953+00:00
+fastmoney.com,Fast,Money,TAKEN,200,"GoDaddy.com, LLC",2027-05-15T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastmoney.com,2026-11-19T02:06:23.418421+00:00
+fastcash.com,Fast,Cash,TAKEN,200,"Sea Wasp, LLC",2027-06-19T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastcash.com,2026-11-19T02:06:24.366168+00:00
+fastbill.com,Fast,Bill,TAKEN,200,"Amazon Registrar, Inc.",2027-01-21T07:35:32Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastbill.com,2026-11-19T02:06:25.265910+00:00
+fastcloud.com,Fast,Cloud,TAKEN,200,"Amazon Registrar, Inc.",2027-03-19T22:11:12Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastcloud.com,2026-11-19T02:06:26.137210+00:00
+fastscience.com,Fast,Science,TAKEN,200,NameSecure L.L.C.,2027-04-24T18:01:11Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastscience.com,2026-11-19T02:06:26.991629+00:00
+fastbio.com,Fast,Bio,TAKEN,200,Atom.com Domains LLC,2032-12-10T19:45:38Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastbio.com,2026-11-19T02:06:27.974786+00:00
+fastbiology.com,Fast,Biology,TAKEN,200,"Cloudflare, Inc.",2027-09-21T13:41:42Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastbiology.com,2026-11-19T02:06:28.858817+00:00
+fastcom.com,Fast,Com,TAKEN,200,Alibaba Cloud Computing Ltd. d/b/a HiChina (www.net.cn),2030-07-08T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastcom.com,2026-11-19T02:06:29.728670+00:00
+fastcompany.com,Fast,Company,TAKEN,200,"Amazon Registrar, Inc.",2027-06-01T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastcompany.com,2026-11-19T02:06:30.590567+00:00
+fastcoin.com,Fast,Coin,TAKEN,200,"Spaceship, Inc.",2028-04-09T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastcoin.com,2026-11-19T02:06:31.538323+00:00
+fastchain.com,Fast,Chain,TAKEN,200,"GoDaddy.com, LLC",2029-03-22T18:17:53Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastchain.com,2026-11-19T02:06:32.398703+00:00
+fastblock.com,Fast,Block,TAKEN,200,"GoDaddy.com, LLC",2027-05-09T16:32:48Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastblock.com,2026-11-19T02:06:33.335258+00:00
+fastnews.com,Fast,News,TAKEN,200,"GoDaddy.com, LLC",2028-03-30T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastnews.com,2026-11-19T02:06:34.236580+00:00
+fastapp.com,Fast,App,TAKEN,200,"GoDaddy.com, LLC",2027-10-29T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastapp.com,2026-11-19T02:06:35.158545+00:00
+fasttech.com,Fast,Tech,TAKEN,200,"Cloudflare, Inc.",2027-10-10T11:59:59Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/fasttech.com,2026-11-19T02:06:36.101726+00:00
+fastnetwork.com,Fast,Network,TAKEN,200,"Network Solutions, LLC",2027-07-31T04:00:00Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/fastnetwork.com,2026-11-19T02:06:37.015965+00:00
+fastlake.com,Fast,Lake,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-08-28T18:04:57Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastlake.com,2026-11-19T02:06:37.955993+00:00
+fastwater.com,Fast,Water,TAKEN,200,"GoDaddy.com, LLC",2027-07-07T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastwater.com,2026-11-19T02:06:38.934721+00:00
+fastcapital.com,Fast,Capital,TAKEN,200,"GoDaddy.com, LLC",2027-10-24T18:25:41Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastcapital.com,2026-11-19T02:06:39.798601+00:00
+fastfish.com,Fast,Fish,TAKEN,200,"Alibaba Cloud Computing (Beijing) Co., Ltd.",2035-10-30T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastfish.com,2026-11-19T02:06:40.809973+00:00
+fastbrands.com,Fast,Brands,TAKEN,200,Nom-iq Ltd. dba COM LAUDE,2027-12-13T05:00:00Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/fastbrands.com,2026-11-19T02:06:41.790886+00:00
+fastproducts.com,Fast,Products,TAKEN,200,Dynadot Inc,2027-09-18T18:53:43Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastproducts.com,2026-11-19T02:06:42.745073+00:00
+fastvault.com,Fast,Vault,TAKEN,200,"GoDaddy.com, LLC",2027-09-22T02:22:13Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastvault.com,2026-11-19T02:06:43.708191+00:00
+fastsafe.com,Fast,Safe,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-11-30T19:12:42Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastsafe.com,2026-11-19T02:06:44.667906+00:00
+fastguard.com,Fast,Guard,TAKEN,200,"Wild West Domains, LLC",2027-09-07T03:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastguard.com,2026-11-19T02:06:45.673755+00:00
+fastbrain.com,Fast,Brain,TAKEN,200,"GoDaddy.com, LLC",2027-01-07T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastbrain.com,2026-11-19T02:06:46.606550+00:00
+fastsports.com,Fast,Sports,TAKEN,200,"Network Solutions, LLC",2035-01-06T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/fastsports.com,2026-11-19T02:06:47.492173+00:00
+privatewhale.com,Private,Whale,TAKEN,200,DropCatch.com 1153 LLC,2027-08-15T18:23:38Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatewhale.com,2026-11-19T02:06:48.346667+00:00
+privatemonkey.com,Private,Monkey,TAKEN,200,RegistryGate GmbH,2027-01-28T19:22:06Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatemonkey.com,2026-11-19T02:06:49.311176+00:00
+privatebird.com,Private,Bird,TAKEN,200,IONOS SE,2026-12-06T23:26:17Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatebird.com,2026-11-19T02:06:50.263294+00:00
+privaterabbit.com,Private,Rabbit,TAKEN,200,Alibaba Cloud Computing Ltd. d/b/a HiChina (www.net.cn),2027-05-10T08:17:55Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/privaterabbit.com,2026-11-19T02:06:51.414094+00:00
+privatecoyote.com,Private,Coyote,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/privatecoyote.com,2026-11-19T02:06:52.337964+00:00
+privatefox.com,Private,Fox,TAKEN,200,"GoDaddy.com, LLC",2028-09-17T14:49:15Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatefox.com,2026-11-19T02:06:53.206806+00:00
+privatedeer.com,Private,Deer,TAKEN,200,"GoDaddy.com, LLC",2027-01-01T17:15:39Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatedeer.com,2026-11-19T02:06:54.150111+00:00
+privatebuck.com,Private,Buck,TAKEN,200,"Amazon Registrar, Inc.",2027-10-18T07:49:56Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/privatebuck.com,2026-11-19T02:06:55.099138+00:00
+privateape.com,Private,Ape,TAKEN,200,Dynadot Inc,2027-07-23T08:15:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privateape.com,2026-11-19T02:06:56.030798+00:00
+privateparrot.com,Private,Parrot,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/privateparrot.com,2026-11-19T02:06:56.957580+00:00
+privatefrog.com,Private,Frog,TAKEN,200,"GoDaddy.com, LLC",2027-10-12T15:39:02Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatefrog.com,2026-11-19T02:06:57.931858+00:00
+privatelion.com,Private,Lion,TAKEN,200,Dynadot Inc,2027-07-26T15:52:54Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatelion.com,2026-11-19T02:06:58.844512+00:00
+privatetiger.com,Private,Tiger,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/privatetiger.com,2026-11-19T02:06:59.837595+00:00
+privateelephant.com,Private,Elephant,TAKEN,200,VIAWEB Inc.,2029-05-25T04:21:05Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privateelephant.com,2026-11-19T02:07:01.130793+00:00
+privatedolphin.com,Private,Dolphin,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/privatedolphin.com,2026-11-19T02:07:02.007435+00:00
+privateoctopus.com,Private,Octopus,TAKEN,200,"GoDaddy.com, LLC",2026-12-01T00:54:11Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privateoctopus.com,2026-11-19T02:07:02.933080+00:00
+privatebook.com,Private,Book,TAKEN,200,"NameCheap, Inc.",2028-02-01T03:36:15Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatebook.com,2026-11-19T02:07:03.864362+00:00
+privatenote.com,Private,Note,TAKEN,200,"GoDaddy.com, LLC",2027-05-11T12:22:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatenote.com,2026-11-19T02:07:04.739636+00:00
+privatesite.com,Private,Site,TAKEN,200,"GoDaddy.com, LLC",2027-03-06T13:56:41Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatesite.com,2026-11-19T02:07:05.702713+00:00
+privatelottery.com,Private,Lottery,TAKEN,200,"NameCheap, Inc.",2027-02-12T17:39:36Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatelottery.com,2026-11-19T02:07:06.617499+00:00
+privatemoney.com,Private,Money,TAKEN,200,"Name.com, Inc.",2034-02-16T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatemoney.com,2026-11-19T02:07:07.533232+00:00
+privatecash.com,Private,Cash,TAKEN,200,"DNC Holdings, Inc.",2027-06-24T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatecash.com,2026-11-19T02:07:08.475322+00:00
+privatebill.com,Private,Bill,TAKEN,200,"Spaceship, Inc.",2028-01-03T19:40:57Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatebill.com,2026-11-19T02:07:09.392990+00:00
+privatecloud.com,Private,Cloud,TAKEN,200,"Spaceship, Inc.",2028-03-12T18:23:30Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatecloud.com,2026-11-19T02:07:10.367521+00:00
+privatescience.com,Private,Science,TAKEN,200,"GoDaddy.com, LLC",2027-10-05T22:50:46Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatescience.com,2026-11-19T02:07:11.301403+00:00
+privatebio.com,Private,Bio,TAKEN,200,"Name.com, Inc.",2027-07-11T01:53:27Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatebio.com,2026-11-19T02:07:12.247282+00:00
+privatebiology.com,Private,Biology,TAKEN,200,Tucows Domains Inc.,2027-08-16T15:21:11Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatebiology.com,2026-11-19T02:07:13.187942+00:00
+privatecom.com,Private,Com,TAKEN,200,"GoDaddy.com, LLC",2027-03-15T18:06:33Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/privatecom.com,2026-11-19T02:07:14.114560+00:00
+privatecompany.com,Private,Company,TAKEN,200,"GoDaddy.com, LLC",2031-05-21T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatecompany.com,2026-11-19T02:07:14.990571+00:00
+privatecoin.com,Private,Coin,TAKEN,200,Unstoppable Domains Inc.,2027-11-10T19:42:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatecoin.com,2026-11-19T02:07:15.900652+00:00
+privatechain.com,Private,Chain,TAKEN,200,"GoDaddy.com, LLC",2027-04-29T08:52:47Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatechain.com,2026-11-19T02:07:16.821994+00:00
+privateblock.com,Private,Block,TAKEN,200,OpusDNS GmbH,2027-05-30T10:00:55Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privateblock.com,2026-11-19T02:07:17.824155+00:00
+privatenews.com,Private,News,TAKEN,200,"DNC Holdings, Inc.",2027-04-26T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatenews.com,2026-11-19T02:07:18.768203+00:00
+privateapp.com,Private,App,TAKEN,200,"GoDaddy.com, LLC",2028-02-16T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privateapp.com,2026-11-19T02:07:19.625550+00:00
+privatetech.com,Private,Tech,TAKEN,200,Dynadot Inc,2027-02-15T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatetech.com,2026-11-19T02:07:20.505824+00:00
+privatenetwork.com,Private,Network,TAKEN,200,"GoDaddy.com, LLC",2029-03-04T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatenetwork.com,2026-11-19T02:07:21.517123+00:00
+privatelake.com,Private,Lake,TAKEN,200,Dynadot Inc,2027-02-24T16:53:32Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatelake.com,2026-11-19T02:07:22.375695+00:00
+privatewater.com,Private,Water,TAKEN,200,Epik LLC,2027-02-16T20:59:44Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatewater.com,2026-11-19T02:07:23.327071+00:00
+privatecapital.com,Private,Capital,TAKEN,200,"Network Solutions, LLC",2031-02-01T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatecapital.com,2026-11-19T02:07:24.181533+00:00
+privatefish.com,Private,Fish,TAKEN,200,"GoDaddy.com, LLC",2027-01-01T17:15:39Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatefish.com,2026-11-19T02:07:25.122170+00:00
+privatebrands.com,Private,Brands,TAKEN,200,"GoDaddy.com, LLC",2027-05-20T14:31:44Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatebrands.com,2026-11-19T02:07:25.980425+00:00
+privateproducts.com,Private,Products,TAKEN,200,"Network Solutions, LLC",2027-07-27T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privateproducts.com,2026-11-19T02:07:26.945450+00:00
+privatevault.com,Private,Vault,TAKEN,200,"GoDaddy.com, LLC",2027-11-25T19:03:37Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatevault.com,2026-11-19T02:07:27.914036+00:00
+privatesafe.com,Private,Safe,TAKEN,200,"NameCheap, Inc.",2029-11-29T07:56:25Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatesafe.com,2026-11-19T02:07:28.781219+00:00
+privateguard.com,Private,Guard,TAKEN,200,"NameSilo, LLC",2027-01-23T06:11:20Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privateguard.com,2026-11-19T02:07:29.638044+00:00
+privatebrain.com,Private,Brain,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-07-07T12:11:13Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatebrain.com,2026-11-19T02:07:30.581134+00:00
+privatesports.com,Private,Sports,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-03-07T19:02:12Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/privatesports.com,2026-11-19T02:07:31.436755+00:00
+securewhale.com,Secure,Whale,TAKEN,200,Dynadot Inc,2027-09-02T20:39:27Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securewhale.com,2026-11-19T02:07:32.359740+00:00
+securemonkey.com,Secure,Monkey,TAKEN,200,"GoDaddy.com, LLC",2027-03-12T01:40:47Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securemonkey.com,2026-11-19T02:07:33.346907+00:00
+securebird.com,Secure,Bird,TAKEN,200,"GoDaddy.com, LLC",2027-08-28T17:33:26Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securebird.com,2026-11-19T02:07:34.200118+00:00
+securerabbit.com,Secure,Rabbit,TAKEN,200,"NameCheap, Inc.",2027-10-13T18:14:19Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/securerabbit.com,2026-11-19T02:07:35.114870+00:00
+securecoyote.com,Secure,Coyote,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/securecoyote.com,2026-11-19T02:07:36.076497+00:00
+securefox.com,Secure,Fox,TAKEN,200,"GoDaddy.com, LLC",2028-08-10T18:00:46Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securefox.com,2026-11-19T02:07:36.955233+00:00
+securedeer.com,Secure,Deer,TAKEN,200,"Cloudflare, Inc.",2027-02-17T05:13:55Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securedeer.com,2026-11-19T02:07:37.889097+00:00
+securebuck.com,Secure,Buck,TAKEN,200,Atom.com Domains LLC,2027-12-20T18:57:08Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securebuck.com,2026-11-19T02:07:38.826559+00:00
+secureape.com,Secure,Ape,TAKEN,200,"Spaceship, Inc.",2029-07-22T21:11:42Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/secureape.com,2026-11-19T02:07:39.692963+00:00
+secureparrot.com,Secure,Parrot,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/secureparrot.com,2026-11-19T02:07:40.649314+00:00
+securefrog.com,Secure,Frog,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-02-02T19:01:34Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securefrog.com,2026-11-19T02:07:41.563992+00:00
+securelion.com,Secure,Lion,TAKEN,200,Gandi SAS,2029-05-29T01:24:11Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securelion.com,2026-11-19T02:07:42.445229+00:00
+securetiger.com,Secure,Tiger,TAKEN,200,Dynadot Inc,2027-07-21T12:16:12Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securetiger.com,2026-11-19T02:07:43.397344+00:00
+secureelephant.com,Secure,Elephant,TAKEN,200,"GoDaddy.com, LLC",2027-08-15T19:51:27Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/secureelephant.com,2026-11-19T02:07:44.372342+00:00
+securedolphin.com,Secure,Dolphin,TAKEN,200,"GoDaddy.com, LLC",2027-06-12T00:02:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securedolphin.com,2026-11-19T02:07:45.240381+00:00
+secureoctopus.com,Secure,Octopus,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/secureoctopus.com,2026-11-19T02:07:46.229519+00:00
+securebook.com,Secure,Book,TAKEN,200,"Megazone Corp., dba HOSTING.KR",2027-04-04T18:20:29Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securebook.com,2026-11-19T02:07:47.149956+00:00
+securenote.com,Secure,Note,TAKEN,200,IONOS SE,2027-08-20T18:23:58Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securenote.com,2026-11-19T02:08:09.166510+00:00
+securesite.com,Secure,Site,TAKEN,200,DomainRegistry.com LLC,2028-03-12T04:00:00Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/securesite.com,2026-11-19T02:08:10.100044+00:00
+securelottery.com,Secure,Lottery,TAKEN,200,Gname.com Pte. Ltd.,2027-07-02T18:05:46Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securelottery.com,2026-11-19T02:08:11.112455+00:00
+securemoney.com,Secure,Money,TAKEN,200,"Cloudflare, Inc.",2027-11-25T19:01:16Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securemoney.com,2026-11-19T02:08:11.997923+00:00
+securecash.com,Secure,Cash,TAKEN,200,"Network Solutions, LLC",2031-01-04T23:17:04Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securecash.com,2026-11-19T02:08:12.947688+00:00
+securebill.com,Secure,Bill,TAKEN,200,"GoDaddy.com, LLC",2027-09-26T10:44:09Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securebill.com,2026-11-19T02:08:14.006883+00:00
+securecloud.com,Secure,Cloud,TAKEN,200,"GoDaddy.com, LLC",2027-06-27T18:41:40Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/securecloud.com,2026-11-19T02:08:14.979361+00:00
+securescience.com,Secure,Science,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2028-01-16T19:17:36Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securescience.com,2026-11-19T02:08:15.832768+00:00
+securebio.com,Secure,Bio,TAKEN,200,"NameCheap, Inc.",2027-11-06T19:23:45Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securebio.com,2026-11-19T02:08:16.700995+00:00
+securebiology.com,Secure,Biology,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/securebiology.com,2026-11-19T02:08:17.648697+00:00
+securecom.com,Secure,Com,TAKEN,200,"NameSilo, LLC",2028-07-02T18:28:11Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securecom.com,2026-11-19T02:08:18.633406+00:00
+securecompany.com,Secure,Company,TAKEN,200,"DreamHost, LLC",2027-03-28T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securecompany.com,2026-11-19T02:08:19.595635+00:00
+securecoin.com,Secure,Coin,TAKEN,200,"Network Solutions, LLC",2033-05-16T00:07:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securecoin.com,2026-11-19T02:08:20.681403+00:00
+securechain.com,Secure,Chain,TAKEN,200,"Amazon Registrar, Inc.",2028-04-05T19:34:27Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securechain.com,2026-11-19T02:08:21.657194+00:00
+secureblock.com,Secure,Block,TAKEN,200,"eNom, LLC",2027-09-03T05:10:57Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/secureblock.com,2026-11-19T02:08:22.739083+00:00
+securenews.com,Secure,News,TAKEN,200,"GoDaddy.com, LLC",2027-05-22T18:18:43Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securenews.com,2026-11-19T02:08:23.650488+00:00
+secureapp.com,Secure,App,TAKEN,200,InterNetX GmbH,2027-07-15T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/secureapp.com,2026-11-19T02:08:24.523378+00:00
+securetech.com,Secure,Tech,TAKEN,200,"GoDaddy.com, LLC",2027-05-06T03:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securetech.com,2026-11-19T02:08:25.402196+00:00
+securenetwork.com,Secure,Network,TAKEN,200,Tucows Domains Inc.,2027-08-07T04:00:00Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securenetwork.com,2026-11-19T02:08:30.299531+00:00
+securelake.com,Secure,Lake,TAKEN,200,"GoDaddy.com, LLC",2027-11-06T03:48:57Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securelake.com,2026-11-19T02:08:31.222571+00:00
+securewater.com,Secure,Water,TAKEN,200,"GoDaddy.com, LLC",2027-10-24T23:34:57Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securewater.com,2026-11-19T02:08:32.186111+00:00
+securecapital.com,Secure,Capital,TAKEN,200,Moniker Online Services LLC,2027-08-17T18:24:44Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securecapital.com,2026-11-19T02:08:33.139418+00:00
+securefish.com,Secure,Fish,TAKEN,200,"GoDaddy.com, LLC",2027-02-25T06:54:45Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securefish.com,2026-11-19T02:08:34.126818+00:00
+securebrands.com,Secure,Brands,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-06-26T18:31:32Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securebrands.com,2026-11-19T02:08:35.058033+00:00
+secureproducts.com,Secure,Products,TAKEN,200,PDR Ltd. d/b/a PublicDomainRegistry.com,2028-10-30T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/secureproducts.com,2026-11-19T02:08:35.933669+00:00
+securevault.com,Secure,Vault,TAKEN,200,"Cloudflare, Inc.",2028-12-18T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securevault.com,2026-11-19T02:08:36.862577+00:00
+securesafe.com,Secure,Safe,TAKEN,200,Infomaniak Network SA,2031-12-19T19:37:24Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securesafe.com,2026-11-19T02:08:37.801458+00:00
+secureguard.com,Secure,Guard,TAKEN,200,Dreamscape Networks International Pte Ltd,2027-08-03T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/secureguard.com,2026-11-19T02:08:39.006033+00:00
+securebrain.com,Secure,Brain,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2028-02-17T19:43:39Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securebrain.com,2026-11-19T02:08:39.888106+00:00
+securesports.com,Secure,Sports,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-04-03T10:52:39Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/securesports.com,2026-11-19T02:08:40.767375+00:00
+safewhale.com,Safe,Whale,TAKEN,200,Dynadot Inc,2028-02-01T13:11:04Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safewhale.com,2026-11-19T02:08:41.763877+00:00
+safemonkey.com,Safe,Monkey,TAKEN,200,"GoDaddy.com, LLC",2027-09-12T18:27:21Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safemonkey.com,2026-11-19T02:08:47.663857+00:00
+safebird.com,Safe,Bird,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-04-27T04:17:32Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safebird.com,2026-11-19T02:08:48.504622+00:00
+saferabbit.com,Safe,Rabbit,TAKEN,200,Atom.com Domains LLC,2027-09-01T22:41:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/saferabbit.com,2026-11-19T02:08:49.459191+00:00
+safecoyote.com,Safe,Coyote,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/safecoyote.com,2026-11-19T02:08:50.381510+00:00
+safefox.com,Safe,Fox,TAKEN,200,Atom.com Domains LLC,2032-11-07T20:05:41Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safefox.com,2026-11-19T02:08:51.244608+00:00
+safedeer.com,Safe,Deer,TAKEN,200,DropCatch.com 755 LLC,2027-06-04T18:08:08Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safedeer.com,2026-11-19T02:08:52.113255+00:00
+safebuck.com,Safe,Buck,TAKEN,200,Total Web Solutions Limited,2028-07-03T13:58:40Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safebuck.com,2026-11-19T02:08:53.178484+00:00
+safeape.com,Safe,Ape,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-11-11T16:45:12Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safeape.com,2026-11-19T02:08:54.038092+00:00
+safeparrot.com,Safe,Parrot,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/safeparrot.com,2026-11-19T02:08:54.974969+00:00
+safefrog.com,Safe,Frog,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-06-11T18:34:17Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safefrog.com,2026-11-19T02:08:55.882937+00:00
+safelion.com,Safe,Lion,TAKEN,200,Dynadot Inc,2027-09-14T18:35:01Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safelion.com,2026-11-19T02:08:57.007391+00:00
+safetiger.com,Safe,Tiger,TAKEN,200,"Alibaba Cloud Computing (Beijing) Co., Ltd.",2027-09-12T09:04:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safetiger.com,2026-11-19T02:08:58.227735+00:00
+safeelephant.com,Safe,Elephant,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-07-11T18:23:33Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safeelephant.com,2026-11-19T02:08:59.229962+00:00
+safedolphin.com,Safe,Dolphin,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-07-16T18:19:06Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safedolphin.com,2026-11-19T02:09:00.269869+00:00
+safeoctopus.com,Safe,Octopus,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/safeoctopus.com,2026-11-19T02:09:01.129882+00:00
+safebook.com,Safe,Book,TAKEN,200,"GoDaddy.com, LLC",2027-07-14T21:02:57Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safebook.com,2026-11-19T02:09:02.085887+00:00
+safenote.com,Safe,Note,TAKEN,200,"007Names, Inc.",2027-12-19T17:40:01Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safenote.com,2026-11-19T02:09:03.044485+00:00
+safesite.com,Safe,Site,TAKEN,200,Dynadot Inc,2027-07-07T18:33:38Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safesite.com,2026-11-19T02:09:04.054659+00:00
+safelottery.com,Safe,Lottery,TAKEN,200,"GoDaddy.com, LLC",2026-12-22T07:50:51Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safelottery.com,2026-11-19T02:09:04.979367+00:00
+safemoney.com,Safe,Money,TAKEN,200,"GoDaddy.com, LLC",2027-12-15T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safemoney.com,2026-11-19T02:09:05.896418+00:00
+safecash.com,Safe,Cash,TAKEN,200,"Network Solutions, LLC",2027-05-15T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safecash.com,2026-11-19T02:09:06.780203+00:00
+safebill.com,Safe,Bill,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-04-20T04:00:00Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safebill.com,2026-11-19T02:09:12.626938+00:00
+safecloud.com,Safe,Cloud,TAKEN,200,"GoDaddy.com, LLC",2027-02-18T01:17:09Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safecloud.com,2026-11-19T02:09:13.578399+00:00
+safescience.com,Safe,Science,TAKEN,200,"Network Solutions, LLC",2028-03-29T18:40:55Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safescience.com,2026-11-19T02:09:14.465231+00:00
+safebio.com,Safe,Bio,TAKEN,200,"Inames Co., Ltd.",2027-02-06T16:59:57Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safebio.com,2026-11-19T02:09:15.404758+00:00
+safebiology.com,Safe,Biology,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/safebiology.com,2026-11-19T02:09:16.359294+00:00
+safecom.com,Safe,Com,TAKEN,200,"GoDaddy.com, LLC",2027-01-12T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safecom.com,2026-11-19T02:09:17.378123+00:00
+safecompany.com,Safe,Company,TAKEN,200,"GoDaddy.com, LLC",2027-06-06T18:36:39Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safecompany.com,2026-11-19T02:09:18.347928+00:00
+safecoin.com,Safe,Coin,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-12-09T19:17:51Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safecoin.com,2026-11-19T02:09:19.260681+00:00
+safechain.com,Safe,Chain,TAKEN,200,"GoDaddy.com, LLC",2027-10-28T18:54:51Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safechain.com,2026-11-19T02:09:20.296197+00:00
+safeblock.com,Safe,Block,TAKEN,200,"Cloudflare, Inc.",2027-01-01T19:02:45Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safeblock.com,2026-11-19T02:09:21.220149+00:00
+safenews.com,Safe,News,TAKEN,200,"GoDaddy.com, LLC",2027-06-06T06:37:08Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safenews.com,2026-11-19T02:09:24.174349+00:00
+safeapp.com,Safe,App,TAKEN,200,"GoDaddy.com, LLC",2027-11-16T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safeapp.com,2026-11-19T02:09:25.038824+00:00
+safetech.com,Safe,Tech,TAKEN,200,"GoDaddy.com, LLC",2028-01-29T19:17:10Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safetech.com,2026-11-19T02:09:25.967668+00:00
+safenetwork.com,Safe,Network,TAKEN,200,"eNom, LLC",2027-11-28T07:36:17Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safenetwork.com,2026-11-19T02:09:26.886139+00:00
+safelake.com,Safe,Lake,TAKEN,200,"Spaceship, Inc.",2028-05-23T18:28:47Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safelake.com,2026-11-19T02:09:27.978242+00:00
+safewater.com,Safe,Water,TAKEN,200,Porkbun LLC,2027-05-09T04:00:00Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safewater.com,2026-11-19T02:09:29.012780+00:00
+safecapital.com,Safe,Capital,TAKEN,200,The Registrar Company B.V.,2027-07-17T18:14:51Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safecapital.com,2026-11-19T02:09:29.953297+00:00
+safefish.com,Safe,Fish,TAKEN,200,"GoDaddy.com, LLC",2027-09-09T18:46:31Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safefish.com,2026-11-19T02:09:30.897542+00:00
+safebrands.com,Safe,Brands,TAKEN,200,SafeBrands SAS,2029-09-12T17:45:22Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safebrands.com,2026-11-19T02:09:31.826216+00:00
+safeproducts.com,Safe,Products,TAKEN,200,"GoDaddy.com, LLC",2027-10-02T21:37:07Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safeproducts.com,2026-11-19T02:09:32.784170+00:00
+safevault.com,Safe,Vault,TAKEN,200,"GoDaddy.com, LLC",2027-07-01T18:09:35Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safevault.com,2026-11-19T02:09:33.658869+00:00
+safesafe.com,Safe,Safe,TAKEN,200,"GoDaddy.com, LLC",2028-01-23T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safesafe.com,2026-11-19T02:09:34.694426+00:00
+safeguard.com,Safe,Guard,TAKEN,200,Dynadot Inc,2026-12-18T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safeguard.com,2026-11-19T02:09:35.554809+00:00
+safebrain.com,Safe,Brain,TAKEN,200,"GoDaddy.com, LLC",2027-05-19T18:33:28Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safebrain.com,2026-11-19T02:09:36.491431+00:00
+safesports.com,Safe,Sports,TAKEN,200,"GoDaddy.com, LLC",2027-06-10T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/safesports.com,2026-11-19T02:09:37.450126+00:00
+easywhale.com,Easy,Whale,TAKEN,200,"Sav.com, LLC",2027-11-06T01:12:43Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easywhale.com,2026-11-19T02:09:38.610219+00:00
+easymonkey.com,Easy,Monkey,TAKEN,200,"NameCheap, Inc.",2027-02-26T12:56:05Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easymonkey.com,2026-11-19T02:09:39.524726+00:00
+easybird.com,Easy,Bird,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-10-25T18:34:05Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easybird.com,2026-11-19T02:09:40.532506+00:00
+easyrabbit.com,Easy,Rabbit,TAKEN,200,"eNom, LLC",2027-04-22T22:06:51Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easyrabbit.com,2026-11-19T02:09:41.402714+00:00
+easycoyote.com,Easy,Coyote,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/easycoyote.com,2026-11-19T02:09:42.271639+00:00
+easyfox.com,Easy,Fox,TAKEN,200,Register SPA,2028-04-28T14:43:35Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easyfox.com,2026-11-19T02:09:43.308561+00:00
+easydeer.com,Easy,Deer,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-10-11T18:07:24Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easydeer.com,2026-11-19T02:09:44.246809+00:00
+easybuck.com,Easy,Buck,TAKEN,200,"GoDaddy.com, LLC",2027-11-20T13:43:23Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easybuck.com,2026-11-19T02:09:45.124321+00:00
+easyape.com,Easy,Ape,TAKEN,200,MarkMonitor Inc.,2027-11-15T20:52:01Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easyape.com,2026-11-19T02:09:45.983106+00:00
+easyparrot.com,Easy,Parrot,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/easyparrot.com,2026-11-19T02:09:46.945890+00:00
+easyfrog.com,Easy,Frog,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-11-09T19:04:39Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easyfrog.com,2026-11-19T02:09:47.879965+00:00
+easylion.com,Easy,Lion,TAKEN,200,"GoDaddy.com, LLC",2027-10-20T03:19:23Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easylion.com,2026-11-19T02:09:48.794418+00:00
+easytiger.com,Easy,Tiger,TAKEN,200,"Sav.com, LLC",2026-12-28T23:31:04Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easytiger.com,2026-11-19T02:09:49.671537+00:00
+easyelephant.com,Easy,Elephant,TAKEN,200,"Name.com, Inc.",2027-10-02T16:34:43Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easyelephant.com,2026-11-19T02:09:50.594745+00:00
+easydolphin.com,Easy,Dolphin,TAKEN,200,"GoDaddy.com, LLC",2029-01-16T19:27:42Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easydolphin.com,2026-11-19T02:09:51.465931+00:00
+easyoctopus.com,Easy,Octopus,TAKEN,200,Atom.com Domains LLC,2027-03-14T02:16:28Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easyoctopus.com,2026-11-19T02:09:52.411265+00:00
+easybook.com,Easy,Book,TAKEN,200,"eNom, LLC",2028-11-05T06:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easybook.com,2026-11-19T02:09:53.275850+00:00
+easynote.com,Easy,Note,TAKEN,200,"NameCheap, Inc.",2027-04-04T02:11:40Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easynote.com,2026-11-19T02:09:54.149976+00:00
+easysite.com,Easy,Site,TAKEN,200,"GoDaddy.com, LLC",2027-05-02T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easysite.com,2026-11-19T02:09:55.035672+00:00
+easylottery.com,Easy,Lottery,TAKEN,200,"NameCheap, Inc.",2027-03-27T18:36:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easylottery.com,2026-11-19T02:09:55.966338+00:00
+easymoney.com,Easy,Money,TAKEN,200,MarkMonitor Inc.,2028-04-23T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easymoney.com,2026-11-19T02:09:56.825980+00:00
+easycash.com,Easy,Cash,TAKEN,200,"CSC Corporate Domains, Inc.",2027-03-21T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easycash.com,2026-11-19T02:09:57.820526+00:00
+easybill.com,Easy,Bill,TAKEN,200,InterNetX GmbH,2027-06-04T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easybill.com,2026-11-19T02:09:58.768489+00:00
+easycloud.com,Easy,Cloud,TAKEN,200,MarkMonitor Inc.,2028-07-25T11:15:16Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easycloud.com,2026-11-19T02:09:59.621832+00:00
+easyscience.com,Easy,Science,TAKEN,200,"GoDaddy.com, LLC",2027-04-09T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easyscience.com,2026-11-19T02:10:00.643666+00:00
+easybio.com,Easy,Bio,TAKEN,200,"Gabia, Inc.",2026-12-27T19:25:42Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easybio.com,2026-11-19T02:10:01.620498+00:00
+easybiology.com,Easy,Biology,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-03-26T18:44:46Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easybiology.com,2026-11-19T02:10:02.561831+00:00
+easycom.com,Easy,Com,TAKEN,200,Name SRS AB,2027-04-16T18:08:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easycom.com,2026-11-19T02:10:03.542296+00:00
+easycompany.com,Easy,Company,TAKEN,200,Porkbun LLC,2027-04-26T18:00:02Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easycompany.com,2026-11-19T02:10:04.452717+00:00
+easycoin.com,Easy,Coin,TAKEN,200,easyDNS Technologies Inc.,2029-12-10T19:28:53Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easycoin.com,2026-11-19T02:10:05.416705+00:00
+easychain.com,Easy,Chain,TAKEN,200,Dynadot Inc,2027-05-03T18:07:29Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easychain.com,2026-11-19T02:10:06.321197+00:00
+easyblock.com,Easy,Block,TAKEN,200,Squarespace Domains II LLC,2028-03-21T18:12:14Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easyblock.com,2026-11-19T02:10:07.260892+00:00
+easynews.com,Easy,News,TAKEN,200,"GoDaddy.com, LLC",2028-10-30T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easynews.com,2026-11-19T02:10:08.202257+00:00
+easyapp.com,Easy,App,TAKEN,200,"GoDaddy.com, LLC",2027-09-17T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easyapp.com,2026-11-19T02:10:09.083290+00:00
+easytech.com,Easy,Tech,TAKEN,200,"Register.com - Network Solutions, LLC",2029-09-17T22:30:13Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easytech.com,2026-11-19T02:10:10.035229+00:00
+easynetwork.com,Easy,Network,TAKEN,200,"GoDaddy.com, LLC",2027-11-14T20:56:57Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easynetwork.com,2026-11-19T02:10:10.932631+00:00
+easylake.com,Easy,Lake,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2028-01-28T19:18:41Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easylake.com,2026-11-19T02:10:11.809428+00:00
+easywater.com,Easy,Water,TAKEN,200,"CSC Corporate Domains, Inc.",2027-04-27T15:27:04Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easywater.com,2026-11-19T02:10:12.683266+00:00
+easycapital.com,Easy,Capital,TAKEN,200,"GoDaddy.com, LLC",2027-05-13T18:23:56Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easycapital.com,2026-11-19T02:10:13.604965+00:00
+easyfish.com,Easy,Fish,TAKEN,200,"Spaceship, Inc.",2027-08-10T18:15:16Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easyfish.com,2026-11-19T02:10:14.558940+00:00
+easybrands.com,Easy,Brands,TAKEN,200,MarkMonitor Inc.,2028-03-21T20:00:21Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easybrands.com,2026-11-19T02:10:15.583684+00:00
+easyproducts.com,Easy,Products,TAKEN,200,"GoDaddy.com, LLC",2027-05-05T10:50:12Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easyproducts.com,2026-11-19T02:10:16.459801+00:00
+easyvault.com,Easy,Vault,TAKEN,200,"Name.com, Inc.",2027-03-06T06:35:07Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easyvault.com,2026-11-19T02:10:17.327071+00:00
+easysafe.com,Easy,Safe,TAKEN,200,Domain The Net Technologies Ltd.,2027-01-02T04:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easysafe.com,2026-11-19T02:10:18.329024+00:00
+easyguard.com,Easy,Guard,TAKEN,200,Internet Domain Service BS Corp,2027-02-05T16:58:23Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easyguard.com,2026-11-19T02:10:19.320517+00:00
+easybrain.com,Easy,Brain,TAKEN,200,"GoDaddy.com, LLC",2027-09-20T00:12:51Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easybrain.com,2026-11-19T02:10:20.307024+00:00
+easysports.com,Easy,Sports,TAKEN,200,Mesh Digital Limited,2027-11-02T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/easysports.com,2026-11-19T02:10:21.285070+00:00
+prowhale.com,Pro,Whale,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-03-01T04:48:34Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/prowhale.com,2026-11-19T02:10:22.250564+00:00
+promonkey.com,Pro,Monkey,TAKEN,200,"Name.com, Inc.",2027-06-10T03:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/promonkey.com,2026-11-19T02:10:23.244689+00:00
+probird.com,Pro,Bird,TAKEN,200,"ConnectWave co.,Ltd",2027-10-12T16:11:31Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/probird.com,2026-11-19T02:10:24.173636+00:00
+prorabbit.com,Pro,Rabbit,TAKEN,200,"GoDaddy.com, LLC",2027-06-28T22:01:55Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/prorabbit.com,2026-11-19T02:10:25.065063+00:00
+procoyote.com,Pro,Coyote,TAKEN,200,"GoDaddy.com, LLC",2026-11-18T20:15:51Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/procoyote.com,2026-11-19T02:10:25.993560+00:00
+profox.com,Pro,Fox,TAKEN,200,PDR Ltd. d/b/a PublicDomainRegistry.com,2027-02-05T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/profox.com,2026-11-19T02:10:26.969256+00:00
+prodeer.com,Pro,Deer,TAKEN,200,Dynadot Inc,2027-04-11T03:20:26Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/prodeer.com,2026-11-19T02:10:27.914161+00:00
+probuck.com,Pro,Buck,TAKEN,200,"GoDaddy.com, LLC",2027-10-20T20:19:25Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/probuck.com,2026-11-19T02:10:28.781379+00:00
+proape.com,Pro,Ape,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-03-15T19:04:53Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/proape.com,2026-11-19T02:10:29.639142+00:00
+proparrot.com,Pro,Parrot,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-05-22T18:36:51Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/proparrot.com,2026-11-19T02:10:30.505364+00:00
+profrog.com,Pro,Frog,TAKEN,200,"Megazone Corp., dba HOSTING.KR",2027-08-16T11:56:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/profrog.com,2026-11-19T02:10:35.539556+00:00
+prolion.com,Pro,Lion,TAKEN,200,EPAG Domainservices GmbH,2026-11-22T15:22:26Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/prolion.com,2026-11-19T02:10:36.467417+00:00
+protiger.com,Pro,Tiger,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-10-02T09:15:17Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/protiger.com,2026-11-19T02:10:37.386798+00:00
+proelephant.com,Pro,Elephant,TAKEN,200,"NameCheap, Inc.",2028-08-24T19:30:29Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/proelephant.com,2026-11-19T02:10:38.342074+00:00
+prodolphin.com,Pro,Dolphin,TAKEN,200,"GoDaddy.com, LLC",2027-08-17T04:41:34Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/prodolphin.com,2026-11-19T02:10:39.207813+00:00
+prooctopus.com,Pro,Octopus,TAKEN,200,"NameCheap, Inc.",2027-10-13T13:36:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/prooctopus.com,2026-11-19T02:10:40.141274+00:00
+probook.com,Pro,Book,TAKEN,200,Porkbun LLC,2029-05-02T10:45:46Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/probook.com,2026-11-19T02:10:41.068238+00:00
+pronote.com,Pro,Note,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2028-02-19T19:01:16Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/pronote.com,2026-11-19T02:10:41.996647+00:00
+prosite.com,Pro,Site,TAKEN,200,Nom-iq Ltd. dba COM LAUDE,2027-05-14T03:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/prosite.com,2026-11-19T02:10:42.960863+00:00
+prolottery.com,Pro,Lottery,TAKEN,200,"GoDaddy.com, LLC",2027-01-27T09:03:06Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/prolottery.com,2026-11-19T02:10:43.894414+00:00
+promoney.com,Pro,Money,TAKEN,200,"Wild West Domains, LLC",2027-10-20T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/promoney.com,2026-11-19T02:10:44.914646+00:00
+procash.com,Pro,Cash,TAKEN,200,"GoDaddy.com, LLC",2027-07-20T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/procash.com,2026-11-19T02:10:45.849763+00:00
+probill.com,Pro,Bill,TAKEN,200,"GoDaddy.com, LLC",2027-09-11T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/probill.com,2026-11-19T02:10:46.775970+00:00
+procloud.com,Pro,Cloud,TAKEN,200,"GoDaddy.com, LLC",2027-03-21T16:55:42Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/procloud.com,2026-11-19T02:10:47.803915+00:00
+proscience.com,Pro,Science,TAKEN,200,"GoDaddy.com, LLC",2030-04-03T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/proscience.com,2026-11-19T02:10:48.678738+00:00
+probio.com,Pro,Bio,TAKEN,200,Dynadot Inc,2027-11-02T20:40:41Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/probio.com,2026-11-19T02:10:49.544162+00:00
+probiology.com,Pro,Biology,TAKEN,200,Lexsynergy Limited,2027-04-22T18:04:43Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/probiology.com,2026-11-19T02:10:50.409211+00:00
+procom.com,Pro,Com,TAKEN,200,"Name106, Inc.",2027-03-13T04:00:00Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/procom.com,2026-11-19T02:10:55.400841+00:00
+procompany.com,Pro,Company,TAKEN,200,Dynadot Inc,2027-04-07T10:56:48Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/procompany.com,2026-11-19T02:10:56.264274+00:00
+procoin.com,Pro,Coin,TAKEN,200,"eNom, LLC",2027-11-04T04:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/procoin.com,2026-11-19T02:10:57.212343+00:00
+prochain.com,Pro,Chain,TAKEN,200,Tucows Domains Inc.,2027-07-29T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/prochain.com,2026-11-19T02:10:58.098192+00:00
+problock.com,Pro,Block,TAKEN,200,"Register.com - Network Solutions, LLC",2027-05-31T03:03:32Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/problock.com,2026-11-19T02:10:58.962311+00:00
+pronews.com,Pro,News,TAKEN,200,"Amazon Registrar, Inc.",2027-07-18T18:32:23Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/pronews.com,2026-11-19T02:10:59.865932+00:00
+proapp.com,Pro,App,TAKEN,200,"eNom, LLC",2027-04-07T18:12:39Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/proapp.com,2026-11-19T02:11:00.766080+00:00
+protech.com,Pro,Tech,TAKEN,200,"Network Solutions, LLC",2029-11-15T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/protech.com,2026-11-19T02:11:01.804953+00:00
+pronetwork.com,Pro,Network,TAKEN,200,"Name106, Inc.",2027-12-24T19:02:25Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/pronetwork.com,2026-11-19T02:11:02.773617+00:00
+prolake.com,Pro,Lake,TAKEN,200,"GoDaddy.com, LLC",2032-01-09T16:41:32Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/prolake.com,2026-11-19T02:11:03.740986+00:00
+prowater.com,Pro,Water,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-05-18T18:12:37Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/prowater.com,2026-11-19T02:11:04.730664+00:00
+procapital.com,Pro,Capital,TAKEN,200,"Network Solutions, LLC",2027-03-14T04:00:00Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/procapital.com,2026-11-19T02:11:05.583171+00:00
+profish.com,Pro,Fish,TAKEN,200,"GoDaddy.com, LLC",2028-08-30T18:13:48Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/profish.com,2026-11-19T02:11:06.498183+00:00
+probrands.com,Pro,Brands,TAKEN,200,"Ascio Technologies, Inc. Danmark - Filial af Ascio technologies, Inc. USA",2027-12-03T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/probrands.com,2026-11-19T02:11:07.524806+00:00
+proproducts.com,Pro,Products,TAKEN,200,"Network Solutions, LLC",2030-12-03T17:12:58Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/proproducts.com,2026-11-19T02:11:08.396626+00:00
+provault.com,Pro,Vault,TAKEN,200,"eNom, LLC",2028-06-03T10:15:12Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/provault.com,2026-11-19T02:11:09.283464+00:00
+prosafe.com,Pro,Safe,TAKEN,200,"CSC Corporate Domains, Inc.",2027-02-11T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/prosafe.com,2026-11-19T02:11:10.185114+00:00
+proguard.com,Pro,Guard,TAKEN,200,NETIM SAS,2027-09-18T18:07:54Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/proguard.com,2026-11-19T02:11:11.167970+00:00
+probrain.com,Pro,Brain,TAKEN,200,Moniker Online Services LLC,2027-10-27T22:48:50Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/probrain.com,2026-11-19T02:11:12.033223+00:00
+prosports.com,Pro,Sports,TAKEN,200,"Sea Wasp, LLC",2027-10-02T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/prosports.com,2026-11-19T02:11:13.011453+00:00
+firstwhale.com,First,Whale,TAKEN,200,Atom.com Domains LLC,2028-07-24T18:36:05Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstwhale.com,2026-11-19T02:11:14.011112+00:00
+firstmonkey.com,First,Monkey,TAKEN,200,"GoDaddy.com, LLC",2027-07-14T17:52:52Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstmonkey.com,2026-11-19T02:11:14.936822+00:00
+firstbird.com,First,Bird,TAKEN,200,"Cloudflare, Inc.",2027-08-23T16:39:54Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstbird.com,2026-11-19T02:11:15.812180+00:00
+firstrabbit.com,First,Rabbit,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-02-11T19:30:15Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstrabbit.com,2026-11-19T02:11:16.714676+00:00
+firstcoyote.com,First,Coyote,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/firstcoyote.com,2026-11-19T02:11:17.667107+00:00
+firstfox.com,First,Fox,TAKEN,200,"GoDaddy.com, LLC",2027-05-29T18:22:27Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstfox.com,2026-11-19T02:11:18.578360+00:00
+firstdeer.com,First,Deer,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-07-03T18:16:03Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstdeer.com,2026-11-19T02:11:19.470069+00:00
+firstbuck.com,First,Buck,TAKEN,200,"DomainAdministration.com, LLC",2027-08-30T18:10:44Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstbuck.com,2026-11-19T02:11:20.335629+00:00
+firstape.com,First,Ape,TAKEN,200,"GoDaddy.com, LLC",2028-02-01T04:11:28Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstape.com,2026-11-19T02:11:21.253107+00:00
+firstparrot.com,First,Parrot,TAKEN,200,PDR Ltd. d/b/a PublicDomainRegistry.com,2026-12-03T10:00:30Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstparrot.com,2026-11-19T02:11:22.490363+00:00
+firstfrog.com,First,Frog,TAKEN,200,"GoDaddy.com, LLC",2026-12-23T20:19:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstfrog.com,2026-11-19T02:11:23.466795+00:00
+firstlion.com,First,Lion,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-07-13T18:41:52Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstlion.com,2026-11-19T02:11:24.311480+00:00
+firsttiger.com,First,Tiger,TAKEN,200,"Cloudflare, Inc.",2027-09-06T13:33:46Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firsttiger.com,2026-11-19T02:11:25.252306+00:00
+firstelephant.com,First,Elephant,TAKEN,200,Dynadot Inc,2027-03-05T04:07:42Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstelephant.com,2026-11-19T02:11:26.116693+00:00
+firstdolphin.com,First,Dolphin,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2026-09-05T18:34:08Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/firstdolphin.com,2026-11-19T02:11:26.986273+00:00
+firstoctopus.com,First,Octopus,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/firstoctopus.com,2026-11-19T02:11:27.960007+00:00
+firstbook.com,First,Book,TAKEN,200,"Sea Wasp, LLC",2027-09-12T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstbook.com,2026-11-19T02:11:28.891380+00:00
+firstnote.com,First,Note,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-04-05T21:29:45Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstnote.com,2026-11-19T02:11:29.837846+00:00
+firstsite.com,First,Site,TAKEN,200,"GoDaddy.com, LLC",2027-10-10T18:09:49Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstsite.com,2026-11-19T02:11:30.796760+00:00
+firstlottery.com,First,Lottery,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-08-14T18:36:14Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstlottery.com,2026-11-19T02:11:31.715182+00:00
+firstmoney.com,First,Money,TAKEN,200,"GoDaddy.com, LLC",2028-07-06T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstmoney.com,2026-11-19T02:11:32.657989+00:00
+firstcash.com,First,Cash,TAKEN,200,"Network Solutions, LLC",2028-12-11T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstcash.com,2026-11-19T02:11:33.566939+00:00
+firstbill.com,First,Bill,TAKEN,200,"GoDaddy.com, LLC",2027-06-29T13:40:29Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstbill.com,2026-11-19T02:11:34.488295+00:00
+firstcloud.com,First,Cloud,TAKEN,200,"NameCheap, Inc.",2031-04-09T12:04:29Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstcloud.com,2026-11-19T02:11:35.439882+00:00
+firstscience.com,First,Science,TAKEN,200,IONOS SE,2027-10-19T19:07:04Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstscience.com,2026-11-19T02:11:36.330431+00:00
+firstbio.com,First,Bio,TAKEN,200,BestCert Pte. Ltd.,2027-10-26T10:36:51Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstbio.com,2026-11-19T02:11:37.255023+00:00
+firstbiology.com,First,Biology,TAKEN,200,"Spaceship, Inc.",2027-07-02T06:36:15Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstbiology.com,2026-11-19T02:11:38.274816+00:00
+firstcom.com,First,Com,TAKEN,200,"CSC Corporate Domains, Inc.",2027-02-25T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstcom.com,2026-11-19T02:11:39.201798+00:00
+firstcompany.com,First,Company,TAKEN,200,Tucows Domains Inc.,2030-01-19T22:00:03Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstcompany.com,2026-11-19T02:11:40.113952+00:00
+firstcoin.com,First,Coin,TAKEN,200,MarkMonitor Inc.,2027-11-29T19:01:36Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstcoin.com,2026-11-19T02:11:41.067056+00:00
+firstchain.com,First,Chain,TAKEN,200,"eNom, LLC",2028-04-04T01:19:31Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstchain.com,2026-11-19T02:11:42.071507+00:00
+firstblock.com,First,Block,TAKEN,200,"GoDaddy.com, LLC",2027-03-06T09:42:04Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstblock.com,2026-11-19T02:11:43.041935+00:00
+firstnews.com,First,News,TAKEN,200,"GMO Internet Group, Inc. d/b/a Onamae.com",2027-07-09T04:00:00Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/firstnews.com,2026-11-19T02:11:43.932464+00:00
+firstapp.com,First,App,TAKEN,200,"GoDaddy.com, LLC",2027-03-30T11:03:16Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstapp.com,2026-11-19T02:11:45.041664+00:00
+firsttech.com,First,Tech,TAKEN,200,"Network Solutions, LLC",2029-02-26T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firsttech.com,2026-11-19T02:11:45.880147+00:00
+firstnetwork.com,First,Network,TAKEN,200,Tucows Domains Inc.,2028-06-29T10:33:52Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstnetwork.com,2026-11-19T02:11:46.793523+00:00
+firstlake.com,First,Lake,TAKEN,200,"GoDaddy.com, LLC",2030-08-16T15:45:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstlake.com,2026-11-19T02:11:47.772720+00:00
+firstwater.com,First,Water,TAKEN,200,Squarespace Domains II LLC,2027-11-19T19:05:23Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstwater.com,2026-11-19T02:11:48.762768+00:00
+firstcapital.com,First,Capital,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2030-08-06T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstcapital.com,2026-11-19T02:11:49.714695+00:00
+firstfish.com,First,Fish,TAKEN,200,"GoDaddy.com, LLC",2027-05-18T18:16:14Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstfish.com,2026-11-19T02:11:50.743298+00:00
+firstbrands.com,First,Brands,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2028-03-08T05:00:00Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/firstbrands.com,2026-11-19T02:11:51.766342+00:00
+firstproducts.com,First,Products,TAKEN,200,"GoDaddy.com, LLC",2027-12-05T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstproducts.com,2026-11-19T02:11:52.665163+00:00
+firstvault.com,First,Vault,TAKEN,200,"GoDaddy.com, LLC",2027-03-25T15:20:18Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstvault.com,2026-11-19T02:11:53.643653+00:00
+firstsafe.com,First,Safe,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-04-13T21:40:56Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstsafe.com,2026-11-19T02:11:54.538157+00:00
+firstguard.com,First,Guard,TAKEN,200,"GoDaddy.com, LLC",2026-11-30T11:59:59Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstguard.com,2026-11-19T02:11:55.411983+00:00
+firstbrain.com,First,Brain,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-10-27T18:11:52Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstbrain.com,2026-11-19T02:12:00.478292+00:00
+firstsports.com,First,Sports,TAKEN,200,Tucows Domains Inc.,2027-10-08T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/firstsports.com,2026-11-19T02:12:01.474968+00:00
+bestwhale.com,Best,Whale,TAKEN,200,Alibaba Cloud Computing Ltd. d/b/a HiChina (www.net.cn),2027-12-17T19:17:27Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestwhale.com,2026-11-19T02:12:02.456512+00:00
+bestmonkey.com,Best,Monkey,TAKEN,200,"GoDaddy.com, LLC",2027-04-15T06:41:14Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestmonkey.com,2026-11-19T02:12:03.379235+00:00
+bestbird.com,Best,Bird,TAKEN,200,GoDaddy Online Services Cayman Islands Ltd.,2027-04-20T18:06:35Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestbird.com,2026-11-19T02:12:04.385273+00:00
+bestrabbit.com,Best,Rabbit,TAKEN,200,"TurnCommerce, Inc. DBA NameBright.com",2027-05-01T15:46:44Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestrabbit.com,2026-11-19T02:12:05.436837+00:00
+bestcoyote.com,Best,Coyote,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/bestcoyote.com,2026-11-19T02:12:06.368298+00:00
+bestfox.com,Best,Fox,TAKEN,200,"Spaceship, Inc.",2027-10-28T12:56:07Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestfox.com,2026-11-19T02:12:07.396392+00:00
+bestdeer.com,Best,Deer,TAKEN,200,"Megazone Corp., dba HOSTING.KR",2027-03-10T04:41:34Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestdeer.com,2026-11-19T02:12:08.344663+00:00
+bestbuck.com,Best,Buck,TAKEN,200,"GoDaddy.com, LLC",2026-12-04T23:28:02Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestbuck.com,2026-11-19T02:12:09.262648+00:00
+bestape.com,Best,Ape,TAKEN,200,Moniker Online Services LLC,2028-01-27T19:08:47Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestape.com,2026-11-19T02:12:10.139972+00:00
+bestparrot.com,Best,Parrot,TAKEN,200,"GoDaddy.com, LLC",2027-09-26T18:16:29Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/bestparrot.com,2026-11-19T02:12:11.035396+00:00
+bestfrog.com,Best,Frog,TAKEN,200,"GoDaddy.com, LLC",2027-08-29T23:13:26Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestfrog.com,2026-11-19T02:12:11.980214+00:00
+bestlion.com,Best,Lion,TAKEN,200,"GoDaddy.com, LLC",2027-05-19T05:09:33Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestlion.com,2026-11-19T02:12:13.021030+00:00
+besttiger.com,Best,Tiger,TAKEN,200,Gname.com Pte. Ltd.,2027-02-28T19:48:05Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/besttiger.com,2026-11-19T02:12:14.013416+00:00
+bestelephant.com,Best,Elephant,TAKEN,200,"Alibaba Cloud Computing (Beijing) Co., Ltd.",2026-12-18T10:55:55Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/bestelephant.com,2026-11-19T02:12:15.192900+00:00
+bestdolphin.com,Best,Dolphin,TAKEN,200,"Spaceship, Inc.",2027-01-08T20:55:23Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestdolphin.com,2026-11-19T02:12:36.092715+00:00
+bestoctopus.com,Best,Octopus,AVAILABLE,404,,,False,RDAP 404 — not in the .com registry; public DNS is NXDOMAIN / no A,https://rdap.verisign.com/com/v1/domain/bestoctopus.com,2026-11-19T02:12:37.052511+00:00
+bestbook.com,Best,Book,TAKEN,200,"Cloudflare, Inc.",2027-01-08T19:43:29Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/bestbook.com,2026-11-19T02:12:37.991094+00:00
+bestnote.com,Best,Note,TAKEN,200,Dynadot Inc,2027-02-19T00:02:06Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestnote.com,2026-11-19T02:12:38.869068+00:00
+bestsite.com,Best,Site,TAKEN,200,"NameCheap, Inc.",2027-02-02T05:00:00Z,,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestsite.com,2026-11-19T02:12:39.872190+00:00
+bestlottery.com,Best,Lottery,TAKEN,200,"Sea Wasp, LLC",2027-11-28T22:50:39Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestlottery.com,2026-11-19T02:12:40.825388+00:00
+bestmoney.com,Best,Money,TAKEN,200,"GoDaddy.com, LLC",2027-03-20T18:09:30Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestmoney.com,2026-11-19T02:12:41.699811+00:00
+bestcash.com,Best,Cash,TAKEN,200,"Sea Wasp, LLC",2027-03-03T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestcash.com,2026-11-19T02:12:42.659172+00:00
+bestbill.com,Best,Bill,TAKEN,200,"GoDaddy.com, LLC",2027-01-19T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestbill.com,2026-11-19T02:12:43.542125+00:00
+bestcloud.com,Best,Cloud,TAKEN,200,"GoDaddy.com, LLC",2026-11-24T00:58:58Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestcloud.com,2026-11-19T02:12:44.479628+00:00
+bestscience.com,Best,Science,TAKEN,200,"Name.com, Inc.",2027-04-26T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestscience.com,2026-11-19T02:12:45.410518+00:00
+bestbio.com,Best,Bio,TAKEN,200,"Megazone Corp., dba HOSTING.KR",2027-05-15T20:38:25Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestbio.com,2026-11-19T02:12:46.340774+00:00
+bestbiology.com,Best,Biology,TAKEN,200,Dynadot Inc,2026-11-22T19:06:39Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestbiology.com,2026-11-19T02:12:47.291960+00:00
+bestcom.com,Best,Com,TAKEN,200,"GoDaddy.com, LLC",2027-01-31T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestcom.com,2026-11-19T02:12:48.163908+00:00
+bestcompany.com,Best,Company,TAKEN,200,"eNom, LLC",2027-08-08T16:10:35Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestcompany.com,2026-11-19T02:12:49.096690+00:00
+bestcoin.com,Best,Coin,TAKEN,200,"GoDaddy.com, LLC",2033-12-21T14:42:27Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestcoin.com,2026-11-19T02:12:50.061622+00:00
+bestchain.com,Best,Chain,TAKEN,200,"eName Technology Co., Ltd.",2027-08-13T18:44:39Z,False,RDAP 200 (registered) but public DNS has no A record — still TAKEN,https://rdap.verisign.com/com/v1/domain/bestchain.com,2026-11-19T02:12:51.218025+00:00
+bestblock.com,Best,Block,TAKEN,200,"Network Solutions, LLC",2031-04-13T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestblock.com,2026-11-19T02:12:52.400771+00:00
+bestnews.com,Best,News,TAKEN,200,Tucows Domains Inc.,2027-08-10T10:34:53Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestnews.com,2026-11-19T02:12:53.251107+00:00
+bestapp.com,Best,App,TAKEN,200,"GoDaddy.com, LLC",2027-01-30T19:47:46Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestapp.com,2026-11-19T02:12:54.152632+00:00
+besttech.com,Best,Tech,TAKEN,200,"Network Solutions, LLC",2031-07-19T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/besttech.com,2026-11-19T02:12:55.101712+00:00
+bestnetwork.com,Best,Network,TAKEN,200,"GoDaddy.com, LLC",2027-08-16T18:40:47Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestnetwork.com,2026-11-19T02:12:56.028668+00:00
+bestlake.com,Best,Lake,TAKEN,200,"Name.com, Inc.",2027-02-16T00:44:20Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestlake.com,2026-11-19T02:12:58.191098+00:00
+bestwater.com,Best,Water,TAKEN,200,"GoDaddy.com, LLC",2026-12-13T23:00:40Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestwater.com,2026-11-19T02:12:59.093667+00:00
+bestcapital.com,Best,Capital,TAKEN,200,"GoDaddy.com, LLC",2028-05-06T21:33:28Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestcapital.com,2026-11-19T02:12:59.980503+00:00
+bestfish.com,Best,Fish,TAKEN,200,"NameCheap, Inc.",2027-01-01T05:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestfish.com,2026-11-19T02:13:00.968388+00:00
+bestbrands.com,Best,Brands,TAKEN,200,"Network Solutions, LLC",2029-05-15T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestbrands.com,2026-11-19T02:13:01.876912+00:00
+bestproducts.com,Best,Products,TAKEN,200,"CSC Corporate Domains, Inc.",2027-04-14T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestproducts.com,2026-11-19T02:13:02.797617+00:00
+bestvault.com,Best,Vault,TAKEN,200,"Name.com, Inc.",2027-04-21T08:49:36Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestvault.com,2026-11-19T02:13:03.659370+00:00
+bestsafe.com,Best,Safe,TAKEN,200,"NameSilo, LLC",2027-07-31T18:09:17Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestsafe.com,2026-11-19T02:13:04.516978+00:00
+bestguard.com,Best,Guard,TAKEN,200,"Domain.com - Network Solutions, LLC",2027-10-07T16:03:25Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestguard.com,2026-11-19T02:13:05.497088+00:00
+bestbrain.com,Best,Brain,TAKEN,200,IONOS SE,2027-05-21T04:00:00Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestbrain.com,2026-11-19T02:13:06.487051+00:00
+bestsports.com,Best,Sports,TAKEN,200,"GoDaddy.com, LLC",2027-08-05T16:59:32Z,True,RDAP 200 — registered,https://rdap.verisign.com/com/v1/domain/bestsports.com,2026-11-19T02:13:07.439374+00:00
