@@ -615,6 +615,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     hack.add_argument("--json", action="store_true")
 
+    rec = sub.add_parser(
+        "defihacklabs-recall",
+        help="Score detector leads on immutable incident runtimes. Adds no heat.",
+    )
+    rec.add_argument("--json", action="store_true")
+
     wake = sub.add_parser(
         "wake-detect",
         help="Run Ackee Wake when it is installed. Detector names add no heat.",
@@ -936,6 +942,12 @@ def main(argv: list[str] | None = None) -> int:
         except OSError:
             labeled = []
         print(_json.dumps(index_report(labeled), indent=2))
+        return 0
+
+    if args.cmd == "defihacklabs-recall":
+        import json as _json
+        from eth_scanner.benchmark.incident_recall import live_report
+        print(_json.dumps(live_report(), indent=2))
         return 0
 
     if args.cmd == "wake-detect":
