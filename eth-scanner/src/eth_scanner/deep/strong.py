@@ -34,6 +34,7 @@ from eth_scanner.deep.runners import (
     engine_availability,
     run_aderyn,
     run_halmos,
+    run_hevm_engine,
     run_mythril,
     run_property_fuzz,
     run_semgrep,
@@ -385,6 +386,7 @@ def _run_engine_set(
         "semgrep": lambda: run_semgrep(project, timeout_s=120),
         "wake": lambda: run_wake_project(project, timeout_s=40),
         "halmos": lambda: run_halmos(harness_dir=FUZZ_ROOT, timeout_s=90),
+        "hevm": lambda: run_hevm_engine(project, timeout_s=20),
         "medusa": lambda: run_medusa(suite_dir=FUZZ_ROOT, timeout_s=90),
         "echidna": lambda: run_echidna(suite_dir=FUZZ_ROOT, timeout_s=90),
     }
