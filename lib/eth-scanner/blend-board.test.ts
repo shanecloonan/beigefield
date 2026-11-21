@@ -159,3 +159,31 @@ test("a solana row does not change the ethereum totals", () => {
   assert.equal(sol.leaderboard[0].chain, "solana");
   assert.equal(sol.leaderboard[0].heat, 9);
 });
+
+test("bnb, arbitrum, and base rows stay out of the ethereum totals", () => {
+  const rows = [
+    { address: ADDR_A, heat: 3, blend_bucket: "maybe", status: "done", funds_usd: 200 },
+    { address: ADDR_B, chain: "bsc", heat: 8, blend_bucket: "drain-found", status: "done", funds_usd: 900 },
+    { address: ADDR_C, chain: "arbitrum", heat: 2, blend_bucket: "no", status: "done" },
+    { address: ADDR_A, chain: "base", heat: 5, blend_bucket: "maybe", status: "done", funds_usd: 40 },
+  ];
+  const eth = summarizeBlendRuns(rows);
+  assert.equal(eth.chain, "ethereum");
+  assert.equal(eth.scanned, 1);
+  assert.equal(eth.totals.maybe, 1);
+  assert.equal(eth.totals.yes, 0);
+  assert.equal(eth.leaderboard[0].address, ADDR_A);
+  assert.equal(eth.leaderboard[0].chain, "ethereum");
+  const bsc = summarizeBlendRuns(rows, 100, Date.now(), "bnb");
+  assert.equal(bsc.chain, "bsc");
+  assert.equal(bsc.scanned, 1);
+  assert.equal(bsc.totals.yes, 1);
+  assert.equal(bsc.leaderboard[0].chain, "bsc");
+  const all = summarizeBlendRuns(rows, 100, Date.now(), "all");
+  assert.equal(all.chain, "all");
+  assert.equal(all.scanned, 4);
+  assert.equal(all.totals.yes, 1);
+  assert.equal(all.totals.maybe, 2);
+  assert.equal(all.totals.no, 1);
+  assert.equal(all.leaderboard[0].chain, "bsc");
+});
