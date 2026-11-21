@@ -627,6 +627,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     inv.add_argument("--json", action="store_true")
 
+    maybe = sub.add_parser(
+        "maybe-triage",
+        help="Annotate a manual-review row. Heat may fall and cannot rise.",
+    )
+    maybe.add_argument("--heat", type=int, default=0)
+    maybe.add_argument("--bucket", default="manual-review")
+    maybe.add_argument("--lower", type=int, default=0)
+    maybe.add_argument("--note", default="")
+    maybe.add_argument("--json", action="store_true")
+
     wake = sub.add_parser(
         "wake-detect",
         help="Run Ackee Wake when it is installed. Detector names add no heat.",
@@ -960,6 +970,17 @@ def main(argv: list[str] | None = None) -> int:
         import json as _json
         from eth_scanner.advanced.invariants import report as invariant_report
         print(_json.dumps(invariant_report(), indent=2))
+        return 0
+
+    if args.cmd == "maybe-triage":
+        import json as _json
+        from eth_scanner.advanced.triage import triage_report
+        print(_json.dumps(triage_report(
+            heat=args.heat,
+            bucket=args.bucket,
+            lower_by=args.lower,
+            note=args.note,
+        ), indent=2))
         return 0
 
     if args.cmd == "wake-detect":
