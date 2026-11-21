@@ -627,6 +627,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     inv.add_argument("--json", action="store_true")
 
+    fork = sub.add_parser(
+        "fork-sensitivity",
+        help="Compare one view on a local fork. Read-only, heat stays 0.",
+    )
+    fork.add_argument("--url", default="")
+    fork.add_argument("--address", default="")
+    fork.add_argument("--json", action="store_true")
+
     proto = sub.add_parser(
         "protocol-invariants",
         help="Catalog properties for a vault and witness roles around it. Heat only on a local failure.",
@@ -995,6 +1003,12 @@ def main(argv: list[str] | None = None) -> int:
         import json as _json
         from eth_scanner.advanced.invariants import report as invariant_report
         print(_json.dumps(invariant_report(), indent=2))
+        return 0
+
+    if args.cmd == "fork-sensitivity":
+        import json as _json
+        from eth_scanner.advanced.fork_sensitivity import compare_view
+        print(_json.dumps(compare_view(args.url, args.address or ("0x" + "00" * 20)), indent=2))
         return 0
 
     if args.cmd == "protocol-invariants":
