@@ -45,6 +45,40 @@ MONTHLY_SCAN_EXAMPLE = {
     "org_cap_cu": 96_000_000,
 }
 
+# Ethereum keeps the 50/day example. Each extra EVM chain gets a smaller
+# share so BNB, Arbitrum, and Base together stay near 10% of the org cap.
+EXTRA_CHAIN_SCANS_PER_DAY = 8
+_CU_PER_SCAN = DEFAULT_TRACE_SEED_CU + DEFAULT_STORAGE_CU + DEFAULT_LIVENESS_CU
+
+
+def chain_daily_scans(chain: str) -> int:
+    """How many deep scans a chain may start in a day. Ethereum stays at 50."""
+    from eth_scanner.chains.registry import normalize_chain
+
+    name = normalize_chain(chain)
+    if name == "ethereum":
+        return int(MONTHLY_SCAN_EXAMPLE["scans_per_day"])
+    if name in {"bsc", "arbitrum", "base"}:
+        return EXTRA_CHAIN_SCANS_PER_DAY
+    return 0
+
+
+def multi_chain_monthly_cu() -> dict[str, Any]:
+    """Combined ceiling. The Ethereum line matches MONTHLY_SCAN_EXAMPLE."""
+    scans = {name: chain_daily_scans(name) for name in ("ethereum", "bsc", "arbitrum", "base")}
+    daily = sum(scans.values())
+    monthly = daily * 30 * _CU_PER_SCAN
+    ethereum = scans["ethereum"] * 30 * _CU_PER_SCAN
+    return {
+        "scans_per_day": scans,
+        "cu_per_scan": _CU_PER_SCAN,
+        "ethereum_monthly_cu": ethereum,
+        "monthly_cu": monthly,
+        "org_cap_cu": MONTHLY_SCAN_EXAMPLE["org_cap_cu"],
+        "within_cap": monthly < int(MONTHLY_SCAN_EXAMPLE["org_cap_cu"]),
+        "heat_contribution": 0,
+    }
+
 
 class CuBudgetExceeded(RuntimeError):
     """The per-run cap would be crossed. Callers stop and keep partial evidence."""

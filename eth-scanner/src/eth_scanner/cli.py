@@ -581,6 +581,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     evm.add_argument("--json", action="store_true")
 
+    evd = sub.add_parser(
+        "evm-discover",
+        help="Read BNB, Arbitrum, or Base TVL. Adds no heat and does not touch Ethereum.",
+    )
+    evd.add_argument("--chain", required=True, choices=("bsc", "arbitrum", "base", "bnb", "arb"))
+    evd.add_argument("--limit", type=int, default=10)
+    evd.add_argument("--min-usd", type=float, default=None)
+    evd.add_argument("--dry-run", action="store_true")
+    evd.add_argument("--json", action="store_true")
+
     ai = sub.add_parser(
         "explain",
         help="Phase E optional LLM triage note (skipped without API key; never adds heat)",
@@ -806,6 +816,42 @@ def main(argv: list[str] | None = None) -> int:
         import json as _json
         from eth_scanner.chains.evm import describe_all
         print(_json.dumps(describe_all(), indent=2))
+        return 0
+
+    if args.cmd == "evm-discover":
+        import json as _json
+        from eth_scanner.chains.evm_discover import discover as _evm_discover
+        from eth_scanner.chains.evm_discover import enqueue as _evm_enqueue
+        from eth_scanner.types import DEFAULT_MIN_FUNDS_USD
+        floor = float(args.min_usd) if args.min_usd is not None else DEFAULT_MIN_FUNDS_USD
+        report = _evm_discover(args.chain, limit=int(args.limit or 10), min_usd=floor)
+        saved = {"enqueued": [], "skipped": []}
+        if not args.dry_run and not report.get("refused"):
+            saved = _evm_enqueue(store, report)
+        out = {
+            "chain": report.get("chain"),
+            "refused": report.get("refused", False),
+            "heat_contribution": 0,
+            "min_usd": report.get("min_usd"),
+            "degraded": report.get("degraded"),
+            "daily_scans": report.get("daily_scans"),
+            "monthly_cu": report.get("monthly_cu"),
+            "ethereum_monthly_cu": report.get("ethereum_monthly_cu"),
+            "within_cap": report.get("within_cap"),
+            "candidates": len(report.get("candidates") or []),
+            "enqueued": saved.get("enqueued") or [],
+            "skipped": saved.get("skipped") or [],
+            "sample": [
+                {
+                    "name": row.get("name"),
+                    "address": row.get("address"),
+                    "funds_usd": row.get("funds_usd"),
+                    "has_code": row.get("has_code"),
+                }
+                for row in (report.get("candidates") or [])[:10]
+            ],
+        }
+        print(_json.dumps(out, indent=2))
         return 0
 
     if args.cmd == "strong-deep" or (
