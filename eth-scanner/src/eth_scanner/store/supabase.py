@@ -49,6 +49,11 @@ def _missing_chain_column(exc: BaseException) -> bool:
     return "chain" in text and ("pgrst204" in text or "column" in text or "schema" in text)
 
 
+def _no_composite_key(exc: BaseException) -> bool:
+    text = str(exc).lower()
+    return "42p10" in text or "no unique or exclusion constraint" in text
+
+
 def normalize_address(addr: str) -> str:
     a = (addr or "").strip().lower()
     if not a.startswith("0x"):
@@ -797,10 +802,6 @@ class SupabaseStore:
                 raise ValueError("address required")
         target.chain = chain
         target.address = addr
-        if is_evm_chain(chain) and chain != "ethereum":
-            existing = self.get_target(addr)
-            if existing and normalize_chain(existing.get("chain")) != chain:
-                raise ValueError("address already stored on another chain")
         body: dict[str, Any] = {
             "address": addr,
             "chain": chain,
@@ -823,19 +824,75 @@ class SupabaseStore:
         if getattr(target, "discovery_source", None):
             body["discovery_source"] = target.discovery_source
         try:
-            self._req("POST", "eth_scan_targets", body, prefer="return=minimal,resolution=merge-duplicates")
+            self._req(
+                "POST",
+                "eth_scan_targets",
+                body,
+                query={"on_conflict": "chain,address"},
+                prefer="return=minimal,resolution=merge-duplicates",
+            )
         except RuntimeError as exc:
-            # An unmigrated database still accepts the ethereum row without the column.
-            if chain == "ethereum" and _missing_chain_column(exc):
-                body.pop("chain", None)
+            # Before the (chain, address) key exists, an ethereum write still
+            # merges on the address. A second chain must not take that path,
+            # or it would overwrite the ethereum row.
+            if chain == "ethereum" and (_no_composite_key(exc) or _missing_chain_column(exc)):
+                if _missing_chain_column(exc):
+                    body.pop("chain", None)
                 self._req("POST", "eth_scan_targets", body, prefer="return=minimal,resolution=merge-duplicates")
             else:
                 raise
         return target
 
-    def get_target(self, address: str) -> Optional[dict[str, Any]]:
-        rows = self._req("GET", "eth_scan_targets", query={"address": "eq.%s" % normalize_address(address)})
+    def get_target(self, address: str, chain: str = "ethereum") -> Optional[dict[str, Any]]:
+        from eth_scanner.chains.evm import is_evm_chain
+        from eth_scanner.chains.registry import normalize_chain, normalize_solana_address
+
+        chosen = normalize_chain(chain)
+        if chosen == "solana":
+            addr = normalize_solana_address(address)
+        elif is_evm_chain(chosen):
+            addr = normalize_address(address)
+        else:
+            addr = (address or "").strip()
+        query = {"address": "eq.%s" % addr, "chain": "eq.%s" % chosen, "limit": "1"}
+        try:
+            rows = self._req("GET", "eth_scan_targets", query=query)
+        except RuntimeError as exc:
+            if chosen == "ethereum" and _missing_chain_column(exc):
+                rows = self._req("GET", "eth_scan_targets", query={"address": "eq.%s" % addr, "limit": "1"})
+            else:
+                raise
         return rows[0] if rows else None
+
+    def _patch_target(
+        self,
+        address: str,
+        patch: dict[str, Any],
+        *,
+        chain: str = "ethereum",
+        extra: Optional[dict[str, str]] = None,
+    ) -> None:
+        from eth_scanner.chains.evm import is_evm_chain
+        from eth_scanner.chains.registry import normalize_chain, normalize_solana_address
+
+        chosen = normalize_chain(chain)
+        if chosen == "solana":
+            addr = normalize_solana_address(address)
+        elif is_evm_chain(chosen):
+            addr = normalize_address(address)
+        else:
+            addr = (address or "").strip()
+        query = {"address": "eq.%s" % addr, "chain": "eq.%s" % chosen}
+        if extra:
+            query.update(extra)
+        try:
+            self._req("PATCH", "eth_scan_targets", patch, query=query, prefer="return=minimal")
+        except RuntimeError as exc:
+            if chosen == "ethereum" and _missing_chain_column(exc):
+                query.pop("chain", None)
+                self._req("PATCH", "eth_scan_targets", patch, query=query, prefer="return=minimal")
+            else:
+                raise
 
     def closed_no_hashes(self) -> set[str]:
         rows = self._req("GET", "eth_scan_targets", query={
@@ -915,7 +972,7 @@ class SupabaseStore:
             patch["contract_name"] = result.contract_name
         if getattr(result, "heat_breakdown", None) is not None:
             patch["heat_breakdown"] = dict(result.heat_breakdown or {})
-        self._req("PATCH", "eth_scan_targets", patch, query={"address": "eq.%s" % addr})
+        self._patch_target(addr, patch, chain=str(getattr(result, "chain", None) or "ethereum"))
 
 
     def release_stale_claims(
@@ -933,7 +990,7 @@ class SupabaseStore:
         moment = now or datetime.now(timezone.utc)
         rows = self._req("GET", "eth_scan_targets", query={
             "status": "eq.running",
-            "select": "address,status,claimed_by,claimed_at,updated_at,heat_breakdown",
+            "select": "address,chain,status,claimed_by,claimed_at,updated_at,heat_breakdown",
             "limit": "2000",
         })
         if not isinstance(rows, list) or not rows:
@@ -945,24 +1002,22 @@ class SupabaseStore:
             )
             if not plan:
                 continue
-            self._req(
-                "PATCH",
-                "eth_scan_targets",
+            self._patch_target(
+                row["address"],
                 plan["patch"],
-                query={"address": "eq.%s" % row["address"], "status": "eq.running"},
+                chain=str(row.get("chain") or "ethereum"),
+                extra={"status": "eq.running"},
             )
             released.append({k: v for k, v in plan.items() if k != "patch"})
         return released
 
-    def requeue_target(self, address: str) -> bool:
+    def requeue_target(self, address: str, chain: str = "ethereum") -> bool:
         """Return a finished target to pending. A running claim is left alone."""
-        addr = normalize_address(address)
-        self._req(
-            "PATCH",
-            "eth_scan_targets",
+        self._patch_target(
+            address,
             {"status": "pending", "claimed_by": None, "claimed_at": None},
-            query={"address": "eq.%s" % addr, "status": "neq.running"},
-            prefer="return=minimal",
+            chain=chain,
+            extra={"status": "neq.running"},
         )
         return True
 
@@ -1044,11 +1099,11 @@ class SupabaseStore:
         out: list[dict[str, Any]] = []
         for row in picked:
             try:
-                self._req("PATCH", "eth_scan_targets", {
+                self._patch_target(row["address"], {
                     "deep_status": "running",
                     "claimed_by": worker_id,
                     "claimed_at": now,
-                }, query={"address": "eq.%s" % row["address"]})
+                }, chain=str(row.get("chain") or "ethereum"))
             except Exception:  # noqa: BLE001
                 # Column may be missing — still return the claim for local processing.
                 pass
@@ -1086,7 +1141,7 @@ class SupabaseStore:
         if protocol_risks is not None:
             patch["protocol_risks"] = dict(protocol_risks)
         try:
-            self._req("PATCH", "eth_scan_targets", patch, query={"address": "eq.%s" % addr})
+            self._patch_target(addr, patch)
         except Exception:  # noqa: BLE001
             # Soft-fail when migration not applied yet.
             pass
@@ -1176,13 +1231,7 @@ class SupabaseStore:
                 pass
         tgt = {k: body[k] for k in ("heat", "bucket", "heat_breakdown") if k in body}
         if tgt:
-            self._req(
-                "PATCH",
-                "eth_scan_targets",
-                tgt,
-                query={"address": "eq.%s" % addr},
-                prefer="return=minimal",
-            )
+            self._patch_target(addr, tgt, chain=str(row.get("chain") or "ethereum"))
 
     def list_artifacts(self, address: Optional[str] = None, kind: Optional[str] = None, limit: int = 50) -> list[dict[str, Any]]:
         q: dict[str, str] = {"order": "created_at.desc", "limit": str(limit)}
@@ -1225,18 +1274,11 @@ class SupabaseStore:
         except Exception:  # noqa: BLE001
             return []
 
-    def patch_target(self, address: str, fields: dict[str, Any]) -> None:
-        addr = normalize_address(address)
+    def patch_target(self, address: str, fields: dict[str, Any], chain: str = "ethereum") -> None:
         body = {k: v for k, v in fields.items() if v is not None}
         if not body:
             return
-        self._req(
-            "PATCH",
-            "eth_scan_targets",
-            body,
-            query={"address": "eq.%s" % addr},
-            prefer="return=minimal",
-        )
+        self._patch_target(address, body, chain=chain)
 
     def save_test_scan_run(self, row: dict[str, Any]) -> dict[str, Any]:
         """Upsert test_scan_runs on dedupe_key. Retries without new columns if unmigrated."""
@@ -1416,11 +1458,11 @@ class SupabaseStore:
         out: list[dict[str, Any]] = []
         now = _now()
         for row in rows:
-            self._req("PATCH", "eth_scan_targets", {
+            self._patch_target(row["address"], {
                 "status": "running",
                 "claimed_by": worker_id,
                 "claimed_at": now,
-            }, query={"address": "eq.%s" % row["address"]})
+            }, chain=str(row.get("chain") or "ethereum"))
             row = dict(row)
             row["status"] = "running"
             row["claimed_by"] = worker_id

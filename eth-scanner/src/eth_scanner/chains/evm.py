@@ -113,10 +113,10 @@ def is_evm_chain(value: object) -> bool:
 
 
 def target_store_key(chain: str, address: str) -> str:
-    """Ethereum and Solana stay keyed by the address. Other EVM chains do not.
+    """Memory-store key. Ethereum and Solana stay the bare address.
 
-    The Supabase primary key is still the address alone, so a second EVM
-    chain cannot overwrite an Ethereum row. The memory store keeps both.
+    Other EVM chains use chain:address so both rows can sit in one dict.
+    Supabase stores the same pair as the (chain, address) primary key.
     """
     name = normalize_chain(chain)
     if name in {"ethereum", "solana"}:
