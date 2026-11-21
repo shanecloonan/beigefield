@@ -627,6 +627,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     inv.add_argument("--json", action="store_true")
 
+    taint = sub.add_parser(
+        "taint-flow",
+        help="Name delegatecall and oracle-to-value flows in local source. Adds no heat.",
+    )
+    taint.add_argument("--source", default=None, help="local Solidity file")
+    taint.add_argument("--json", action="store_true")
+
     maybe = sub.add_parser(
         "maybe-triage",
         help="Annotate a manual-review row. Heat may fall and cannot rise.",
@@ -970,6 +977,15 @@ def main(argv: list[str] | None = None) -> int:
         import json as _json
         from eth_scanner.advanced.invariants import report as invariant_report
         print(_json.dumps(invariant_report(), indent=2))
+        return 0
+
+    if args.cmd == "taint-flow":
+        import json as _json
+        from eth_scanner.advanced.taint import taint_report
+        text = ""
+        if args.source:
+            text = Path(args.source).read_text(encoding="utf-8", errors="replace")
+        print(_json.dumps(taint_report(text), indent=2))
         return 0
 
     if args.cmd == "maybe-triage":
