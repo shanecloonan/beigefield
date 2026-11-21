@@ -95,7 +95,11 @@ def _safe_id(prop: str) -> str:
     return cleaned[:48]
 
 
-def seeded_harness(contracts: list[dict[str, Any]], properties: list[str]) -> str:
+def seeded_harness(
+    contracts: list[dict[str, Any]],
+    properties: list[str],
+    seeds: list[dict[str, Any]] | None = None,
+) -> str:
     """Target-shaped calls and property entry points. Local simulation only."""
     sigs: list[tuple[str, list[str]]] = []
     for item in contracts:
@@ -116,6 +120,14 @@ def seeded_harness(contracts: list[dict[str, Any]], properties: list[str]) -> st
             )
     if not calls:
         calls.append('        target.call(abi.encodeWithSignature("skim()"));')
+    for seed in list(seeds or [])[:16]:
+        raw = str(seed.get("calldata") or "").strip().lower()
+        if len(raw) < 10 or not raw.startswith("0x"):
+            continue
+        body_hex = raw[2:]
+        if len(body_hex) % 2 or any(ch not in "0123456789abcdef" for ch in body_hex):
+            continue
+        calls.append('        target.call(hex"%s");' % body_hex)
     body = "\n".join(calls)
     props = []
     for prop in properties or []:
@@ -158,6 +170,8 @@ def write_project(
     *,
     facts: dict[str, Any] | None = None,
     properties: list[str] | None = None,
+    seeds: list[dict[str, Any]] | None = None,
+    sequences: list[dict[str, Any]] | None = None,
 ) -> Path:
     """contracts: [{name, source, address?}]. Local anvil / forge only."""
     root = Path(dest)
@@ -259,7 +273,7 @@ contract ConservationHarness {
     selected = list(properties or [])
     if not selected and facts:
         selected = [str(row.get("id")) for row in (facts.get("candidate_invariants") or []) if row.get("id")]
-    extra = seeded_harness(contracts, selected)
+    extra = seeded_harness(contracts, selected, seeds)
     text = note + "\n" + harness.rstrip()
     if text.endswith("}"):
         text = text[:-1] + "\n" + extra + "\n}\n"
@@ -300,4 +314,7 @@ contract ConservationHarness {
         json.dumps({"contracts": names, "functions": fnames, "label": joined}, indent=2),
         encoding="utf-8",
     )
+    if seeds:
+        from eth_scanner.chain.trace_seeds import write_corpora
+        write_corpora(root, {"seeds": list(seeds), "sequences": list(sequences or []), "note": "local replay"})
     return root
