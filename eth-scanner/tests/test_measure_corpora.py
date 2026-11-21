@@ -63,6 +63,22 @@ class CorpusThresholdTests(unittest.TestCase):
     def test_fail_below_floor(self):
         self.assertEqual(MEASURE._threshold_exit(self._summary(89), self._args(90)), 1)
 
+    def test_new_shape_detectors_map_to_dasp_categories(self):
+        pairs = {
+            "custom:pre08-arithmetic": "arithmetic",
+            "weak-entropy": "bad_randomness",
+            "slither:unchecked-low-level": "unchecked_low_level_calls",
+            "unchecked-delegatecall": "access_control",
+            "custom:hash-preimage-payout": "front_running",
+            "unbounded-storage-loop": "denial_of_service",
+            "arbitrary-send-erc20-permit": "access_control",
+        }
+        for detector, category in pairs.items():
+            self.assertEqual(MEASURE.dasp_of_finding(detector=detector), category, detector)
+
+    def test_recall_floor_stays_at_least_90(self):
+        self.assertGreaterEqual(MEASURE.DEFAULT_MIN_SMARTBUGS, 90)
+
     def test_print_table_includes_counts(self):
         buf = io.StringIO()
         with redirect_stdout(buf):
