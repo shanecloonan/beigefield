@@ -565,6 +565,16 @@ def main(argv: list[str] | None = None) -> int:
     ins.add_argument("--json", action="store_true")
     ins.add_argument("--dry-run", action="store_true")
 
+    sim = sub.add_parser(
+        "solana-sim",
+        help="Plan a local Solana validator. Refuses any non-loopback RPC and sends nothing.",
+    )
+    sim.add_argument("--address", required=True)
+    sim.add_argument("--rpc", default="", help="loopback validator URL only")
+    sim.add_argument("--clone", action="append", default=[], help="extra account to clone locally")
+    sim.add_argument("--run", action="store_true", help="start the local validator when it is installed")
+    sim.add_argument("--json", action="store_true")
+
     ai = sub.add_parser(
         "explain",
         help="Phase E optional LLM triage note (skipped without API key; never adds heat)",
@@ -770,6 +780,18 @@ def main(argv: list[str] | None = None) -> int:
             args.address,
             source=args.source,
             run_tools=bool(args.tools),
+        )
+        print(_json.dumps(report, indent=2))
+        return 0
+
+    if args.cmd == "solana-sim":
+        import json as _json
+        from eth_scanner.chains.solana_sim import plan_sim
+        report = plan_sim(
+            args.address,
+            rpc=args.rpc or "",
+            clones=list(args.clone or []),
+            execute=bool(args.run),
         )
         print(_json.dumps(report, indent=2))
         return 0
