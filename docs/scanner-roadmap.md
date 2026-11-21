@@ -20,6 +20,8 @@ A `chain` field on targets and runs defaults to `ethereum`. The Blend board and 
 
 `python -m eth_scanner solana-discover` reads the public DefiLlama Solana TVL and, when `SOLANA_RPC_URL` is set, that RPC. Otherwise it uses the public mainnet-beta endpoint and backs off once on HTTP 429. Dollars at risk are evidence. The command adds no heat and does not send a transaction. The $100 floor is unchanged.
 
+`python -m eth_scanner solana-inspect --address <program>` reads the upgradeable loader account and classifies the upgrade authority as immutable, a single key, or a known multisig/governance program. OtterSec's public verify endpoint records whether a build is verified and, when present, the source URL. `--source` runs local notes for a missing signer check, a missing owner check, an arbitrary CPI shape, a PDA helper with no bump, and unchecked math. `--tools` runs `cargo audit` and `cargo clippy --offline` only when those binaries are already installed. All of these add no heat.
+
 ---
 
 ## Architecture (current → target)
