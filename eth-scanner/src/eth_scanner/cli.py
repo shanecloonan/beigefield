@@ -615,6 +615,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     hack.add_argument("--json", action="store_true")
 
+    wake = sub.add_parser(
+        "wake-detect",
+        help="Run Ackee Wake when it is installed. Detector names add no heat.",
+    )
+    wake.add_argument("--source", default=None, help="local Solidity file")
+    wake.add_argument("--json", action="store_true")
+
     ai = sub.add_parser(
         "explain",
         help="Phase E optional LLM triage note (skipped without API key; never adds heat)",
@@ -929,6 +936,15 @@ def main(argv: list[str] | None = None) -> int:
         except OSError:
             labeled = []
         print(_json.dumps(index_report(labeled), indent=2))
+        return 0
+
+    if args.cmd == "wake-detect":
+        import json as _json
+        from eth_scanner.engines.wake_runner import run_wake
+        text = ""
+        if args.source:
+            text = Path(args.source).read_text(encoding="utf-8", errors="replace")
+        print(_json.dumps(run_wake(text), indent=2))
         return 0
 
     if args.cmd == "strong-deep" or (
