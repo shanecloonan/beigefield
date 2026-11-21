@@ -627,6 +627,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     inv.add_argument("--json", action="store_true")
 
+    proto = sub.add_parser(
+        "protocol-invariants",
+        help="Catalog properties for a vault and witness roles around it. Heat only on a local failure.",
+    )
+    proto.add_argument("--vault", default="")
+    proto.add_argument("--strategy", default="")
+    proto.add_argument("--oracle", default="")
+    proto.add_argument("--router", default="")
+    proto.add_argument("--json", action="store_true")
+
     rank = sub.add_parser(
         "learned-rank",
         help="Order contracts from lead counts. Ordering only, heat stays 0.",
@@ -985,6 +995,25 @@ def main(argv: list[str] | None = None) -> int:
         import json as _json
         from eth_scanner.advanced.invariants import report as invariant_report
         print(_json.dumps(invariant_report(), indent=2))
+        return 0
+
+    if args.cmd == "protocol-invariants":
+        import json as _json
+        from eth_scanner.advanced.protocol import protocol_report
+        parts = {
+            role: getattr(args, role)
+            for role in ("vault", "strategy", "oracle", "router")
+            if getattr(args, role)
+        }
+        if not parts:
+            print(_json.dumps({
+                "status": "skipped",
+                "reason": "no protocol parts",
+                "kept": [],
+                "heat_contribution": 0,
+            }, indent=2))
+            return 0
+        print(_json.dumps(protocol_report(parts), indent=2))
         return 0
 
     if args.cmd == "learned-rank":
