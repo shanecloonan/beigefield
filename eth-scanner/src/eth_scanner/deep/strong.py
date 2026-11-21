@@ -22,6 +22,7 @@ from typing import Any, Callable, Optional
 
 from eth_scanner.classify import classify_contract, engine_config_for_class
 from eth_scanner.config import Settings, load_settings
+from eth_scanner.advanced.kontrol import run_kontrol
 from eth_scanner.deep.added_engines import engine_run_row, run_unverified_decompile, run_wake_project
 from eth_scanner.deep.findings import EngineFinding, sanitize_evidence
 from eth_scanner.deep.findings import apply_agreement, dedupe_findings
@@ -387,6 +388,7 @@ def _run_engine_set(
         "wake": lambda: run_wake_project(project, timeout_s=40),
         "halmos": lambda: run_halmos(harness_dir=FUZZ_ROOT, timeout_s=90),
         "hevm": lambda: run_hevm_engine(project, timeout_s=20),
+        "kontrol": lambda: run_kontrol(project, timeout_s=30),
         "medusa": lambda: run_medusa(suite_dir=FUZZ_ROOT, timeout_s=90),
         "echidna": lambda: run_echidna(suite_dir=FUZZ_ROOT, timeout_s=90),
     }
