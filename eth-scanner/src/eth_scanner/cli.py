@@ -627,6 +627,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     inv.add_argument("--json", action="store_true")
 
+    rank = sub.add_parser(
+        "learned-rank",
+        help="Order contracts from lead counts. Ordering only, heat stays 0.",
+    )
+    rank.add_argument("--train", default=None, help="JSON list of labeled lead counts")
+    rank.add_argument("--rows", default=None, help="JSON list of rows to order")
+    rank.add_argument("--json", action="store_true")
+
     taint = sub.add_parser(
         "taint-flow",
         help="Name delegatecall and oracle-to-value flows in local source. Adds no heat.",
@@ -977,6 +985,23 @@ def main(argv: list[str] | None = None) -> int:
         import json as _json
         from eth_scanner.advanced.invariants import report as invariant_report
         print(_json.dumps(invariant_report(), indent=2))
+        return 0
+
+    if args.cmd == "learned-rank":
+        import json as _json
+        from eth_scanner.advanced.rank import learn_order
+        if not args.train:
+            print(_json.dumps({
+                "status": "skipped",
+                "reason": "no training rows",
+                "weight": 0,
+                "order": [],
+                "heat_contribution": 0,
+            }, indent=2))
+            return 0
+        train = _json.loads(Path(args.train).read_text(encoding="utf-8"))
+        rows = _json.loads(Path(args.rows).read_text(encoding="utf-8")) if args.rows else []
+        print(_json.dumps(learn_order(train, rows), indent=2))
         return 0
 
     if args.cmd == "taint-flow":
