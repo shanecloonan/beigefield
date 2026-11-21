@@ -75,7 +75,8 @@ jobs:
             ~/.solc-select
             ~/.cache/pip
             ~/.semgrep
-          key: deep-tools-${{ runner.os }}-py312-v3
+            ~/.cache/eth-scanner-tools
+          key: deep-tools-${{ runner.os }}-py312-v4
 
       - name: Install solc + scanner + engines (best-effort)
         run: |
@@ -142,6 +143,39 @@ jobs:
               && chmod +x "$HOME/.local/bin/ityfuzz" \
               || echo "ityfuzz install skipped"
           fi
+          # Pinned external tools. Each lives in its own prefix so a solver
+          # conflict cannot break slither. A failed download leaves that
+          # engine skipped.
+          mkdir -p "$HOME/.cache/eth-scanner-tools" "$HOME/.local/bin"
+          if [ ! -x "$HOME/.local/bin/heimdall" ]; then
+            curl -fsSL -o "$HOME/.local/bin/heimdall" \
+              "https://github.com/Jon-Becker/heimdall-rs/releases/download/0.9.3/heimdall-linux-amd64" \
+              && chmod +x "$HOME/.local/bin/heimdall" \
+              || echo "heimdall 0.9.3 unavailable — decompile will skip"
+          fi
+          WAKE_ROOT="$HOME/.cache/eth-scanner-tools/wake-5.0.0"
+          if [ ! -x "$WAKE_ROOT/bin/wake" ]; then
+            python -m venv "$WAKE_ROOT" \
+              && "$WAKE_ROOT/bin/pip" install -q "eth-wake==5.0.0" \
+              || echo "eth-wake 5.0.0 unavailable — wake will skip"
+          fi
+          if [ -x "$WAKE_ROOT/bin/wake" ]; then
+            ln -sfn "$WAKE_ROOT/bin/wake" "$HOME/.local/bin/wake"
+            echo "ETH_SCANNER_WAKE_BIN=$WAKE_ROOT/bin/wake" >> "$GITHUB_ENV"
+          fi
+          PAN_ROOT="$HOME/.cache/eth-scanner-tools/panoramix-0.6.1"
+          if [ ! -x "$PAN_ROOT/bin/panoramix" ]; then
+            python -m venv "$PAN_ROOT" \
+              && "$PAN_ROOT/bin/pip" install -q "panoramix-decompiler==0.6.1" \
+              || echo "panoramix-decompiler 0.6.1 unavailable — panoramix will skip"
+          fi
+          if [ -x "$PAN_ROOT/bin/panoramix" ]; then
+            ln -sfn "$PAN_ROOT/bin/panoramix" "$HOME/.local/bin/panoramix"
+            echo "ETH_SCANNER_PANORAMIX_BIN=$PAN_ROOT/bin/panoramix" >> "$GITHUB_ENV"
+          fi
+          if [ -x "$HOME/.local/bin/heimdall" ]; then
+            echo "ETH_SCANNER_HEIMDALL_BIN=$HOME/.local/bin/heimdall" >> "$GITHUB_ENV"
+          fi
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           export PATH="$HOME/.local/bin:$PATH"
           git clone --depth 1 https://github.com/Decurity/semgrep-smart-contracts.git /tmp/semgrep-smart-contracts || true
@@ -159,6 +193,9 @@ jobs:
           echo "medusa $(medusa --version 2>/dev/null | head -1)"
           echo "echidna $(echidna --version 2>/dev/null | head -1)"
           echo "ityfuzz $(ityfuzz --version 2>/dev/null | head -1)"
+          echo "heimdall $(heimdall --version 2>/dev/null | head -1)"
+          echo "wake $(wake --version 2>/dev/null | head -1)"
+          echo "panoramix $(panoramix --help 2>/dev/null | head -1)"
           set -e
           python - <<'PY'
           from eth_scanner.deep.runners import engine_availability

@@ -94,7 +94,18 @@ def engine_availability() -> dict[str, bool]:
         "medusa": bool(medusa_bin()),
         "echidna": bool(echidna_bin()),
         "ityfuzz": bool(ityfuzz_bin()),
+        "wake": bool(_added("wake")),
+        "heimdall": bool(_added("heimdall")),
+        "panoramix": bool(_added("panoramix")),
     }
+
+
+def _added(name: str) -> bool:
+    try:
+        from eth_scanner.deep.added_engines import added_availability
+        return bool(added_availability().get(name))
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def _write_source_tree(source: str, contract_name: str = "Target") -> tempfile.TemporaryDirectory[str]:

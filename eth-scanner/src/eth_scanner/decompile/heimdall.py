@@ -7,6 +7,7 @@ stub so the funnel routes to manual-review.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import tempfile
@@ -102,8 +103,15 @@ def decompile(address: str, bytecode: str = "") -> SourceArtifact:
     )
 
 
+def _tool_bin(env_key: str, name: str) -> str | None:
+    override = (os.environ.get(env_key) or "").strip()
+    if override and Path(override).is_file():
+        return override
+    return shutil.which(name)
+
+
 def _try_heimdall(address: str, bytecode: str) -> tuple[str | None, str]:
-    exe = shutil.which("heimdall")
+    exe = _tool_bin("ETH_SCANNER_HEIMDALL_BIN", "heimdall")
     if not exe:
         return None, "heimdall"
     try:
@@ -112,15 +120,14 @@ def _try_heimdall(address: str, bytecode: str) -> tuple[str | None, str]:
                 hex_path = Path(tmp) / "code.hex"
                 hex_path.write_text(bytecode.replace("0x", ""), encoding="utf-8")
                 proc = subprocess.run(
-                    [exe, "decompile", str(hex_path), "-o", tmp],
-                    capture_output=True, text=True, timeout=45, check=False,
+                    [exe, "decompile", str(hex_path), "--default", "--skip-resolving", "-o", tmp, "--timeout", "4000"],
+                    capture_output=True, text=True, timeout=20, check=False,
                 )
                 out = (proc.stdout or "").strip() or _first_text(Path(tmp))
-                if out:
-                    return out[:200_000], "heimdall"
+                return (out[:200_000], "heimdall") if out else (None, "heimdall")
         proc = subprocess.run(
-            [exe, "decompile", address],
-            capture_output=True, text=True, timeout=45, check=False,
+            [exe, "decompile", address, "--default", "--skip-resolving", "-o", "print", "--timeout", "4000"],
+            capture_output=True, text=True, timeout=20, check=False,
         )
         out = (proc.stdout or "").strip()
         return (out[:200_000], "heimdall") if out else (None, "heimdall")
@@ -129,7 +136,7 @@ def _try_heimdall(address: str, bytecode: str) -> tuple[str | None, str]:
 
 
 def _try_panoramix(address: str, bytecode: str) -> tuple[str | None, str]:
-    exe = shutil.which("panoramix") or shutil.which("panoramix.py")
+    exe = _tool_bin("ETH_SCANNER_PANORAMIX_BIN", "panoramix") or shutil.which("panoramix.py")
     if not exe:
         return None, "panoramix"
     try:
