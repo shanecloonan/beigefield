@@ -22,6 +22,8 @@ A `chain` field on targets and runs defaults to `ethereum`. The Blend board and 
 
 `python -m eth_scanner solana-inspect --address <program>` reads the upgradeable loader account and classifies the upgrade authority as immutable, a single key, or a known multisig/governance program. OtterSec's public verify endpoint records whether a build is verified and, when present, the source URL. `--source` runs local notes for a missing signer check, a missing owner check, an arbitrary CPI shape, a PDA helper with no bump, and unchecked math. `--tools` runs `cargo audit` and `cargo clippy --offline` only when those binaries are already installed. All of these add no heat.
 
+`python -m eth_scanner solana-sim --address <program> --rpc http://127.0.0.1:8899` plans a local `solana-test-validator` clone. Any other RPC, including public mainnet-beta and Alchemy, is refused before a process starts. `--run` starts that local validator only when the binary is already installed, then stops it. The command never sends a transaction and adds no heat.
+
 ---
 
 ## Architecture (current → target)
