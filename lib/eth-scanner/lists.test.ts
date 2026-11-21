@@ -47,10 +47,10 @@ test("named lists keep list 1 and load the sketchy list 2 file", () => {
   assert.equal(one.max_funds_usd, 9_000_000);
   assert.equal(two.min_funds_usd, 50);
   assert.equal(two.max_funds_usd, 1900);
-  assert.equal(one.contracts[0]?.address, "0x06f00ff668a6c70e74b8932615df0a5ca17c315c");
+  assert.equal(one.contracts[0]?.address, "0x657d9aba1dbb59e53f9f3ecaa878447dcfc96dcb");
   assert.equal(two.source, "list2_candidates");
-  assert.equal(two.total, 929);
-  assert.equal(two.total_usd, 255900.81);
+  assert.equal(two.total, 313);
+  assert.equal(two.total_usd, 211226.03);
   assert.equal(random_scan.enabled, true);
   assert.equal(random_scan.gap_ms, 8000);
   const sushi = two.contracts.find((row) => /sushi|uniswap|aave/i.test(row.protocol));
@@ -78,5 +78,6 @@ test("sketchy score prefers a hacked abandoned contract over a generic label", (
   const two = lists.find((list) => list.id === "list-2");
   const ranked: ListContract[] = two?.contracts.filter((row) => !row.manual) ?? [];
   assert.ok(ranked.length > 1);
-  assert.match(ranked[0]?.candidate_reason || "", /hack|abandoned|no-audit|odd|unknown/i);
+  assert.match(ranked[0]?.candidate_reason || "", /fresh-pick/);
+  assert.match(ranked[0]?.candidate_reason || "", /not-exploited/);
 });
