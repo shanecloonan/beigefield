@@ -609,6 +609,12 @@ def main(argv: list[str] | None = None) -> int:
     dec.add_argument("--verified", action="store_true")
     dec.add_argument("--json", action="store_true")
 
+    hack = sub.add_parser(
+        "defihacklabs-index",
+        help="Count public DeFiHackLabs incident names. Metadata only, no heat.",
+    )
+    hack.add_argument("--json", action="store_true")
+
     ai = sub.add_parser(
         "explain",
         help="Phase E optional LLM triage note (skipped without API key; never adds heat)",
@@ -912,6 +918,17 @@ def main(argv: list[str] | None = None) -> int:
         shown = {k: v for k, v in report.items() if k != "content"}
         shown["content_chars"] = len(report.get("content") or "")
         print(_json.dumps(shown, indent=2))
+        return 0
+
+    if args.cmd == "defihacklabs-index":
+        import json as _json
+        from eth_scanner.benchmark.defihacklabs import index_report
+        from eth_scanner.benchmark.eval import load_labeled
+        try:
+            labeled = list((load_labeled().get("entries") or []))
+        except OSError:
+            labeled = []
+        print(_json.dumps(index_report(labeled), indent=2))
         return 0
 
     if args.cmd == "strong-deep" or (
