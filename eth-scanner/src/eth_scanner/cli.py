@@ -635,6 +635,16 @@ def main(argv: list[str] | None = None) -> int:
     fork.add_argument("--address", default="")
     fork.add_argument("--json", action="store_true")
 
+    l2 = sub.add_parser(
+        "l2-invariants",
+        help="Compare an L2 header with its L1 head. A miss is a lead, heat stays 0.",
+    )
+    l2.add_argument("--chain", default="")
+    l2.add_argument("--l2-head", default="")
+    l2.add_argument("--l1-block", default="")
+    l2.add_argument("--l1-head", default="")
+    l2.add_argument("--json", action="store_true")
+
     graph = sub.add_parser(
         "system-graph",
         help="Link protocol roles across chains. No messages, heat stays 0.",
@@ -1016,6 +1026,17 @@ def main(argv: list[str] | None = None) -> int:
         import json as _json
         from eth_scanner.advanced.fork_sensitivity import compare_view
         print(_json.dumps(compare_view(args.url, args.address or ("0x" + "00" * 20)), indent=2))
+        return 0
+
+    if args.cmd == "l2-invariants":
+        import json as _json
+        from eth_scanner.advanced.l2_invariants import l2_invariants
+        print(_json.dumps(l2_invariants(
+            args.chain,
+            l2_head=args.l2_head,
+            l1_block=args.l1_block,
+            l1_head=args.l1_head,
+        ), indent=2))
         return 0
 
     if args.cmd == "system-graph":
