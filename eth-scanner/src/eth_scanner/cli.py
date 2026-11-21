@@ -635,6 +635,13 @@ def main(argv: list[str] | None = None) -> int:
     fork.add_argument("--address", default="")
     fork.add_argument("--json", action="store_true")
 
+    messages = sub.add_parser(
+        "message-match",
+        help="Compare observed 32-byte message ids. Nothing is replayed, heat stays 0.",
+    )
+    messages.add_argument("--seen", action="append", default=[], help="chain:0x<64 hex>")
+    messages.add_argument("--json", action="store_true")
+
     l2 = sub.add_parser(
         "l2-invariants",
         help="Compare an L2 header with its L1 head. A miss is a lead, heat stays 0.",
@@ -1026,6 +1033,16 @@ def main(argv: list[str] | None = None) -> int:
         import json as _json
         from eth_scanner.advanced.fork_sensitivity import compare_view
         print(_json.dumps(compare_view(args.url, args.address or ("0x" + "00" * 20)), indent=2))
+        return 0
+
+    if args.cmd == "message-match":
+        import json as _json
+        from eth_scanner.advanced.message_match import message_match
+        seen = []
+        for raw in args.seen or []:
+            chain, ident = (raw.split(":", 1) + [""])[:2]
+            seen.append({"chain": chain, "id": ident})
+        print(_json.dumps(message_match(seen), indent=2))
         return 0
 
     if args.cmd == "l2-invariants":
