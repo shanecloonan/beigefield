@@ -102,6 +102,7 @@ Each phase ships as its **own PR → merge to `main` → confirm Vercel → repo
 Per-class invariant suites (ERC-4626, staking, lending/CDP, AMM/LP, bridges/escrow, vesting, governance/timelock) as **read-only** fork tests:
 
 - Live `eth_call` property catalog (`eth_scanner/fork_props`) against current mainnet state
+- Touched storage from `debug_traceTransaction` `prestateTracer` (else `eth_getProof` / `eth_getStorageAt`) is copied onto the **local** anvil with `anvil_setStorageAt` and recorded as evidence. Cap 1,500 CU. A missing debug API or a 429 leaves the simulation on its current state. Non-loopback URLs are refused.
 - Optional Foundry defensive mock suite (`research/fuzz`) when `forge` is installed; counterexample traces elided
 - Output only: invariant name, `held` / `violated` / `unknown`, minimized **evidence summary** (state values), severity
 - CLI: `python -m eth_scanner fork-props --address 0x… --class vault [--forge]`
