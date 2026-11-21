@@ -12,9 +12,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from eth_scanner.research.detectors import (
+    detect_hash_preimage_payout,
     detect_oracle_freshness,
+    detect_pre08_arithmetic,
     detect_share_asset_shape,
+    detect_unbounded_storage_loop,
+    detect_unchecked_low_level,
     detect_weak_auth_value_moves,
+    detect_weak_entropy,
 )
 from eth_scanner.research.fork_checks import TotalAssetsCheck, run_fork_checks
 from eth_scanner.research.invariants import (
@@ -97,6 +102,162 @@ class CustomDetectors(unittest.TestCase):
         """
         rows = detect_oracle_freshness(address=ADDR, source=src)
         self.assertEqual(rows[0].severity, "info")
+
+
+class GapDetectors(unittest.TestCase):
+    """Shapes Slither 0.11.6 misses. Leads only: low severity, defensive_only."""
+
+    def test_pre08_overflow_flags_and_guarded_or_modern_does_not(self):
+        raw = """
+        pragma solidity ^0.4.19;
+        contract C {
+            uint public count = 1;
+            function run(uint256 input) public { count += input; }
+        }
+        """
+        rows = detect_pre08_arithmetic(address=ADDR, source=raw)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].detector, "custom:pre08-arithmetic")
+        self.assertEqual(rows[0].severity, "low")
+        self.assertTrue(rows[0].defensive_only)
+        guarded = """
+        pragma solidity ^0.4.19;
+        contract C {
+            function add(uint a, uint b) public returns (uint) {
+                uint c = a + b;
+                require(c >= a);
+                return c;
+            }
+        }
+        """
+        self.assertEqual(detect_pre08_arithmetic(address=ADDR, source=guarded), [])
+        modern = """
+        pragma solidity ^0.8.20;
+        contract C { function run(uint input) public returns (uint) { return input + 1; } }
+        """
+        self.assertEqual(detect_pre08_arithmetic(address=ADDR, source=modern), [])
+        internal = """
+        pragma solidity ^0.4.16;
+        library SafeMath {
+            function add(uint a, uint b) internal returns (uint) {
+                uint c = a + b;
+                return c;
+            }
+        }
+        """
+        self.assertEqual(detect_pre08_arithmetic(address=ADDR, source=internal), [])
+
+    def test_weak_entropy_sees_blockhash_and_ignores_a_deadline(self):
+        lottery = """
+        pragma solidity ^0.4.21;
+        contract L {
+            function makeBet() public {
+                bool won = (block.number % 2) == 0;
+            }
+        }
+        """
+        rows = detect_weak_entropy(address=ADDR, source=lottery)
+        self.assertEqual(rows[0].detector, "custom:weak-entropy")
+        deal = """
+        contract D {
+            function deal(address player) public returns (uint8) {
+                return uint8(uint256(keccak256(block.blockhash(block.number), player)) % 52);
+            }
+        }
+        """
+        self.assertTrue(detect_weak_entropy(address=ADDR, source=deal))
+        deadline = """
+        contract T {
+            function withdraw() public {
+                require(block.timestamp > 10);
+            }
+        }
+        """
+        self.assertEqual(detect_weak_entropy(address=ADDR, source=deadline), [])
+
+    def test_unchecked_call_and_checked_call(self):
+        bare = """
+        pragma solidity ^0.4.10;
+        contract Caller {
+            function callAddress(address a) public { a.call(); }
+        }
+        """
+        rows = detect_unchecked_low_level(address=ADDR, source=bare)
+        self.assertEqual(rows[0].detector, "custom:unchecked-low-level")
+        checked = """
+        contract C {
+            function pay(address a) public {
+                (bool ok,) = a.call("");
+                require(ok);
+            }
+        }
+        """
+        self.assertEqual(detect_unchecked_low_level(address=ADDR, source=checked), [])
+        required = """
+        contract C {
+            function bid(address a) public {
+                require(a.send(1));
+            }
+        }
+        """
+        self.assertEqual(detect_unchecked_low_level(address=ADDR, source=required), [])
+        delegated = """
+        contract C {
+            function run(address a) public { a.delegatecall(""); }
+        }
+        """
+        delegated_rows = detect_unchecked_low_level(address=ADDR, source=delegated)
+        self.assertEqual(delegated_rows[0].detector, "custom:unchecked-delegatecall")
+        internal = """
+        contract C {
+            function donateToWhale(uint256 amount) internal {
+                whale.call.value(amount)(bytes4(keccak256("donate()")));
+            }
+        }
+        """
+        self.assertTrue(detect_unchecked_low_level(address=ADDR, source=internal))
+
+    def test_hash_preimage_payout_and_unbounded_loop(self):
+        puzzle = """
+        pragma solidity ^0.4.22;
+        contract FindThisHash {
+            bytes32 public hash;
+            function solve(string solution) public {
+                require(hash == sha3(solution));
+                msg.sender.transfer(1 ether);
+            }
+        }
+        """
+        rows = detect_hash_preimage_payout(address=ADDR, source=puzzle)
+        self.assertEqual(rows[0].detector, "custom:hash-preimage-payout")
+        encoded = """
+        contract M {
+            function claim(bytes32 leaf) public {
+                require(keccak256(abi.encodePacked(leaf)) == leaf);
+                msg.sender.transfer(1);
+            }
+        }
+        """
+        self.assertEqual(detect_hash_preimage_payout(address=ADDR, source=encoded), [])
+        loop = """
+        contract D {
+            uint[] array;
+            function insertNnumbers(uint value, uint numbers) public {
+                for (uint i = 0; i < numbers; i++) { array.push(value); }
+            }
+        }
+        """
+        loop_rows = detect_unbounded_storage_loop(address=ADDR, source=loop)
+        self.assertEqual(loop_rows[0].detector, "custom:unbounded-storage-loop")
+        fixed = """
+        contract D {
+            address[] list;
+            function fill() public {
+                for (uint i = 0; i < 350; i++) { list.push(msg.sender); }
+            }
+        }
+        """
+        self.assertEqual(detect_unbounded_storage_loop(address=ADDR, source=fixed), [])
 
 
 class SlitherParse(unittest.TestCase):

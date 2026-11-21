@@ -95,6 +95,19 @@ DETECTOR_TO_DASP = {
     "incorrect-unary": "arithmetic",
     "custom:weak-auth-value-move": "access_control",
     "weak-auth-value-move": "access_control",
+    "arbitrary-send-erc20-permit": "access_control",
+    "pre08-arithmetic": "arithmetic",
+    "custom:pre08-arithmetic": "arithmetic",
+    "weak-entropy": "bad_randomness",
+    "custom:weak-entropy": "bad_randomness",
+    "unchecked-low-level": "unchecked_low_level_calls",
+    "custom:unchecked-low-level": "unchecked_low_level_calls",
+    "unchecked-delegatecall": "access_control",
+    "custom:unchecked-delegatecall": "access_control",
+    "hash-preimage-payout": "front_running",
+    "custom:hash-preimage-payout": "front_running",
+    "unbounded-storage-loop": "denial_of_service",
+    "custom:unbounded-storage-loop": "denial_of_service",
 }
 
 NSSC_FOLDER_TO_DASP = {
