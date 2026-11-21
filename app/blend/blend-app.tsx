@@ -53,6 +53,7 @@ type Board = {
   totals: { yes: number; maybe: number; no: number; other: number };
   leaderboard: {
     address: string;
+    chain?: string;
     heat: number;
     bucket: string;
     label: string;
@@ -119,6 +120,7 @@ export default function BlendApp() {
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [sample, setSample] = useState<{ address: string; contract_name: string | null } | null>(null);
   const [board, setBoard] = useState<Board | null>(null);
+  const [chain, setChain] = useState("ethereum");
   const [live, setLive] = useState<{
     phase: string;
     status: string;
@@ -140,10 +142,10 @@ export default function BlendApp() {
   }, []);
 
   const loadBoard = useCallback(async () => {
-    const res = await fetch("/api/blend/stats", { cache: "no-store" });
+    const res = await fetch(`/api/blend/stats?chain=${encodeURIComponent(chain)}`, { cache: "no-store" });
     const body = await res.json();
     if (body.ok) setBoard(body);
-  }, []);
+  }, [chain]);
 
   const loadCatalog = useCallback(async () => {
     const res = await fetch("/api/blend", { cache: "no-store" });
@@ -295,15 +297,30 @@ export default function BlendApp() {
             </div>
           )}
 
-          <h3 className="mt-8 text-[11px] tracking-[0.2em] uppercase text-gold/80 font-semibold">
-            Highest heat
-          </h3>
+          <div className="mt-8 flex items-center justify-between gap-3">
+            <h3 className="text-[11px] tracking-[0.2em] uppercase text-gold/80 font-semibold">
+              Highest heat
+            </h3>
+            <div className="flex gap-1 text-[10px] uppercase tracking-[0.14em]">
+              {["ethereum", "solana", "all"].map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setChain(id)}
+                  className={`rounded border px-2 py-1 ${chain === id ? "border-gold/60 text-brand-100" : "border-brand-800 text-brand-500"}`}
+                >
+                  {id === "all" ? "All" : id === "solana" ? "Solana" : "Ethereum"}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="mt-3 overflow-x-auto rounded-lg border border-brand-800/80 max-h-[32rem]">
             <table className="w-full text-xs">
               <thead className="bg-brand-900/80 text-brand-400 text-left sticky top-0">
                 <tr>
                   <th className="px-3 py-2 w-10">#</th>
                   <th className="px-3 py-2">Contract</th>
+                  <th className="px-3 py-2">Chain</th>
                   <th className="px-3 py-2">Latest</th>
                   <th className="px-3 py-2">Peak</th>
                   <th className="px-3 py-2">Result</th>
@@ -318,6 +335,7 @@ export default function BlendApp() {
                       {row.contract_name && <span className="block text-brand-100">{row.contract_name}</span>}
                       <span className="block font-mono text-[10px] text-brand-400">{row.address}</span>
                     </td>
+                    <td className="px-3 py-2 uppercase tracking-wider text-brand-400">{row.chain || "ethereum"}</td>
                     <td className="px-3 py-2 tabular-nums text-brand-100">
                       {row.heat}
                       {row.stale ? <span className="mt-0.5 block text-[10px] uppercase tracking-wider text-brand-500">Stale</span> : null}
@@ -333,14 +351,14 @@ export default function BlendApp() {
                 ))}
                 {!board && (
                   <tr>
-                    <td colSpan={6} className="px-3 py-6 text-center text-brand-500">
+                    <td colSpan={7} className="px-3 py-6 text-center text-brand-500">
                       Loading scans.
                     </td>
                   </tr>
                 )}
                 {board && board.leaderboard.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-3 py-6 text-center text-brand-500">
+                    <td colSpan={7} className="px-3 py-6 text-center text-brand-500">
                       No finished scans yet.
                     </td>
                   </tr>

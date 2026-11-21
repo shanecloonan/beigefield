@@ -16,6 +16,8 @@ Live desk: [`/test`](https://beigefield.vercel.app/test). Automation emits **buc
 | **Heat from evidence** | Pattern leads (weak auth regex, proxy mentions, fork family, generic detector hits) contribute **zero** heat. They only select which checks to run. |
 | **Lane A stays fast** | Vercel `/api/test/run` remains a lightweight picker + live funds/invariant skim. Heavy engines run **off** serverless. |
 
+A `chain` field on targets and runs defaults to `ethereum`. The Blend board and `/api/blend/stats` stay on Ethereum unless `chain` is set, so Ethereum totals do not move when another chain is stored. Solana is the first adapter beside Ethereum (`eth_scanner/chains`). A later chain registers a name and an address form; it does not go through the Ethereum claim path.
+
 ---
 
 ## Architecture (current → target)

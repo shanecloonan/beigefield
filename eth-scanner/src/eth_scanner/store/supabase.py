@@ -44,6 +44,11 @@ def persistable_bucket(result: FunnelResult) -> str:
     return "manual-review"
 
 
+def _missing_chain_column(exc: BaseException) -> bool:
+    text = str(exc).lower()
+    return "chain" in text and ("pgrst204" in text or "column" in text or "schema" in text)
+
+
 def normalize_address(addr: str) -> str:
     a = (addr or "").strip().lower()
     if not a.startswith("0x"):
@@ -206,12 +211,24 @@ class MemoryStore:
             self._load()
 
     def upsert_target(self, target: Target) -> Target:
-        addr = normalize_address(target.address)
+        from eth_scanner.chains.registry import normalize_chain, normalize_solana_address
+
+        chain = normalize_chain(getattr(target, "chain", None))
+        if chain == "solana":
+            addr = normalize_solana_address(target.address)
+        elif chain == "ethereum":
+            addr = normalize_address(target.address)
+        else:
+            addr = (target.address or "").strip()
+            if not addr:
+                raise ValueError("address required")
+        target.chain = chain
         target.address = addr
         now = _now()
         prev = self.targets.get(addr, {})
         row = {
             "address": addr,
+            "chain": chain,
             "bytecode_hash": target.bytecode_hash,
             "tvl_usd": target.tvl_usd,
             "status": target.status,
@@ -246,12 +263,20 @@ class MemoryStore:
             row["deployed_at"] = target.deployed_at
         if getattr(target, "discovery_source", None):
             row["discovery_source"] = target.discovery_source
+        row["chain"] = chain
         self.targets[addr] = row
         self._flush()
         return target
 
-    def get_target(self, address: str) -> Optional[dict[str, Any]]:
-        return self.targets.get(normalize_address(address))
+    def get_target(self, address: str, chain: str = "ethereum") -> Optional[dict[str, Any]]:
+        from eth_scanner.chains.registry import normalize_chain, normalize_solana_address
+
+        chosen = normalize_chain(chain)
+        if chosen == "solana":
+            return self.targets.get(normalize_solana_address(address))
+        if chosen == "ethereum":
+            return self.targets.get(normalize_address(address))
+        return self.targets.get((address or "").strip())
 
     def closed_no_hashes(self) -> set[str]:
         out: set[str] = set()
@@ -367,14 +392,21 @@ class MemoryStore:
         limit: int,
         worker_id: str,
         discovery_source: Optional[str] = None,
+        chain: str = "ethereum",
     ) -> list[dict[str, Any]]:
+        from eth_scanner.chains.registry import normalize_chain, row_chain
+
         self.release_stale_claims()
         claimed: list[dict[str, Any]] = []
         now = _now()
-        pending = [r for r in self.targets.values() if r.get("status") == "pending"]
+        want = normalize_chain(chain)
+        pending = [
+            r for r in self.targets.values()
+            if r.get("status") == "pending" and row_chain(r) == want
+        ]
         if discovery_source:
-            want = str(discovery_source)
-            pending = [r for r in pending if str(r.get("discovery_source") or "") == want]
+            source = str(discovery_source)
+            pending = [r for r in pending if str(r.get("discovery_source") or "") == source]
         # Prefer newest deployments first; rows without age sort last.
         pending.sort(
             key=lambda r: int(r.get("deployed_block") or 0),
@@ -393,7 +425,11 @@ class MemoryStore:
     def claim_lane_b(self, limit: int, worker_id: str) -> list[dict[str, Any]]:
         claimed: list[dict[str, Any]] = []
         now = _now()
+        from eth_scanner.chains.registry import row_chain
+
         for row in self.targets.values():
+            if row_chain(row) != "ethereum":
+                continue
             if row.get("bucket") not in {"lane-b-queue", "manual-review"}:
                 continue
             if row.get("status") == "running" and row.get("claimed_by") != worker_id:
@@ -409,9 +445,13 @@ class MemoryStore:
 
     def claim_deep(self, limit: int, worker_id: str) -> list[dict[str, Any]]:
         """Claim lane-b / manual-review rows that still need Phase A deep engines."""
+        from eth_scanner.chains.registry import row_chain
+
         claimed: list[dict[str, Any]] = []
         now = _now()
         for row in self.targets.values():
+            if row_chain(row) != "ethereum":
+                continue
             if row.get("bucket") not in {"lane-b-queue", "manual-review"}:
                 continue
             if row.get("deep_status") in {"done", "running"}:
@@ -737,10 +777,22 @@ class SupabaseStore:
         self.timeout_s = timeout_s
 
     def upsert_target(self, target: Target) -> Target:
-        addr = normalize_address(target.address)
+        from eth_scanner.chains.registry import normalize_chain, normalize_solana_address
+
+        chain = normalize_chain(getattr(target, "chain", None))
+        if chain == "solana":
+            addr = normalize_solana_address(target.address)
+        elif chain == "ethereum":
+            addr = normalize_address(target.address)
+        else:
+            addr = (target.address or "").strip()
+            if not addr:
+                raise ValueError("address required")
+        target.chain = chain
         target.address = addr
         body: dict[str, Any] = {
             "address": addr,
+            "chain": chain,
             "bytecode_hash": target.bytecode_hash,
             "tvl_usd": target.tvl_usd,
             "status": target.status,
@@ -759,7 +811,15 @@ class SupabaseStore:
             body["deployed_at"] = target.deployed_at
         if getattr(target, "discovery_source", None):
             body["discovery_source"] = target.discovery_source
-        self._req("POST", "eth_scan_targets", body, prefer="return=minimal,resolution=merge-duplicates")
+        try:
+            self._req("POST", "eth_scan_targets", body, prefer="return=minimal,resolution=merge-duplicates")
+        except RuntimeError as exc:
+            # An unmigrated database still accepts the ethereum row without the column.
+            if chain == "ethereum" and _missing_chain_column(exc):
+                body.pop("chain", None)
+                self._req("POST", "eth_scan_targets", body, prefer="return=minimal,resolution=merge-duplicates")
+            else:
+                raise
         return target
 
     def get_target(self, address: str) -> Optional[dict[str, Any]]:
@@ -900,26 +960,47 @@ class SupabaseStore:
         limit: int,
         worker_id: str,
         discovery_source: Optional[str] = None,
+        chain: str = "ethereum",
     ) -> list[dict[str, Any]]:
+        from eth_scanner.chains.registry import normalize_chain
+
         self.release_stale_claims()
+        want = normalize_chain(chain)
         # Newest deployments first; fall back to updated_at when age is missing.
         query: dict[str, str] = {
             "status": "eq.pending",
+            "chain": "eq.%s" % want,
             "order": "deployed_block.desc.nullslast,updated_at.asc",
             "limit": str(limit),
         }
         if discovery_source:
             query["discovery_source"] = "eq.%s" % discovery_source
-        rows = self._req("GET", "eth_scan_targets", query=query)
+        try:
+            rows = self._req("GET", "eth_scan_targets", query=query)
+        except RuntimeError as exc:
+            if want == "ethereum" and _missing_chain_column(exc):
+                query.pop("chain", None)
+                rows = self._req("GET", "eth_scan_targets", query=query)
+            else:
+                raise
         if not isinstance(rows, list) or not rows:
             fallback = {
                 "status": "eq.pending",
                 "order": "updated_at.asc",
                 "limit": str(limit),
             }
+            if "chain" in query:
+                fallback["chain"] = query["chain"]
             if discovery_source:
                 fallback["discovery_source"] = "eq.%s" % discovery_source
-            rows = self._req("GET", "eth_scan_targets", query=fallback)
+            try:
+                rows = self._req("GET", "eth_scan_targets", query=fallback)
+            except RuntimeError as exc:
+                if want == "ethereum" and _missing_chain_column(exc):
+                    fallback.pop("chain", None)
+                    rows = self._req("GET", "eth_scan_targets", query=fallback)
+                else:
+                    raise
         return self._mark_running(rows, worker_id)
 
     def claim_lane_b(self, limit: int, worker_id: str) -> list[dict[str, Any]]:

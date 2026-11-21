@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { LEADERBOARD_LIMIT, summarizeBlendRuns, type BlendRunLike } from "@/lib/eth-scanner/blend-board";
+import { DEFAULT_CHAIN, LEADERBOARD_LIMIT, normalizeChain, summarizeBlendRuns, type BlendRunLike } from "@/lib/eth-scanner/blend-board";
 import { createServiceSupabaseClient } from "@/lib/eth-scanner/service-supabase";
 
 export const runtime = "nodejs";
@@ -15,6 +15,7 @@ const MAX_ROWS = 20_000;
 const HOT_LIMIT = 500;
 
 const COLUMN_SETS = [
+  "chain,address,heat,blend_heat,blend_bucket,bucket,funds_usd,tvl_usd,money_at_risk_usd,contract_name,created_at,status,heat_breakdown,notes,drop_reason",
   "address,heat,blend_heat,blend_bucket,bucket,funds_usd,tvl_usd,money_at_risk_usd,contract_name,created_at,status,heat_breakdown,notes,drop_reason",
   "address,heat,bucket,funds_usd,tvl_usd,money_at_risk_usd,contract_name,created_at,status,heat_breakdown,notes,drop_reason",
   "address,heat,bucket,created_at,status,heat_breakdown,notes,drop_reason",
@@ -27,11 +28,12 @@ function json(body: unknown, status = 200) {
   });
 }
 
-function empty(connected: boolean) {
-  const board = summarizeBlendRuns([]);
+function empty(connected: boolean, chain = DEFAULT_CHAIN) {
+  const board = summarizeBlendRuns([], LEADERBOARD_LIMIT, Date.now(), chain);
   return json({
     ok: true,
     connected,
+    chain: board.chain,
     truncated: false,
     scanned: board.scanned,
     totals: board.totals,
@@ -73,9 +75,10 @@ async function loadColumns(
   return { columns, rows, truncated };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const requested = normalizeChain(new URL(request.url).searchParams.get("chain") || DEFAULT_CHAIN);
   const sb = createServiceSupabaseClient();
-  if (!sb) return empty(false);
+  if (!sb) return empty(false, requested);
   try {
     const loaded = await loadColumns(sb);
     let rows = loaded.rows;
@@ -93,10 +96,11 @@ export async function GET() {
         .limit(HOT_LIMIT);
       if (!hotBlend.error && hotBlend.data) rows = rows.concat(hotBlend.data as BlendRunLike[]);
     }
-    const board = summarizeBlendRuns(rows, LEADERBOARD_LIMIT);
+    const board = summarizeBlendRuns(rows, LEADERBOARD_LIMIT, Date.now(), requested);
     return json({
       ok: true,
       connected: true,
+      chain: board.chain,
       truncated: loaded.truncated,
       scanned: board.scanned,
       totals: board.totals,
@@ -105,6 +109,6 @@ export async function GET() {
       requeue: board.requeue,
     });
   } catch {
-    return empty(true);
+    return empty(true, requested);
   }
 }

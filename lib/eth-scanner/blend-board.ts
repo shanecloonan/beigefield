@@ -6,6 +6,8 @@
 import { classifyOutcome, normalizeAddress } from "@/lib/eth-scanner/lists";
 
 export const LEADERBOARD_LIMIT = 100;
+/** The desk shows Ethereum unless a caller asks for another chain. */
+export const DEFAULT_CHAIN = "ethereum";
 /** A high-heat contract is stale when its latest scan is older than this. */
 export const STALE_AFTER_MS = 14 * 24 * 60 * 60 * 1000;
 export const STALE_MIN_HEAT = 1;
@@ -27,12 +29,14 @@ export type BlendRunLike = {
   heat_breakdown?: unknown;
   notes?: unknown;
   drop_reason?: unknown;
+  chain?: unknown;
 };
 
 export type Liveness = "live" | "dead" | "already-exploited";
 
 export type LeaderRow = {
   address: string;
+  chain: string;
   heat: number;
   bucket: string;
   verdict: BlendVerdict;
@@ -47,6 +51,7 @@ export type LeaderRow = {
 };
 
 export type BlendBoard = {
+  chain: string;
   scanned: number;
   totals: Record<BlendVerdict, number>;
   leaderboard: LeaderRow[];
@@ -65,6 +70,17 @@ function numberOrNull(value: unknown): number | null {
   if (value == null || value === "") return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
+}
+
+export function normalizeChain(value: unknown): string {
+  const text = String(value ?? "").trim().toLowerCase();
+  if (!text || text === "eth" || text === "mainnet") return DEFAULT_CHAIN;
+  return text;
+}
+
+/** A row with no chain is an Ethereum row. That keeps today's totals stable. */
+export function chainOf(row: BlendRunLike): string {
+  return normalizeChain(row.chain);
 }
 
 export function heatOf(row: BlendRunLike): number {
@@ -136,6 +152,7 @@ function toRow(address: string, row: BlendRunLike): LeaderRow {
   const name = String(row.contract_name || "").trim();
   return {
     address,
+    chain: chainOf(row),
     heat: heatOf(row),
     bucket: decision.bucket,
     verdict: decision.verdict,
@@ -168,16 +185,22 @@ export function summarizeBlendRuns(
   rows: BlendRunLike[],
   limit = LEADERBOARD_LIMIT,
   now = Date.now(),
+  chain = DEFAULT_CHAIN,
 ): BlendBoard {
+  const selected = normalizeChain(chain);
   const best = new Map<string, { latest: LeaderRow; peak: number; count: number }>();
   for (const row of rows) {
     if (!finished(row)) continue;
-    const address = normalizeAddress(row.address);
+    const rowChain = chainOf(row);
+    if (selected !== "all" && rowChain !== selected) continue;
+    const address = rowChain === "ethereum" ? normalizeAddress(row.address) : String(row.address || "").trim();
     if (!address) continue;
     const next = toRow(address, row);
-    const prev = best.get(address);
+    next.chain = rowChain;
+    const key = `${rowChain}:${address}`;
+    const prev = best.get(key);
     if (!prev) {
-      best.set(address, { latest: next, peak: next.heat, count: 1 });
+      best.set(key, { latest: next, peak: next.heat, count: 1 });
       continue;
     }
     prev.peak = Math.max(prev.peak, next.heat);
@@ -203,6 +226,7 @@ export function summarizeBlendRuns(
   const flagged = ranked.filter((row) => row.liveness !== "live");
   const requeue = ranked.filter((row) => row.stale);
   return {
+    chain: selected,
     scanned: ranked.length,
     totals,
     leaderboard: hot.slice(0, cap),
