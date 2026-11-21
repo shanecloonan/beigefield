@@ -37,6 +37,7 @@ function empty(connected: boolean) {
     totals: board.totals,
     leaderboard: board.leaderboard,
     flagged: board.flagged,
+    requeue: board.requeue,
   });
 }
 
@@ -101,6 +102,7 @@ export async function GET() {
       totals: board.totals,
       leaderboard: board.leaderboard,
       flagged: board.flagged,
+      requeue: board.requeue,
     });
   } catch {
     return empty(true);

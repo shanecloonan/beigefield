@@ -6,6 +6,9 @@
 import { classifyOutcome, normalizeAddress } from "@/lib/eth-scanner/lists";
 
 export const LEADERBOARD_LIMIT = 100;
+/** A high-heat contract is stale when its latest scan is older than this. */
+export const STALE_AFTER_MS = 14 * 24 * 60 * 60 * 1000;
+export const STALE_MIN_HEAT = 1;
 
 export type BlendVerdict = "yes" | "maybe" | "no" | "other";
 
@@ -38,6 +41,9 @@ export type LeaderRow = {
   contract_name: string | null;
   scanned_at: string | null;
   liveness: Liveness;
+  peak_heat: number;
+  history_count: number;
+  stale: boolean;
 };
 
 export type BlendBoard = {
@@ -45,6 +51,7 @@ export type BlendBoard = {
   totals: Record<BlendVerdict, number>;
   leaderboard: LeaderRow[];
   flagged: LeaderRow[];
+  requeue: LeaderRow[];
 };
 
 const FINISHED = new Set(["", "done", "dropped", "gated"]);
@@ -137,26 +144,53 @@ function toRow(address: string, row: BlendRunLike): LeaderRow {
     contract_name: name || null,
     scanned_at: row.created_at ? String(row.created_at) : null,
     liveness: livenessOf(row),
+    peak_heat: heatOf(row),
+    history_count: 1,
+    stale: false,
   };
 }
 
-function prefer(next: LeaderRow, prev: LeaderRow): boolean {
-  if (next.heat !== prev.heat) return next.heat > prev.heat;
-  return Date.parse(next.scanned_at || "") >= Date.parse(prev.scanned_at || "");
+function scannedAt(row: LeaderRow): number {
+  const parsed = Date.parse(row.scanned_at || "");
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
-/** Unique finished contracts, ranked by heat. Drained rows are flagged, not ranked hot. */
-export function summarizeBlendRuns(rows: BlendRunLike[], limit = LEADERBOARD_LIMIT): BlendBoard {
-  const best = new Map<string, LeaderRow>();
+/** The newest finished scan wins. Heat is that scan's heat, not the historical max. */
+function newer(next: LeaderRow, prev: LeaderRow): boolean {
+  const nextAt = scannedAt(next);
+  const prevAt = scannedAt(prev);
+  if (nextAt !== prevAt) return nextAt > prevAt;
+  return next.heat > prev.heat;
+}
+
+/** Unique finished contracts, ranked by the latest heat. Drained rows stay off the hot list. */
+export function summarizeBlendRuns(
+  rows: BlendRunLike[],
+  limit = LEADERBOARD_LIMIT,
+  now = Date.now(),
+): BlendBoard {
+  const best = new Map<string, { latest: LeaderRow; peak: number; count: number }>();
   for (const row of rows) {
     if (!finished(row)) continue;
     const address = normalizeAddress(row.address);
     if (!address) continue;
     const next = toRow(address, row);
     const prev = best.get(address);
-    if (!prev || prefer(next, prev)) best.set(address, next);
+    if (!prev) {
+      best.set(address, { latest: next, peak: next.heat, count: 1 });
+      continue;
+    }
+    prev.peak = Math.max(prev.peak, next.heat);
+    prev.count += 1;
+    if (newer(next, prev.latest)) prev.latest = next;
   }
-  const ranked = [...best.values()].sort((a, b) => {
+  const ranked = [...best.values()].map((acc) => {
+    const age = acc.latest.scanned_at ? now - scannedAt(acc.latest) : Number.POSITIVE_INFINITY;
+    const stale =
+      acc.latest.liveness === "live" && acc.peak >= STALE_MIN_HEAT && age >= STALE_AFTER_MS;
+    return { ...acc.latest, peak_heat: acc.peak, history_count: acc.count, stale };
+  });
+  ranked.sort((a, b) => {
     if (b.heat !== a.heat) return b.heat - a.heat;
     const funds = (b.funds_usd ?? -1) - (a.funds_usd ?? -1);
     if (funds !== 0) return funds;
@@ -167,10 +201,12 @@ export function summarizeBlendRuns(rows: BlendRunLike[], limit = LEADERBOARD_LIM
   const cap = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : LEADERBOARD_LIMIT;
   const hot = ranked.filter((row) => row.liveness === "live");
   const flagged = ranked.filter((row) => row.liveness !== "live");
+  const requeue = ranked.filter((row) => row.stale);
   return {
     scanned: ranked.length,
     totals,
     leaderboard: hot.slice(0, cap),
     flagged: flagged.slice(0, cap),
+    requeue,
   };
 }

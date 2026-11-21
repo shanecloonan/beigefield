@@ -539,6 +539,13 @@ def main(argv: list[str] | None = None) -> int:
     pg.add_argument("--json", action="store_true")
     pg.add_argument("--dry-run", action="store_true")
 
+    rq = sub.add_parser(
+        "requeue-stale",
+        help="Return stale high-heat contracts to pending for a rescan",
+    )
+    rq.add_argument("--runs", required=True, help="JSON list of finished scan rows")
+    rq.add_argument("--dry-run", action="store_true")
+
     ai = sub.add_parser(
         "explain",
         help="Phase E optional LLM triage note (skipped without API key; never adds heat)",
@@ -696,6 +703,21 @@ def main(argv: list[str] | None = None) -> int:
     if getattr(args, "dry_run", False):
         settings.dry_run = True
     store = open_store(settings)
+
+    if args.cmd == "requeue-stale":
+        import json as _json
+        from eth_scanner.desk.stale_rescan import apply_stale, plan_stale
+        runs = _json.loads(Path(args.runs).read_text(encoding="utf-8"))
+        if not isinstance(runs, list):
+            print("requeue-stale: --runs must be a JSON list", file=sys.stderr)
+            return 2
+        planned = plan_stale(runs)
+        if args.dry_run:
+            print(_json.dumps(planned, indent=2))
+            return 0
+        applied = apply_stale(store, [row["address"] for row in planned])
+        print(_json.dumps({"planned": len(planned), "requeued": applied}, indent=2))
+        return 0
 
     if args.cmd == "strong-deep" or (
         args.cmd == "deep" and not args.discover and not args.address
