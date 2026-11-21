@@ -24,6 +24,8 @@ A `chain` field on targets and runs defaults to `ethereum`. The Blend board and 
 
 `python -m eth_scanner solana-sim --address <program> --rpc http://127.0.0.1:8899` plans a local `solana-test-validator` clone. Any other RPC, including public mainnet-beta and Alchemy, is refused before a process starts. `--run` starts that local validator only when the binary is already installed, then stops it. The command never sends a transaction and adds no heat.
 
+EVM chains beside Ethereum are BNB Chain (56), Arbitrum One (42161), and Base (8453). `python -m eth_scanner evm-chains` prints the chain id, native token, and whether `ETH_RPC_URL`, `BSC_RPC_URL`, `ARBITRUM_RPC_URL`, or `BASE_RPC_URL` is set. It never prints the URL. Ethereum still uses only `ETH_RPC_URL` and does not gain a public fallback. The other three use a free public endpoint when their variable is unset, and a 429 is retried once. Explorer reads stay on Etherscan v2 with that chain's `chainid`. The same capped Alchemy key also covers `bnb-mainnet.g.alchemy.com`, `arb-mainnet.g.alchemy.com`, and `base-mainnet.g.alchemy.com`; those hosts share the $50/month cap. Trace and proof methods are feature-detected per endpoint. A missing method or a 429 does not add heat.
+
 ---
 
 ## Architecture (current → target)
@@ -227,6 +229,9 @@ Add these as **GitHub Actions repository secrets** (Settings → Secrets and var
 | `SUPABASE_SECRET_KEY` | **Yes** | Service-role / secret key for claim + write (`eth_scan_*`, `test_scan_*`). Prefer secret key over legacy service_role if both exist. |
 | `ETHERSCAN_API_KEYS` | Recommended | Verified-source fetch for claimed addresses (comma-separated). Falls back to free-tier test key if unset. |
 | `ETH_RPC_URL` | Recommended | Alchemy Pay-as-You-Go (`eth-mainnet.g.alchemy.com`), hard $50/month org cap (~96M CU). Read-only `eth_call`, logs, and — when enabled — `trace_*` / `debug_*`. **Fork-verify never falls back to a public RPC**; it skips when this secret is missing. |
+| `BSC_RPC_URL` | Optional | BNB Chain. The same Alchemy key's `bnb-mainnet.g.alchemy.com` host. Unset uses a public dataseed and backs off once on 429. |
+| `ARBITRUM_RPC_URL` | Optional | Arbitrum One. The same key's `arb-mainnet.g.alchemy.com` host. Unset uses the public Arbitrum RPC. |
+| `BASE_RPC_URL` | Optional | Base. The same key's `base-mainnet.g.alchemy.com` host. Unset uses `mainnet.base.org`. |
 | `ETH_SCANNER_SLITHER_BIN` | Optional | Override Slither binary path in the runner image |
 | `ETH_SCANNER_ADERYN_BIN` | Optional | Override Aderyn binary path |
 | `ETH_SCANNER_MYTHRIL_BIN` | Optional | Override Mythril binary path |

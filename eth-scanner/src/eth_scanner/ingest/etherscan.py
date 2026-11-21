@@ -1,6 +1,7 @@
-"""Etherscan verified-source ingestion with multi-key rotation + rate limits.
+"""Etherscan v2 verified-source ingestion with multi-key rotation + rate limits.
 
-Ethereum only (chainid=1). Read-only explorer API. No transactions.
+The default chainid is 1. Another EVM chain passes its own id. Read-only.
+No transactions.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from eth_scanner.ingest.quota import DailyBudgetExhausted, active_ledger, key_id
 from eth_scanner.types import DEFAULT_ETHERSCAN_INTERVAL_S, SourceArtifact
 
 ETHERSCAN_V2 = "https://api.etherscan.io/v2/api"
-CHAIN_ID = 1  # Ethereum mainnet only
+CHAIN_ID = 1  # Ethereum mainnet. Callers pass another id for BNB, Arbitrum, or Base.
 RATE_HINTS = (
     "rate limit", "max rate", "too many requests", "max calls per",
     "rate limiter", "max rate limit reached",
@@ -143,6 +144,15 @@ def shared_key_rotator(keys: list[str], min_interval_s: float) -> KeyRotator:
         return rot
 
 
+def explorer_query(params: dict[str, Any], chain_id: int = CHAIN_ID, api_key: str = "") -> dict[str, Any]:
+    """Etherscan v2 query. chainid defaults to Ethereum."""
+    query = dict(params)
+    query["chainid"] = int(chain_id)
+    if api_key:
+        query["apikey"] = api_key
+    return query
+
+
 class EtherscanClient:
     def __init__(
         self,
@@ -150,6 +160,7 @@ class EtherscanClient:
         min_interval_s: Optional[float] = None,
         timeout_s: float = 20.0,
         max_attempts: int = 8,
+        chain_id: int = CHAIN_ID,
     ):
         if min_interval_s is None:
             from eth_scanner.ingest.quota import interval_for, read_limits
@@ -159,6 +170,7 @@ class EtherscanClient:
         self.rotator = shared_key_rotator(list(keys), float(min_interval_s))
         self.timeout_s = timeout_s
         self.max_attempts = max(3, int(max_attempts))
+        self.chain_id = int(chain_id)
 
     def get_source(self, address: str) -> Any:
         return self._get({"module": "contract", "action": "getsourcecode", "address": address})
@@ -177,9 +189,7 @@ class EtherscanClient:
         retry_hdr = None
         for attempt in range(self.max_attempts):
             key = self.rotator.acquire()
-            q = dict(params)
-            q["chainid"] = CHAIN_ID
-            q["apikey"] = key
+            q = explorer_query(params, self.chain_id, key)
             url = ETHERSCAN_V2 + "?" + urllib.parse.urlencode(q)
             try:
                 req = urllib.request.Request(url, headers={"User-Agent": "eth-scanner/0.3 (defensive; read-only)"})

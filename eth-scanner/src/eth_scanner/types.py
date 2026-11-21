@@ -9,9 +9,9 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field, is_dataclass
 from typing import Any, Literal, Optional
 
-# Ethereum is the default. A new chain is a string the registry accepts;
-# "solana" is the first one beside Ethereum.
-Chain = Literal["ethereum", "solana"]
+# Ethereum is the default. Solana stays its own adapter. The other names
+# are EVM chains that reuse this pipeline.
+Chain = Literal["ethereum", "solana", "bsc", "arbitrum", "base"]
 SrcConfidence = Literal["high", "med", "low"]
 IrConfidence = Literal["high", "med", "low"]
 Bucket = Literal[
