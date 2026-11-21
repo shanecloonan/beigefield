@@ -103,6 +103,7 @@ Per-class invariant suites (ERC-4626, staking, lending/CDP, AMM/LP, bridges/escr
 
 - Live `eth_call` property catalog (`eth_scanner/fork_props`) against current mainnet state
 - Touched storage from `debug_traceTransaction` `prestateTracer` (else `eth_getProof` / `eth_getStorageAt`) is copied onto the **local** anvil with `anvil_setStorageAt` and recorded as evidence. Cap 1,500 CU. A missing debug API or a 429 leaves the simulation on its current state. Non-loopback URLs are refused.
+- Already-drained detection (`eth_scanner/chain/liveness.py`): a historical external ETH outflow to an account with no code, plus a collapsed balance, sets `heat_breakdown.liveness` to `already-exploited` or `dead`. That flag adds **no** heat and the Blend board lists the row under Already drained instead of the heat ranking. Cap 400 CU. No transfer API or a 429 leaves the row in the normal ranking.
 - Optional Foundry defensive mock suite (`research/fuzz`) when `forge` is installed; counterexample traces elided
 - Output only: invariant name, `held` / `violated` / `unknown`, minimized **evidence summary** (state values), severity
 - CLI: `python -m eth_scanner fork-props --address 0x… --class vault [--forge]`

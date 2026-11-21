@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { summarizeBlendRuns, verdictOf } from "./blend-board";
+import { livenessOf, summarizeBlendRuns, verdictOf } from "./blend-board";
 
 const ADDR_A = "0x1111111111111111111111111111111111111111";
 const ADDR_B = "0x2222222222222222222222222222222222222222";
@@ -65,4 +65,26 @@ test("the leaderboard keeps the top 100 and ranks funds after heat", () => {
   assert.ok(board.leaderboard.every((row) => row.heat === 1));
   assert.ok(board.leaderboard[0].funds_usd! > board.leaderboard[1].funds_usd!);
   assert.equal(board.totals.yes + board.totals.maybe + board.totals.no + board.totals.other, 120);
+  assert.equal(board.flagged.length, 0);
+});
+
+test("a collapsed outflow is flagged and kept off the heat ranking", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 12,
+      blend_bucket: "drain-found",
+      status: "done",
+      heat_breakdown: { liveness: { status: "already-exploited", heat_contribution: 0 } },
+    },
+    { address: ADDR_B, heat: 2, blend_bucket: "maybe", status: "done" },
+  ]);
+  assert.equal(livenessOf({ heat_breakdown: { liveness: { status: "dead" } } }), "dead");
+  assert.equal(board.scanned, 2);
+  assert.equal(board.totals.yes, 1);
+  assert.equal(board.leaderboard.length, 1);
+  assert.equal(board.leaderboard[0].address, ADDR_B);
+  assert.equal(board.flagged.length, 1);
+  assert.equal(board.flagged[0].address, ADDR_A);
+  assert.equal(board.flagged[0].liveness, "already-exploited");
 });
