@@ -112,6 +112,18 @@ def is_evm_chain(value: object) -> bool:
     return normalize_chain(value) in EVM_CHAINS
 
 
+def target_store_key(chain: str, address: str) -> str:
+    """Ethereum and Solana stay keyed by the address. Other EVM chains do not.
+
+    The Supabase primary key is still the address alone, so a second EVM
+    chain cannot overwrite an Ethereum row. The memory store keeps both.
+    """
+    name = normalize_chain(chain)
+    if name in {"ethereum", "solana"}:
+        return address
+    return "%s:%s" % (name, address)
+
+
 def evm_chain(value: object) -> EvmChain:
     name = normalize_chain(value)
     cfg = EVM_CHAINS.get(name)

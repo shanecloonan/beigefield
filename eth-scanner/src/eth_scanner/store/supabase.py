@@ -225,8 +225,11 @@ class MemoryStore:
                 raise ValueError("address required")
         target.chain = chain
         target.address = addr
+        from eth_scanner.chains.evm import target_store_key
+
+        key = target_store_key(chain, addr)
         now = _now()
-        prev = self.targets.get(addr, {})
+        prev = self.targets.get(key, {})
         row = {
             "address": addr,
             "chain": chain,
@@ -265,18 +268,20 @@ class MemoryStore:
         if getattr(target, "discovery_source", None):
             row["discovery_source"] = target.discovery_source
         row["chain"] = chain
-        self.targets[addr] = row
+        self.targets[key] = row
         self._flush()
         return target
 
     def get_target(self, address: str, chain: str = "ethereum") -> Optional[dict[str, Any]]:
         from eth_scanner.chains.registry import normalize_chain, normalize_solana_address
 
+        from eth_scanner.chains.evm import is_evm_chain, target_store_key
+
         chosen = normalize_chain(chain)
         if chosen == "solana":
             return self.targets.get(normalize_solana_address(address))
-        if chosen == "ethereum":
-            return self.targets.get(normalize_address(address))
+        if is_evm_chain(chosen):
+            return self.targets.get(target_store_key(chosen, normalize_address(address)))
         return self.targets.get((address or "").strip())
 
     def closed_no_hashes(self) -> set[str]:
@@ -792,6 +797,10 @@ class SupabaseStore:
                 raise ValueError("address required")
         target.chain = chain
         target.address = addr
+        if is_evm_chain(chain) and chain != "ethereum":
+            existing = self.get_target(addr)
+            if existing and normalize_chain(existing.get("chain")) != chain:
+                raise ValueError("address already stored on another chain")
         body: dict[str, Any] = {
             "address": addr,
             "chain": chain,
