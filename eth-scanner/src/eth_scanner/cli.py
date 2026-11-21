@@ -599,6 +599,16 @@ def main(argv: list[str] | None = None) -> int:
     sem.add_argument("--source", default=None, help="local source to scan for PancakeSwap or Venus names")
     sem.add_argument("--json", action="store_true")
 
+    dec = sub.add_parser(
+        "decompile-funded",
+        help="Decompile an unverified funded contract. Lower confidence, no heat.",
+    )
+    dec.add_argument("--address", required=True)
+    dec.add_argument("--funds", type=float, required=True)
+    dec.add_argument("--bytecode", default="")
+    dec.add_argument("--verified", action="store_true")
+    dec.add_argument("--json", action="store_true")
+
     ai = sub.add_parser(
         "explain",
         help="Phase E optional LLM triage note (skipped without API key; never adds heat)",
@@ -888,6 +898,20 @@ def main(argv: list[str] | None = None) -> int:
             text = Path(args.source).read_text(encoding="utf-8", errors="replace")
             report["fork_flags"] = scan_bsc_forks(text)
         print(_json.dumps(report, indent=2))
+        return 0
+
+    if args.cmd == "decompile-funded":
+        import json as _json
+        from eth_scanner.decompile.heimdall import decompile_unverified_funded
+        report = decompile_unverified_funded(
+            args.address,
+            funds_usd=args.funds,
+            verified=bool(args.verified),
+            bytecode=args.bytecode or "",
+        )
+        shown = {k: v for k, v in report.items() if k != "content"}
+        shown["content_chars"] = len(report.get("content") or "")
+        print(_json.dumps(shown, indent=2))
         return 0
 
     if args.cmd == "strong-deep" or (
