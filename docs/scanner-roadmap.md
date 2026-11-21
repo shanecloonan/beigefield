@@ -1,6 +1,6 @@
 # Beigefield ETH scanner — architecture & phased roadmap
 
-Goal: the most advanced **defensive** Ethereum contract bug scanner we can build on free tiers, where **heat reflects real problems** (measured funds + failed checks + multi-engine agreement), never code-shape noise.
+Goal: the most advanced **defensive** Ethereum contract bug scanner we can build on free tiers plus Shane's capped Alchemy RPC, where **heat reflects real problems** (measured funds + failed checks + multi-engine agreement), never code-shape noise.
 
 Live desk: [`/test`](https://beigefield.vercel.app/test). Automation emits **buckets and evidence**, never a human verdict. Never auto-yes.
 
@@ -11,8 +11,8 @@ Live desk: [`/test`](https://beigefield.vercel.app/test). Automation emits **buc
 | Rule | Meaning |
 |---|---|
 | **Defensive only** | Findings are funds-at-risk signals. No mainnet broadcast and no packaged exploit scripts. A post-heat fork-verify stage may record a *sanitized* Foundry sequence when a conservation invariant breaks on a **local** fork. |
-| **Read-only chain I/O** | `eth_call`, `eth_getCode`, logs, Multicall3. **Never send transactions. Never spend ETH.** |
-| **Free tiers only** | GitHub Actions free minutes, public RPCs / existing keys, free Supabase project. Ask before any paid service. |
+| **Read-only chain I/O** | `eth_call`, `eth_getCode`, logs, Multicall3, and — when the endpoint allows — `trace_*` / `debug_*` / `alchemy_getAssetTransfers`. **Never send transactions. Never spend ETH.** |
+| **Free tiers plus Shane's capped Alchemy PAYG RPC ($50/mo hard cap)** | GitHub Actions free minutes, the existing `ETH_RPC_URL` secret (Alchemy Pay-as-You-Go, `eth-mainnet.g.alchemy.com`, ~96M CU/month), and the free Supabase project. No other paid service. Trace and debug calls are feature-detected, cached, and capped per run; a missing method or HTTP 429 keeps the previous behavior. |
 | **Heat from evidence** | Pattern leads (weak auth regex, proxy mentions, fork family, generic detector hits) contribute **zero** heat. They only select which checks to run. |
 | **Lane A stays fast** | Vercel `/api/test/run` remains a lightweight picker + live funds/invariant skim. Heavy engines run **off** serverless. |
 
@@ -151,7 +151,7 @@ For contracts already at heat ≥ `ETH_SCANNER_FUZZ_MIN_HEAT` (default 8), run a
 - CLI: `python -m eth_scanner fork-verify --fixture leaky|safe` (no RPC) or `--from-store --min-heat 8 --limit 1`
 - Lane A is opt-in (`ETH_SCANNER_FORK_VERIFY=1`) so the monitor stays fast
 - Deep CI always runs the planted leaky/safe fixtures; live `--from-store` runs only when `ETH_RPC_URL` is set, 1 contract, 60s budget
-- **Do not** broadcast. **Do not** add a paid RPC. Ask before increasing live fork volume.
+- **Do not** broadcast. Live forks use the capped Alchemy `ETH_RPC_URL` only. Ask before raising per-run CU caps.
 
 
 ---
@@ -215,13 +215,13 @@ Add these as **GitHub Actions repository secrets** (Settings → Secrets and var
 | `SUPABASE_URL` | **Yes** | Project URL (same as Vercel `SUPABASE_URL` / `ETH_SCANNER_SUPABASE_URL`) |
 | `SUPABASE_SECRET_KEY` | **Yes** | Service-role / secret key for claim + write (`eth_scan_*`, `test_scan_*`). Prefer secret key over legacy service_role if both exist. |
 | `ETHERSCAN_API_KEYS` | Recommended | Verified-source fetch for claimed addresses (comma-separated). Falls back to free-tier test key if unset. |
-| `ETH_RPC_URL` | Recommended | Read-only mainnet RPC for `eth_call` / fork base. Public RPCs used for light reads if unset. **Fork-verify never falls back to a public RPC** (campaigns are chatty); it skips when this secret is missing. |
+| `ETH_RPC_URL` | Recommended | Alchemy Pay-as-You-Go (`eth-mainnet.g.alchemy.com`), hard $50/month org cap (~96M CU). Read-only `eth_call`, logs, and — when enabled — `trace_*` / `debug_*`. **Fork-verify never falls back to a public RPC**; it skips when this secret is missing. |
 | `ETH_SCANNER_SLITHER_BIN` | Optional | Override Slither binary path in the runner image |
 | `ETH_SCANNER_ADERYN_BIN` | Optional | Override Aderyn binary path |
 | `ETH_SCANNER_MYTHRIL_BIN` | Optional | Override Mythril binary path |
 | `ETH_SCANNER_HALMOS_BIN` | Optional | Override Halmos binary path |
 
-**Not required for Phase A:** OpenAI/Anthropic keys (Phase E), paid RPC, paid CI minutes.
+**Not required for Phase A:** OpenAI/Anthropic keys (Phase E), any paid service besides the capped Alchemy RPC, paid CI minutes.
 
 Vercel already needs the same Supabase + Etherscan vars for `/test`. Actions secrets are a **separate** store — copy the values into Actions secrets; do not rely on Vercel env for GHA.
 
@@ -234,7 +234,7 @@ Workflow permissions: `contents: read` only. No deploy keys. No write to the rep
 | Resource | Constraint | Mitigation |
 |---|---|---|
 | GHA minutes | ~2 000 min/month private free | Schedule every 30–60 min; claim ≤3 jobs; hard timeouts; skip when queue empty |
-| Public RPC | Rate limits | Multicall3 batching; cache; prefer one `ETH_RPC_URL` |
+| Alchemy PAYG | $50/month hard cap, ~96M CU | Per-run caps (trace seeds 2,500 CU, storage preload 1,500 CU, liveness 400 CU). Fifty scans/day is about 6.6M CU/month. Cache repeats. Back off on 429. `debug_traceTransaction` is budgeted at 1,000 CU. |
 | Etherscan | Free key quotas | Key rotation via `ETHERSCAN_API_KEYS` list |
 | Vercel serverless | 60–180s, no engine binaries | Keep Lane A light; engines on GHA only |
 

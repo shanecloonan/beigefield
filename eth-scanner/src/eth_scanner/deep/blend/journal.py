@@ -17,6 +17,7 @@ logger = logging.getLogger("eth_scanner.blend.journal")
 STAGES = (
     "intake",
     "facts",
+    "trace-seeds",
     "spec",
     "symbolic",
     "engine-medusa",

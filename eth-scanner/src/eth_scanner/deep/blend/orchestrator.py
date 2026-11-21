@@ -329,6 +329,26 @@ def run_blend(
         raise
 
 
+def _trace_seeds(address: str) -> dict[str, Any]:
+    """Historical calldata for the harness. Empty when the RPC cannot trace."""
+    import os
+
+    from eth_scanner.chain.trace_seeds import collect_seeds
+
+    try:
+        return collect_seeds(address, os.environ.get("ETH_RPC_URL") or "")
+    except Exception as exc:  # noqa: BLE001 — a seed failure must not stop the scan
+        return {
+            "status": "degraded",
+            "heat_contribution": 0,
+            "label": "evidence only",
+            "note": "trace seeds skipped: %s" % str(exc)[:160],
+            "seeds": [],
+            "sequences": [],
+            "degraded": True,
+        }
+
+
 def _run_live(
     journal: Any,
     *,
@@ -355,6 +375,8 @@ def _run_live(
     limit = max(2, min(8, int(timeout_s)))
     facts = collect_facts(source, contract_name, live=True, timeout_s=limit)
     journal.stage("facts", facts, status=str(facts.get("status") or "ok"))
+    trace_seeds = _trace_seeds(address)
+    journal.stage("trace-seeds", trace_seeds, status=str(trace_seeds.get("status") or "skipped"))
     spec = build_spec(facts)
     journal.stage("spec", spec, status="ok")
     label = "".join(ch for ch in (contract_name or "Target") if ch.isalnum() or ch == "_") or "Target"
@@ -363,7 +385,9 @@ def _run_live(
             "name": label,
             "source": source,
             "address": address,
-        }], facts=facts, properties=list(spec.get("selected") or []))
+        }], facts=facts, properties=list(spec.get("selected") or []),
+            seeds=list(trace_seeds.get("seeds") or []),
+            sequences=list(trace_seeds.get("sequences") or []))
         scribble = try_scribble(project, timeout_s=limit)
         spec["scribble"] = scribble
         # Replace the spec row now that Scribble has either instrumented or skipped.
