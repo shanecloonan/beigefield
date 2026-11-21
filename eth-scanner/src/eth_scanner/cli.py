@@ -555,6 +555,16 @@ def main(argv: list[str] | None = None) -> int:
     sol.add_argument("--dry-run", action="store_true")
     sol.add_argument("--json", action="store_true")
 
+    ins = sub.add_parser(
+        "solana-inspect",
+        help="Read a Solana program's upgrade authority and local source notes. Adds no heat.",
+    )
+    ins.add_argument("--address", required=True)
+    ins.add_argument("--source", default=None, help="local .rs file or crate directory")
+    ins.add_argument("--tools", action="store_true", help="run cargo-audit and clippy --offline if already installed")
+    ins.add_argument("--json", action="store_true")
+    ins.add_argument("--dry-run", action="store_true")
+
     ai = sub.add_parser(
         "explain",
         help="Phase E optional LLM triage note (skipped without API key; never adds heat)",
@@ -751,6 +761,17 @@ def main(argv: list[str] | None = None) -> int:
             ],
         }
         print(_json.dumps(out, indent=2))
+        return 0
+
+    if args.cmd == "solana-inspect":
+        import json as _json
+        from eth_scanner.chains.solana_static import inspect_program
+        report = inspect_program(
+            args.address,
+            source=args.source,
+            run_tools=bool(args.tools),
+        )
+        print(_json.dumps(report, indent=2))
         return 0
 
     if args.cmd == "strong-deep" or (
