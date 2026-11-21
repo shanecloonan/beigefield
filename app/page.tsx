@@ -14,7 +14,6 @@ export default function Home() {
         <span className="rule" aria-hidden="true" />
         <p>Blockchain Research</p>
         <nav className="lockup-nav" aria-label="Tools">
-          <Link href="/test">Scanner</Link>
           <Link href="/blend">Blend</Link>
         </nav>
       </main>

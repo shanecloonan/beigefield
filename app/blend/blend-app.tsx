@@ -46,6 +46,21 @@ type Finding = {
   incentive?: { who_benefits?: string; what_breaks?: string } | null;
 };
 
+type Board = {
+  connected: boolean;
+  truncated: boolean;
+  scanned: number;
+  totals: { yes: number; maybe: number; no: number; other: number };
+  leaderboard: {
+    address: string;
+    heat: number;
+    bucket: string;
+    label: string;
+    funds_usd: number | null;
+    contract_name: string | null;
+  }[];
+};
+
 type Receipt = {
   schema: string;
   bucket: string;
@@ -69,6 +84,16 @@ function money(value: number | null | undefined): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
 }
 
+function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <div className="rounded-lg border border-brand-800 bg-brand-900/40 px-4 py-3">
+      <p className="text-[11px] tracking-[0.16em] uppercase text-brand-500">{label}</p>
+      <p className="mt-1 text-2xl font-semibold tabular-nums text-brand-50">{value}</p>
+      <p className="mt-1 text-[11px] text-brand-400">{hint}</p>
+    </div>
+  );
+}
+
 export default function BlendApp() {
   const [lists, setLists] = useState<ListCard[] | null>(null);
   const [pins, setPins] = useState<Record<string, { version: string }> | null>(null);
@@ -80,6 +105,7 @@ export default function BlendApp() {
   const [busy, setBusy] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [sample, setSample] = useState<{ address: string; contract_name: string | null } | null>(null);
+  const [board, setBoard] = useState<Board | null>(null);
   const [live, setLive] = useState<{
     phase: string;
     status: string;
@@ -100,6 +126,12 @@ export default function BlendApp() {
     if (body.ok) setLive(body);
   }, []);
 
+  const loadBoard = useCallback(async () => {
+    const res = await fetch("/api/blend/stats", { cache: "no-store" });
+    const body = await res.json();
+    if (body.ok) setBoard(body);
+  }, []);
+
   const loadCatalog = useCallback(async () => {
     const res = await fetch("/api/blend", { cache: "no-store" });
     const body = await res.json();
@@ -114,11 +146,19 @@ export default function BlendApp() {
   }, []);
 
   useEffect(() => {
-    void loadCatalog();
-    void loadLive();
-    const timer = setInterval(() => void loadLive(), 20000);
-    return () => clearInterval(timer);
-  }, [loadCatalog, loadLive]);
+    const kick = window.setTimeout(() => {
+      void loadCatalog();
+      void loadLive();
+      void loadBoard();
+    }, 0);
+    const timer = window.setInterval(() => void loadLive(), 20000);
+    const boardTimer = window.setInterval(() => void loadBoard(), 60000);
+    return () => {
+      window.clearTimeout(kick);
+      window.clearInterval(timer);
+      window.clearInterval(boardTimer);
+    };
+  }, [loadCatalog, loadLive, loadBoard]);
 
   const openList = useCallback(async (id: ScanListId) => {
     setOpen(id);
@@ -192,8 +232,79 @@ export default function BlendApp() {
           Randoop, LearnLib, Stateright, PICT, OpenSpiel, and Picire. The scheduled jobs walk List 1,
           then List 2, then random contracts, and pick a list up again when its fingerprint changes.
           This page watches that loop. Local forks only. Heat moves only when an unprivileged caller
-          ends with more value than they started. The desk stays on <Link href="/test" className="text-gold hover:text-gold/80">/test</Link>.
+          ends with more value than they started.
         </p>
+
+        <section className="mt-8" aria-labelledby="board-heading">
+          <h2 id="board-heading" className="text-[11px] tracking-[0.2em] uppercase text-gold/80 font-semibold">
+            Scans
+          </h2>
+          <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Stat label="Scanned" value={board ? board.scanned.toLocaleString() : "—"} hint="Finished contracts" />
+            <Stat label="Yes" value={board ? board.totals.yes.toLocaleString() : "—"} hint="Drain found" />
+            <Stat label="Maybe" value={board ? board.totals.maybe.toLocaleString() : "—"} hint="Heat, no drain" />
+            <Stat label="No" value={board ? board.totals.no.toLocaleString() : "—"} hint="Cold" />
+          </div>
+          {board && board.totals.other > 0 && (
+            <p className="mt-2 text-xs text-brand-400">Other buckets: {board.totals.other.toLocaleString()}</p>
+          )}
+          <p className="mt-3 text-xs text-brand-500">
+            {board && !board.connected
+              ? "The desk store is not connected, so these totals stay at zero."
+              : "Yes is a drain found. Maybe is heat without a drain. No is a cold scan. One row per contract."}
+            {board?.truncated ? " Totals use the latest 20,000 runs plus the highest-heat rows." : ""}
+          </p>
+
+          <h3 className="mt-8 text-[11px] tracking-[0.2em] uppercase text-gold/80 font-semibold">
+            Highest heat
+          </h3>
+          <div className="mt-3 overflow-x-auto rounded-lg border border-brand-800/80 max-h-[32rem]">
+            <table className="w-full text-xs">
+              <thead className="bg-brand-900/80 text-brand-400 text-left sticky top-0">
+                <tr>
+                  <th className="px-3 py-2 w-10">#</th>
+                  <th className="px-3 py-2">Contract</th>
+                  <th className="px-3 py-2">Heat</th>
+                  <th className="px-3 py-2">Result</th>
+                  <th className="px-3 py-2">Funds</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(board?.leaderboard || []).map((row, index) => (
+                  <tr key={row.address} className="border-t border-brand-800/60">
+                    <td className="px-3 py-2 text-brand-500 tabular-nums">{index + 1}</td>
+                    <td className="px-3 py-2">
+                      {row.contract_name && <span className="block text-brand-100">{row.contract_name}</span>}
+                      <span className="block font-mono text-[10px] text-brand-400">{row.address}</span>
+                    </td>
+                    <td className="px-3 py-2 tabular-nums text-brand-100">{row.heat}</td>
+                    <td className="px-3 py-2">
+                      <span className={`inline-block rounded border px-2 py-0.5 uppercase tracking-wider ${BUCKET[row.bucket] || BUCKET.no}`}>
+                        {row.label}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-brand-200">{money(row.funds_usd)}</td>
+                  </tr>
+                ))}
+                {!board && (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-6 text-center text-brand-500">
+                      Loading scans.
+                    </td>
+                  </tr>
+                )}
+                {board && board.leaderboard.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-6 text-center text-brand-500">
+                      No finished scans yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <section className="mt-8 rounded-lg border border-brand-800 bg-brand-900/40 p-4" aria-labelledby="live-heading">
           <h2 id="live-heading" className="text-[11px] tracking-[0.2em] uppercase text-gold/80 font-semibold">
             Automatic pipeline
