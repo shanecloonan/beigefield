@@ -9,7 +9,9 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field, is_dataclass
 from typing import Any, Literal, Optional
 
-Chain = Literal["ethereum"]
+# Ethereum is the default. A new chain is a string the registry accepts;
+# "solana" is the first one beside Ethereum.
+Chain = Literal["ethereum", "solana"]
 SrcConfidence = Literal["high", "med", "low"]
 IrConfidence = Literal["high", "med", "low"]
 Bucket = Literal[

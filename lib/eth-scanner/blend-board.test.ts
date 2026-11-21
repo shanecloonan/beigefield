@@ -129,4 +129,33 @@ test("the rank uses the latest heat and keeps the historical peak", () => {
   assert.equal(board.requeue.length, 1);
   assert.equal(board.requeue[0].address, ADDR_B);
   assert.equal(board.requeue[0].peak_heat, 4);
+  assert.equal(board.chain, "ethereum");
+  assert.equal(board.leaderboard[0].chain, "ethereum");
+});
+
+test("a solana row does not change the ethereum totals", () => {
+  const eth = [
+    { address: ADDR_A, heat: 3, blend_bucket: "maybe", status: "done", funds_usd: 200 },
+  ];
+  const solana = {
+    address: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+    chain: "solana",
+    heat: 9,
+    blend_bucket: "drain-found",
+    status: "done",
+    funds_usd: 1_000_000,
+  };
+  const ethOnly = summarizeBlendRuns(eth);
+  const mixed = summarizeBlendRuns([...eth, solana]);
+  assert.equal(mixed.chain, "ethereum");
+  assert.equal(mixed.scanned, ethOnly.scanned);
+  assert.equal(mixed.totals.maybe, ethOnly.totals.maybe);
+  assert.equal(mixed.totals.yes, 0);
+  assert.equal(mixed.leaderboard.length, 1);
+  assert.equal(mixed.leaderboard[0].address, ADDR_A);
+  const sol = summarizeBlendRuns([...eth, solana], 100, Date.now(), "solana");
+  assert.equal(sol.scanned, 1);
+  assert.equal(sol.totals.yes, 1);
+  assert.equal(sol.leaderboard[0].chain, "solana");
+  assert.equal(sol.leaderboard[0].heat, 9);
 });
