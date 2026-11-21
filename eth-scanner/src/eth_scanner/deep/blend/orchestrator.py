@@ -349,6 +349,11 @@ def _trace_seeds(address: str) -> dict[str, Any]:
         }
 
 
+def _liveness(address: str) -> dict[str, Any]:
+    from eth_scanner.chain.liveness import liveness_from_env
+    return liveness_from_env(address)
+
+
 def _storage_state(address: str, fork_url: str, seeds: dict[str, Any]) -> dict[str, Any]:
     """Copy traced slots onto the local anvil. Empty when the RPC cannot read them."""
     import os
@@ -465,6 +470,8 @@ def _run_live(
         },
         "mutation": mutation,
     }
+    liveness = _liveness(address)
+    journal.stage("liveness", liveness, status=str(liveness.get("status") or "unknown"))
     report = _receipt_for_outputs(
         outputs,
         address=address,
@@ -476,6 +483,18 @@ def _run_live(
         source=source,
         prepared=prepared,
     )
+    breakdown = report.get("heat_breakdown")
+    if not isinstance(breakdown, dict):
+        breakdown = {}
+        report["heat_breakdown"] = breakdown
+    breakdown["liveness"] = {
+        "status": liveness.get("status") or "unknown",
+        "heat_contribution": 0,
+        "outflow_wei": int(liveness.get("outflow_wei") or 0),
+        "balance_wei": int(liveness.get("balance_wei") or 0),
+        "evidence": list(liveness.get("evidence") or [])[:8],
+        "note": liveness.get("note") or "",
+    }
     adaptations = report.get("adaptations") if isinstance(report.get("adaptations"), dict) else {}
     for name, block in adaptations.items():
         payload = dict(block) if isinstance(block, dict) else {"heat_contribution": 0}

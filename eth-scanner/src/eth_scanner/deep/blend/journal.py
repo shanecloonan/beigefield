@@ -19,6 +19,7 @@ STAGES = (
     "facts",
     "trace-seeds",
     "storage-fidelity",
+    "liveness",
     "spec",
     "symbolic",
     "engine-medusa",

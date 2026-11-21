@@ -26,6 +26,8 @@ export type BlendRunLike = {
   drop_reason?: unknown;
 };
 
+export type Liveness = "live" | "dead" | "already-exploited";
+
 export type LeaderRow = {
   address: string;
   heat: number;
@@ -35,12 +37,14 @@ export type LeaderRow = {
   funds_usd: number | null;
   contract_name: string | null;
   scanned_at: string | null;
+  liveness: Liveness;
 };
 
 export type BlendBoard = {
   scanned: number;
   totals: Record<BlendVerdict, number>;
   leaderboard: LeaderRow[];
+  flagged: LeaderRow[];
 };
 
 const FINISHED = new Set(["", "done", "dropped", "gated"]);
@@ -97,6 +101,29 @@ function finished(row: BlendRunLike): boolean {
   return FINISHED.has(String(row.status || "").trim().toLowerCase());
 }
 
+function breakdownOf(row: BlendRunLike): Record<string, unknown> | null {
+  const raw = row.heat_breakdown;
+  if (!raw) return null;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
+    } catch {
+      return null;
+    }
+  }
+  return typeof raw === "object" ? (raw as Record<string, unknown>) : null;
+}
+
+/** Trace evidence that the contract already paid an EOA and then collapsed. */
+export function livenessOf(row: BlendRunLike): Liveness {
+  const block = breakdownOf(row)?.liveness;
+  const status =
+    block && typeof block === "object" ? String((block as { status?: unknown }).status || "") : "";
+  if (status === "dead" || status === "already-exploited") return status;
+  return "live";
+}
+
 function toRow(address: string, row: BlendRunLike): LeaderRow {
   const decision = verdictOf(row);
   const name = String(row.contract_name || "").trim();
@@ -109,6 +136,7 @@ function toRow(address: string, row: BlendRunLike): LeaderRow {
     funds_usd: fundsOf(row),
     contract_name: name || null,
     scanned_at: row.created_at ? String(row.created_at) : null,
+    liveness: livenessOf(row),
   };
 }
 
@@ -117,7 +145,7 @@ function prefer(next: LeaderRow, prev: LeaderRow): boolean {
   return Date.parse(next.scanned_at || "") >= Date.parse(prev.scanned_at || "");
 }
 
-/** Unique finished contracts, ranked by heat. Totals count those contracts once. */
+/** Unique finished contracts, ranked by heat. Drained rows are flagged, not ranked hot. */
 export function summarizeBlendRuns(rows: BlendRunLike[], limit = LEADERBOARD_LIMIT): BlendBoard {
   const best = new Map<string, LeaderRow>();
   for (const row of rows) {
@@ -137,9 +165,12 @@ export function summarizeBlendRuns(rows: BlendRunLike[], limit = LEADERBOARD_LIM
   const totals: Record<BlendVerdict, number> = { yes: 0, maybe: 0, no: 0, other: 0 };
   for (const row of ranked) totals[row.verdict] += 1;
   const cap = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : LEADERBOARD_LIMIT;
+  const hot = ranked.filter((row) => row.liveness === "live");
+  const flagged = ranked.filter((row) => row.liveness !== "live");
   return {
     scanned: ranked.length,
     totals,
-    leaderboard: ranked.slice(0, cap),
+    leaderboard: hot.slice(0, cap),
+    flagged: flagged.slice(0, cap),
   };
 }

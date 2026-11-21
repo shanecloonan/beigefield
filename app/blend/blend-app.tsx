@@ -58,6 +58,14 @@ type Board = {
     label: string;
     funds_usd: number | null;
     contract_name: string | null;
+    liveness?: string;
+  }[];
+  flagged?: {
+    address: string;
+    heat: number;
+    label: string;
+    liveness?: string;
+    contract_name: string | null;
   }[];
 };
 
@@ -254,6 +262,30 @@ export default function BlendApp() {
               : "Yes is a drain found. Maybe is heat without a drain. No is a cold scan. One row per contract."}
             {board?.truncated ? " Totals use the latest 20,000 runs plus the highest-heat rows." : ""}
           </p>
+
+          {board && (board.flagged || []).length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-[11px] tracking-[0.2em] uppercase text-brand-400 font-semibold">
+                Already drained
+              </h3>
+              <p className="mt-1 text-xs text-brand-500">
+                A past ETH outflow to an empty account, and the balance has collapsed. These stay off the heat ranking.
+              </p>
+              <ul className="mt-2 space-y-1 text-xs">
+                {(board.flagged || []).slice(0, 20).map((row) => (
+                  <li key={row.address} className="flex items-baseline justify-between gap-3 border-t border-brand-800/60 py-1.5">
+                    <span className="min-w-0">
+                      {row.contract_name && <span className="mr-2 text-brand-200">{row.contract_name}</span>}
+                      <span className="font-mono text-[10px] text-brand-400">{row.address}</span>
+                    </span>
+                    <span className="shrink-0 uppercase tracking-wider text-brand-400">
+                      {row.liveness === "dead" ? "Dead" : "Exploited"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <h3 className="mt-8 text-[11px] tracking-[0.2em] uppercase text-gold/80 font-semibold">
             Highest heat
