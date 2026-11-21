@@ -4,10 +4,11 @@
  */
 
 import { classifyOutcome, normalizeAddress } from "@/lib/eth-scanner/lists";
+import { DEFAULT_CHAIN, normalizeChain } from "@/lib/eth-scanner/chain-filters";
+
+export { CHAIN_FILTERS, DEFAULT_CHAIN, normalizeChain } from "@/lib/eth-scanner/chain-filters";
 
 export const LEADERBOARD_LIMIT = 100;
-/** The desk shows Ethereum unless a caller asks for another chain. */
-export const DEFAULT_CHAIN = "ethereum";
 /** A high-heat contract is stale when its latest scan is older than this. */
 export const STALE_AFTER_MS = 14 * 24 * 60 * 60 * 1000;
 export const STALE_MIN_HEAT = 1;
@@ -70,12 +71,6 @@ function numberOrNull(value: unknown): number | null {
   if (value == null || value === "") return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
-}
-
-export function normalizeChain(value: unknown): string {
-  const text = String(value ?? "").trim().toLowerCase();
-  if (!text || text === "eth" || text === "mainnet") return DEFAULT_CHAIN;
-  return text;
 }
 
 /** A row with no chain is an Ethereum row. That keeps today's totals stable. */

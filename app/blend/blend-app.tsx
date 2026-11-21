@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { CHAIN_FILTERS } from "@/lib/eth-scanner/chain-filters";
 import { groupByEngineRule } from "@/lib/eth-scanner/desk/blend-groups";
 import { SCAN_LISTS, type ScanListId } from "@/lib/eth-scanner/scan-lists";
 
@@ -67,6 +68,7 @@ type Board = {
   }[];
   flagged?: {
     address: string;
+    chain?: string;
     heat: number;
     label: string;
     liveness?: string;
@@ -239,7 +241,7 @@ export default function BlendApp() {
           ← Beigefield
         </Link>
         <p className="text-[11px] tracking-[0.2em] uppercase text-gold/80 font-semibold mb-2">
-          Beigefield · Ethereum only · Blend
+          Beigefield · Blend
         </p>
         <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-brand-50">Blend</h1>
         <p className="mt-3 max-w-2xl text-sm text-brand-400 leading-relaxed">
@@ -283,7 +285,7 @@ export default function BlendApp() {
               </p>
               <ul className="mt-2 space-y-1 text-xs">
                 {(board.flagged || []).slice(0, 20).map((row) => (
-                  <li key={row.address} className="flex items-baseline justify-between gap-3 border-t border-brand-800/60 py-1.5">
+                  <li key={`${row.chain || "ethereum"}:${row.address}`} className="flex items-baseline justify-between gap-3 border-t border-brand-800/60 py-1.5">
                     <span className="min-w-0">
                       {row.contract_name && <span className="mr-2 text-brand-200">{row.contract_name}</span>}
                       <span className="font-mono text-[10px] text-brand-400">{row.address}</span>
@@ -302,14 +304,14 @@ export default function BlendApp() {
               Highest heat
             </h3>
             <div className="flex gap-1 text-[10px] uppercase tracking-[0.14em]">
-              {["ethereum", "solana", "all"].map((id) => (
+              {CHAIN_FILTERS.map((item) => (
                 <button
-                  key={id}
+                  key={item.id}
                   type="button"
-                  onClick={() => setChain(id)}
-                  className={`rounded border px-2 py-1 ${chain === id ? "border-gold/60 text-brand-100" : "border-brand-800 text-brand-500"}`}
+                  onClick={() => setChain(item.id)}
+                  className={`rounded border px-2 py-1 ${chain === item.id ? "border-gold/60 text-brand-100" : "border-brand-800 text-brand-500"}`}
                 >
-                  {id === "all" ? "All" : id === "solana" ? "Solana" : "Ethereum"}
+                  {item.label}
                 </button>
               ))}
             </div>
@@ -329,7 +331,7 @@ export default function BlendApp() {
               </thead>
               <tbody>
                 {(board?.leaderboard || []).map((row, index) => (
-                  <tr key={row.address} className="border-t border-brand-800/60">
+                  <tr key={`${row.chain || "ethereum"}:${row.address}`} className="border-t border-brand-800/60">
                     <td className="px-3 py-2 text-brand-500 tabular-nums">{index + 1}</td>
                     <td className="px-3 py-2">
                       {row.contract_name && <span className="block text-brand-100">{row.contract_name}</span>}
