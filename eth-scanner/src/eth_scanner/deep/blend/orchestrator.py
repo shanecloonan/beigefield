@@ -349,6 +349,35 @@ def _trace_seeds(address: str) -> dict[str, Any]:
         }
 
 
+def _storage_state(address: str, fork_url: str, seeds: dict[str, Any]) -> dict[str, Any]:
+    """Copy traced slots onto the local anvil. Empty when the RPC cannot read them."""
+    import os
+
+    from eth_scanner.chain.storage_fidelity import load_storage
+
+    hashes = []
+    for sequence in seeds.get("sequences") or []:
+        if isinstance(sequence, dict) and sequence.get("tx"):
+            hashes.append(str(sequence["tx"]))
+    try:
+        return load_storage(
+            address,
+            os.environ.get("ETH_RPC_URL") or "",
+            tx_hashes=hashes,
+            local_rpc_url=fork_url or "",
+        )
+    except Exception as exc:  # noqa: BLE001 — storage preload must not stop the scan
+        return {
+            "status": "degraded",
+            "heat_contribution": 0,
+            "label": "evidence only",
+            "note": "storage preload skipped: %s" % str(exc)[:160],
+            "slots": [],
+            "applied_local": False,
+            "degraded": True,
+        }
+
+
 def _run_live(
     journal: Any,
     *,
@@ -388,6 +417,10 @@ def _run_live(
         }], facts=facts, properties=list(spec.get("selected") or []),
             seeds=list(trace_seeds.get("seeds") or []),
             sequences=list(trace_seeds.get("sequences") or []))
+        storage = _storage_state(address, fork_url, trace_seeds)
+        from eth_scanner.chain.storage_fidelity import write_evidence
+        write_evidence(project, storage)
+        journal.stage("storage-fidelity", storage, status=str(storage.get("status") or "skipped"))
         scribble = try_scribble(project, timeout_s=limit)
         spec["scribble"] = scribble
         # Replace the spec row now that Scribble has either instrumented or skipped.

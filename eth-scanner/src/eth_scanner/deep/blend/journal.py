@@ -18,6 +18,7 @@ STAGES = (
     "intake",
     "facts",
     "trace-seeds",
+    "storage-fidelity",
     "spec",
     "symbolic",
     "engine-medusa",
