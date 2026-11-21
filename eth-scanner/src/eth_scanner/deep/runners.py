@@ -94,6 +94,7 @@ def engine_availability() -> dict[str, bool]:
         "mythril": bool(mythril_bin()),
         "halmos": bool(halmos_bin()),
         "hevm": bool(hevm_bin()),
+        "kontrol": _kontrol_present(),
         "semgrep": bool(semgrep_bin()),
         "forge": bool(forge_bin()),
         "anvil": bool(anvil_bin()),
@@ -104,6 +105,14 @@ def engine_availability() -> dict[str, bool]:
         "heimdall": bool(_added("heimdall")),
         "panoramix": bool(_added("panoramix")),
     }
+
+
+def _kontrol_present() -> bool:
+    try:
+        from eth_scanner.advanced.kontrol import kontrol_bin
+        return bool(kontrol_bin())
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def _added(name: str) -> bool:
