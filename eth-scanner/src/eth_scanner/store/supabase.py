@@ -211,12 +211,13 @@ class MemoryStore:
             self._load()
 
     def upsert_target(self, target: Target) -> Target:
+        from eth_scanner.chains.evm import is_evm_chain
         from eth_scanner.chains.registry import normalize_chain, normalize_solana_address
 
         chain = normalize_chain(getattr(target, "chain", None))
         if chain == "solana":
             addr = normalize_solana_address(target.address)
-        elif chain == "ethereum":
+        elif is_evm_chain(chain):
             addr = normalize_address(target.address)
         else:
             addr = (target.address or "").strip()
@@ -777,12 +778,13 @@ class SupabaseStore:
         self.timeout_s = timeout_s
 
     def upsert_target(self, target: Target) -> Target:
+        from eth_scanner.chains.evm import is_evm_chain
         from eth_scanner.chains.registry import normalize_chain, normalize_solana_address
 
         chain = normalize_chain(getattr(target, "chain", None))
         if chain == "solana":
             addr = normalize_solana_address(target.address)
-        elif chain == "ethereum":
+        elif is_evm_chain(chain):
             addr = normalize_address(target.address)
         else:
             addr = (target.address or "").strip()

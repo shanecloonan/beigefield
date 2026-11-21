@@ -575,6 +575,12 @@ def main(argv: list[str] | None = None) -> int:
     sim.add_argument("--run", action="store_true", help="start the local validator when it is installed")
     sim.add_argument("--json", action="store_true")
 
+    evm = sub.add_parser(
+        "evm-chains",
+        help="Show EVM chain ids and whether each RPC env is set. Never prints a URL.",
+    )
+    evm.add_argument("--json", action="store_true")
+
     ai = sub.add_parser(
         "explain",
         help="Phase E optional LLM triage note (skipped without API key; never adds heat)",
@@ -794,6 +800,12 @@ def main(argv: list[str] | None = None) -> int:
             execute=bool(args.run),
         )
         print(_json.dumps(report, indent=2))
+        return 0
+
+    if args.cmd == "evm-chains":
+        import json as _json
+        from eth_scanner.chains.evm import describe_all
+        print(_json.dumps(describe_all(), indent=2))
         return 0
 
     if args.cmd == "strong-deep" or (

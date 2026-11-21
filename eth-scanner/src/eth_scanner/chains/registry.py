@@ -10,17 +10,34 @@ from __future__ import annotations
 from typing import Any
 
 DEFAULT_CHAIN = "ethereum"
-SUPPORTED_CHAINS = ("ethereum", "solana")
+SUPPORTED_CHAINS = ("ethereum", "bsc", "arbitrum", "base", "solana")
+
+_ALIASES = {
+    "": "ethereum",
+    "eth": "ethereum",
+    "mainnet": "ethereum",
+    "bnb": "bsc",
+    "bnb-chain": "bsc",
+    "binance": "bsc",
+    "bsc": "bsc",
+    "arb": "arbitrum",
+    "arbitrum-one": "arbitrum",
+    "arbitrum": "arbitrum",
+    "base": "base",
+}
 
 _SOLANA_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
 
 def normalize_chain(value: object) -> str:
-    """Blank and the ETH aliases stay ethereum. Any other name is kept."""
+    """Blank and the ETH aliases stay ethereum. Known EVM aliases collapse.
+
+    Any other non-empty name is kept, so a later chain does not need an edit.
+    """
     text = str(value or "").strip().lower()
-    if text in {"", "eth", "mainnet"}:
-        return DEFAULT_CHAIN
-    return text
+    if text in _ALIASES:
+        return _ALIASES[text]
+    return text or DEFAULT_CHAIN
 
 
 def row_chain(row: dict[str, Any] | None) -> str:
