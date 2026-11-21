@@ -5,6 +5,7 @@ Binaries expected from owner forks (or PATH overrides via ETH_SCANNER_*_BIN).
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -13,7 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from eth_scanner.deep.findings import EngineFinding, apply_agreement, dedupe_findings
+from eth_scanner.deep.findings import EngineFinding, apply_agreement, dedupe_findings, make_finding
 from eth_scanner.deep.parsers import parse_aderyn, parse_halmos, parse_mythril, parse_slither
 
 
@@ -53,6 +54,10 @@ def halmos_bin() -> Optional[str]:
     return _which("ETH_SCANNER_HALMOS_BIN", ["halmos"])
 
 
+def hevm_bin() -> Optional[str]:
+    return _which("ETH_SCANNER_HEVM_BIN", ["hevm"])
+
+
 # Strong-candidate symbolic bounds. The light deep worker keeps its shorter default.
 MYTHRIL_EXECUTION_TIMEOUT_S = 300
 MYTHRIL_MAX_DEPTH = 22
@@ -88,6 +93,7 @@ def engine_availability() -> dict[str, bool]:
         "aderyn": bool(aderyn_bin()),
         "mythril": bool(mythril_bin()),
         "halmos": bool(halmos_bin()),
+        "hevm": bool(hevm_bin()),
         "semgrep": bool(semgrep_bin()),
         "forge": bool(forge_bin()),
         "anvil": bool(anvil_bin()),
@@ -312,6 +318,75 @@ def run_halmos(*, harness_dir: Optional[Path] = None, timeout_s: int = 120) -> E
         "ok",
         findings=findings,
         note="exit=%s findings=%d" % (proc.returncode, len(findings)),
+        duration_ms=int((time.time() - t0) * 1000),
+    )
+
+
+def _deployed_hex(project: Path) -> str:
+    out = project / "out"
+    if not out.is_dir():
+        return ""
+    for path in sorted(out.rglob("*.json")):
+        if "build-info" in path.parts:
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            continue
+        inner = payload.get("deployedBytecode") if isinstance(payload, dict) else None
+        text = ""
+        if isinstance(inner, dict):
+            text = str(inner.get("object") or "")
+        elif isinstance(inner, str):
+            text = inner
+        if text.startswith("0x") and len(text) > 10:
+            return text
+    return ""
+
+
+def run_hevm_engine(project: str, *, timeout_s: int = 20) -> EngineRunResult:
+    """Time-boxed hevm beside Halmos. A missing binary or a timeout is a skip or error, not heat."""
+    import time
+    exe = hevm_bin()
+    if not exe:
+        return EngineRunResult("hevm", "skipped", note="hevm not on PATH")
+    code = _deployed_hex(Path(project))
+    if not code:
+        return EngineRunResult("hevm", "skipped", note="no deployed bytecode under out/")
+    t0 = time.time()
+    try:
+        proc = subprocess.run(
+            [exe, "symbolic", "--code", code, "--sig", "totalAssets()", "--smttimeout", "5000"],
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return EngineRunResult(
+            "hevm", "error", note="timed out after %ss" % timeout_s,
+            duration_ms=int((time.time() - t0) * 1000),
+        )
+    except OSError as exc:
+        return EngineRunResult("hevm", "error", note=str(exc)[:200])
+    raw = ((proc.stdout or "") + "\n" + (proc.stderr or "")).lower()
+    findings: list[EngineFinding] = []
+    if "assertion violation" in raw or "vmfailure" in raw:
+        finding = make_finding(
+            engine="hevm",
+            rule="symbolic",
+            title="hevm reported a local failure",
+            severity="info",
+            confidence="low",
+            evidence="hevm local failure; no caller profit",
+        )
+        finding.generic = True
+        findings.append(finding)
+    return EngineRunResult(
+        "hevm",
+        "ok",
+        findings=findings,
+        note="exit=%s" % proc.returncode,
         duration_ms=int((time.time() - t0) * 1000),
     )
 
