@@ -4,31 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { CHAIN_FILTERS } from "@/lib/eth-scanner/chain-filters";
 import { groupByEngineRule } from "@/lib/eth-scanner/desk/blend-groups";
-import { SCAN_LISTS, type ScanListId } from "@/lib/eth-scanner/scan-lists";
-
-type ListCard = {
-  id: ScanListId;
-  name: string;
-  kind: string;
-  blurb: string;
-  min_usd: number | null;
-  max_usd: number | null;
-  count?: number;
-  deep_count?: number;
-};
-
-type ContractRow = {
-  address: string;
-  protocol: string;
-  est_usd_held: number;
-  tier: number;
-  candidate_reason: string;
-  deep_lane: boolean;
-  bucket: string;
-  fixture?: string | null;
-  list_id: string;
-};
-
 type EngineRow = { engine: string; status: string; note?: string; version_pin?: string };
 type Finding = {
   id: string;
@@ -111,13 +86,9 @@ function Stat({ label, value, hint }: { label: string; value: string; hint: stri
 }
 
 export default function BlendApp() {
-  const [lists, setLists] = useState<ListCard[] | null>(null);
   const [pins, setPins] = useState<Record<string, { version: string }> | null>(null);
   const [random, setRandom] = useState<{ enabled: boolean; etherscan_configured: boolean; reason: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState<ScanListId | null>(null);
-  const [contracts, setContracts] = useState<ContractRow[]>([]);
-  const [total, setTotal] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [sample, setSample] = useState<{ address: string; contract_name: string | null } | null>(null);
@@ -153,10 +124,9 @@ export default function BlendApp() {
     const res = await fetch("/api/blend", { cache: "no-store" });
     const body = await res.json();
     if (!body.ok) {
-      setError(body.error || "Blend could not load the lists.");
+      setError(body.error || "Blend could not load.");
       return;
     }
-    setLists(body.lists);
     setPins(body.pins);
     setRandom(body.random);
     setError(null);
@@ -177,44 +147,6 @@ export default function BlendApp() {
     };
   }, [loadCatalog, loadLive, loadBoard]);
 
-  const openList = useCallback(async (id: ScanListId) => {
-    setOpen(id);
-    setReceipt(null);
-    setBusy("list");
-    const res = await fetch(`/api/blend?list=${id}&limit=40`, { cache: "no-store" });
-    const body = await res.json();
-    setBusy(null);
-    if (!body.ok) {
-      setError(body.error || "That list could not be opened.");
-      return;
-    }
-    setContracts(body.contracts || []);
-    setTotal(body.total || 0);
-  }, []);
-
-  const runRow = useCallback(async (row: ContractRow) => {
-    setBusy(row.address);
-    setReceipt(null);
-    const res = await fetch("/api/blend", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        address: row.address,
-        list: row.list_id,
-        fixture: row.fixture || undefined,
-      }),
-    });
-    const body = await res.json();
-    setBusy(null);
-    if (!body.ok) {
-      setError(body.error || "The gauntlet did not finish.");
-      return;
-    }
-    const next = body.receipt as Receipt;
-    setReceipt(next);
-    setContracts((prev) => prev.map((item) => (item.address === row.address ? { ...item, bucket: next.bucket } : item)));
-  }, []);
-
   const runRandom = useCallback(async () => {
     setBusy("random");
     setReceipt(null);
@@ -232,7 +164,6 @@ export default function BlendApp() {
   }, []);
 
   const groups = groupByEngineRule(receipt?.findings || receipt?.groups || []);
-  const active = SCAN_LISTS.find((row) => row.id === open) || lists?.find((row) => row.id === open);
 
   return (
     <main className="min-h-screen bg-brand-950 text-brand-100">
@@ -246,10 +177,9 @@ export default function BlendApp() {
         <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-brand-50">Blend</h1>
         <p className="mt-3 max-w-2xl text-sm text-brand-400 leading-relaxed">
           One automatic gauntlet: Ityfuzz, Halmos, Medusa, Echidna, the earlier adaptations, and
-          Randoop, LearnLib, Stateright, PICT, OpenSpiel, and Picire. The scheduled jobs walk List 1,
-          then List 2, then random contracts, and pick a list up again when its fingerprint changes.
-          This page watches that loop. Local forks only. Heat moves only when an unprivileged caller
-          ends with more value than they started.
+          Randoop, LearnLib, Stateright, PICT, OpenSpiel, and Picire. Scheduled jobs keep scanning.
+          This page shows the totals and the highest heat. Local forks only. Heat moves only when an
+          unprivileged caller ends with more value than they started.
         </p>
 
         <section className="mt-8" aria-labelledby="board-heading">
@@ -385,15 +315,6 @@ export default function BlendApp() {
               Every kept contract runs {live.passes.join(", ")}.
             </p>
           )}
-          <ul className="mt-3 grid gap-2 sm:grid-cols-2 text-xs text-brand-300">
-            {(live?.lists || []).map((list) => (
-              <li key={list.id} className="rounded border border-brand-800 px-3 py-2">
-                <span className="text-brand-100">{list.name}</span>
-                {" "}{list.scanned}/{list.total} scanned
-                {" · "}drain {list.buckets.drain} · maybe {list.buckets.maybe} · no {list.buckets.no}
-              </li>
-            ))}
-          </ul>
           <p className="mt-2 text-xs text-brand-400">
             Random contracts this run: {live?.random_scanned_this_run ?? 0}
             {live?.random_enabled === false ? " · random phase off" : ""}
@@ -402,100 +323,14 @@ export default function BlendApp() {
         </section>
         {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
 
-        <section className="mt-10" aria-labelledby="lists-heading">
-          <h2 id="lists-heading" className="text-[11px] tracking-[0.2em] uppercase text-gold/80 font-semibold mb-3">
-            Scanning lists
-          </h2>
-          {!open && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {(lists || SCAN_LISTS).map((list) => (
-                <button
-                  key={list.id}
-                  type="button"
-                  onClick={() => void openList(list.id)}
-                  className="text-left rounded-lg border border-brand-800 bg-brand-900/40 p-4 hover:border-gold/50"
-                >
-                  <span className="block text-lg text-brand-50">{list.name}</span>
-                  <span className="mt-1 block text-sm text-brand-400">{list.blurb}</span>
-                  <span className="mt-3 block text-[11px] tracking-[0.12em] uppercase text-brand-500">
-                    {"count" in list && list.count != null ? `${list.count} contracts` : "Open"}
-                    {"deep_count" in list && list.deep_count != null ? ` · ${list.deep_count} deep-lane` : ""}
-                    {list.min_usd != null && list.max_usd != null ? ` · $${list.min_usd}–$${list.max_usd}` : ""}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {open && active && (
-            <div>
-              <button
-                type="button"
-                onClick={() => { setOpen(null); setReceipt(null); }}
-                className="text-[11px] tracking-[0.14em] uppercase text-brand-400 hover:text-gold mb-3"
-              >
-                ← All lists
-              </button>
-              <h3 className="text-xl text-brand-50">{active.name}</h3>
-              <p className="text-sm text-brand-400 mt-1">{active.blurb} Showing {contracts.length} of {total}.</p>
-              <div className="mt-4 overflow-x-auto rounded-lg border border-brand-800/80">
-                <table className="w-full text-xs">
-                  <thead className="bg-brand-900/60 text-brand-400 text-left">
-                    <tr>
-                      <th className="px-3 py-2">Contract</th>
-                      <th className="px-3 py-2">Held</th>
-                      <th className="px-3 py-2">Bucket</th>
-                      <th className="px-3 py-2"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {contracts.map((row) => (
-                      <tr key={row.address} className="border-t border-brand-800/60 align-top">
-                        <td className="px-3 py-2">
-                          <span className="block text-brand-100">{row.protocol || "Contract"}</span>
-                          <span className="block font-mono text-[10px] text-brand-500">{row.address}</span>
-                          {row.deep_lane && <span className="text-[10px] uppercase tracking-wider text-gold/80">Deep lane</span>}
-                        </td>
-                        <td className="px-3 py-2 text-brand-200">{money(row.est_usd_held)}</td>
-                        <td className="px-3 py-2">
-                          <span className={`inline-block rounded border px-2 py-0.5 uppercase tracking-wider ${BUCKET[row.bucket] || BUCKET.no}`}>
-                            {row.bucket}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          <button
-                            type="button"
-                            disabled={busy === row.address}
-                            onClick={() => void runRow(row)}
-                            className="text-[11px] uppercase tracking-wider text-gold hover:text-gold/80 disabled:text-brand-600"
-                          >
-                            {busy === row.address ? "Running" : "Run now"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    {contracts.length === 0 && !busy && (
-                      <tr>
-                        <td colSpan={4} className="px-3 py-6 text-center text-brand-500">
-                          No contracts in this list yet.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </section>
-
         <section className="mt-12" aria-labelledby="random-heading">
           <h2 id="random-heading" className="text-[11px] tracking-[0.2em] uppercase text-gold/80 font-semibold mb-3">
             Scanning random contracts
           </h2>
           <div className="rounded-lg border border-brand-800 bg-brand-900/30 p-4">
             <p className="text-sm text-brand-300">
-              Random contracts are pulled by the scheduled loop after both lists have a finished pass.
-              The list below is that stream. Run now is optional and is not how the loop advances.
+              Random contracts are pulled by the scheduled loop. The list below is that stream.
+              Run now is optional and is not how the loop advances.
             </p>
             <ul className="mt-3 space-y-1 text-xs">
               {(live?.random_stream || []).map((row) => (
@@ -504,7 +339,7 @@ export default function BlendApp() {
                 </li>
               ))}
               {(live?.random_stream || []).length === 0 && (
-                <li className="text-brand-500">No random contracts recorded yet. The loop adds them after the lists.</li>
+                <li className="text-brand-500">No random contracts recorded yet.</li>
               )}
             </ul>
             <button

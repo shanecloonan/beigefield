@@ -96,8 +96,8 @@ class List2SelectionTests(unittest.TestCase):
         named = load_named_list("list-2")
         self.assertEqual(named.source, "list2_candidates")
         self.assertTrue(str(named.source_path).endswith("list2_candidates.json"))
-        self.assertEqual(len(named.candidates), 929)
-        self.assertAlmostEqual(named.total_usd, 255900.81, places=2)
+        self.assertEqual(len(named.candidates), 313)
+        self.assertAlmostEqual(named.total_usd, 211226.03, places=2)
         self.assertEqual(named.config.min_funds_usd, 50.0)
         self.assertEqual(named.config.max_funds_usd, 1900.0)
         for row in named.candidates:

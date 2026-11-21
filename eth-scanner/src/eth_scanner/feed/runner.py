@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from eth_scanner.config import Settings, load_settings
+from eth_scanner.feed.list_refresh import chain_of_reason
 from eth_scanner.feed.lists import (
     LIST1_ID,
     bounds_for_list,
@@ -181,8 +182,12 @@ def run_master_list(
                 break
             batch_n = min(workers, n - idx, remaining_cap)
             batch = candidates[idx:idx + batch_n]
-            outcomes = _scan_batch(batch, scan=scan, workers=workers)
-            attempted: set[str] = set()
+            local = [cand for cand in batch if chain_of_reason(cand.candidate_reason) == "ethereum"]
+            # Other-chain rows stay on the list for their own pipeline. This
+            # walker is Ethereum-only, so it advances past them without an
+            # eth_call and without writing an Ethereum target.
+            outcomes = _scan_batch(local, scan=scan, workers=workers) if local else []
+            attempted: set[str] = {cand.address for cand in batch if cand not in local}
             for cand, result, err in outcomes:
                 if isinstance(err, DailyBudgetExhausted):
                     budget_hit = err
