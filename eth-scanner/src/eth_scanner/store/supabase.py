@@ -349,6 +349,19 @@ class MemoryStore:
             self._flush()
         return released
 
+    def requeue_target(self, address: str) -> bool:
+        """Return a finished target to pending so the next worker scans it again."""
+        addr = normalize_address(address)
+        row = self.targets.get(addr)
+        if not row or row.get("status") == "running":
+            return False
+        row["status"] = "pending"
+        row["claimed_by"] = None
+        row["claimed_at"] = None
+        row["updated_at"] = _now()
+        self._flush()
+        return True
+
     def claim_pending(
         self,
         limit: int,
@@ -869,6 +882,18 @@ class SupabaseStore:
             )
             released.append({k: v for k, v in plan.items() if k != "patch"})
         return released
+
+    def requeue_target(self, address: str) -> bool:
+        """Return a finished target to pending. A running claim is left alone."""
+        addr = normalize_address(address)
+        self._req(
+            "PATCH",
+            "eth_scan_targets",
+            {"status": "pending", "claimed_by": None, "claimed_at": None},
+            query={"address": "eq.%s" % addr, "status": "neq.running"},
+            prefer="return=minimal",
+        )
+        return True
 
     def claim_pending(
         self,

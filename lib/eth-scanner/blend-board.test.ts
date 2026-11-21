@@ -88,3 +88,45 @@ test("a collapsed outflow is flagged and kept off the heat ranking", () => {
   assert.equal(board.flagged[0].address, ADDR_A);
   assert.equal(board.flagged[0].liveness, "already-exploited");
 });
+
+test("the rank uses the latest heat and keeps the historical peak", () => {
+  const now = Date.parse("2026-11-21T00:00:00Z");
+  const board = summarizeBlendRuns(
+    [
+      {
+        address: ADDR_A,
+        heat: 9,
+        blend_bucket: "maybe",
+        status: "done",
+        created_at: "2026-01-01T00:00:00Z",
+      },
+      {
+        address: ADDR_A,
+        heat: 1,
+        blend_bucket: "maybe",
+        status: "done",
+        created_at: "2026-11-20T00:00:00Z",
+        funds_usd: 50,
+      },
+      {
+        address: ADDR_B,
+        heat: 4,
+        blend_bucket: "maybe",
+        status: "done",
+        created_at: "2026-10-01T00:00:00Z",
+      },
+    ],
+    100,
+    now,
+  );
+  assert.equal(board.leaderboard[0].address, ADDR_B);
+  assert.equal(board.leaderboard[0].heat, 4);
+  assert.equal(board.leaderboard[1].address, ADDR_A);
+  assert.equal(board.leaderboard[1].heat, 1);
+  assert.equal(board.leaderboard[1].peak_heat, 9);
+  assert.equal(board.leaderboard[1].history_count, 2);
+  assert.equal(board.leaderboard[1].stale, false);
+  assert.equal(board.requeue.length, 1);
+  assert.equal(board.requeue[0].address, ADDR_B);
+  assert.equal(board.requeue[0].peak_heat, 4);
+});

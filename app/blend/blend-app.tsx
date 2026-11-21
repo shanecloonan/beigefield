@@ -59,6 +59,10 @@ type Board = {
     funds_usd: number | null;
     contract_name: string | null;
     liveness?: string;
+    peak_heat?: number;
+    history_count?: number;
+    scanned_at?: string | null;
+    stale?: boolean;
   }[];
   flagged?: {
     address: string;
@@ -67,6 +71,7 @@ type Board = {
     liveness?: string;
     contract_name: string | null;
   }[];
+  requeue?: { address: string; heat: number; peak_heat?: number }[];
 };
 
 type Receipt = {
@@ -261,6 +266,9 @@ export default function BlendApp() {
               ? "The desk store is not connected, so these totals stay at zero."
               : "Yes is a drain found. Maybe is heat without a drain. No is a cold scan. One row per contract."}
             {board?.truncated ? " Totals use the latest 20,000 runs plus the highest-heat rows." : ""}
+            {board && (board.requeue || []).length > 0
+              ? ` ${(board.requeue || []).length.toLocaleString()} stale high-heat contracts are queued for a rescan.`
+              : ""}
           </p>
 
           {board && (board.flagged || []).length > 0 && (
@@ -296,7 +304,8 @@ export default function BlendApp() {
                 <tr>
                   <th className="px-3 py-2 w-10">#</th>
                   <th className="px-3 py-2">Contract</th>
-                  <th className="px-3 py-2">Heat</th>
+                  <th className="px-3 py-2">Latest</th>
+                  <th className="px-3 py-2">Peak</th>
                   <th className="px-3 py-2">Result</th>
                   <th className="px-3 py-2">Funds</th>
                 </tr>
@@ -309,7 +318,11 @@ export default function BlendApp() {
                       {row.contract_name && <span className="block text-brand-100">{row.contract_name}</span>}
                       <span className="block font-mono text-[10px] text-brand-400">{row.address}</span>
                     </td>
-                    <td className="px-3 py-2 tabular-nums text-brand-100">{row.heat}</td>
+                    <td className="px-3 py-2 tabular-nums text-brand-100">
+                      {row.heat}
+                      {row.stale ? <span className="mt-0.5 block text-[10px] uppercase tracking-wider text-brand-500">Stale</span> : null}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums text-brand-400">{row.peak_heat ?? row.heat}</td>
                     <td className="px-3 py-2">
                       <span className={`inline-block rounded border px-2 py-0.5 uppercase tracking-wider ${BUCKET[row.bucket] || BUCKET.no}`}>
                         {row.label}
@@ -320,14 +333,14 @@ export default function BlendApp() {
                 ))}
                 {!board && (
                   <tr>
-                    <td colSpan={5} className="px-3 py-6 text-center text-brand-500">
+                    <td colSpan={6} className="px-3 py-6 text-center text-brand-500">
                       Loading scans.
                     </td>
                   </tr>
                 )}
                 {board && board.leaderboard.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-3 py-6 text-center text-brand-500">
+                    <td colSpan={6} className="px-3 py-6 text-center text-brand-500">
                       No finished scans yet.
                     </td>
                   </tr>
