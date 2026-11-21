@@ -635,6 +635,13 @@ def main(argv: list[str] | None = None) -> int:
     fork.add_argument("--address", default="")
     fork.add_argument("--json", action="store_true")
 
+    graph = sub.add_parser(
+        "system-graph",
+        help="Link protocol roles across chains. No messages, heat stays 0.",
+    )
+    graph.add_argument("--part", action="append", default=[], help="chain:role:address")
+    graph.add_argument("--json", action="store_true")
+
     proto = sub.add_parser(
         "protocol-invariants",
         help="Catalog properties for a vault and witness roles around it. Heat only on a local failure.",
@@ -1009,6 +1016,16 @@ def main(argv: list[str] | None = None) -> int:
         import json as _json
         from eth_scanner.advanced.fork_sensitivity import compare_view
         print(_json.dumps(compare_view(args.url, args.address or ("0x" + "00" * 20)), indent=2))
+        return 0
+
+    if args.cmd == "system-graph":
+        import json as _json
+        from eth_scanner.advanced.system_graph import system_graph
+        parts = []
+        for raw in args.part or []:
+            chain, role, address = (raw.split(":", 2) + ["", "", ""])[:3]
+            parts.append({"chain": chain, "role": role, "address": address})
+        print(_json.dumps(system_graph(parts), indent=2))
         return 0
 
     if args.cmd == "protocol-invariants":
