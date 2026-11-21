@@ -591,6 +591,14 @@ def main(argv: list[str] | None = None) -> int:
     evd.add_argument("--dry-run", action="store_true")
     evd.add_argument("--json", action="store_true")
 
+    sem = sub.add_parser(
+        "evm-semantics",
+        help="Read a chain's block meaning and optional BNB fork-shape flags. Adds no heat.",
+    )
+    sem.add_argument("--chain", required=True)
+    sem.add_argument("--source", default=None, help="local source to scan for PancakeSwap or Venus names")
+    sem.add_argument("--json", action="store_true")
+
     ai = sub.add_parser(
         "explain",
         help="Phase E optional LLM triage note (skipped without API key; never adds heat)",
@@ -852,6 +860,34 @@ def main(argv: list[str] | None = None) -> int:
             ],
         }
         print(_json.dumps(out, indent=2))
+        return 0
+
+    if args.cmd == "evm-semantics":
+        import json as _json
+        from eth_scanner.chains.evm import call_with_backoff
+        from eth_scanner.chains.evm_discover import _rpc_call
+        from eth_scanner.chains.evm_semantics import interpret_block, scan_bsc_forks
+        try:
+            header = call_with_backoff(
+                args.chain,
+                "eth_getBlockByNumber",
+                ["latest", False],
+                rpc=_rpc_call,
+            )
+            report = interpret_block(args.chain, header)
+        except Exception as exc:  # noqa: BLE001
+            report = {
+                "chain": args.chain,
+                "heat_contribution": 0,
+                "degraded": True,
+                "l1_source": "unknown",
+                "rpc_error": type(exc).__name__,
+                "note": "Block header was not read. L1 and L2 numbers stay unknown.",
+            }
+        if args.source:
+            text = Path(args.source).read_text(encoding="utf-8", errors="replace")
+            report["fork_flags"] = scan_bsc_forks(text)
+        print(_json.dumps(report, indent=2))
         return 0
 
     if args.cmd == "strong-deep" or (
