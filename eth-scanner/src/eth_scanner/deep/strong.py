@@ -22,6 +22,7 @@ from typing import Any, Callable, Optional
 
 from eth_scanner.classify import classify_contract, engine_config_for_class
 from eth_scanner.config import Settings, load_settings
+from eth_scanner.deep.added_engines import engine_run_row, run_unverified_decompile, run_wake_project
 from eth_scanner.deep.findings import EngineFinding, sanitize_evidence
 from eth_scanner.deep.findings import apply_agreement, dedupe_findings
 from eth_scanner.deep.echidna_runner import run_echidna
@@ -243,6 +244,18 @@ def run_strong_deep(
     return progress
 
 
+def _runtime_code(address: str, settings: Settings) -> str:
+    """Read-only eth_getCode. A missing RPC leaves the decompiler with no bytecode."""
+    from eth_scanner.ingest.etherscan import fetch_rpc_code
+    url = getattr(settings, "eth_rpc_url", "") or ""
+    if not url:
+        return ""
+    try:
+        return fetch_rpc_code(url, address) or ""
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 def _scan_batch(batch, *, scan, workers: int) -> list[dict[str, Any]]:
     if workers == 1 or len(batch) == 1:
         return [scan(c, light, funds) for c, light, funds in batch]
@@ -321,10 +334,23 @@ def _scan_candidate(
                 finding.contract = finding.contract or impl_artifact.contract_name
             findings.extend(impl_findings)
             runs.extend(impl_runs)
+    verified = bool(
+        artifact
+        and (artifact.content or "").strip()
+        and artifact.kind == "source"
+        and artifact.src_confidence in {"high", "med"}
+    )
+    if not verified:
+        dec = run_unverified_decompile(cand.address, _runtime_code(cand.address, settings), funds)
+        for finding in dec.findings:
+            finding.generic = True
+        findings.extend(dec.findings)
+        runs.append(engine_run_row(dec))
+    decompiled = any(row.get("engine") == "decompile" and row.get("status") == "ok" for row in runs)
     live = _live(cand.address, settings)
     return {
-        "status": "done" if artifact and artifact.content else "skipped",
-        "skipped_reason": None if artifact and artifact.content else "no verified source",
+        "status": "done" if (artifact and artifact.content) or decompiled else "skipped",
+        "skipped_reason": None if (artifact and artifact.content) or decompiled else "no verified source",
         "contract_name": (artifact.contract_name if artifact else None) or light.get("contract_name"),
         "findings": findings,
         "engine_runs": runs,
@@ -357,6 +383,7 @@ def _run_engine_set(
             ) if primary else EngineRunResult("mythril", "skipped", note="no primary source file")
         ),
         "semgrep": lambda: run_semgrep(project, timeout_s=120),
+        "wake": lambda: run_wake_project(project, timeout_s=40),
         "halmos": lambda: run_halmos(harness_dir=FUZZ_ROOT, timeout_s=90),
         "medusa": lambda: run_medusa(suite_dir=FUZZ_ROOT, timeout_s=90),
         "echidna": lambda: run_echidna(suite_dir=FUZZ_ROOT, timeout_s=90),

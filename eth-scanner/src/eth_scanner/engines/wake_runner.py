@@ -8,6 +8,7 @@ binary, a timeout, or a crash leaves an empty lead list.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -33,7 +34,8 @@ def run_wake(
         "detections": [],
         "note": "wake is not installed. Detectors were not run.",
     }
-    if runner is None and not (which or shutil.which)("wake"):
+    located = which("wake") if which is not None else _wake_bin()
+    if runner is None and not located:
         return report
     try:
         raw = runner(source) if runner is not None else _run_cli(source, timeout_s=timeout_s)
@@ -81,18 +83,28 @@ def parse_wake(raw: str) -> list[dict[str, Any]]:
     return kept
 
 
+def _wake_bin() -> Optional[str]:
+    override = (os.environ.get("ETH_SCANNER_WAKE_BIN") or "").strip()
+    if override and Path(override).is_file():
+        return override
+    return shutil.which("wake")
+
+
 def _run_cli(source: str, *, timeout_s: int) -> str:
-    exe = shutil.which("wake")
+    exe = _wake_bin()
     if not exe:
         raise FileNotFoundError("wake")
     with tempfile.TemporaryDirectory(prefix="eth-scanner-wake-") as tmp:
         path = Path(tmp) / "Target.sol"
         path.write_text(source or "", encoding="utf-8")
         proc = subprocess.run(
-            [exe, "detect", "all", str(path), "--export", "json"],
+            [exe, "detect", "--export", "json", "--ignore-errors", "all", str(path)],
             capture_output=True,
             text=True,
             timeout=timeout_s,
             check=False,
         )
+        exported = Path(tmp) / ".wake" / "detections.json"
+        if exported.is_file():
+            return exported.read_text(encoding="utf-8")
     return proc.stdout or ""
