@@ -635,6 +635,14 @@ def main(argv: list[str] | None = None) -> int:
     fork.add_argument("--address", default="")
     fork.add_argument("--json", action="store_true")
 
+    bridge = sub.add_parser(
+        "bridge-note",
+        help="Record a bridge, inbox, outbox, or messenger name. No call, heat stays 0.",
+    )
+    bridge.add_argument("--role", action="append", default=[])
+    bridge.add_argument("--source", default="")
+    bridge.add_argument("--json", action="store_true")
+
     messages = sub.add_parser(
         "message-match",
         help="Compare observed 32-byte message ids. Nothing is replayed, heat stays 0.",
@@ -1033,6 +1041,25 @@ def main(argv: list[str] | None = None) -> int:
         import json as _json
         from eth_scanner.advanced.fork_sensitivity import compare_view
         print(_json.dumps(compare_view(args.url, args.address or ("0x" + "00" * 20)), indent=2))
+        return 0
+
+    if args.cmd == "bridge-note":
+        import json as _json
+        from eth_scanner.advanced.bridge_note import bridge_note
+        text = ""
+        if args.source:
+            try:
+                text = open(args.source, encoding="utf-8").read()
+            except OSError:
+                print(_json.dumps({
+                    "status": "skipped",
+                    "reason": "source missing",
+                    "roles": [],
+                    "names": [],
+                    "heat_contribution": 0,
+                }, indent=2))
+                return 0
+        print(_json.dumps(bridge_note(args.role or [], text), indent=2))
         return 0
 
     if args.cmd == "message-match":
