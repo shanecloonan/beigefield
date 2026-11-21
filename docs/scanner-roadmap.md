@@ -18,6 +18,8 @@ Live desk: [`/test`](https://beigefield.vercel.app/test). Automation emits **buc
 
 A `chain` field on targets and runs defaults to `ethereum`. The Blend board and `/api/blend/stats` stay on Ethereum unless `chain` is set, so Ethereum totals do not move when another chain is stored. Solana is the first adapter beside Ethereum (`eth_scanner/chains`). A later chain registers a name and an address form; it does not go through the Ethereum claim path.
 
+`python -m eth_scanner solana-discover` reads the public DefiLlama Solana TVL and, when `SOLANA_RPC_URL` is set, that RPC. Otherwise it uses the public mainnet-beta endpoint and backs off once on HTTP 429. Dollars at risk are evidence. The command adds no heat and does not send a transaction. The $100 floor is unchanged.
+
 ---
 
 ## Architecture (current → target)
