@@ -102,7 +102,7 @@ def discover(
 
 
 def enqueue(store: Any, report: dict[str, Any]) -> dict[str, Any]:
-    """Queue contracts only. Skip an address that already belongs to Ethereum."""
+    """Queue contracts on their own chain. An Ethereum row with the same address stays put."""
     saved: list[str] = []
     skipped: list[dict[str, str]] = []
     if report.get("refused") or report.get("chain") == "ethereum":
