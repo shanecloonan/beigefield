@@ -175,12 +175,6 @@ export default function BlendApp() {
           Beigefield · Blend
         </p>
         <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-brand-50">Blend</h1>
-        <p className="mt-3 max-w-2xl text-sm text-brand-400 leading-relaxed">
-          One automatic gauntlet: Ityfuzz, Halmos, Medusa, Echidna, the earlier adaptations, and
-          Randoop, LearnLib, Stateright, PICT, OpenSpiel, and Picire. Scheduled jobs keep scanning.
-          This page shows the totals and the highest heat. Local forks only. Heat moves only when an
-          unprivileged caller ends with more value than they started.
-        </p>
 
         <section className="mt-8" aria-labelledby="board-heading">
           <h2 id="board-heading" className="text-[11px] tracking-[0.2em] uppercase text-gold/80 font-semibold">
@@ -193,26 +187,14 @@ export default function BlendApp() {
             <Stat label="No" value={board ? board.totals.no.toLocaleString() : "—"} hint="Cold" />
           </div>
           {board && board.totals.other > 0 && (
-            <p className="mt-2 text-xs text-brand-400">Other buckets: {board.totals.other.toLocaleString()}</p>
+            <p className="mt-2 text-xs text-brand-400">Other {board.totals.other.toLocaleString()}</p>
           )}
-          <p className="mt-3 text-xs text-brand-500">
-            {board && !board.connected
-              ? "The desk store is not connected, so these totals stay at zero."
-              : "Yes is a drain found. Maybe is heat without a drain. No is a cold scan. One row per contract."}
-            {board?.truncated ? " Totals use the latest 20,000 runs plus the highest-heat rows." : ""}
-            {board && (board.requeue || []).length > 0
-              ? ` ${(board.requeue || []).length.toLocaleString()} stale high-heat contracts are queued for a rescan.`
-              : ""}
-          </p>
 
           {board && (board.flagged || []).length > 0 && (
             <div className="mt-6">
               <h3 className="text-[11px] tracking-[0.2em] uppercase text-brand-400 font-semibold">
                 Already drained
               </h3>
-              <p className="mt-1 text-xs text-brand-500">
-                A past ETH outflow to an empty account, and the balance has collapsed. These stay off the heat ranking.
-              </p>
               <ul className="mt-2 space-y-1 text-xs">
                 {(board.flagged || []).slice(0, 20).map((row) => (
                   <li key={`${row.chain || "ethereum"}:${row.address}`} className="flex items-baseline justify-between gap-3 border-t border-brand-800/60 py-1.5">
@@ -229,17 +211,17 @@ export default function BlendApp() {
             </div>
           )}
 
-          <div className="mt-8 flex items-center justify-between gap-3">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-[11px] tracking-[0.2em] uppercase text-gold/80 font-semibold">
               Highest heat
             </h3>
-            <div className="flex gap-1 text-[10px] uppercase tracking-[0.14em]">
+            <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-[0.14em]">
               {CHAIN_FILTERS.map((item) => (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => setChain(item.id)}
-                  className={`rounded border px-2 py-1 ${chain === item.id ? "border-gold/60 text-brand-100" : "border-brand-800 text-brand-500"}`}
+                  className={`rounded border px-1.5 py-1 sm:px-2 ${chain === item.id ? "border-gold/60 text-brand-100" : "border-brand-800 text-brand-500"}`}
                 >
                   {item.label}
                 </button>
@@ -254,8 +236,8 @@ export default function BlendApp() {
                   <th className="px-3 py-2">Contract</th>
                   <th className="px-3 py-2">Chain</th>
                   <th className="px-3 py-2">Latest</th>
-                  <th className="px-3 py-2">Peak</th>
-                  <th className="px-3 py-2">Result</th>
+                  <th className="px-3 py-2 hidden sm:table-cell">Peak</th>
+                  <th className="px-3 py-2 hidden sm:table-cell">Result</th>
                   <th className="px-3 py-2">Funds</th>
                 </tr>
               </thead>
@@ -272,8 +254,8 @@ export default function BlendApp() {
                       {row.heat}
                       {row.stale ? <span className="mt-0.5 block text-[10px] uppercase tracking-wider text-brand-500">Stale</span> : null}
                     </td>
-                    <td className="px-3 py-2 tabular-nums text-brand-400">{row.peak_heat ?? row.heat}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 tabular-nums text-brand-400 hidden sm:table-cell">{row.peak_heat ?? row.heat}</td>
+                    <td className="px-3 py-2 hidden sm:table-cell">
                       <span className={`inline-block rounded border px-2 py-0.5 uppercase tracking-wider ${BUCKET[row.bucket] || BUCKET.no}`}>
                         {row.label}
                       </span>
@@ -307,18 +289,7 @@ export default function BlendApp() {
           <p className="mt-2 text-sm text-brand-200">
             {live?.phase || "scheduled"} · {live?.status || "scheduled"}
             {live?.current_address ? ` · ${live.current_address}` : ""}
-          </p>
-          <p className="mt-1 text-sm text-brand-400">{live?.message || "Loading the scheduled run."}</p>
-          <p className="mt-2 text-[11px] text-brand-500">{live?.schedule}</p>
-          {live?.passes && live.passes.length > 0 && (
-            <p className="mt-2 text-[11px] text-brand-500">
-              Every kept contract runs {live.passes.join(", ")}.
-            </p>
-          )}
-          <p className="mt-2 text-xs text-brand-400">
-            Random contracts this run: {live?.random_scanned_this_run ?? 0}
-            {live?.random_enabled === false ? " · random phase off" : ""}
-            {live && !live.connected ? " · desk store not connected, so counts stay at zero until it is" : ""}
+            {" · "}random {live?.random_scanned_this_run ?? 0}
           </p>
         </section>
         {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
@@ -328,11 +299,7 @@ export default function BlendApp() {
             Scanning random contracts
           </h2>
           <div className="rounded-lg border border-brand-800 bg-brand-900/30 p-4">
-            <p className="text-sm text-brand-300">
-              Random contracts are pulled by the scheduled loop. The list below is that stream.
-              Run now is optional and is not how the loop advances.
-            </p>
-            <ul className="mt-3 space-y-1 text-xs">
+            <ul className="space-y-1 text-xs">
               {(live?.random_stream || []).map((row) => (
                 <li key={`${row.at}-${row.address}`} className="font-mono text-brand-300">
                   {row.address} · {row.bucket} · heat {row.heat}
@@ -348,7 +315,7 @@ export default function BlendApp() {
               onClick={() => void runRandom()}
               className="mt-4 rounded-md border border-brand-700 px-4 py-2 text-[11px] uppercase tracking-[0.14em] text-brand-300 disabled:text-brand-600"
             >
-              {busy === "random" ? "Sampling" : "Run now (optional)"}
+              {busy === "random" ? "Sampling" : "Run now"}
             </button>
             {sample && (
               <p className="mt-3 text-xs text-brand-400">
@@ -404,7 +371,7 @@ export default function BlendApp() {
                   {groups.length === 0 && (
                     <tr>
                       <td colSpan={4} className="px-3 py-6 text-center text-brand-500">
-                        No property failures. That is not a verdict of safety.
+                        None
                       </td>
                     </tr>
                   )}
