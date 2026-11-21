@@ -546,6 +546,15 @@ def main(argv: list[str] | None = None) -> int:
     rq.add_argument("--runs", required=True, help="JSON list of finished scan rows")
     rq.add_argument("--dry-run", action="store_true")
 
+    sol = sub.add_parser(
+        "solana-discover",
+        help="Read Solana TVL and program accounts. Adds no heat and sends nothing.",
+    )
+    sol.add_argument("--limit", type=int, default=20)
+    sol.add_argument("--min-usd", type=float, default=None)
+    sol.add_argument("--dry-run", action="store_true")
+    sol.add_argument("--json", action="store_true")
+
     ai = sub.add_parser(
         "explain",
         help="Phase E optional LLM triage note (skipped without API key; never adds heat)",
@@ -717,6 +726,31 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         applied = apply_stale(store, [row["address"] for row in planned])
         print(_json.dumps({"planned": len(planned), "requeued": applied}, indent=2))
+        return 0
+
+    if args.cmd == "solana-discover":
+        import json as _json
+        from eth_scanner.chains.solana_discover import discover as _solana_discover
+        from eth_scanner.chains.solana_discover import enqueue as _solana_enqueue
+        from eth_scanner.types import DEFAULT_MIN_FUNDS_USD
+        floor = float(args.min_usd) if args.min_usd is not None else DEFAULT_MIN_FUNDS_USD
+        report = _solana_discover(limit=int(args.limit or 20), min_usd=floor)
+        saved: list[str] = []
+        if not args.dry_run:
+            saved = _solana_enqueue(store, report)
+        out = {
+            "chain": report["chain"],
+            "heat_contribution": report["heat_contribution"],
+            "rpc": report["rpc"],
+            "degraded": report["degraded"],
+            "candidates": len(report["candidates"]),
+            "enqueued": saved,
+            "sample": [
+                {"name": row["name"], "address": row["address"], "funds_usd": row["funds_usd"]}
+                for row in report["candidates"][:10]
+            ],
+        }
+        print(_json.dumps(out, indent=2))
         return 0
 
     if args.cmd == "strong-deep" or (
