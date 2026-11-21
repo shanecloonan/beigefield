@@ -621,6 +621,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     rec.add_argument("--json", action="store_true")
 
+    inv = sub.add_parser(
+        "advanced-invariants",
+        help="Keep allowlisted invariants that hold on a known-good baseline. Heat only on a local failure.",
+    )
+    inv.add_argument("--json", action="store_true")
+
     wake = sub.add_parser(
         "wake-detect",
         help="Run Ackee Wake when it is installed. Detector names add no heat.",
@@ -948,6 +954,12 @@ def main(argv: list[str] | None = None) -> int:
         import json as _json
         from eth_scanner.benchmark.incident_recall import live_report
         print(_json.dumps(live_report(), indent=2))
+        return 0
+
+    if args.cmd == "advanced-invariants":
+        import json as _json
+        from eth_scanner.advanced.invariants import report as invariant_report
+        print(_json.dumps(invariant_report(), indent=2))
         return 0
 
     if args.cmd == "wake-detect":
