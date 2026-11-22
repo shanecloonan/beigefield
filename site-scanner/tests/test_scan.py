@@ -7,7 +7,18 @@ import unittest
 from site_scanner.allow import active_allowed
 from site_scanner.fetch import _robots_disallows, _same_origin
 from site_scanner.analyze import report_for
-from site_scanner.discover import parse_bounty, parse_crt, parse_tranco
+from site_scanner.discover import (
+    hosts_from_certstream,
+    mix_hosts,
+    parse_bounty,
+    parse_crt,
+    parse_tranco,
+    sample_tranco_lines,
+    source_counts,
+    usable_host,
+)
+from site_scanner.migrate import missing_ddl_secrets, pg_env
+from site_scanner.store import _error_code
 from site_scanner.redact import redact
 
 
@@ -100,6 +111,50 @@ class ScanTests(unittest.TestCase):
         self.assertFalse(_robots_disallows(robots, "/"))
         self.assertEqual(_same_origin("app.example", "/_next/static/app.js"), "https://app.example/_next/static/app.js")
         self.assertEqual(_same_origin("app.example", "https://cdn.example/app.js"), "")
+
+    def test_discovery_keeps_random_hosts_passive(self) -> None:
+        hosts = mix_hosts(
+            owned=["beigefield.vercel.app"],
+            bounty=["app.example"],
+            crt=["*.new.example"],
+            tranco=["shop.example", "app.example"],
+            limit=4,
+        )
+        self.assertEqual(hosts, ["beigefield.vercel.app", "app.example", "new.example", "shop.example"])
+        bounty = {"app.example"}
+        self.assertTrue(active_allowed("app.example", bounty))
+        self.assertFalse(active_allowed("shop.example", bounty))
+        self.assertFalse(active_allowed("new.example", bounty))
+        self.assertEqual(usable_host("*.Login.Example"), "login.example")
+        message = {"data": {"leaf_cert": {"all_domains": ["*.issued.example", "localhost"]}}}
+        self.assertEqual(hosts_from_certstream(message), ["issued.example"])
+        lines = "\n".join("%s,site-%s.example" % (rank, rank) for rank in range(1, 600))
+        picked = sample_tranco_lines(lines, limit=2, start_rank=500, rng=__import__("random").Random(1))
+        self.assertEqual(len(picked), 2)
+        self.assertTrue(all(host.startswith("site-5") for host in picked))
+        counts = source_counts(hosts, owned=["beigefield.vercel.app"], bounty=["app.example"], crt=["new.example"], tranco=["shop.example"])
+        self.assertEqual(counts, {"owned": 1, "bounty": 1, "certificate": 1, "tranco": 1})
+
+    def test_a_host_excluded_by_any_program_is_dropped(self) -> None:
+        hosts = parse_bounty([
+            {"targets": {"in_scope": [{"asset_identifier": "https://app.example", "asset_type": "URL"}], "out_of_scope": [{"asset_identifier": "https://admin.example"}]}},
+            {"targets": {"in_scope": [{"asset_identifier": "https://admin.example", "asset_type": "URL"}]}},
+        ])
+        self.assertEqual(hosts, ["app.example"])
+
+    def test_migration_report_names_missing_secrets_only(self) -> None:
+        self.assertEqual(
+            missing_ddl_secrets({}),
+            ["DATABASE_URL or SUPABASE_DB_PASSWORD", "SUPABASE_ACCESS_TOKEN"],
+        )
+        env = {"DATABASE_URL": "postgresql://postgres:s3cret@db.example:5432/postgres"}
+        self.assertNotIn("s3cret", str(missing_ddl_secrets(env)))
+        child = pg_env(env)
+        assert child is not None
+        self.assertEqual(child["PGHOST"], "db.example")
+        self.assertEqual(child["PGPASSWORD"], "s3cret")
+        self.assertEqual(_error_code('{"code":"PGRST205","message":"AKIAIOSFODNN7EXAMPLE"}'), "PGRST205")
+        self.assertEqual(_error_code('{"message":"AKIAIOSFODNN7EXAMPLE"}'), "")
 
 
 if __name__ == "__main__":

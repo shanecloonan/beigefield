@@ -17,10 +17,30 @@ def _env() -> tuple[str, str]:
     return url, key
 
 
-def _req(method: str, query: dict[str, str] | None = None, body: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+class StoreError(RuntimeError):
+    def __init__(self, status: int, code: str) -> None:
+        self.status = int(status)
+        self.code = code
+        super().__init__("http-%s" % self.status)
+
+
+def _error_code(raw: str) -> str:
+    try:
+        parsed = json.loads(raw or "")
+    except json.JSONDecodeError:
+        return ""
+    if not isinstance(parsed, dict):
+        return ""
+    code = str(parsed.get("code") or "")
+    if code and all(ch.isalnum() or ch == "_" for ch in code) and len(code) <= 40:
+        return code
+    return ""
+
+
+def _req(method: str, query: dict[str, str] | None = None, body: dict[str, Any] | None = None) -> tuple[list[dict[str, Any]], int]:
     url, key = _env()
     if not url or not key:
-        return []
+        raise StoreError(0, "no-store")
     qs = ("?" + urllib.parse.urlencode(query)) if query else ""
     data = json.dumps(body).encode("utf-8") if body is not None and method != "GET" else None
     request = urllib.request.Request(
@@ -38,12 +58,30 @@ def _req(method: str, query: dict[str, str] | None = None, body: dict[str, Any] 
     try:
         with urllib.request.urlopen(request, timeout=15) as response:
             raw = response.read().decode("utf-8", errors="replace")
-    except urllib.error.HTTPError:
-        return []
+            status = int(getattr(response, "status", 200) or 200)
+    except urllib.error.HTTPError as exc:
+        err = exc.read(500).decode("utf-8", errors="replace") if exc.fp else ""
+        raise StoreError(int(exc.code), _error_code(err)) from None
     if not raw:
-        return []
+        return [], status
     parsed = json.loads(raw)
-    return parsed if isinstance(parsed, list) else []
+    if isinstance(parsed, list):
+        return parsed, status
+    if isinstance(parsed, dict):
+        return [parsed], status
+    return [], status
+
+
+def probe_store() -> dict[str, Any]:
+    """Whether the service key can read site_scan_hits. No row bodies are returned."""
+    url, key = _env()
+    if not url or not key:
+        return {"status": "no-store"}
+    try:
+        rows, status = _req("GET", {"select": "dedupe_key", "limit": "1"})
+    except StoreError as exc:
+        return {"status": "error", "http": exc.status, "code": exc.code}
+    return {"status": "ok", "http": status, "rows": len(rows)}
 
 
 def save_hit(report: dict[str, Any]) -> dict[str, Any]:
@@ -53,8 +91,11 @@ def save_hit(report: dict[str, Any]) -> dict[str, Any]:
         return {"status": "skipped", "reason": "no host"}
     url, key = _env()
     if not url or not key:
-        return {"status": "skipped", "reason": "no store"}
-    previous = _req("GET", {"select": "peak_heat", "dedupe_key": "eq.%s" % host, "limit": "1"})
+        return {"status": "skipped", "reason": "no-store"}
+    try:
+        previous, _status = _req("GET", {"select": "peak_heat", "dedupe_key": "eq.%s" % host, "limit": "1"})
+    except StoreError as exc:
+        return {"status": "skipped", "reason": "http-%s" % exc.status, "code": exc.code, "host": host}
     prior = 0
     if previous:
         try:
@@ -75,5 +116,15 @@ def save_hit(report: dict[str, Any]) -> dict[str, Any]:
         "mode": report.get("mode") or "passive",
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
-    saved = _req("POST", {"on_conflict": "dedupe_key"}, body)
-    return {"status": "ok" if saved else "skipped", "host": host, "heat": heat, "peak_heat": body["peak_heat"]}
+    try:
+        saved, status = _req("POST", {"on_conflict": "dedupe_key"}, body)
+    except StoreError as exc:
+        return {"status": "skipped", "reason": "http-%s" % exc.status, "code": exc.code, "host": host, "heat": heat}
+    wrote = bool(saved) or status in {200, 201, 204}
+    return {
+        "status": "ok" if wrote else "skipped",
+        "reason": "" if wrote else "empty",
+        "host": host,
+        "heat": heat,
+        "peak_heat": body["peak_heat"],
+    }

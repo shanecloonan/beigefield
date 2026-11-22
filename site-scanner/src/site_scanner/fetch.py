@@ -149,6 +149,8 @@ def fetch_host(
         pages.append(page)
         if path == "/robots.txt" and page.get("status") == 200:
             robots = str(page.get("body") or "")
+        if page.get("status") == 0 and path != "/robots.txt":
+            return pages
     extras = _script_urls(host, pages)
     mapping = ""
     for url in extras:
