@@ -286,3 +286,5 @@ Lane A evidence-heat (#37 / #38) and the funds floor (#36, now $100) are **prere
 A scan stores one row per stage. The quick stage sets a provisional heat immediately. Similarity, cross-contract reachability, Halmos, hevm, Kontrol, fork, and fuzz stay pending until their own job finishes. Fusion sums distinct evidence facts. An empty stage does not lower that sum, and a hold counts only when it is more confident than the fact it contradicts.
 
 `cross-contract` asks whether an open function reaches a value move, a signature check, or a library in a different contract, and whether a caller-controlled value is an argument. A public address getter can be read with `eth_call`. The path is a lead and adds no heat.
+
+During a scan, the similarity and cross-contract stages finish from the source already in hand. A neighbor or a path is stored on the row and adds no heat. Halmos, hevm, Kontrol, fork, and fuzz stay pending for their own jobs.

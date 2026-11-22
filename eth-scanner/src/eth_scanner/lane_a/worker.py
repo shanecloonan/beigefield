@@ -17,6 +17,7 @@ from eth_scanner.engines.pipeline import run_advanced_engines
 from eth_scanner.funnel.s0_s7 import FunnelConfig, FunnelContext, run_lane_a
 from eth_scanner.heat import evidence_heat, should_promote_lane_b
 from eth_scanner.stages.fusion import annotate_stages
+from eth_scanner.stages.local import finish_local_stages
 from eth_scanner.ingest.etherscan import (
     EtherscanClient,
     IngestError,
@@ -273,7 +274,10 @@ def run_one(
             "fork-verify error (non-blocking): %s" % str(exc)[:160]
         ]
 
-    result.heat_breakdown = annotate_stages(result.heat_breakdown, heat=int(result.heat or 0))
+    result.heat_breakdown = finish_local_stages(
+        annotate_stages(result.heat_breakdown, heat=int(result.heat or 0)),
+        (artifact.content or "") if artifact else "",
+    )
     store.save_result(addr, result)
     return result
 
