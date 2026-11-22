@@ -280,3 +280,5 @@ After each merge, report:
 7. **Phase F** — upgrade / TVL monitors
 
 Lane A evidence-heat (#37 / #38) and the funds floor (#36, now $100) are **prerequisites** already on `main`.
+
+`similarity-search` compares a function's statement graph with confirmed function text and a few saved shapes. A renamed or reordered body can still be a neighbor. The score is a lead for the existing detectors, and it adds no heat.
