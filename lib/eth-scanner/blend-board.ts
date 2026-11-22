@@ -178,6 +178,16 @@ function toRow(address: string, row: BlendRunLike): LeaderRow {
   };
 }
 
+/** A rescore stores the recomputed all-time peak. Raw heat on that row is not a second peak. */
+function contributedHeat(row: BlendRunLike): number {
+  const breakdown = breakdownOf(row);
+  if (breakdown && breakdown.rescore === "evidence-read") {
+    const recomputed = numberOrNull(breakdown.peak_heat);
+    if (recomputed != null) return recomputed;
+  }
+  return heatOf(row);
+}
+
 function scannedAt(row: LeaderRow): number {
   const parsed = Date.parse(row.scanned_at || "");
   return Number.isFinite(parsed) ? parsed : 0;
@@ -227,11 +237,12 @@ export function summarizeBlendRuns(
     next.chain = rowChain;
     const key = `${rowChain}:${address}`;
     const prev = best.get(key);
+    const contributed = contributedHeat(row);
     if (!prev) {
-      best.set(key, { latest: next, peak: next.heat, count: 1 });
+      best.set(key, { latest: next, peak: contributed, count: 1 });
       continue;
     }
-    prev.peak = Math.max(prev.peak, next.heat);
+    prev.peak = Math.max(prev.peak, contributed);
     prev.count += 1;
     if (newer(next, prev.latest)) prev.latest = next;
   }
