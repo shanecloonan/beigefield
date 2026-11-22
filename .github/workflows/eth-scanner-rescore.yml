@@ -1,0 +1,62 @@
+# Re-read stored heat and lower contradicted stamps. Read-only eth_getCode
+# and eth_call. Heat never rises. A failed read leaves the old points.
+#
+# Required repo secrets (the same ones eth-scanner-deep uses):
+#   SUPABASE_URL
+#   SUPABASE_SECRET_KEY
+#   ETH_RPC_URL
+
+name: eth-scanner-rescore
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Max high-heat rows to re-read"
+        required: false
+        default: "40"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eth-scanner-rescore
+  cancel-in-progress: false
+
+jobs:
+  rescore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install scanner
+        run: python -m pip install -e ./eth-scanner
+      - name: Rescore stored heat
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          ETH_SCANNER_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          ETH_RPC_URL: ${{ secrets.ETH_RPC_URL }}
+          INPUT_LIMIT: ${{ github.event.inputs.limit || '40' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SECRET_KEY:-}" ] || [ -z "${ETH_RPC_URL:-}" ]; then
+            echo "Missing SUPABASE_URL, SUPABASE_SECRET_KEY, or ETH_RPC_URL"
+            exit 1
+          fi
+          python -m eth_scanner rescore-evidence --limit "${INPUT_LIMIT}" --json > /tmp/rescore.json
+          python - <<'PY'
+          import json
+          report = json.load(open("/tmp/rescore.json", encoding="utf-8"))
+          if report.get("status") != "ok":
+              raise SystemExit("rescore did not run: %s" % report.get("status"))
+          print(json.dumps({
+              "status": report.get("status"),
+              "updated": report.get("updated"),
+              "changes": report.get("changes") or [],
+              "heat_contribution": report.get("heat_contribution"),
+          }))
+          PY
