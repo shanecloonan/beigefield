@@ -102,6 +102,35 @@ class RescorePeakTests(unittest.TestCase):
         self.assertEqual(rows[0]["heat"], 12)
         self.assertEqual(report["skipped"][0]["reason"], "no-probe-points")
 
+    def test_retired_probe_drops_without_a_live_read(self) -> None:
+        retired = dict(FALSE)
+        retired["admin"] = {"confirmed": [
+            {"id": "admin-eoa-confirmed", "evidence": "controller=0xabc funds_usd=241805"},
+            {"id": "admin-privileged-open", "evidence": "upgradeTo(address) on 0xabc — eth_call succeeded (no revert) selector=0x3659cfe6"},
+        ]}
+        rows = [{"id": "hydro", "address": HYDRO, "chain": "ethereum", "heat": 12, "blend_heat": 12, "heat_breakdown": retired}]
+        store = Store(rows)
+        with patch("eth_scanner.engines.rescore.live_flags", return_value=(None, None)):
+            report = rescore_rows(store, "http://rpc.example", limit=10)
+        self.assertEqual(report["updated"], 1)
+        self.assertEqual(rows[0]["heat"], 6)
+        self.assertEqual(rows[0]["heat_breakdown"]["privileged_callable"], 0)
+        self.assertEqual(rows[0]["heat_breakdown"]["eoa_admin"], 3)
+        self.assertEqual(rows[0]["heat_breakdown"]["original_peak"], 12)
+        self.assertEqual(rows[0]["heat_breakdown"]["peak_heat"], 6)
+
+    def test_current_control_confirmation_survives_a_failed_read(self) -> None:
+        current = dict(FALSE)
+        current["admin"] = {"confirmed": [
+            {"id": "admin-privileged-open", "evidence": "selector dispatched and the control selector reverted"},
+        ]}
+        rows = [{"id": "kept", "address": HYDRO, "chain": "ethereum", "heat": 4, "blend_heat": 4, "heat_breakdown": current}]
+        store = Store(rows)
+        with patch("eth_scanner.engines.rescore.live_flags", return_value=(None, None)):
+            report = rescore_rows(store, "http://rpc.example", limit=10)
+        self.assertEqual(report["updated"], 0)
+        self.assertEqual(rows[0]["heat"], 4)
+
     def test_an_undecided_read_does_not_touch_heat(self) -> None:
         rows = [{"id": "only", "address": HYDRO, "chain": "ethereum", "heat": 12, "blend_heat": 12, "heat_breakdown": dict(FALSE)}]
         store = Store(rows)

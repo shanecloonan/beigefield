@@ -67,6 +67,7 @@ jobs:
               "status": report.get("status"),
               "updated": report.get("updated"),
               "changes": report.get("changes") or [],
+              "skipped": report.get("skipped") or [],
               "heat_contribution": report.get("heat_contribution"),
           }))
           PY
