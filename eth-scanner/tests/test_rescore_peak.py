@@ -59,8 +59,48 @@ class RescorePeakTests(unittest.TestCase):
         self.assertEqual(rows[0]["heat_breakdown"]["peak_heat"], 0)
         self.assertEqual(rows[1]["heat"], 0)
         self.assertEqual(rows[2]["heat"], 9)
-        self.assertEqual(rows[2]["heat_breakdown"]["original_peak"], 9)
-        self.assertEqual(rows[2]["heat_breakdown"]["peak_heat"], 9)
+        self.assertNotIn("rescore", rows[2]["heat_breakdown"])
+
+    def test_receipt_evidence_lowers_a_column_the_board_still_ranks(self) -> None:
+        receipt = {"heat_breakdown": dict(FALSE)}
+        rows = [
+            {
+                "id": "latest",
+                "address": HYDRO,
+                "chain": "ethereum",
+                "heat": 0,
+                "blend_heat": 0,
+                "heat_breakdown": {"rescore": "evidence-read", "eoa_admin": 0, "privileged_callable": 0},
+                "blend_receipt": receipt,
+            },
+            {
+                "id": "ghost",
+                "address": HYDRO,
+                "chain": "eth",
+                "heat": 12,
+                "blend_heat": 12,
+                "heat_breakdown": {},
+                "blend_receipt": receipt,
+            },
+        ]
+        store = Store(rows)
+        with patch("eth_scanner.engines.rescore.live_flags", return_value=(False, False)):
+            report = rescore_rows(store, "http://rpc.example", limit=10)
+        self.assertGreater(report["updated"], 0)
+        self.assertEqual(rows[1]["heat"], 0)
+        self.assertEqual(rows[1]["blend_heat"], 0)
+        self.assertEqual(rows[1]["heat_breakdown"]["original_peak"], 12)
+        self.assertEqual(rows[1]["heat_breakdown"]["peak_heat"], 0)
+        self.assertEqual(rows[0]["heat_breakdown"]["peak_heat"], 0)
+
+    def test_unexplained_heat_is_not_wiped(self) -> None:
+        rows = [{"id": "bare", "address": HYDRO, "chain": "ethereum", "heat": 12, "blend_heat": 12, "heat_breakdown": {}}]
+        store = Store(rows)
+        with patch("eth_scanner.engines.rescore.live_flags", return_value=(False, False)):
+            report = rescore_rows(store, "http://rpc.example", limit=10)
+        self.assertEqual(report["updated"], 0)
+        self.assertEqual(rows[0]["heat"], 12)
+        self.assertEqual(report["skipped"][0]["reason"], "no-probe-points")
 
     def test_an_undecided_read_does_not_touch_heat(self) -> None:
         rows = [{"id": "only", "address": HYDRO, "chain": "ethereum", "heat": 12, "blend_heat": 12, "heat_breakdown": dict(FALSE)}]
