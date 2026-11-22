@@ -49,6 +49,8 @@ export type LeaderRow = {
   peak_heat: number;
   history_count: number;
   stale: boolean;
+  score_state: "" | "provisional" | "final";
+  pending_stages: string[];
 };
 
 export type BlendBoard = {
@@ -142,9 +144,21 @@ export function livenessOf(row: BlendRunLike): Liveness {
   return "live";
 }
 
+function scoreOf(row: BlendRunLike): { state: "" | "provisional" | "final"; pending: string[] } {
+  const raw = row.heat_breakdown;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { state: "", pending: [] };
+  const record = raw as { score_state?: unknown; pending_stages?: unknown };
+  const state = record.score_state === "provisional" || record.score_state === "final" ? record.score_state : "";
+  const pending = Array.isArray(record.pending_stages)
+    ? record.pending_stages.map((name) => String(name || "")).filter(Boolean)
+    : [];
+  return { state, pending };
+}
+
 function toRow(address: string, row: BlendRunLike): LeaderRow {
   const decision = verdictOf(row);
   const name = String(row.contract_name || "").trim();
+  const score = scoreOf(row);
   return {
     address,
     chain: chainOf(row),
@@ -159,6 +173,8 @@ function toRow(address: string, row: BlendRunLike): LeaderRow {
     peak_heat: heatOf(row),
     history_count: 1,
     stale: false,
+    score_state: score.state,
+    pending_stages: score.pending,
   };
 }
 

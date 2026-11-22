@@ -205,3 +205,29 @@ test("bnb, arbitrum, and base rows stay out of the ethereum totals", () => {
   assert.equal(all.totals.no, 1);
   assert.equal(all.leaderboard[0].chain, "bsc");
 });
+
+test("a pending slow stage is a label and does not change the heat rank", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 4,
+      blend_bucket: "maybe",
+      status: "done",
+      created_at: "2026-11-01T00:00:00Z",
+      heat_breakdown: { score_state: "provisional", pending_stages: ["similarity", "halmos"], total: 4 },
+    },
+    {
+      address: ADDR_B,
+      heat: 9,
+      blend_bucket: "yes",
+      status: "done",
+      created_at: "2026-11-02T00:00:00Z",
+    },
+  ]);
+  assert.equal(board.leaderboard[0].address, ADDR_B);
+  assert.equal(board.leaderboard[0].score_state, "");
+  assert.equal(board.leaderboard[1].address, ADDR_A);
+  assert.equal(board.leaderboard[1].heat, 4);
+  assert.equal(board.leaderboard[1].score_state, "provisional");
+  assert.deepEqual(board.leaderboard[1].pending_stages, ["similarity", "halmos"]);
+});
