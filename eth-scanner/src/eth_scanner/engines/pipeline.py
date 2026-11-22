@@ -41,6 +41,7 @@ from eth_scanner.engines.halmos_runner import (
     run_lead_halmos,
     symbolic_failures_as_confirmed,
     symbolic_failures_as_invariants,
+    symbolic_passes_as_invariants,
 )
 from eth_scanner.engines.oracle_checks import (
     oracle_as_confirmed,
@@ -122,6 +123,8 @@ def run_advanced_engines(
     min_funds_usd: float = DEFAULT_MIN_FUNDS_USD,
     run_fuzz: bool = True,
     run_halmos: bool = True,
+    lane_owner: str = "",
+    lane_owner_kind: str = "",
 ) -> AdvancedEngineReport:
     """Run gated defensive engine stages. Never broadcasts / builds attacks."""
     report = AdvancedEngineReport()
@@ -187,6 +190,8 @@ def run_advanced_engines(
                 funds_usd=funds_usd,
                 source=source,
                 timeout_s=30.0,
+                lane_owner=lane_owner,
+                lane_owner_kind=lane_owner_kind,
             )
             report.admin = admin.to_dict()
             report.proxy = {
@@ -382,6 +387,8 @@ def run_advanced_engines(
             )
             report.symbolic = halmos_report.to_dict()
             report.notes.extend(list(halmos_report.notes or [])[:4])
+            if halmos_report.passes:
+                report.extra_invariant_results.extend(symbolic_passes_as_invariants(halmos_report))
             if halmos_report.failures:
                 inv_rows = symbolic_failures_as_invariants(halmos_report)
                 report.extra_invariant_results.extend(inv_rows)

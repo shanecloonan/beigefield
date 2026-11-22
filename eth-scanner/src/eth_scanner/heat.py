@@ -136,14 +136,59 @@ def invariant_heat(
     return min(w.failed_invariant_cap, n_failed * w.failed_invariant)
 
 
+_EOA_FACT = "eoa-admin"
+_PRIV_FACT = "privileged-callable"
+_FACT_IDS = {
+    "admin-eoa": _EOA_FACT,
+    "admin-eoa-confirmed": _EOA_FACT,
+    "eoa-admin": _EOA_FACT,
+    "admin-privileged-open": _PRIV_FACT,
+    "admin-uninit-impl": _PRIV_FACT,
+    "admin-uninit-impl-lead": _PRIV_FACT,
+    "privileged-callable": _PRIV_FACT,
+}
+
+
+def evidence_fact(row: dict[str, Any]) -> str:
+    """One name for one fact, so a flag and a confirmed row cannot both add heat."""
+    extras = row.get("extras") if isinstance(row.get("extras"), dict) else {}
+    explicit = str(row.get("fact") or extras.get("fact") or "")
+    if explicit in {_EOA_FACT, _PRIV_FACT}:
+        return explicit
+    lead = str(row.get("lead_id") or row.get("id") or "")
+    return _FACT_IDS.get(lead, lead)
+
+
+def stronger_holds(results: list[dict[str, Any]]) -> set[str]:
+    """A passing symbolic access-control check contradicts a weaker call probe."""
+    held: set[str] = set()
+    for row in results or []:
+        if str(row.get("status") or "").lower() != "held":
+            continue
+        source = str(row.get("source") or row.get("tool") or "").lower()
+        if source not in {"symbolic", "halmos"}:
+            continue
+        blob = " ".join([str(row.get("id") or ""), str(row.get("name") or "")]).lower()
+        if "access_control" in blob or "access-control" in blob:
+            held.add(_PRIV_FACT)
+    return held
+
+
 def corroborated_heat(
     confirmed: list[dict[str, Any]],
     weights: Optional[HeatWeights] = None,
+    *,
+    skip_facts: Optional[set[str]] = None,
 ) -> int:
-    """Only *confirmed* engine/clone corroborations add heat. Leads alone → 0."""
+    """Only *confirmed* engine/clone corroborations add heat. Leads alone → 0.
+
+    Each fact is counted once. Facts already applied as eoa or privileged
+    heat are skipped.
+    """
     w = weights or load_heat_weights()
     n = 0
     seen: set[str] = set()
+    skip = set(skip_facts or ())
     for c in confirmed:
         if not c.get("confirmed"):
             continue
@@ -152,7 +197,10 @@ def corroborated_heat(
         if method in {"fuzz", "symbolic", "slither", "mythril", "semgrep", "aderyn", "halmos", "none", "source"}:
             if not c.get("live_confirmed"):
                 continue
-        key = str(c.get("lead_id") or "")
+        fact = evidence_fact(c)
+        if fact in skip:
+            continue
+        key = fact
         if key and key in seen:
             continue
         if key:
@@ -174,11 +222,18 @@ def evidence_heat(
     w = weights or load_heat_weights()
     rank = funds_rank(funds_usd, w)
     inv = invariant_heat(invariant_results, w)
-    priv = w.privileged_callable if privileged_callable else 0
+    contradicted = stronger_holds(invariant_results)
+    priv_on = bool(privileged_callable) and _PRIV_FACT not in contradicted
+    priv = w.privileged_callable if priv_on else 0
     eoa = 0
     if eoa_admin and funds_usd is not None and funds_usd >= w.eoa_admin_min_usd:
         eoa = w.eoa_admin
-    corr = corroborated_heat(list(corroborated or []), w)
+    skip = set(contradicted)
+    if priv_on:
+        skip.add(_PRIV_FACT)
+    if eoa:
+        skip.add(_EOA_FACT)
+    corr = corroborated_heat(list(corroborated or []), w, skip_facts=skip)
     total = min(w.max_heat, inv + priv + eoa + corr)
     from eth_scanner.drain import score_drain
     drain = score_drain(
@@ -194,8 +249,10 @@ def evidence_heat(
         "funds_in_heat": 0,
         "invariants_failed": inv,
         "privileged_callable": priv,
+        "privileged_confidence": 0 if _PRIV_FACT in contradicted else (1 if priv_on else 0),
         "eoa_admin": eoa,
         "corroborated_leads": corr,
+        "contradictions": sorted(contradicted),
         "total": total,
         "drain_probability": drain["drain_probability"],
         "profit_invariant_broke": drain["profit_invariant_broke"],

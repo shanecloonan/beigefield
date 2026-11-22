@@ -21,6 +21,32 @@ const COLUMN_SETS = [
   "address,heat,bucket,created_at,status,heat_breakdown,notes,drop_reason",
 ];
 
+function scanIdentity(row: BlendRunLike): string {
+  return [
+    normalizeChain(row.chain),
+    String(row.address || "").trim().toLowerCase(),
+    String(row.created_at || ""),
+    String(row.heat ?? ""),
+    String(row.blend_heat ?? ""),
+    String(row.status || ""),
+    String(row.blend_bucket || ""),
+    String(row.bucket || ""),
+  ].join("|");
+}
+
+/** The hot-heat query repeats rows already on the recent page. Count each scan once. */
+function uniqueScans(rows: BlendRunLike[]): BlendRunLike[] {
+  const seen = new Set<string>();
+  const out: BlendRunLike[] = [];
+  for (const row of rows) {
+    const key = scanIdentity(row);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(row);
+  }
+  return out;
+}
+
 function json(body: unknown, status = 200) {
   return NextResponse.json(body, {
     status,
@@ -96,7 +122,7 @@ export async function GET(request: Request) {
         .limit(HOT_LIMIT);
       if (!hotBlend.error && hotBlend.data) rows = rows.concat(hotBlend.data as BlendRunLike[]);
     }
-    const board = summarizeBlendRuns(rows, LEADERBOARD_LIMIT, Date.now(), requested);
+    const board = summarizeBlendRuns(uniqueScans(rows), LEADERBOARD_LIMIT, Date.now(), requested);
     return json({
       ok: true,
       connected: true,

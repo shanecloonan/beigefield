@@ -175,7 +175,20 @@ function newer(next: LeaderRow, prev: LeaderRow): boolean {
   return next.heat > prev.heat;
 }
 
-/** Unique finished contracts, ranked by the latest heat. Drained rows stay off the hot list. */
+function observationKey(chain: string, address: string, row: BlendRunLike): string {
+  return [
+    chain,
+    address,
+    String(row.created_at || ""),
+    String(row.heat ?? ""),
+    String(row.blend_heat ?? ""),
+    String(row.status || ""),
+    String(row.blend_bucket || ""),
+    String(row.bucket || ""),
+  ].join("|");
+}
+
+/** Unique finished contracts, ranked by all-time heat. Age does not remove a row. */
 export function summarizeBlendRuns(
   rows: BlendRunLike[],
   limit = LEADERBOARD_LIMIT,
@@ -184,12 +197,16 @@ export function summarizeBlendRuns(
 ): BlendBoard {
   const selected = normalizeChain(chain);
   const best = new Map<string, { latest: LeaderRow; peak: number; count: number }>();
+  const seen = new Set<string>();
   for (const row of rows) {
     if (!finished(row)) continue;
     const rowChain = chainOf(row);
     if (selected !== "all" && rowChain !== selected) continue;
     const address = rowChain === "ethereum" ? normalizeAddress(row.address) : String(row.address || "").trim();
     if (!address) continue;
+    const mark = observationKey(rowChain, address, row);
+    if (seen.has(mark)) continue;
+    seen.add(mark);
     const next = toRow(address, row);
     next.chain = rowChain;
     const key = `${rowChain}:${address}`;
@@ -209,7 +226,7 @@ export function summarizeBlendRuns(
     return { ...acc.latest, peak_heat: acc.peak, history_count: acc.count, stale };
   });
   ranked.sort((a, b) => {
-    if (b.heat !== a.heat) return b.heat - a.heat;
+    if (b.peak_heat !== a.peak_heat) return b.peak_heat - a.peak_heat;
     const funds = (b.funds_usd ?? -1) - (a.funds_usd ?? -1);
     if (funds !== 0) return funds;
     return a.address.localeCompare(b.address);
@@ -217,14 +234,13 @@ export function summarizeBlendRuns(
   const totals: Record<BlendVerdict, number> = { yes: 0, maybe: 0, no: 0, other: 0 };
   for (const row of ranked) totals[row.verdict] += 1;
   const cap = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : LEADERBOARD_LIMIT;
-  const hot = ranked.filter((row) => row.liveness === "live");
   const flagged = ranked.filter((row) => row.liveness !== "live");
   const requeue = ranked.filter((row) => row.stale);
   return {
     chain: selected,
     scanned: ranked.length,
     totals,
-    leaderboard: hot.slice(0, cap),
+    leaderboard: ranked.slice(0, cap),
     flagged: flagged.slice(0, cap),
     requeue,
   };

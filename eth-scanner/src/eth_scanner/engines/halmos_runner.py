@@ -55,6 +55,7 @@ class HalmosReport:
     properties_skipped: int = 0
     property_ids: list[str] = field(default_factory=list)
     failures: list[SymbolicFailure] = field(default_factory=list)
+    passes: list[str] = field(default_factory=list)
     duration_ms: int = 0
     notes: list[str] = field(default_factory=list)
     artifact: dict[str, Any] = field(default_factory=dict)
@@ -74,6 +75,7 @@ class HalmosReport:
             "properties_skipped": self.properties_skipped,
             "property_ids": list(self.property_ids),
             "failures": [f.to_dict() for f in self.failures],
+            "passes": list(self.passes),
             "duration_ms": self.duration_ms,
             "notes": list(self.notes),
             "artifact": dict(self.artifact),
@@ -247,6 +249,21 @@ def run_lead_halmos(
     return report
 
 
+def symbolic_passes_as_invariants(report: HalmosReport) -> list[dict[str, Any]]:
+    """A passed symbolic check. It adds no heat and can contradict a weaker probe."""
+    out: list[dict[str, Any]] = []
+    for prop in report.passes:
+        out.append({
+            "id": "symbolic-%s" % prop,
+            "name": prop,
+            "status": "held",
+            "evidence": "halmos passed %s" % prop,
+            "tool": "halmos",
+            "source": "symbolic",
+        })
+    return out
+
+
 def symbolic_failures_as_invariants(report: HalmosReport) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for fail in report.failures:
@@ -294,6 +311,7 @@ def _ingest(blob: str, report: HalmosReport) -> None:
         return
 
     passed = {_clean_prop(m.group(1), report) for m in _PASS_RX.finditer(text)}
+    report.passes = sorted(passed)
     failed_names = []
     for m in _FAIL_RX.finditer(text):
         prop = _clean_prop(m.group(1), report)

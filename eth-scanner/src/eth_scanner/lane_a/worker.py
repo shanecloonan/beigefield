@@ -151,6 +151,7 @@ def run_one(
         and (target.funds_usd is not None and target.funds_usd >= min_funds)
     ):
         try:
+            lane_owner, lane_kind = _lane_owner(list(result.invariant_results or []))
             eng = run_advanced_engines(
                 address=addr,
                 source=artifact.content or "",
@@ -165,6 +166,8 @@ def run_one(
                 source_dir=src_dir,
                 compiler=getattr(artifact, "compiler", None),
                 runtime_bytecode=code or "",
+                lane_owner=lane_owner,
+                lane_owner_kind=lane_kind,
             )
             result.engine_leads = list(eng.leads)
             result.confirmed_findings = list(eng.confirmed)
@@ -646,6 +649,17 @@ def _as_float(v: object) -> Optional[float]:
         return float(v)
     except (TypeError, ValueError):
         return None
+
+
+def _lane_owner(rows: list[dict[str, Any]]) -> tuple[str, str]:
+    for row in rows:
+        if row.get("id") != "roles-owner":
+            continue
+        extras = row.get("extras") or {}
+        if not isinstance(extras, dict):
+            continue
+        return str(extras.get("owner") or ""), str(extras.get("kind") or "")
+    return "", ""
 
 
 def _flags_from_invariant_dicts(rows: list[dict[str, Any]]) -> tuple[bool, bool]:

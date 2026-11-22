@@ -635,6 +635,13 @@ def main(argv: list[str] | None = None) -> int:
     fork.add_argument("--address", default="")
     fork.add_argument("--json", action="store_true")
 
+    rescore = sub.add_parser(
+        "rescore-evidence",
+        help="Re-read stored heat. A contradicted EOA or privileged stamp can fall. Heat never rises.",
+    )
+    rescore.add_argument("--limit", type=int, default=30)
+    rescore.add_argument("--json", action="store_true")
+
     bridge = sub.add_parser(
         "bridge-note",
         help="Record a bridge, inbox, outbox, or messenger name. No call, heat stays 0.",
@@ -1041,6 +1048,25 @@ def main(argv: list[str] | None = None) -> int:
         import json as _json
         from eth_scanner.advanced.fork_sensitivity import compare_view
         print(_json.dumps(compare_view(args.url, args.address or ("0x" + "00" * 20)), indent=2))
+        return 0
+
+    if args.cmd == "rescore-evidence":
+        import json as _json
+        import os
+        from eth_scanner import config as _config
+        from eth_scanner.engines import rescore as _rescore
+        from eth_scanner.store import supabase as _supabase
+        settings = _config.load_settings()
+        rpc = (os.environ.get("ETH_RPC_URL") or "").strip()
+        if not rpc or not settings.persist_remote:
+            print(_json.dumps({
+                "status": "skipped",
+                "reason": "ETH_RPC_URL or Supabase is unset",
+                "updated": 0,
+                "heat_contribution": 0,
+            }, indent=2))
+            return 0
+        print(_json.dumps(_rescore.rescore_rows(_supabase.open_store(settings), rpc, limit=max(1, args.limit)), indent=2))
         return 0
 
     if args.cmd == "bridge-note":
