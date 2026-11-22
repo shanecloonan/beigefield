@@ -15,6 +15,16 @@ on:
         description: "Max high-heat rows to re-read"
         required: false
         default: "40"
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/eth-scanner-rescore.yml
+      - eth-scanner/src/eth_scanner/engines/rescore.py
+      - eth-scanner/src/eth_scanner/heat.py
+      - eth-scanner/src/eth_scanner/engines/corroborate.py
+  schedule:
+    # Once a day, away from the hourly deep job at minute 17.
+    - cron: "41 8 * * *"
 
 permissions:
   contents: read

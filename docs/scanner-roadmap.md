@@ -289,4 +289,4 @@ A scan stores one row per stage. The quick stage sets a provisional heat immedia
 
 During a scan, the similarity and cross-contract stages finish from the source already in hand. A neighbor or a path is stored on the row and adds no heat. Halmos, hevm, Kontrol, fork, and fuzz stay pending for their own jobs.
 
-`eth-scanner-rescore` re-reads stored heat with the existing `ETH_RPC_URL` and Supabase secrets. It only lowers a contradicted stamp. A failed read leaves the old points.
+`eth-scanner-rescore` re-reads stored heat with the existing `ETH_RPC_URL` and Supabase secrets. It only lowers a contradicted stamp. A failed read leaves the old points. A push to `main` that changes the rescore or heat files starts it, and a daily run repeats it. One run at a time.
