@@ -1,5 +1,6 @@
-# Passive website checks for owned hosts. Active paths run only because these
-# hosts are on the owned allowlist. No injection, no fuzzing, no row dumps.
+# Passive website checks. Random hosts come from CT logs, Tranco, and bounty
+# scope. Active paths run only for owned hosts and in-scope bounty assets.
+# No injection, no fuzzing, no row dumps.
 name: site-scanner
 
 on:
@@ -11,6 +12,7 @@ on:
     paths:
       - site-scanner/**
       - .github/workflows/site-scanner.yml
+      - supabase/migrations/20261122120000_site_scan_hits.sql
 
 permissions:
   contents: read
@@ -22,32 +24,60 @@ concurrency:
 jobs:
   scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Install scanner
-        run: python -m pip install -e ./site-scanner
-      - name: Scan owned hosts
+        run: python -m pip install -e ./site-scanner 'websocket-client==1.9.2'
+      - name: Install psql when a database secret is present
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          if [ -n "${DATABASE_URL:-}" ] || [ -n "${SUPABASE_DB_PASSWORD:-}" ]; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql-client
+          else
+            echo "psql not installed: DATABASE_URL and SUPABASE_DB_PASSWORD are unset"
+          fi
+      - name: Apply site_scan_hits migration
+        env:
+          PYTHONPATH: site-scanner/src:eth-scanner/src
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: python -m site_scanner.migrate --sql supabase/migrations/20261122120000_site_scan_hits.sql
+      - name: Scan owned and discovered hosts
         env:
           PYTHONPATH: site-scanner/src:eth-scanner/src
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: |
-          python -m site_scanner scan --hosts beigefield.vercel.app,dap-ashy.vercel.app --limit 4 --json > /tmp/site-scan.json
+          python -m site_scanner scan --discover --limit 8 --json > /tmp/site-scan.json
           python - <<'PY'
           import json
           report = json.load(open("/tmp/site-scan.json", encoding="utf-8"))
           slim = []
           for row in report.get("reports") or []:
+              persist = row.get("persist") or {}
               slim.append({
                   "host": row.get("host"),
                   "heat": row.get("heat"),
                   "mode": row.get("mode"),
                   "facts": row.get("facts") or [],
-                  "persist": (row.get("persist") or {}).get("status"),
+                  "persist": persist.get("status"),
+                  "reason": persist.get("reason") or "",
+                  "code": persist.get("code") or "",
               })
-          print(json.dumps({"status": report.get("status"), "scanned": report.get("scanned"), "reports": slim}))
+          print(json.dumps({
+              "status": report.get("status"),
+              "scanned": report.get("scanned"),
+              "sources": report.get("sources") or {},
+              "reports": slim,
+          }))
           PY
