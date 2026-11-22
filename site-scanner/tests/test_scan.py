@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import unittest
+from datetime import datetime, timezone
 
 from site_scanner.allow import active_allowed
 from site_scanner.fetch import _robots_disallows, _same_origin
 from site_scanner.analyze import report_for
 from site_scanner.discover import (
     hosts_from_certstream,
+    hosts_from_san,
     mix_hosts,
+    names_from_crt_rows,
     parse_bounty,
     parse_crt,
     parse_tranco,
@@ -155,6 +158,41 @@ class ScanTests(unittest.TestCase):
         self.assertEqual(child["PGPASSWORD"], "s3cret")
         self.assertEqual(_error_code('{"code":"PGRST205","message":"AKIAIOSFODNN7EXAMPLE"}'), "PGRST205")
         self.assertEqual(_error_code('{"message":"AKIAIOSFODNN7EXAMPLE"}'), "")
+
+    def test_header_hygiene_stays_visible_and_low(self) -> None:
+        bare = report_for("app.example", [{
+            "path": "/",
+            "scheme": "https",
+            "status": 200,
+            "headers": {},
+            "body": "<html></html>",
+        }], active_ran=True)
+        self.assertEqual(bare["heat"], 1)
+        self.assertIn("missing-csp", bare["facts"])
+        self.assertIn("missing-hsts", bare["facts"])
+        self.assertEqual(len([item for item in bare["findings"] if item["id"] in {"missing-csp", "missing-hsts"}]), 2)
+        leaked = report_for("app.example", [{
+            "path": "/",
+            "scheme": "https",
+            "status": 200,
+            "headers": {"content-security-policy": "default-src 'none'", "strict-transport-security": "max-age=10"},
+            "body": "key AKIAIOSFODNN7EXAMPLE",
+        }], active_ran=True)
+        self.assertGreaterEqual(leaked["heat"], 8)
+        self.assertGreater(leaked["heat"], bare["heat"])
+
+    def test_crt_rows_prefer_the_last_hour(self) -> None:
+        now = datetime(2026, 11, 22, 12, 0, tzinfo=timezone.utc)
+        names = names_from_crt_rows([
+            {"common_name": "old.example", "entry_timestamp": "2026-11-21T00:00:00"},
+            {"common_name": "*.fresh.example", "entry_timestamp": "2026-11-22T11:30:00"},
+        ], now=now, hours=1, limit=5)
+        self.assertEqual(names, ["fresh.example"])
+        fallback = names_from_crt_rows([
+            {"common_name": "old.example", "entry_timestamp": "2026-11-21T00:00:00"},
+        ], now=now, hours=1, limit=5)
+        self.assertEqual(fallback, ["old.example"])
+        self.assertEqual(hosts_from_san("DNS:alpha.example, DNS:*.beta.example"), ["alpha.example", "beta.example"])
 
 
 if __name__ == "__main__":

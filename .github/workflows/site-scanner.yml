@@ -24,7 +24,7 @@ concurrency:
 jobs:
   scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -58,7 +58,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: |
-          python -m site_scanner scan --discover --limit 8 --json > /tmp/site-scan.json
+          python -m site_scanner scan --discover --limit 24 --json > /tmp/site-scan.json
           python - <<'PY'
           import json
           report = json.load(open("/tmp/site-scan.json", encoding="utf-8"))

@@ -30,6 +30,48 @@ function num(value: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Same weights as the scanner. Header checks stay, capped so they cannot lead the board. */
+const WEIGHTS: Record<string, number> = {
+  "missing-csp": 1,
+  "missing-hsts": 1,
+  "cors-credentials-star": 6,
+  "tls-expired": 6,
+  "tls-soon": 1,
+  "exposed-env": 8,
+  "exposed-git": 8,
+  "open-directory": 5,
+  "open-admin": 4,
+  "secret-in-page": 8,
+  "old-library": 6,
+  "supabase-schema-open": 8,
+  "firebase-root-open": 8,
+  "dangling-host": 7,
+};
+const HEADER = new Set(["missing-csp", "missing-hsts"]);
+const HEADER_CAP = 1;
+const MAX_HEAT = 12;
+
+export function heatFromFindings(findings: SiteRow["findings"]): { heat: number; findings: SiteRow["findings"] } {
+  const seen = new Set<string>();
+  let headerRoom = HEADER_CAP;
+  let rest = 0;
+  const next = findings.map((item) => {
+    const id = String(item.id || "");
+    if (!id || seen.has(id) || WEIGHTS[id] == null) return item;
+    seen.add(id);
+    let applied = WEIGHTS[id];
+    if (HEADER.has(id)) {
+      applied = Math.min(applied, headerRoom);
+      headerRoom -= applied;
+    } else {
+      rest += applied;
+    }
+    return { ...item, heat: applied };
+  });
+  const heat = Math.min(MAX_HEAT, rest + (HEADER_CAP - headerRoom));
+  return { heat, findings: next };
+}
+
 export function summarizeSiteHits(rows: SiteHit[], limit = 100): SiteRow[] {
   const best = new Map<string, SiteRow>();
   for (const row of rows) {
@@ -39,14 +81,15 @@ export function summarizeSiteHits(rows: SiteHit[], limit = 100): SiteRow[] {
     const peak = Math.max(heat, num(row.peak_heat));
     const pending = Array.isArray(row.pending_stages) ? row.pending_stages.map((item) => String(item)) : [];
     const findings = Array.isArray(row.findings) ? row.findings as SiteRow["findings"] : [];
+    const scored = findings.length ? heatFromFindings(findings) : { heat, findings };
     const next: SiteRow = {
       host,
       url: String(row.url || `https://${host}/`),
-      heat,
+      heat: scored.heat,
       peak_heat: peak,
       score_state: String(row.score_state || ""),
       pending_stages: pending,
-      findings,
+      findings: scored.findings,
       mode: String(row.mode || "passive"),
       scanned_at: row.updated_at ? String(row.updated_at) : row.created_at ? String(row.created_at) : null,
     };
@@ -61,6 +104,6 @@ export function summarizeSiteHits(rows: SiteHit[], limit = 100): SiteRow[] {
     best.set(host, chosen);
   }
   return [...best.values()]
-    .sort((a, b) => b.peak_heat - a.peak_heat || b.heat - a.heat || a.host.localeCompare(b.host))
+    .sort((a, b) => b.heat - a.heat || b.peak_heat - a.peak_heat || a.host.localeCompare(b.host))
     .slice(0, limit);
 }
