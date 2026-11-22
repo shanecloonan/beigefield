@@ -40,6 +40,8 @@ type Board = {
     history_count?: number;
     scanned_at?: string | null;
     stale?: boolean;
+    score_state?: "" | "provisional" | "final";
+    pending_stages?: string[];
   }[];
   flagged?: {
     address: string;
@@ -258,6 +260,16 @@ export default function BlendApp() {
                         </span>
                       ) : null}
                       {row.stale ? <span className="mt-0.5 block text-[10px] uppercase tracking-wider text-brand-500">Stale</span> : null}
+                      {row.score_state === "provisional" ? (
+                        <span
+                          className="mt-0.5 block text-[10px] uppercase tracking-wider text-brand-500"
+                          title={(row.pending_stages || []).join(", ")}
+                        >
+                          Provisional{row.pending_stages && row.pending_stages.length ? ` · ${row.pending_stages.length} pending` : ""}
+                        </span>
+                      ) : row.score_state === "final" ? (
+                        <span className="mt-0.5 block text-[10px] uppercase tracking-wider text-brand-500">Final</span>
+                      ) : null}
                     </td>
                     <td className="px-3 py-2 tabular-nums text-brand-400 hidden sm:table-cell">{row.heat}</td>
                     <td className="px-3 py-2 hidden sm:table-cell">

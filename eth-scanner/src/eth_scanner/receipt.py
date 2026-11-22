@@ -131,6 +131,22 @@ def _fmt(value: Any, empty: str = "unavailable") -> str:
     return str(value)
 
 
+def _score_lines(res: dict[str, Any]) -> list[str]:
+    hb = res.get("heat_breakdown")
+    if not isinstance(hb, dict):
+        return []
+    state = str(hb.get("score_state") or "")
+    if state not in {"provisional", "final"}:
+        return []
+    pending = [str(name) for name in (hb.get("pending_stages") or []) if name]
+    pending_text = ", ".join(pending) if pending else "none"
+    fused = hb.get("fused_heat")
+    return [
+        f"- **Score:** `{state}` · fused heat `{_fmt(fused, empty='0')}` · pending: {pending_text}",
+        "- A stage that finds nothing does not lower this heat. A stronger hold can remove a weaker fact.",
+    ]
+
+
 def _lanes_from_trace(stage_trace: list[Any], lane: str) -> list[str]:
     stages: list[str] = []
     for step in stage_trace:
@@ -373,6 +389,7 @@ def render_markdown(ctx: ReceiptContext) -> str:
         f"- **Dropped:** {_fmt(res.get('dropped'), empty='no')}"
         + (f" — `{_md_escape(res.get('drop_reason'))}`" if res.get("drop_reason") else ""),
         f"- **Heat (ranking only, never a dismiss):** {_fmt(heat, empty='0')}",
+        *_score_lines(res),
         "",
         "Automation **never** stamps `yes` or `no`. `human-*-candidate` still needs a human.",
         "Low or failed IR → `manual-review` (Do Not Auto-Dismiss).",
