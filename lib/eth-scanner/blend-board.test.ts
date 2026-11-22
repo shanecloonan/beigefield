@@ -68,7 +68,7 @@ test("the leaderboard keeps the top 100 and ranks funds after heat", () => {
   assert.equal(board.flagged.length, 0);
 });
 
-test("a collapsed outflow is flagged and kept off the heat ranking", () => {
+test("a collapsed outflow stays on the heat ranking with a liveness label", () => {
   const board = summarizeBlendRuns([
     {
       address: ADDR_A,
@@ -82,14 +82,16 @@ test("a collapsed outflow is flagged and kept off the heat ranking", () => {
   assert.equal(livenessOf({ heat_breakdown: { liveness: { status: "dead" } } }), "dead");
   assert.equal(board.scanned, 2);
   assert.equal(board.totals.yes, 1);
-  assert.equal(board.leaderboard.length, 1);
-  assert.equal(board.leaderboard[0].address, ADDR_B);
+  assert.equal(board.leaderboard.length, 2);
+  assert.equal(board.leaderboard[0].address, ADDR_A);
+  assert.equal(board.leaderboard[0].liveness, "already-exploited");
+  assert.equal(board.leaderboard[1].address, ADDR_B);
   assert.equal(board.flagged.length, 1);
   assert.equal(board.flagged[0].address, ADDR_A);
   assert.equal(board.flagged[0].liveness, "already-exploited");
 });
 
-test("the rank uses the latest heat and keeps the historical peak", () => {
+test("the rank uses all-time heat and keeps the latest scan beside it", () => {
   const now = Date.parse("2026-11-21T00:00:00Z");
   const board = summarizeBlendRuns(
     [
@@ -119,18 +121,34 @@ test("the rank uses the latest heat and keeps the historical peak", () => {
     100,
     now,
   );
-  assert.equal(board.leaderboard[0].address, ADDR_B);
-  assert.equal(board.leaderboard[0].heat, 4);
-  assert.equal(board.leaderboard[1].address, ADDR_A);
-  assert.equal(board.leaderboard[1].heat, 1);
-  assert.equal(board.leaderboard[1].peak_heat, 9);
-  assert.equal(board.leaderboard[1].history_count, 2);
-  assert.equal(board.leaderboard[1].stale, false);
+  assert.equal(board.leaderboard[0].address, ADDR_A);
+  assert.equal(board.leaderboard[0].heat, 1);
+  assert.equal(board.leaderboard[0].peak_heat, 9);
+  assert.equal(board.leaderboard[0].history_count, 2);
+  assert.equal(board.leaderboard[1].address, ADDR_B);
+  assert.equal(board.leaderboard[1].heat, 4);
+  assert.equal(board.leaderboard[1].peak_heat, 4);
+  assert.equal(board.leaderboard[0].stale, false);
   assert.equal(board.requeue.length, 1);
   assert.equal(board.requeue[0].address, ADDR_B);
   assert.equal(board.requeue[0].peak_heat, 4);
   assert.equal(board.chain, "ethereum");
   assert.equal(board.leaderboard[0].chain, "ethereum");
+});
+
+test("the same scan repeated by a second query counts once", () => {
+  const row = {
+    address: ADDR_A,
+    heat: 12,
+    blend_bucket: "maybe",
+    status: "done",
+    created_at: "2026-11-01T00:00:00Z",
+    funds_usd: 1000,
+  };
+  const board = summarizeBlendRuns([row, { ...row }, { ...row, heat: 4, created_at: "2026-11-20T00:00:00Z" }]);
+  assert.equal(board.leaderboard[0].history_count, 2);
+  assert.equal(board.leaderboard[0].peak_heat, 12);
+  assert.equal(board.leaderboard[0].heat, 4);
 });
 
 test("a solana row does not change the ethereum totals", () => {

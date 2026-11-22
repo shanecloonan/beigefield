@@ -235,8 +235,8 @@ export default function BlendApp() {
                   <th className="px-3 py-2 w-10">#</th>
                   <th className="px-3 py-2">Contract</th>
                   <th className="px-3 py-2">Chain</th>
-                  <th className="px-3 py-2">Latest</th>
-                  <th className="px-3 py-2 hidden sm:table-cell">Peak</th>
+                  <th className="px-3 py-2">Heat</th>
+                  <th className="px-3 py-2 hidden sm:table-cell">Latest</th>
                   <th className="px-3 py-2 hidden sm:table-cell">Result</th>
                   <th className="px-3 py-2">Funds</th>
                 </tr>
@@ -251,10 +251,15 @@ export default function BlendApp() {
                     </td>
                     <td className="px-3 py-2 uppercase tracking-wider text-brand-400">{row.chain || "ethereum"}</td>
                     <td className="px-3 py-2 tabular-nums text-brand-100">
-                      {row.heat}
+                      {row.peak_heat ?? row.heat}
+                      {row.liveness && row.liveness !== "live" ? (
+                        <span className="mt-0.5 block text-[10px] uppercase tracking-wider text-brand-500">
+                          {row.liveness === "dead" ? "Dead" : "Exploited"}
+                        </span>
+                      ) : null}
                       {row.stale ? <span className="mt-0.5 block text-[10px] uppercase tracking-wider text-brand-500">Stale</span> : null}
                     </td>
-                    <td className="px-3 py-2 tabular-nums text-brand-400 hidden sm:table-cell">{row.peak_heat ?? row.heat}</td>
+                    <td className="px-3 py-2 tabular-nums text-brand-400 hidden sm:table-cell">{row.heat}</td>
                     <td className="px-3 py-2 hidden sm:table-cell">
                       <span className={`inline-block rounded border px-2 py-0.5 uppercase tracking-wider ${BUCKET[row.bucket] || BUCKET.no}`}>
                         {row.label}

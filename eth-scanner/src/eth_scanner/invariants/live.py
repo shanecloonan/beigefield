@@ -604,92 +604,48 @@ def _role_checks(addr: str, rpc: str, timeout_s: float, klass: str) -> list[Live
 
 
 def _privileged_call_probes(addr: str, rpc: str, timeout_s: float, klass: str) -> list[LiveInvariantResult]:
-    """Static eth_call from a random EOA. Expected: revert. Non-revert → failed."""
+    """Static eth_call from a random EOA. Expected: revert. Non-revert → failed.
+
+    A selector that is not in the dispatcher, or a fallback that also accepts
+    a garbage selector, is not a privilege.
+    """
+    from eth_scanner.engines.corroborate import confirm_privileged_call, read_code
+
     out: list[LiveInvariantResult] = []
+    code = read_code(rpc, addr, timeout_s=timeout_s)
+    code_hex = str(code.get("hex") or "")
     for name, sel in PRIVILEGED_PROBE_SELECTORS:
-        data = sel
+        suffix = ""
         if name.startswith("upgradeToAndCall"):
-            # upgradeToAndCall(address,bytes) — empty bytes payload
-            data = sel + _pad_addr(RANDOM_EOA) + ("%064x" % 64) + ("%064x" % 0)
+            suffix = _pad_addr(RANDOM_EOA) + ("%064x" % 64) + ("%064x" % 0)
         elif "(address)" in name or "(address," in name:
-            data = sel + _pad_addr(RANDOM_EOA)
-        try:
-            _eth_call_soft(rpc, addr, "0x" + data, timeout_s, from_addr=RANDOM_EOA)
-            out.append(LiveInvariantResult(
-                "privileged-%s" % name.split("(")[0],
-                "%s callable by arbitrary EOA" % name,
-                "failed",
-                "eth_call from %s to %s did not revert" % (RANDOM_EOA, name),
-                contract_class=klass,
-                extras={"selector": sel, "from": RANDOM_EOA},
-            ))
-        except _RevertError as exc:
-            out.append(LiveInvariantResult(
-                "privileged-%s" % name.split("(")[0],
-                "%s reverts for arbitrary EOA" % name,
-                "held",
-                "eth_call reverted as expected: %s" % str(exc)[:120],
-                contract_class=klass,
-                extras={"selector": sel, "from": RANDOM_EOA},
-            ))
-        except Exception as exc:  # noqa: BLE001
-            msg = str(exc).lower()
-            if "revert" in msg or "execution reverted" in msg:
-                out.append(LiveInvariantResult(
-                    "privileged-%s" % name.split("(")[0],
-                    "%s reverts for arbitrary EOA" % name,
-                    "held",
-                    str(exc)[:160],
-                    contract_class=klass,
-                ))
-            elif "invalid params" in msg or "invalid argument" in msg:
-                # Public RPCs sometimes reject odd calldata shapes — retry without `from`,
-                # then treat as held (selector absent / not callable) rather than unknown spam.
-                try:
-                    _eth_call_soft(rpc, addr, "0x" + data, timeout_s, from_addr="")
-                    out.append(LiveInvariantResult(
-                        "privileged-%s" % name.split("(")[0],
-                        "%s callable by arbitrary EOA" % name,
-                        "failed",
-                        "eth_call (no from) to %s did not revert" % name,
-                        contract_class=klass,
-                        extras={"selector": sel},
-                    ))
-                except _RevertError as exc2:
-                    out.append(LiveInvariantResult(
-                        "privileged-%s" % name.split("(")[0],
-                        "%s reverts for arbitrary EOA" % name,
-                        "held",
-                        "retry without from reverted: %s" % str(exc2)[:120],
-                        contract_class=klass,
-                    ))
-                except Exception as exc2:  # noqa: BLE001
-                    msg2 = str(exc2).lower()
-                    if "revert" in msg2:
-                        out.append(LiveInvariantResult(
-                            "privileged-%s" % name.split("(")[0],
-                            "%s reverts for arbitrary EOA" % name,
-                            "held",
-                            str(exc2)[:160],
-                            contract_class=klass,
-                        ))
-                    else:
-                        # Missing selector / RPC soft-reject → held (not open privilege).
-                        out.append(LiveInvariantResult(
-                            "privileged-%s" % name.split("(")[0],
-                            "%s not callable (rpc soft-reject)" % name,
-                            "held",
-                            "treated as non-callable after Invalid params: %s" % str(exc)[:100],
-                            contract_class=klass,
-                        ))
-            else:
-                out.append(LiveInvariantResult(
-                    "privileged-%s" % name.split("(")[0],
-                    "%s probe" % name,
-                    "unknown",
-                    str(exc)[:160],
-                    contract_class=klass,
-                ))
+            suffix = _pad_addr(RANDOM_EOA)
+        verdict = confirm_privileged_call(
+            rpc, addr, sel,
+            code_hex=code_hex,
+            signature=name,
+            data_suffix=suffix,
+            timeout_s=timeout_s,
+        )
+        reason = str(verdict.get("reason") or "")
+        if verdict.get("confirmed"):
+            status = "failed"
+        elif reason.startswith("call revert") or reason in {
+            "selector not in dispatch",
+            "fallback swallows calls",
+            "call changed no state",
+        }:
+            status = "held"
+        else:
+            status = "unknown"
+        out.append(LiveInvariantResult(
+            "privileged-%s" % name.split("(")[0],
+            "%s for an arbitrary caller" % name,
+            status,
+            reason[:160],
+            contract_class=klass,
+            extras={"selector": sel, "from": RANDOM_EOA},
+        ))
     return out
 
 
