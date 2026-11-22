@@ -14,6 +14,9 @@ from eth_scanner.heat import HeatWeights, corroborated_heat, evidence_fact, load
 
 _PRIV = "privileged-callable"
 _EOA = "eoa-admin"
+# The old probe treated a non-reverting eth_call as an open privileged function.
+_RETIRED_PRIV = "eth_call succeeded (no revert)"
+_CURRENT_PRIV = "control selector reverted"
 
 
 def _points(breakdown: dict[str, Any], key: str) -> int:
@@ -123,6 +126,21 @@ def _best_breakdown(rows: list[dict[str, Any]]) -> dict[str, Any]:
     return best
 
 
+def _retired_privileged(breakdown: dict[str, Any]) -> bool:
+    """The saved confirmation is the probe the selector-and-control check replaced."""
+    admin = breakdown.get("admin") if isinstance(breakdown.get("admin"), dict) else {}
+    for item in admin.get("confirmed") or []:
+        if not isinstance(item, dict):
+            continue
+        evidence = str(item.get("evidence") or "")
+        if _RETIRED_PRIV not in evidence or _CURRENT_PRIV in evidence:
+            continue
+        lead = str(item.get("id") or item.get("lead_id") or "")
+        if not lead or "privileg" in lead or "uninit" in lead or "upgrade" in lead:
+            return True
+    return False
+
+
 def _stored_heat(row: dict[str, Any]) -> int:
     try:
         heat = int(row.get("heat") or 0)
@@ -213,6 +231,9 @@ def rescore_rows(store: Any, rpc_url: str, *, limit: int = 30) -> dict[str, Any]
                 })
             continue
         eoa_stands, priv_stands = live_flags(rpc_url, address, breakdown)
+        # A failed live read stays None. The retired phrase is already proof.
+        if priv_stands is None and _retired_privileged(breakdown):
+            priv_stands = False
         if eoa_stands is not False and priv_stands is not False:
             if len(skipped) < 15:
                 skipped.append({
