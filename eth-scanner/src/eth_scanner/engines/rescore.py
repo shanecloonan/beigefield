@@ -83,61 +83,121 @@ def adjust_heat(
     }
 
 
-def rescore_rows(store: Any, rpc_url: str, *, limit: int = 30) -> dict[str, Any]:
-    """Lower stored heat when a live read contradicts it. Never raises heat."""
-    if not rpc_url or not hasattr(store, "_req"):
-        return {"status": "skipped", "reason": "no store or rpc", "updated": 0, "heat_contribution": 0}
-    rows = store._req(
-        "GET",
-        "test_scan_runs",
-        query={
-            "select": "id,address,chain,heat,blend_heat,heat_breakdown",
-            "heat": "gte.3",
-            "order": "heat.desc",
-            "limit": str(limit),
-        },
-    )
+def _stored_heat(row: dict[str, Any]) -> int:
+    try:
+        heat = int(row.get("heat") or 0)
+    except (TypeError, ValueError):
+        heat = 0
+    try:
+        blend = int(row.get("blend_heat") or 0)
+    except (TypeError, ValueError):
+        blend = 0
+    return max(heat, blend, 0)
+
+
+def _pages(store: Any, query: dict[str, str]):
+    """Every matching row. The board reads older scans than a single page."""
+    offset = 0
+    while offset <= 5000:
+        page_query = dict(query)
+        page_query["limit"] = "200"
+        page_query["offset"] = str(offset)
+        rows = store._req("GET", "test_scan_runs", query=page_query) or []
+        if not isinstance(rows, list) or not rows:
+            return
+        for item in rows:
+            if isinstance(item, dict):
+                yield item
+        if len(rows) < 200:
+            return
+        offset += 200
+
+
+def _top_addresses(store: Any, column: str, limit: int) -> list[dict[str, Any]]:
+    chosen: list[dict[str, Any]] = []
     seen: set[str] = set()
-    updated = 0
-    changes = []
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        chain = str(row.get("chain") or "ethereum")
+    for row in _pages(store, {
+        "select": "id,address,chain,heat,blend_heat,heat_breakdown",
+        column: "gte.3",
+        "order": "%s.desc" % column,
+    }):
+        chain = str(row.get("chain") or "ethereum").lower()
         address = str(row.get("address") or "").lower()
         if chain != "ethereum" or not address or address in seen:
             continue
         seen.add(address)
-        siblings = store._req(
-            "GET",
-            "test_scan_runs",
-            query={
-                "select": "id,address,heat,blend_heat,heat_breakdown",
-                "address": "eq.%s" % address,
-                "limit": "20",
-            },
-        )
-        sample = next((item for item in siblings if isinstance(item, dict) and isinstance(item.get("heat_breakdown"), dict)), row)
+        chosen.append(row)
+        if len(chosen) >= limit:
+            break
+    return chosen
+
+
+def _candidates(store: Any, limit: int) -> list[dict[str, Any]]:
+    """High heat from either column. The board ranks max(heat, blend_heat)."""
+    merged: dict[str, dict[str, Any]] = {}
+    for column in ("heat", "blend_heat"):
+        for row in _top_addresses(store, column, limit):
+            address = str(row.get("address") or "").lower()
+            current = merged.get(address)
+            if current is None or _stored_heat(row) > _stored_heat(current):
+                merged[address] = row
+    ordered = sorted(merged.values(), key=_stored_heat, reverse=True)
+    return ordered[:limit]
+
+
+def rescore_rows(store: Any, rpc_url: str, *, limit: int = 30) -> dict[str, Any]:
+    """Lower stored heat when a live read contradicts it. Never raises heat.
+
+    Every stored scan for that contract is rewritten, so the all-time peak
+    falls with the false pattern. Original peak is kept for audit. A row whose
+    heat is a real invariant failure is not reduced by this pass.
+    """
+    if not rpc_url or not hasattr(store, "_req"):
+        return {"status": "skipped", "reason": "no store or rpc", "updated": 0, "heat_contribution": 0}
+    updated = 0
+    changes = []
+    for row in _candidates(store, max(1, limit)):
+        address = str(row.get("address") or "").lower()
+        siblings = _pages(store, {
+            "select": "id,address,chain,heat,blend_heat,heat_breakdown",
+            "address": "ilike.%s" % address,
+        })
+        siblings = [
+            item for item in siblings
+            if str(item.get("chain") or "ethereum").lower() == "ethereum"
+        ] or [row]
+        sample = next((item for item in siblings if isinstance(item.get("heat_breakdown"), dict)), row)
         breakdown = sample.get("heat_breakdown") if isinstance(sample.get("heat_breakdown"), dict) else {}
         eoa_stands, priv_stands = live_flags(rpc_url, address, breakdown)
+        if eoa_stands is not False and priv_stands is not False:
+            continue
+        original_peak = max(_stored_heat(item) for item in siblings)
+        adjusted_rows = []
         for item in siblings:
-            if not isinstance(item, dict) or not item.get("id"):
-                continue
             bd = item.get("heat_breakdown") if isinstance(item.get("heat_breakdown"), dict) else breakdown
             adjusted = adjust_heat(
-                heat=max(int(item.get("heat") or 0), int(item.get("blend_heat") or 0)),
+                heat=_stored_heat(item),
                 breakdown=bd,
                 eoa_stands=eoa_stands,
                 privileged_stands=priv_stands,
             )
-            if not adjusted["changed"]:
+            adjusted_rows.append((item, bd, adjusted))
+        recomputed = max(item[2]["heat"] for item in adjusted_rows)
+        for item, bd, adjusted in adjusted_rows:
+            if not item.get("id"):
                 continue
             new_bd = dict(bd)
+            if "original_peak" not in new_bd:
+                new_bd["original_peak"] = original_peak
             new_bd["eoa_admin"] = adjusted["eoa_admin"]
             new_bd["privileged_callable"] = adjusted["privileged_callable"]
             new_bd["corroborated_leads"] = adjusted["corroborated_leads"]
             new_bd["total"] = adjusted["heat"]
+            new_bd["peak_heat"] = recomputed
             new_bd["rescore"] = "evidence-read"
+            stored = _stored_heat(item)
+            if stored == adjusted["heat"] and item.get("heat_breakdown") == new_bd:
+                continue
             store._req(
                 "PATCH",
                 "test_scan_runs",
@@ -150,7 +210,12 @@ def rescore_rows(store: Any, rpc_url: str, *, limit: int = 30) -> dict[str, Any]
                 prefer="return=minimal",
             )
             updated += 1
-            changes.append({"address": address, "heat": adjusted["heat"]})
+            changes.append({
+                "address": address,
+                "heat": adjusted["heat"],
+                "peak_heat": recomputed,
+                "original_peak": original_peak,
+            })
     return {"status": "ok", "updated": updated, "changes": changes[:20], "heat_contribution": 0}
 
 

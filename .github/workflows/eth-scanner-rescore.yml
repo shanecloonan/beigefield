@@ -50,7 +50,7 @@ jobs:
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           ETH_SCANNER_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           ETH_RPC_URL: ${{ secrets.ETH_RPC_URL }}
-          INPUT_LIMIT: ${{ github.event.inputs.limit || '40' }}
+          INPUT_LIMIT: ${{ github.event.inputs.limit || '200' }}
         run: |
           set -euo pipefail
           if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SECRET_KEY:-}" ] || [ -z "${ETH_RPC_URL:-}" ]; then

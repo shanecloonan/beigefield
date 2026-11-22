@@ -231,3 +231,34 @@ test("a pending slow stage is a label and does not change the heat rank", () => 
   assert.equal(board.leaderboard[1].score_state, "provisional");
   assert.deepEqual(board.leaderboard[1].pending_stages, ["similarity", "halmos"]);
 });
+
+test("a rescored false peak does not outrank a real historical heat", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 12,
+      blend_heat: 12,
+      status: "done",
+      created_at: "2026-01-01T00:00:00Z",
+      heat_breakdown: { rescore: "evidence-read", peak_heat: 0, original_peak: 12 },
+    },
+    {
+      address: ADDR_A,
+      heat: 0,
+      status: "done",
+      created_at: "2026-11-01T00:00:00Z",
+      heat_breakdown: { rescore: "evidence-read", peak_heat: 0, original_peak: 12 },
+    },
+    {
+      address: ADDR_B,
+      heat: 3,
+      status: "done",
+      created_at: "2026-06-01T00:00:00Z",
+    },
+  ]);
+  assert.equal(board.leaderboard[0].address, ADDR_B);
+  assert.equal(board.leaderboard[0].peak_heat, 3);
+  assert.equal(board.leaderboard[1].address, ADDR_A);
+  assert.equal(board.leaderboard[1].peak_heat, 0);
+  assert.equal(board.leaderboard[1].heat, 0);
+});
