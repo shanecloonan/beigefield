@@ -1,0 +1,53 @@
+# Passive website checks for owned hosts. Active paths run only because these
+# hosts are on the owned allowlist. No injection, no fuzzing, no row dumps.
+name: site-scanner
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 9 * * *"
+  push:
+    branches: [main]
+    paths:
+      - site-scanner/**
+      - .github/workflows/site-scanner.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-scanner
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install scanner
+        run: python -m pip install -e ./site-scanner
+      - name: Scan owned hosts
+        env:
+          PYTHONPATH: site-scanner/src:eth-scanner/src
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          python -m site_scanner scan --hosts beigefield.vercel.app,dap-ashy.vercel.app --limit 4 --json > /tmp/site-scan.json
+          python - <<'PY'
+          import json
+          report = json.load(open("/tmp/site-scan.json", encoding="utf-8"))
+          slim = []
+          for row in report.get("reports") or []:
+              slim.append({
+                  "host": row.get("host"),
+                  "heat": row.get("heat"),
+                  "mode": row.get("mode"),
+                  "facts": row.get("facts") or [],
+                  "persist": (row.get("persist") or {}).get("status"),
+              })
+          print(json.dumps({"status": report.get("status"), "scanned": report.get("scanned"), "reports": slim}))
+          PY

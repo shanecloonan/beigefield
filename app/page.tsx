@@ -15,6 +15,7 @@ export default function Home() {
         <p>Blockchain Research</p>
         <nav className="lockup-nav" aria-label="Tools">
           <Link href="/blend">Blend</Link>
+          <Link href="/scan">Scan</Link>
         </nav>
       </main>
     </div>
