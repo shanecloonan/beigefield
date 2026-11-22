@@ -113,17 +113,81 @@ class RescorePeakTests(unittest.TestCase):
         with patch("eth_scanner.engines.rescore.live_flags", return_value=(None, None)):
             report = rescore_rows(store, "http://rpc.example", limit=10)
         self.assertEqual(report["updated"], 1)
-        self.assertEqual(rows[0]["heat"], 6)
+        self.assertEqual(rows[0]["heat"], 0)
         self.assertEqual(rows[0]["heat_breakdown"]["privileged_callable"], 0)
-        self.assertEqual(rows[0]["heat_breakdown"]["eoa_admin"], 3)
+        self.assertEqual(rows[0]["heat_breakdown"]["eoa_admin"], 0)
+        self.assertEqual(rows[0]["heat_breakdown"]["corroborated_leads"], 0)
         self.assertEqual(rows[0]["heat_breakdown"]["original_peak"], 12)
-        self.assertEqual(rows[0]["heat_breakdown"]["peak_heat"], 6)
+        self.assertEqual(rows[0]["heat_breakdown"]["peak_heat"], 0)
+
+    def test_verified_eoa_stays_when_only_the_probe_is_retired(self) -> None:
+        kept = dict(FALSE)
+        kept["admin"] = {
+            "admin_class": "eoa",
+            "eoa_admin": True,
+            "confirmed": [
+                {"id": "admin-eoa-confirmed", "evidence": "controller=0xabc funds_usd=241805"},
+                {"id": "admin-privileged-open", "evidence": "upgradeTo(address) — eth_call succeeded (no revert) selector=0x3659cfe6"},
+            ],
+            "meta": {"controller_details": {"code_status": "ok", "code_size": 0}},
+        }
+        rows = [{"id": "kept", "address": HYDRO, "chain": "ethereum", "heat": 12, "blend_heat": 12, "heat_breakdown": kept}]
+        store = Store(rows)
+        with patch("eth_scanner.engines.rescore.live_flags", return_value=(None, None)):
+            rescore_rows(store, "http://rpc.example", limit=10)
+        self.assertEqual(rows[0]["heat"], 6)
+        self.assertEqual(rows[0]["heat_breakdown"]["eoa_admin"], 3)
+        self.assertEqual(rows[0]["heat_breakdown"]["privileged_callable"], 0)
+
+    def test_admin_report_rejects_privileged_points_and_keeps_the_invariant(self) -> None:
+        rows = [{
+            "id": "mixed",
+            "address": HYDRO,
+            "chain": "ethereum",
+            "heat": 7,
+            "blend_heat": 7,
+            "heat_breakdown": {
+                "invariants_failed": 3,
+                "privileged_callable": 4,
+                "eoa_admin": 0,
+                "corroborated_leads": 0,
+                "admin": {"privileged_callable": False, "eoa_admin": False, "admin_class": "unknown", "confirmed": []},
+            },
+        }]
+        store = Store(rows)
+        with patch("eth_scanner.engines.rescore.live_flags", return_value=(None, None)):
+            rescore_rows(store, "http://rpc.example", limit=10)
+        self.assertEqual(rows[0]["heat"], 3)
+        self.assertEqual(rows[0]["heat_breakdown"]["invariants_failed"], 3)
+        self.assertEqual(rows[0]["heat_breakdown"]["original_peak"], 7)
+        self.assertEqual(rows[0]["heat_breakdown"]["peak_heat"], 3)
+
+    def test_bare_heat_does_not_outrank_a_zero_component_scan(self) -> None:
+        rows = [
+            {"id": "bare", "address": HYDRO, "chain": "ethereum", "heat": 3, "blend_heat": 3, "heat_breakdown": {}},
+            {"id": "zero", "address": HYDRO, "chain": "ethereum", "heat": 0, "blend_heat": 0, "heat_breakdown": {
+                "invariants_failed": 0, "eoa_admin": 0, "privileged_callable": 0, "corroborated_leads": 0, "total": 0,
+            }},
+        ]
+        store = Store(rows)
+        with patch("eth_scanner.engines.rescore.live_flags", return_value=(None, None)):
+            rescore_rows(store, "http://rpc.example", limit=10)
+        self.assertEqual(rows[0]["heat"], 0)
+        self.assertEqual(rows[0]["heat_breakdown"]["original_peak"], 3)
+        self.assertEqual(rows[0]["heat_breakdown"]["peak_heat"], 0)
+        self.assertEqual(rows[1]["heat"], 0)
+        self.assertEqual(rows[1]["heat_breakdown"]["original_peak"], 3)
 
     def test_current_control_confirmation_survives_a_failed_read(self) -> None:
-        current = dict(FALSE)
-        current["admin"] = {"confirmed": [
-            {"id": "admin-privileged-open", "evidence": "selector dispatched and the control selector reverted"},
-        ]}
+        current = {
+            "privileged_callable": 4,
+            "eoa_admin": 0,
+            "corroborated_leads": 0,
+            "invariants_failed": 0,
+            "admin": {"privileged_callable": True, "confirmed": [
+                {"id": "admin-privileged-open", "evidence": "selector dispatched and the control selector reverted"},
+            ]},
+        }
         rows = [{"id": "kept", "address": HYDRO, "chain": "ethereum", "heat": 4, "blend_heat": 4, "heat_breakdown": current}]
         store = Store(rows)
         with patch("eth_scanner.engines.rescore.live_flags", return_value=(None, None)):
@@ -131,8 +195,19 @@ class RescorePeakTests(unittest.TestCase):
         self.assertEqual(report["updated"], 0)
         self.assertEqual(rows[0]["heat"], 4)
 
-    def test_an_undecided_read_does_not_touch_heat(self) -> None:
-        rows = [{"id": "only", "address": HYDRO, "chain": "ethereum", "heat": 12, "blend_heat": 12, "heat_breakdown": dict(FALSE)}]
+    def test_an_undecided_read_does_not_touch_a_verified_eoa(self) -> None:
+        verified = dict(FALSE)
+        verified["admin"] = {
+            "admin_class": "eoa",
+            "eoa_admin": True,
+            "privileged_callable": True,
+            "confirmed": [
+                {"id": "admin-eoa-confirmed"},
+                {"id": "admin-privileged-open", "evidence": "selector dispatched and the control selector reverted"},
+            ],
+            "meta": {"controller_details": {"code_status": "ok", "code_size": 0}},
+        }
+        rows = [{"id": "only", "address": HYDRO, "chain": "ethereum", "heat": 12, "blend_heat": 12, "heat_breakdown": verified}]
         store = Store(rows)
         with patch("eth_scanner.engines.rescore.live_flags", return_value=(None, None)):
             report = rescore_rows(store, "http://rpc.example", limit=10)

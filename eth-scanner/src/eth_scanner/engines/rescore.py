@@ -126,6 +126,76 @@ def _best_breakdown(rows: list[dict[str, Any]]) -> dict[str, Any]:
     return best
 
 
+def _has_components(breakdown: dict[str, Any]) -> bool:
+    return any(key in (breakdown or {}) for key in (
+        "invariants_failed",
+        "eoa_admin",
+        "privileged_callable",
+        "corroborated_leads",
+        "total",
+    ))
+
+
+def _admin(breakdown: dict[str, Any]) -> dict[str, Any]:
+    admin = breakdown.get("admin")
+    return admin if isinstance(admin, dict) else {}
+
+
+def _controller_details(breakdown: dict[str, Any]) -> dict[str, Any]:
+    meta = _admin(breakdown).get("meta")
+    if not isinstance(meta, dict):
+        return {}
+    details = meta.get("controller_details")
+    return details if isinstance(details, dict) else {}
+
+
+def _eoa_from_artifact(breakdown: dict[str, Any]) -> Optional[bool]:
+    """False when the saved record is not a successful empty getCode.
+
+    A missing code_status is the old path that called a failed read an EOA.
+    A multisig, Safe, or timelock is not an EOA. None means this row has no
+    EOA points to judge.
+    """
+    if _points(breakdown, "eoa_admin") <= 0:
+        return None
+    admin = _admin(breakdown)
+    kind = str(admin.get("admin_class") or "").lower()
+    if kind in {"multisig", "safe", "timelock", "contract"}:
+        return False
+    if admin.get("eoa_admin") is False:
+        return False
+    details = _controller_details(breakdown)
+    status = str(details.get("code_status") or "")
+    try:
+        size = int(details.get("code_size")) if details.get("code_size") is not None else None
+    except (TypeError, ValueError):
+        size = None
+    if status == "ok" and size == 0 and kind in {"", "eoa"}:
+        return True
+    return False
+
+
+def _current_privileged(breakdown: dict[str, Any]) -> bool:
+    admin = _admin(breakdown)
+    for item in admin.get("confirmed") or []:
+        if isinstance(item, dict) and _CURRENT_PRIV in str(item.get("evidence") or ""):
+            return True
+    return False
+
+
+def _priv_from_artifact(breakdown: dict[str, Any]) -> Optional[bool]:
+    """False for the retired no-revert probe, or points the admin report rejected."""
+    if _retired_privileged(breakdown):
+        return False
+    if _points(breakdown, "privileged_callable") <= 0:
+        return None
+    if _current_privileged(breakdown):
+        return True
+    if _admin(breakdown).get("privileged_callable") is False:
+        return False
+    return None
+
+
 def _retired_privileged(breakdown: dict[str, Any]) -> bool:
     """The saved confirmation is the probe the selector-and-control check replaced."""
     admin = breakdown.get("admin") if isinstance(breakdown.get("admin"), dict) else {}
@@ -176,7 +246,7 @@ def _top_addresses(store: Any, column: str, limit: int) -> list[dict[str, Any]]:
     seen: set[str] = set()
     for row in _pages(store, {
         "select": "id,address,chain,heat,blend_heat,heat_breakdown,blend_receipt",
-        column: "gte.3",
+        column: "gte.1",
         "order": "%s.desc" % column,
     }):
         address = str(row.get("address") or "").lower()
@@ -222,24 +292,44 @@ def rescore_rows(store: Any, rpc_url: str, *, limit: int = 30) -> dict[str, Any]
         }))
         siblings = [item for item in siblings if _ethereum(item.get("chain"))] or [row]
         breakdown = _best_breakdown(siblings)
-        if _points(breakdown, "eoa_admin") <= 0 and _points(breakdown, "privileged_callable") <= 0:
+        eoa_stands: Optional[bool] = None
+        priv_stands: Optional[bool] = None
+        if (
+            _points(breakdown, "eoa_admin") > 0
+            or _points(breakdown, "privileged_callable") > 0
+            or _retired_privileged(breakdown)
+        ):
+            eoa_stands, priv_stands = live_flags(rpc_url, address, breakdown)
+            # A failed live read stays None. The saved record can still decide.
+            if eoa_stands is None:
+                eoa_stands = _eoa_from_artifact(breakdown)
+            if priv_stands is None:
+                priv_stands = _priv_from_artifact(breakdown)
+        proved = eoa_stands is False or priv_stands is False
+        explained = [
+            _best_breakdown([item]) for item in siblings if _has_components(_best_breakdown([item]))
+        ]
+        explained_cap = 0
+        if explained:
+            explained_cap = max(
+                adjust_heat(
+                    heat=10**6,
+                    breakdown=bd,
+                    eoa_stands=eoa_stands,
+                    privileged_stands=priv_stands,
+                )["heat"]
+                for bd in explained
+            )
+        bare = any(
+            not _has_components(_best_breakdown([item])) and _stored_heat(item) > explained_cap
+            for item in siblings
+        )
+        if not proved and not (explained and bare):
             if len(skipped) < 15:
                 skipped.append({
                     "address": address,
                     "heat": _stored_heat(row),
-                    "reason": "no-probe-points",
-                })
-            continue
-        eoa_stands, priv_stands = live_flags(rpc_url, address, breakdown)
-        # A failed live read stays None. The retired phrase is already proof.
-        if priv_stands is None and _retired_privileged(breakdown):
-            priv_stands = False
-        if eoa_stands is not False and priv_stands is not False:
-            if len(skipped) < 15:
-                skipped.append({
-                    "address": address,
-                    "heat": _stored_heat(row),
-                    "reason": "not-contradicted",
+                    "reason": "not-contradicted" if explained else "no-probe-points",
                     "eoa_stands": eoa_stands,
                     "privileged_stands": priv_stands,
                 })
@@ -248,7 +338,8 @@ def rescore_rows(store: Any, rpc_url: str, *, limit: int = 30) -> dict[str, Any]
         adjusted_rows = []
         for item in siblings:
             own = _best_breakdown([item])
-            bd = own if _evidence_points(own) > 0 else breakdown
+            # A bare number beside a component breakdown is not a second piece of evidence.
+            bd = own if _has_components(own) else {}
             adjusted = adjust_heat(
                 heat=_stored_heat(item),
                 breakdown=bd,

@@ -47,6 +47,8 @@ export type LeaderRow = {
   scanned_at: string | null;
   liveness: Liveness;
   peak_heat: number;
+  /** The peak before a rescore withdrew a false stamp. Null when no rescore rewrote it. */
+  original_peak: number | null;
   history_count: number;
   stale: boolean;
   score_state: "" | "provisional" | "final";
@@ -175,7 +177,14 @@ function toRow(address: string, row: BlendRunLike): LeaderRow {
     stale: false,
     score_state: score.state,
     pending_stages: score.pending,
+    original_peak: null,
   };
+}
+
+function auditPeak(row: BlendRunLike): number | null {
+  const breakdown = breakdownOf(row);
+  if (!breakdown) return null;
+  return numberOrNull(breakdown.original_peak);
 }
 
 /** A rescore stores the recomputed all-time peak. Raw heat on that row is not a second peak. */
@@ -222,7 +231,7 @@ export function summarizeBlendRuns(
   chain = DEFAULT_CHAIN,
 ): BlendBoard {
   const selected = normalizeChain(chain);
-  const best = new Map<string, { latest: LeaderRow; peak: number; count: number }>();
+  const best = new Map<string, { latest: LeaderRow; peak: number; count: number; original: number | null }>();
   const seen = new Set<string>();
   for (const row of rows) {
     if (!finished(row)) continue;
@@ -238,11 +247,13 @@ export function summarizeBlendRuns(
     const key = `${rowChain}:${address}`;
     const prev = best.get(key);
     const contributed = contributedHeat(row);
+    const audit = auditPeak(row);
     if (!prev) {
-      best.set(key, { latest: next, peak: contributed, count: 1 });
+      best.set(key, { latest: next, peak: contributed, count: 1, original: audit });
       continue;
     }
     prev.peak = Math.max(prev.peak, contributed);
+    if (audit != null) prev.original = prev.original == null ? audit : Math.max(prev.original, audit);
     prev.count += 1;
     if (newer(next, prev.latest)) prev.latest = next;
   }
@@ -250,7 +261,7 @@ export function summarizeBlendRuns(
     const age = acc.latest.scanned_at ? now - scannedAt(acc.latest) : Number.POSITIVE_INFINITY;
     const stale =
       acc.latest.liveness === "live" && acc.peak >= STALE_MIN_HEAT && age >= STALE_AFTER_MS;
-    return { ...acc.latest, peak_heat: acc.peak, history_count: acc.count, stale };
+    return { ...acc.latest, peak_heat: acc.peak, original_peak: acc.original, history_count: acc.count, stale };
   });
   ranked.sort((a, b) => {
     if (b.peak_heat !== a.peak_heat) return b.peak_heat - a.peak_heat;
