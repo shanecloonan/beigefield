@@ -642,6 +642,14 @@ def main(argv: list[str] | None = None) -> int:
     rescore.add_argument("--limit", type=int, default=30)
     rescore.add_argument("--json", action="store_true")
 
+    similar = sub.add_parser(
+        "similarity-search",
+        help="Rank functions by structural similarity. A neighbor is a lead and adds no heat.",
+    )
+    similar.add_argument("--source", required=True)
+    similar.add_argument("--corpus", default="", help="JSON list of {id, source} confirmed or saved functions")
+    similar.add_argument("--json", action="store_true")
+
     bridge = sub.add_parser(
         "bridge-note",
         help="Record a bridge, inbox, outbox, or messenger name. No call, heat stays 0.",
@@ -1067,6 +1075,16 @@ def main(argv: list[str] | None = None) -> int:
             }, indent=2))
             return 0
         print(_json.dumps(_rescore.rescore_rows(_supabase.open_store(settings), rpc, limit=max(1, args.limit)), indent=2))
+        return 0
+
+    if args.cmd == "similarity-search":
+        import json as _json
+        from eth_scanner.similarity.index import index_sources, search
+        text = open(args.source, encoding="utf-8").read()
+        extra = []
+        if args.corpus:
+            extra = _json.loads(open(args.corpus, encoding="utf-8").read())
+        print(_json.dumps(search(text, index_sources(extra if isinstance(extra, list) else [])), indent=2))
         return 0
 
     if args.cmd == "bridge-note":
