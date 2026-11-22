@@ -707,6 +707,16 @@ def main(argv: list[str] | None = None) -> int:
     taint.add_argument("--source", default=None, help="local Solidity file")
     taint.add_argument("--json", action="store_true")
 
+    reach = sub.add_parser(
+        "cross-contract",
+        help="Find an open entry that reaches another contract. A path adds no heat.",
+    )
+    reach.add_argument("--source", required=True)
+    reach.add_argument("--address", default="")
+    reach.add_argument("--rpc", default="", help="optional read-only eth_call for public address getters")
+    reach.add_argument("--resolved", default="", help="JSON object of name to address")
+    reach.add_argument("--json", action="store_true")
+
     maybe = sub.add_parser(
         "maybe-triage",
         help="Annotate a manual-review row. Heat may fall and cannot rise.",
@@ -1180,6 +1190,26 @@ def main(argv: list[str] | None = None) -> int:
         if args.source:
             text = Path(args.source).read_text(encoding="utf-8", errors="replace")
         print(_json.dumps(taint_report(text), indent=2))
+        return 0
+
+    if args.cmd == "cross-contract":
+        import json as _json
+        from eth_scanner.advanced.reachability import reachability_report
+        text = open(args.source, encoding="utf-8").read()
+        resolved = {}
+        if args.resolved:
+            loaded = _json.loads(open(args.resolved, encoding="utf-8").read())
+            if isinstance(loaded, dict):
+                resolved = {str(k): str(v) for k, v in loaded.items()}
+        caller = None
+        if args.rpc and args.address:
+            from eth_scanner.ingest.rpc_client import rpc_call
+
+            def caller(to: str, data: str) -> str:
+                result = rpc_call(args.rpc, "eth_call", [{"to": to, "data": data}, "latest"], timeout_s=8)
+                return result if isinstance(result, str) else ""
+
+        print(_json.dumps(reachability_report(text, resolved=resolved, address=args.address, call=caller), indent=2))
         return 0
 
     if args.cmd == "maybe-triage":
