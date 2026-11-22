@@ -14,7 +14,7 @@ from typing import Any, Callable
 PASSIVE_PATHS = ("/robots.txt", "/", "/.env", "/.git/HEAD", "/admin")
 ACTIVE_PATHS = ("/.well-known/security.txt", "/debug")
 _MAX_BODY = 80_000
-_TIMEOUT = 8.0
+_TIMEOUT = 6.0
 _SCRIPT = re.compile(r"<script[^>]+src=[\"']([^\"']+)[\"']", re.I)
 _MAP = re.compile(r"sourceMappingURL=(\S+)")
 

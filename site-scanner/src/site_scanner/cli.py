@@ -26,7 +26,7 @@ def _hosts(args: argparse.Namespace) -> list[str]:
     return found[: args.limit]
 
 
-def scan_host(host: str, *, bounty: set[str], pause_s: float = 0.5) -> dict:
+def scan_host(host: str, *, bounty: set[str], pause_s: float = 0.35) -> dict:
     allowed = active_allowed(host, bounty)
     pages = fetch_host(host, active=allowed, pause_s=pause_s)
     annotate_cloud(pages)
@@ -55,7 +55,7 @@ def main() -> None:
     reports = []
     for index, host in enumerate(hosts):
         if index:
-            time.sleep(0.5)
+            time.sleep(0.25)
         reports.append(scan_host(host, bounty=bounty))
     payload = {"status": "ok", "scanned": len(reports), "sources": sources, "reports": reports}
     if args.json:

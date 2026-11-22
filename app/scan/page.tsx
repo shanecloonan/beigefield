@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import ScanApp from "./scan-app";
+import { loadSiteBoard } from "@/lib/site-scanner/load";
+import ScanBoard from "./scan-board";
 
 export const metadata: Metadata = {
   title: "Scan",
@@ -7,6 +8,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function ScanPage() {
-  return <ScanApp />;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+export default async function ScanPage() {
+  const board = await loadSiteBoard();
+  return <ScanBoard board={board} />;
 }

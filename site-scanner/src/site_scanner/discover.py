@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import random
+import re
 import time
 import urllib.request
+from datetime import datetime, timedelta, timezone
 from typing import Iterable
 
 from site_scanner.allow import host_of
@@ -188,6 +191,155 @@ def _read(url: str, *, limit: int, timeout: float) -> bytes:
         return response.read(limit)
 
 
+def _stamp(value: object) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    text = text.replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def names_from_crt_rows(rows: object, *, now: datetime, hours: int = 1, limit: int = 10) -> list[str]:
+    """Names from a crt.sh JSON page. Prefer the last hour, otherwise the rows that answered."""
+    fresh: list[str] = []
+    older: list[str] = []
+    cutoff = now - timedelta(hours=hours)
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict):
+            continue
+        host = usable_host(str(row.get("common_name") or row.get("name_value") or ""))
+        if not host:
+            continue
+        stamp = _stamp(row.get("entry_timestamp") or row.get("not_before"))
+        bucket = fresh if stamp is not None and stamp >= cutoff else older
+        if host not in bucket and host not in fresh:
+            bucket.append(host)
+    pool = fresh or older
+    return pool[:limit]
+
+
+_INFRA_PREFIX = ("crl.", "ocsp.", "ocsp-", "crt.")
+_INFRA_SUFFIX = (".amazontrust.com", ".pki.goog", ".crl", ".cer")
+_HOST_IN_CERT = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]{0,62}\.)+)(?:[a-z]{2,})", re.I)
+
+
+def hosts_from_san(text: str) -> list[str]:
+    found: list[str] = []
+    for part in (text or "").replace(",", "\n").splitlines():
+        piece = part.strip()
+        if piece.upper().startswith("DNS:"):
+            piece = piece[4:]
+        host = _public_site(piece)
+        if host and host not in found:
+            found.append(host)
+    return found
+
+
+def _public_site(value: str) -> str:
+    host = usable_host(value)
+    if not host or host.startswith(_INFRA_PREFIX) or host.endswith(_INFRA_SUFFIX):
+        return ""
+    labels = host.split(".")
+    if labels[-1] in {"crt", "crl", "cer"}:
+        return ""
+    if labels[0].startswith(("crl", "ocsp")) or labels[0] in {"cacerts", "crt"}:
+        return ""
+    if any(token in host for token in ("acm-acme", "dns-fw", ".ops.prod.")):
+        return ""
+    return host
+
+
+def hosts_from_leaf(leaf: bytes) -> list[str]:
+    """DNS names embedded in a CT leaf. Works for certificates and precertificates."""
+    text = leaf.decode("latin-1", errors="ignore")
+    found: list[str] = []
+    for match in _HOST_IN_CERT.finditer(text):
+        host = _public_site(match.group(0))
+        if host and host not in found:
+            found.append(host)
+    return found
+
+
+def _crt_json(query: str) -> list[object]:
+    url = "https://crt.sh/?q=%s&exclude=expired&output=json" % urllib.request.quote(query, safe="")
+    try:
+        raw = _read(url, limit=400_000, timeout=8)
+        rows = json.loads(raw.decode("utf-8", errors="replace"))
+    except Exception:
+        return []
+    return rows if isinstance(rows, list) else []
+
+
+def _log_entries(base: str, start: int, end: int) -> list[dict]:
+    raw = _read("%sget-entries?start=%s&end=%s" % (base, start, end), limit=3_000_000, timeout=20)
+    data = json.loads(raw.decode("utf-8", errors="replace"))
+    rows = data.get("entries") if isinstance(data, dict) else []
+    return [row for row in rows or [] if isinstance(row, dict)]
+
+
+def ct_log_hosts(*, limit: int = 10) -> list[str]:
+    """Recent names from the tail of a public CT log. Empty when the log does not answer."""
+    base = "https://ct.googleapis.com/logs/us1/argon2026h2/ct/v1/"
+    try:
+        sth = json.loads(_read(base + "get-sth", limit=8_000, timeout=12).decode("utf-8", errors="replace"))
+        end = int(sth.get("tree_size") or 0) - 1
+    except Exception:
+        return []
+    found: list[str] = []
+    for _page in range(8):
+        if end < 0 or len(found) >= limit:
+            break
+        start = max(0, end - 31)
+        try:
+            entries = _log_entries(base, start, end)
+        except Exception:
+            break
+        for entry in entries:
+            try:
+                leaf = base64.b64decode(str(entry.get("leaf_input") or ""))
+            except Exception:
+                continue
+            for host in hosts_from_leaf(leaf):
+                if host not in found:
+                    found.append(host)
+                if len(found) >= limit:
+                    return found
+        if start == 0:
+            break
+        end = start - 1
+    return found
+
+
+def recent_certificate_hosts(*, limit: int = 10) -> list[str]:
+    """crt.sh JSON for a wildcard, then the public CT log when crt.sh does not answer."""
+    found: list[str] = []
+    now = datetime.now(timezone.utc)
+    for query in ("%.app", "%.dev"):
+        for host in names_from_crt_rows(_crt_json(query), now=now, hours=1, limit=limit):
+            if host not in found:
+                found.append(host)
+        if len(found) >= limit:
+            return found[:limit]
+    for host in ct_log_hosts(limit=limit):
+        if host not in found:
+            found.append(host)
+        if len(found) >= limit:
+            break
+    if len(found) < 4:
+        for host in certstream_hosts(limit=limit, seconds=4):
+            if host not in found:
+                found.append(host)
+            if len(found) >= limit:
+                break
+    return found[:limit]
+
+
 def certstream_hosts(*, limit: int = 4, seconds: float = 6) -> list[str]:
     """A few names from the public certstream feed. Empty when it does not answer."""
     try:
@@ -290,25 +442,21 @@ def source_counts(
     return counts
 
 
-def live_discovery(*, limit: int = 8, rng: random.Random | None = None) -> tuple[list[str], set[str], dict[str, int]]:
+def live_discovery(*, limit: int = 24, rng: random.Random | None = None) -> tuple[list[str], set[str], dict[str, int]]:
     """Owned hosts plus a small passive sample. Bounty hosts are returned for the active gate."""
     picker = rng or random.Random()
     bounty_all = fetch_bounty_hosts(limit=80)
-    if len(bounty_all) <= 2:
+    bounty_n = min(6, max(2, limit // 4))
+    if len(bounty_all) <= bounty_n:
         bounty_pick = list(bounty_all)
     else:
-        bounty_pick = picker.sample(bounty_all, 2)
-    stream = certstream_hosts(limit=3, seconds=6)
-    logged = list(stream)
-    if len(logged) < 2:
-        for host in crt_hosts("com", limit=3):
-            if host not in logged:
-                logged.append(host)
-    sampled = fetch_tranco_sample(limit=3, rng=picker)
+        bounty_pick = picker.sample(bounty_all, bounty_n)
+    logged = recent_certificate_hosts(limit=min(10, max(4, limit // 2)))
+    sampled = fetch_tranco_sample(limit=min(10, max(4, limit // 3)), rng=picker)
     hosts = mix_hosts(
         owned=SCHEDULED_OWNED,
         bounty=bounty_pick,
-        crt=logged[:3],
+        crt=logged,
         tranco=sampled,
         limit=limit,
     )
@@ -317,7 +465,7 @@ def live_discovery(*, limit: int = 8, rng: random.Random | None = None) -> tuple
         hosts = mix_hosts(
             owned=SCHEDULED_OWNED,
             bounty=bounty_pick,
-            crt=logged[:3],
+            crt=logged,
             tranco=sampled,
             limit=limit,
         )

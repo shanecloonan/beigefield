@@ -11,23 +11,26 @@ from typing import Any
 from eth_scanner.stages.fusion import fuse
 
 MAX_HEAT = 12
+# Missing CSP and HSTS stay visible, but together they cannot outrank a real exposure.
+HEADER_FACTS = frozenset({"missing-csp", "missing-hsts"})
+HEADER_CAP = 1
 
 # fact -> (points, stage, title, remediation)
 FACTS: dict[str, tuple[int, str, str, str]] = {
-    "missing-csp": (3, "headers", "No Content-Security-Policy", "Send a Content-Security-Policy that limits script and frame sources."),
-    "missing-hsts": (2, "headers", "No Strict-Transport-Security", "Send Strict-Transport-Security on HTTPS responses."),
-    "cors-credentials-star": (4, "headers", "CORS allows any origin with credentials", "Do not combine Access-Control-Allow-Origin * with Allow-Credentials: true."),
-    "tls-expired": (4, "tls", "TLS certificate is expired", "Renew the certificate and keep the chain current."),
+    "missing-csp": (1, "headers", "No Content-Security-Policy", "Send a Content-Security-Policy that limits script and frame sources."),
+    "missing-hsts": (1, "headers", "No Strict-Transport-Security", "Send Strict-Transport-Security on HTTPS responses."),
+    "cors-credentials-star": (6, "headers", "CORS allows any origin with credentials", "Do not combine Access-Control-Allow-Origin * with Allow-Credentials: true."),
+    "tls-expired": (6, "tls", "TLS certificate is expired", "Renew the certificate and keep the chain current."),
     "tls-soon": (1, "tls", "TLS certificate expires within 14 days", "Renew the certificate before it expires."),
-    "exposed-env": (6, "exposure", "Environment file is publicly readable", "Remove the file from the web root and rotate any credential that was in it."),
-    "exposed-git": (6, "exposure", "Git metadata is publicly readable", "Block .git on the web server and rotate anything the repo contained."),
-    "open-directory": (3, "exposure", "Directory listing is enabled", "Turn off autoindex and serve an explicit index or a 403."),
-    "open-admin": (2, "exposure", "An admin path responds without a gate", "Require authentication before the admin page is rendered."),
-    "secret-in-page": (5, "secrets", "A secret-shaped token is in a public response", "Remove the token from client code and rotate it."),
-    "old-library": (3, "fingerprint", "A public page loads a library with a known old line", "Upgrade the library to a supported release."),
-    "supabase-schema-open": (4, "cloud", "Supabase OpenAPI schema is readable", "Require a key for /rest/v1/ and enable RLS. Row data was not read."),
-    "firebase-root-open": (4, "cloud", "Firebase root JSON is readable", "Tighten the Realtime Database rules. The body was not stored."),
-    "dangling-host": (3, "takeover", "The response is a provider's missing-site page", "Remove the dangling DNS record or reclaim the name at the provider."),
+    "exposed-env": (8, "exposure", "Environment file is publicly readable", "Remove the file from the web root and rotate any credential that was in it."),
+    "exposed-git": (8, "exposure", "Git metadata is publicly readable", "Block .git on the web server and rotate anything the repo contained."),
+    "open-directory": (5, "exposure", "Directory listing is enabled", "Turn off autoindex and serve an explicit index or a 403."),
+    "open-admin": (4, "exposure", "An admin path responds without a gate", "Require authentication before the admin page is rendered."),
+    "secret-in-page": (8, "secrets", "A secret-shaped token is in a public response", "Remove the token from client code and rotate it."),
+    "old-library": (6, "fingerprint", "A public page loads a library with a known old line", "Upgrade the library to a supported release."),
+    "supabase-schema-open": (8, "cloud", "Supabase OpenAPI schema is readable", "Require a key for /rest/v1/ and enable RLS. Row data was not read."),
+    "firebase-root-open": (8, "cloud", "Firebase root JSON is readable", "Tighten the Realtime Database rules. The body was not stored."),
+    "dangling-host": (7, "takeover", "The response is a provider's missing-site page", "Remove the dangling DNS record or reclaim the name at the provider."),
 }
 
 
@@ -73,13 +76,17 @@ def score_facts(fact_ids: list[str], *, active_ran: bool) -> dict[str, Any]:
             "heat": applied,
             "remediation": fix,
         })
-    heat = min(MAX_HEAT, int(fused.get("heat") or 0))
-    room = heat
+    header_room = HEADER_CAP
+    rest = 0
     for finding in findings:
-        applied = min(int(finding["heat"]), room)
-        finding["heat"] = applied
-        room -= applied
-    findings = [row for row in findings if int(row["heat"]) > 0]
+        if finding["id"] in HEADER_FACTS:
+            applied = min(int(finding["heat"]), header_room)
+            finding["heat"] = applied
+            header_room -= applied
+        else:
+            rest += int(finding["heat"])
+    heat = min(MAX_HEAT, rest + (HEADER_CAP - header_room))
+    findings = [row for row in findings if int(row["heat"]) > 0 or row["id"] in HEADER_FACTS]
     return {
         "heat": heat,
         "findings": findings,
