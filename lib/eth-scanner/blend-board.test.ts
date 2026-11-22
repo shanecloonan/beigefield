@@ -261,4 +261,6 @@ test("a rescored false peak does not outrank a real historical heat", () => {
   assert.equal(board.leaderboard[1].address, ADDR_A);
   assert.equal(board.leaderboard[1].peak_heat, 0);
   assert.equal(board.leaderboard[1].heat, 0);
+  assert.equal(board.leaderboard[1].original_peak, 12);
+  assert.equal(board.leaderboard[0].original_peak, null);
 });
