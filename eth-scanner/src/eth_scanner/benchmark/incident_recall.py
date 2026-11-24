@@ -12,7 +12,9 @@ the contract that was exploited. EIP-1967 proxies, clones, and rows
 with no verified source stay out of the recall denominator. A legacy
 (non-EIP-1967) proxy is scored with its implementation source, and an
 EIP-2535 diamond is scored with its facet sources. The source is not
-cut at 200,000 characters.
+cut at 200,000 characters. When the listed address is cold, addresses
+named in the protocol's TVL adapter are scored too. Share-balance,
+spot-price, and reentrancy leads count toward recall and add no heat.
 
 Scored rows are reported in three buckets: an off-chain label (key,
 phishing, DNS, rug), a listed address whose source is a token, and a
@@ -172,6 +174,7 @@ def resolve_incidents(hacks: list[dict[str, Any]], protocols: list[dict[str, Any
             "address": address,
             "classification": str(hack.get("classification") or "")[:80],
             "technique": str(hack.get("technique") or "")[:80],
+            "adapter": str(protocol.get("module") or "")[:120],
             "source": "defillama-protocol-address",
             "pre_incident": False,
             "scored": False,
@@ -189,8 +192,11 @@ def score_source(address: str, source: str) -> bool:
     """
     if not (source or "").strip():
         return False
-    findings = run_custom_detectors(address=address, source=source)
-    return bool(findings)
+    if run_custom_detectors(address=address, source=source):
+        return True
+    from eth_scanner.benchmark.leads import has_benchmark_lead
+    # Share, spot-price, and reentrancy leads. They add no heat.
+    return has_benchmark_lead(source)
 
 
 def assemble_runtime_source(
@@ -252,6 +258,7 @@ def recall_report(rows: list[dict[str, Any]], *, incidents: int = 0) -> dict[str
             "recall": legacy["recall"],
             "note": "Every scored immutable source, including off-chain labels.",
         },
+        "adapter_hits": sum(1 for row in scored if row.get("adapter_hit")),
         "buckets": buckets,
         "by_chain": _by_chain(rows),
         "note": (
@@ -361,6 +368,43 @@ def _source_from_sourcify(payload: Any) -> str:
     return "\n".join(parts)
 
 
+def _adapter_hot(
+    row: dict[str, Any],
+    fetch_source: Callable[[str, str], str],
+    rpc_for: Optional[Callable[[str], str]],
+) -> bool:
+    """True when a vault or pool named by the TVL adapter is a lead. Heat stays 0."""
+    from eth_scanner.benchmark.adapter_join import adapter_addresses
+
+    module = str(row.get("adapter") or "")
+    if not module:
+        return False
+    try:
+        extras = adapter_addresses(module, row["chain"], skip=str(row.get("address") or ""))
+    except (OSError, TimeoutError, ValueError):
+        return False
+    rpc = ""
+    if rpc_for is not None:
+        try:
+            rpc = rpc_for(row["chain"]) or ""
+        except Exception:
+            rpc = ""
+    for extra in extras:
+        try:
+            source = fetch_source(row["chain"], extra)
+        except (OSError, TimeoutError, RuntimeError, ValueError):
+            source = ""
+        if not (source or "").strip():
+            continue
+        if rpc:
+            source = assemble_runtime_source(
+                row["chain"], extra, source, fetch_source=fetch_source, rpc_url=rpc,
+            )
+        if score_source(extra, source):
+            return True
+    return False
+
+
 def mark_scored(
     rows: list[dict[str, Any]],
     *,
@@ -400,6 +444,12 @@ def mark_scored(
         row["scored"] = True
         row["bucket"] = assign_bucket(row, source)
         row["hot"] = score_source(row["address"], source)
+        row["adapter_hit"] = False
+        if row["hot"] or row["bucket"] == "off_chain":
+            continue
+        row["adapter_hit"] = _adapter_hot(row, fetch_source, rpc_for)
+        if row["adapter_hit"]:
+            row["hot"] = True
 
 
 def _labeled_safe() -> dict[str, Any]:
