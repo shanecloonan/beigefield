@@ -24,7 +24,7 @@ CLASS_PROPERTIES: dict[str, list[dict[str, Any]]] = {
             "id": "erc4626-previewRedeem",
             "name": "previewRedeem consistency",
             "severity": "low",
-            "summary": "previewRedeem(shares) returns a coherent asset amount.",
+            "summary": "previewRedeem may be lower (withdrawal fee). It fails only when it pays more than convertToAssets.",
         },
     ],
     "staking": [

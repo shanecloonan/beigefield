@@ -204,6 +204,45 @@ def _pick_rpc(preferred: str) -> str:
     return urls[0] if urls else ""
 
 
+def preview_probe_shares(supply: int) -> int:
+    """About 1% of supply so a flat withdrawal fee is not the whole preview."""
+    if supply <= 0:
+        return 0
+    return max(1, int(supply) // 100)
+
+
+def preview_overpays(preview: int, converted: int) -> bool:
+    """True only when previewRedeem pays more than convertToAssets.
+
+    ERC-4626 includes withdrawal fees in previewRedeem, so a lower preview is
+    normal. The 0.5% tolerance is inclusive: equal to convertToAssets + tol holds.
+    """
+    tol = max(1, int(converted) // 200)
+    return int(preview) > int(converted) + tol
+
+
+def preview_failure_stands(rpc_url: str, address: str, timeout_s: float = 12) -> Optional[bool]:
+    """Re-read previewRedeem. None if the calls do not decide.
+
+    False means the stored overpay does not stand (fee, or within tolerance).
+    """
+    if not rpc_url or not address:
+        return None
+    supply = _call_uint(rpc_url, address, SEL["totalSupply()"], timeout_s)
+    if not supply or supply <= 0:
+        return None
+    shares = preview_probe_shares(supply)
+    preview = _call_uint(
+        rpc_url, address, SEL["previewRedeem(uint256)"] + ("%064x" % shares), timeout_s,
+    )
+    converted = _call_uint(
+        rpc_url, address, SEL["convertToAssets(uint256)"] + ("%064x" % shares), timeout_s,
+    )
+    if preview is None or converted is None:
+        return None
+    return preview_overpays(preview, converted)
+
+
 def _erc4626_checks(addr: str, rpc: str, timeout_s: float, klass: str) -> list[LiveInvariantResult]:
     out: list[LiveInvariantResult] = []
     asset = _call_addr(rpc, addr, SEL["asset()"], timeout_s)
@@ -295,7 +334,7 @@ def _erc4626_checks(addr: str, rpc: str, timeout_s: float, klass: str) -> list[L
         ))
 
     if supply and supply > 0:
-        one = min(supply, 10**18)
+        one = preview_probe_shares(supply)
         pred = SEL["previewRedeem(uint256)"] + ("%064x" % one)
         preview = _call_uint(rpc, addr, pred, timeout_s)
         if preview is None:
@@ -305,7 +344,7 @@ def _erc4626_checks(addr: str, rpc: str, timeout_s: float, klass: str) -> list[L
                 contract_class=klass,
             ))
         else:
-            # Consistency vs convertToAssets(one)
+            # A lower preview is a withdrawal fee. Only an overpay is a failure.
             conv_one = _call_uint(
                 rpc, addr, SEL["convertToAssets(uint256)"] + ("%064x" % one), timeout_s,
             )
@@ -318,12 +357,12 @@ def _erc4626_checks(addr: str, rpc: str, timeout_s: float, klass: str) -> list[L
                     extras={"shares": one, "assets": preview},
                 ))
             else:
-                tol = max(1, max(preview, conv_one) // 200)
-                ok = abs(preview - conv_one) <= tol
+                tol = max(1, conv_one // 200)
+                overpay = preview_overpays(preview, conv_one)
                 out.append(LiveInvariantResult(
                     "erc4626-preview-consistency",
-                    "previewRedeem ≈ convertToAssets",
-                    "held" if ok else "failed",
+                    "previewRedeem <= convertToAssets",
+                    "failed" if overpay else "held",
                     "previewRedeem(%s)=%s convertToAssets=%s tol=%s" % (one, preview, conv_one, tol),
                     contract_class=klass,
                     extras={"shares": one, "preview": preview, "converted": conv_one},

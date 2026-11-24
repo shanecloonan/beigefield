@@ -50,6 +50,7 @@ def adjust_heat(
     eoa_stands: Optional[bool],
     privileged_stands: Optional[bool],
     weights: Optional[HeatWeights] = None,
+    preview_stands: Optional[bool] = None,
 ) -> dict[str, Any]:
     """Drop contradicted points. None means the live read did not decide."""
     w = weights or load_heat_weights()
@@ -66,6 +67,9 @@ def adjust_heat(
     if privileged_stands is False:
         priv = 0
         skip.add(_PRIV)
+    # A re-read that shows previewRedeem does not overpay drops one failure's points.
+    if preview_stands is False:
+        inv = max(0, inv - w.failed_invariant)
     if skip:
         rejected = corroborated_heat(
             [row for row in admin_rows if row.get("fact") in skip],
@@ -84,6 +88,10 @@ def adjust_heat(
         "invariants_failed": inv,
         "heat_contribution": 0,
     }
+
+
+def _names_preview(breakdown: dict[str, Any]) -> bool:
+    return "erc4626-preview-consistency" in str(breakdown.get("drain_reason") or "")
 
 
 def _ethereum(chain: Any) -> bool:
@@ -305,7 +313,11 @@ def rescore_rows(store: Any, rpc_url: str, *, limit: int = 30) -> dict[str, Any]
                 eoa_stands = _eoa_from_artifact(breakdown)
             if priv_stands is None:
                 priv_stands = _priv_from_artifact(breakdown)
-        proved = eoa_stands is False or priv_stands is False
+        preview_stands: Optional[bool] = None
+        if _points(breakdown, "invariants_failed") > 0 and _names_preview(breakdown):
+            from eth_scanner.invariants.live import preview_failure_stands
+            preview_stands = preview_failure_stands(rpc_url, address)
+        proved = eoa_stands is False or priv_stands is False or preview_stands is False
         explained = [
             _best_breakdown([item]) for item in siblings if _has_components(_best_breakdown([item]))
         ]
@@ -317,6 +329,7 @@ def rescore_rows(store: Any, rpc_url: str, *, limit: int = 30) -> dict[str, Any]
                     breakdown=bd,
                     eoa_stands=eoa_stands,
                     privileged_stands=priv_stands,
+                    preview_stands=preview_stands if _names_preview(bd) else None,
                 )["heat"]
                 for bd in explained
             )
@@ -345,6 +358,7 @@ def rescore_rows(store: Any, rpc_url: str, *, limit: int = 30) -> dict[str, Any]
                 breakdown=bd,
                 eoa_stands=eoa_stands,
                 privileged_stands=priv_stands,
+                preview_stands=preview_stands if _names_preview(bd) else None,
             )
             adjusted_rows.append((item, bd, adjusted))
         recomputed = max(item[2]["heat"] for item in adjusted_rows)
@@ -357,6 +371,7 @@ def rescore_rows(store: Any, rpc_url: str, *, limit: int = 30) -> dict[str, Any]
             new_bd["eoa_admin"] = adjusted["eoa_admin"]
             new_bd["privileged_callable"] = adjusted["privileged_callable"]
             new_bd["corroborated_leads"] = adjusted["corroborated_leads"]
+            new_bd["invariants_failed"] = adjusted["invariants_failed"]
             new_bd["total"] = adjusted["heat"]
             new_bd["peak_heat"] = recomputed
             new_bd["rescore"] = "evidence-read"
