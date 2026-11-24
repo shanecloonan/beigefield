@@ -10,11 +10,18 @@ comes from Sourcify. Detector leads are the catch. They add no heat.
 The protocol address is the address DefiLlama lists. It is not always
 the contract that was exploited. Rows that are proxies, or that have no
 verified source, stay out of the recall denominator.
+
+Scored rows are reported in three buckets: an off-chain label (key,
+phishing, DNS, rug), a listed address whose source is a token, and a
+listed address whose source is a protocol contract. Off-chain labels
+stay out of the recall denominator. ``legacy`` is the previous ratio
+over every scored row, including those labels.
 """
 
 from __future__ import annotations
 
 import json
+import re
 import urllib.request
 from typing import Any, Callable, Optional
 
@@ -58,6 +65,80 @@ def _chain_name(value: Any) -> str:
     return _LLAMA_CHAIN.get(text, "")
 
 
+# DefiLlama classes that are not a bug in the verified source.
+_OFFCHAIN_CLASSIFICATION = frozenset({
+    "key compromise",
+    "frontend & infrastructure",
+    "social engineering",
+    "rugpull",
+    "rug pull",
+})
+_OFFCHAIN_TECHNIQUE = re.compile(
+    r"private key|phishing|dns hijack|validator key|hot wallet|"
+    r"key leaked|seed phrase|social engineer|deployer key|backdoor",
+    re.I,
+)
+# A pool, vault, or market names one of these. A governance token does not.
+_PROTOCOL_SURFACE = re.compile(
+    r"\bfunction\s+(?:"
+    r"deposit|withdraw|redeem|borrow|liquidate|liquidationCall|"
+    r"swap|buy|sell|skim|sync|harvest|stake|unstake|donate"
+    r")\s*\(",
+    re.I,
+)
+_TOKEN_TRANSFER = re.compile(r"\bfunction\s+transfer\s*\(", re.I)
+_TOKEN_APPROVE = re.compile(r"\bfunction\s+(?:approve|transferFrom)\s*\(", re.I)
+_BUCKETS = (
+    ("off_chain", "off-chain label", False),
+    ("token", "listed address is a token", True),
+    ("protocol", "scored source is a protocol contract", True),
+)
+
+
+def is_offchain_label(classification: str = "", technique: str = "") -> bool:
+    """True for a stolen key, phishing, DNS, or rug label. Not a source bug."""
+    kind = (classification or "").strip().lower()
+    if kind in _OFFCHAIN_CLASSIFICATION:
+        return True
+    return bool(_OFFCHAIN_TECHNIQUE.search(technique or ""))
+
+
+def is_token_source(source: str) -> bool:
+    """True when the bundle has an ERC-20 surface and no pool or vault function."""
+    text = source or ""
+    from eth_scanner.heuristics.invariant_pass import strip_comments
+    text = strip_comments(text, "solidity")
+    if _PROTOCOL_SURFACE.search(text):
+        return False
+    return bool(_TOKEN_TRANSFER.search(text) and _TOKEN_APPROVE.search(text))
+
+
+def assign_bucket(row: dict[str, Any], source: str = "") -> str:
+    """off_chain, token, or protocol. Off-chain wins even when the file is a token."""
+    if is_offchain_label(str(row.get("classification") or ""), str(row.get("technique") or "")):
+        return "off_chain"
+    if is_token_source(source):
+        return "token"
+    return "protocol"
+
+
+def _row_bucket(row: dict[str, Any]) -> str:
+    bucket = str(row.get("bucket") or "")
+    if bucket in {"off_chain", "token", "protocol"}:
+        return bucket
+    return assign_bucket(row, "")
+
+
+def _ratio(group: list[dict[str, Any]]) -> dict[str, Any]:
+    hot = sum(1 for row in group if row.get("hot"))
+    scored = len(group)
+    return {
+        "scored": scored,
+        "hot": hot,
+        "recall": (hot / scored) if scored else None,
+    }
+
+
 def resolve_incidents(hacks: list[dict[str, Any]], protocols: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Join hack metadata to the protocol's listed address. Descriptions are dropped."""
     by_id: dict[str, dict[str, Any]] = {}
@@ -86,6 +167,8 @@ def resolve_incidents(hacks: list[dict[str, Any]], protocols: list[dict[str, Any
             "date": hack.get("date"),
             "chain": chain,
             "address": address,
+            "classification": str(hack.get("classification") or "")[:80],
+            "technique": str(hack.get("technique") or "")[:80],
             "source": "defillama-protocol-address",
             "pre_incident": False,
             "scored": False,
@@ -105,21 +188,39 @@ def score_source(address: str, source: str) -> bool:
 
 def recall_report(rows: list[dict[str, Any]], *, incidents: int = 0) -> dict[str, Any]:
     scored = [row for row in rows if row.get("pre_incident") and row.get("scored")]
-    hot = [row for row in scored if row.get("hot")]
-    recall = (len(hot) / len(scored)) if scored else None
+    legacy = _ratio(scored)
+    kept = [row for row in scored if _row_bucket(row) != "off_chain"]
+    current = _ratio(kept)
+    buckets: dict[str, Any] = {}
+    for key, label, in_denominator in _BUCKETS:
+        group = [row for row in scored if _row_bucket(row) == key]
+        entry = _ratio(group)
+        entry["label"] = label
+        entry["in_denominator"] = in_denominator
+        buckets[key] = entry
     return {
         "metadata_only": True,
         "heat_contribution": 0,
         "incidents": incidents,
         "resolved": len(rows),
         "pre_incident": sum(1 for row in rows if row.get("pre_incident")),
-        "scored": len(scored),
-        "hot": len(hot),
-        "recall": recall,
+        "scored": current["scored"],
+        "hot": current["hot"],
+        "recall": current["recall"],
+        "legacy": {
+            "scored": legacy["scored"],
+            "hot": legacy["hot"],
+            "recall": legacy["recall"],
+            "note": "Every scored immutable source, including off-chain labels.",
+        },
+        "buckets": buckets,
         "by_chain": _by_chain(rows),
         "note": (
-            "Recall is detector leads on immutable verified runtimes. "
-            "Proxy and unverified rows are not in the denominator. Heat is 0."
+            "Recall is detector leads on immutable verified runtimes, "
+            "excluding off-chain labels (key, phishing, DNS, rug). "
+            "Token and protocol buckets stay in the denominator. "
+            "legacy is the previous all-rows ratio. "
+            "Proxy and unverified rows are not in either denominator. Heat is 0."
         ),
     }
 
@@ -240,6 +341,7 @@ def mark_scored(rows: list[dict[str, Any]], *, fetch_source: Callable[[str, str]
         if not source.strip():
             continue
         row["scored"] = True
+        row["bucket"] = assign_bucket(row, source)
         row["hot"] = score_source(row["address"], source)
 
 
@@ -306,7 +408,13 @@ def live_report() -> dict[str, Any]:
     scored_rows = [row for row in rows if row.get("scored")]
     scored_rows.sort(key=lambda row: (not row.get("hot"), row.get("chain") or "", row.get("name") or ""))
     report["examples"] = [
-        {"name": row["name"], "chain": row["chain"], "address": row["address"], "hot": bool(row.get("hot"))}
+        {
+            "name": row["name"],
+            "chain": row["chain"],
+            "address": row["address"],
+            "hot": bool(row.get("hot")),
+            "bucket": _row_bucket(row),
+        }
         for row in scored_rows[:8]
     ]
     return report
