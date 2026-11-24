@@ -50,16 +50,26 @@ _PRICE_VIEW = re.compile(
 )
 
 
-def has_benchmark_lead(source: str) -> bool:
-    """True when a share, spot-price, or reentrancy shape is present. Heat stays 0."""
+def benchmark_lead_names(source: str) -> list[str]:
+    """Share-balance, spot-price, and reentrancy shapes. Names only. Heat stays 0."""
     text = source or ""
     clean = strip_comments(text, "solidity")
     if not _PROTOCOL.search(clean):
-        return False
+        return []
     parsed = functions(text, clean, "solidity")
-    if _share_balance(parsed) or _spot_price(clean, parsed):
-        return True
-    return _reentrancy(parsed)
+    names: list[str] = []
+    if _share_balance(parsed):
+        names.append("share-balance")
+    if _spot_price(clean, parsed):
+        names.append("spot-price")
+    if _reentrancy(parsed):
+        names.append("reentrancy")
+    return names
+
+
+def has_benchmark_lead(source: str) -> bool:
+    """True when a share, spot-price, or reentrancy shape is present. Heat stays 0."""
+    return bool(benchmark_lead_names(source))
 
 
 def _body_with_one_callee(fn: dict, by_name: dict[str, dict]) -> str:
