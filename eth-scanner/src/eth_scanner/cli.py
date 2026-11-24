@@ -528,6 +528,18 @@ def main(argv: list[str] | None = None) -> int:
     fv.add_argument("--json", action="store_true")
     fv.add_argument("--dry-run", action="store_true", help="do not persist store patches")
 
+    cons = sub.add_parser(
+        "conservation-fork",
+        help="Local anvil conservation properties. Stores pass/fail, value delta, and an evidence hash.",
+    )
+    cons.add_argument("--address", default="", help="0x… on a local fork of ETH_RPC_URL")
+    cons.add_argument("--fixture", choices=("fair", "overpay", "donation", "reenter"), default="")
+    cons.add_argument("--from-store", action="store_true", dest="from_store")
+    cons.add_argument("--limit", type=int, default=3, help="max contracts (hard cap 5)")
+    cons.add_argument("--timeout", type=int, default=None, help="per-contract seconds (max 90)")
+    cons.add_argument("--json", action="store_true")
+    cons.add_argument("--dry-run", action="store_true", help="do not write the measurement back")
+
     pg = sub.add_parser(
         "protocol-graph",
         help="Phase C protocol context graph + risk factors (read-only)",
@@ -1393,6 +1405,88 @@ def main(argv: list[str] | None = None) -> int:
         if args.fixture == "leaky" and not any(p.get("drainable") for p in payloads):
             return 1
         if args.fixture == "safe" and any(p.get("drainable") for p in payloads):
+            return 1
+        return 0
+
+    if args.cmd == "conservation-fork":
+        from eth_scanner.engines.conservation import (
+            apply_conservation,
+            run_conservation,
+            select_targets,
+        )
+        timeout = int(args.timeout) if args.timeout is not None else None
+        payloads: list[dict] = []
+        if args.fixture:
+            payloads.append(run_conservation(
+                fixture=args.fixture,
+                timeout_s=timeout,
+                work_dir=settings.work_dir / "conservation",
+            ))
+        elif args.from_store:
+            rpc = getattr(settings, "eth_rpc_url", "") or ""
+            if not rpc:
+                payloads.append({
+                    "ran": False,
+                    "skipped": True,
+                    "records": [],
+                    "high_confidence": [],
+                    "note": "no RPC URL for the local fork",
+                })
+            else:
+                store = open_store(settings)
+                rows = list(store.list_results(limit=200) or [])
+                picked = select_targets(rows, limit=max(1, int(args.limit)))
+                if not picked:
+                    payloads.append({
+                        "ran": False,
+                        "skipped": True,
+                        "records": [],
+                        "high_confidence": [],
+                        "note": "no stored contract with heat or a lead",
+                    })
+                for row in picked:
+                    report = run_conservation(
+                        address=str(row.get("address") or ""),
+                        rpc_url=rpc,
+                        timeout_s=timeout,
+                        work_dir=settings.work_dir / "conservation",
+                    )
+                    if not args.dry_run and settings.persist_remote and report.get("records"):
+                        patched = apply_conservation(row, list(report["records"]))
+                        patched["heat"] = row.get("heat")
+                        from eth_scanner.engines.fork_verify import persist_fork_verify
+                        persist_fork_verify(store, row, patched)
+                        report = dict(report)
+                        report["persisted"] = True
+                    payloads.append(report)
+        else:
+            if not args.address:
+                print("conservation-fork: pass --address, --fixture, or --from-store", file=sys.stderr)
+                return 2
+            payloads.append(run_conservation(
+                address=args.address,
+                rpc_url=getattr(settings, "eth_rpc_url", "") or "",
+                timeout_s=timeout,
+                work_dir=settings.work_dir / "conservation",
+            ))
+        if args.json:
+            print(json.dumps(payloads if len(payloads) != 1 else payloads[0], indent=2))
+        else:
+            for item in payloads:
+                print(
+                    "conservation-fork ran=%s records=%d high_confidence=%s note=%s"
+                    % (
+                        item.get("ran"),
+                        len(item.get("records") or []),
+                        ",".join(item.get("high_confidence") or []),
+                        item.get("note") or "",
+                    )
+                )
+        if args.fixture == "fair" and any(
+            row.get("status") == "fail" for item in payloads for row in (item.get("records") or [])
+        ):
+            return 1
+        if args.fixture in {"overpay", "donation", "reenter"} and not any(item.get("high_confidence") for item in payloads):
             return 1
         return 0
 
