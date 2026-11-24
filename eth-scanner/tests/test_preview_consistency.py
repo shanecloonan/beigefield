@@ -78,7 +78,7 @@ class PreviewRuleTests(unittest.TestCase):
         self.assertEqual(rows[0]["heat_breakdown"]["original_peak"], 3)
         self.assertEqual(rows[1]["heat"], 3)
 
-    def test_a_failed_reread_keeps_the_preview_heat(self) -> None:
+    def test_a_failed_reread_drops_the_retired_two_sided_stamp(self) -> None:
         rows = [{
             "id": "vault",
             "address": VAULT,
@@ -86,6 +86,24 @@ class PreviewRuleTests(unittest.TestCase):
             "heat": 3,
             "blend_heat": 3,
             "heat_breakdown": {"invariants_failed": 3, "drain_reason": REASON},
+        }]
+        store = Store(rows)
+        with patch("eth_scanner.invariants.live.preview_failure_stands", return_value=None):
+            report = rescore_rows(store, "http://rpc.example", limit=10)
+        self.assertEqual(report["updated"], 1)
+        self.assertEqual(rows[0]["heat"], 0)
+
+    def test_a_failed_reread_keeps_a_recorded_overpay(self) -> None:
+        rows = [{
+            "id": "vault",
+            "address": VAULT,
+            "chain": "ethereum",
+            "heat": 3,
+            "blend_heat": 3,
+            "heat_breakdown": {
+                "invariants_failed": 3,
+                "drain_reason": "solvency shape only; no simulated profit path (erc4626-preview-overpay)",
+            },
         }]
         store = Store(rows)
         with patch("eth_scanner.invariants.live.preview_failure_stands", return_value=None):

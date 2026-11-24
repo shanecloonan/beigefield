@@ -93,12 +93,30 @@ def adjust_heat(
     }
 
 
+def _reason(breakdown: dict[str, Any]) -> str:
+    return str(breakdown.get("drain_reason") or "")
+
+
 def _names_preview(breakdown: dict[str, Any]) -> bool:
-    return "erc4626-preview-consistency" in str(breakdown.get("drain_reason") or "")
+    reason = _reason(breakdown)
+    return "erc4626-preview-consistency" in reason or "erc4626-preview-overpay" in reason
+
+
+def _retired_preview(breakdown: dict[str, Any]) -> bool:
+    """The old check failed any gap. That stamp is not proof of an overpay."""
+    reason = _reason(breakdown)
+    return "erc4626-preview-consistency" in reason and "erc4626-preview-overpay" not in reason
 
 
 def _names_solvency(breakdown: dict[str, Any]) -> bool:
-    return "erc4626-solvency" in str(breakdown.get("drain_reason") or "")
+    reason = _reason(breakdown)
+    return "erc4626-solvency" in reason or "erc4626-asset-shortfall" in reason
+
+
+def _retired_solvency(breakdown: dict[str, Any]) -> bool:
+    """The old check failed whenever the conversion exceeded totalAssets."""
+    reason = _reason(breakdown)
+    return "erc4626-solvency" in reason and "erc4626-asset-shortfall" not in reason
 
 
 def _ethereum(chain: Any) -> bool:
@@ -325,9 +343,14 @@ def rescore_rows(store: Any, rpc_url: str, *, limit: int = 30) -> dict[str, Any]
         if _points(breakdown, "invariants_failed") > 0 and _names_preview(breakdown):
             from eth_scanner.invariants.live import preview_failure_stands
             preview_stands = preview_failure_stands(rpc_url, address)
+            # A dead RPC cannot confirm the retired two-sided gap. It is not an overpay.
+            if preview_stands is None and _retired_preview(breakdown):
+                preview_stands = False
         if _points(breakdown, "invariants_failed") > 0 and _names_solvency(breakdown):
             from eth_scanner.invariants.live import solvency_failure_stands
             solvency_stands = solvency_failure_stands(rpc_url, address)
+            if solvency_stands is None and _retired_solvency(breakdown):
+                solvency_stands = False
         proved = (
             eoa_stands is False
             or priv_stands is False

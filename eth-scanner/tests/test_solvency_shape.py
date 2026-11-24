@@ -123,7 +123,7 @@ class SolvencyShapeTests(unittest.TestCase):
         self.assertEqual(rows[0]["heat"], 0)
         self.assertEqual(rows[0]["heat_breakdown"]["invariants_failed"], 0)
 
-    def test_a_failed_reread_keeps_solvency_heat(self) -> None:
+    def test_a_failed_reread_drops_the_retired_accounting_stamp(self) -> None:
         rows = [{
             "id": "fcs",
             "address": VAULT,
@@ -131,6 +131,24 @@ class SolvencyShapeTests(unittest.TestCase):
             "heat": 3,
             "blend_heat": 3,
             "heat_breakdown": {"invariants_failed": 3, "drain_reason": REASON},
+        }]
+        store = Store(rows)
+        with patch("eth_scanner.invariants.live.solvency_failure_stands", return_value=None):
+            report = rescore_rows(store, "http://rpc.example", limit=10)
+        self.assertEqual(report["updated"], 1)
+        self.assertEqual(rows[0]["heat"], 0)
+
+    def test_a_failed_reread_keeps_a_recorded_shortfall(self) -> None:
+        rows = [{
+            "id": "fcs",
+            "address": VAULT,
+            "chain": "ethereum",
+            "heat": 3,
+            "blend_heat": 3,
+            "heat_breakdown": {
+                "invariants_failed": 3,
+                "drain_reason": "solvency shape only; no simulated profit path (erc4626-asset-shortfall)",
+            },
         }]
         store = Store(rows)
         with patch("eth_scanner.invariants.live.solvency_failure_stands", return_value=None):

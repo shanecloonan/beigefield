@@ -398,7 +398,7 @@ def _erc4626_checks(addr: str, rpc: str, timeout_s: float, klass: str) -> list[L
         )
         status = "unknown" if verdict == "unread" else verdict
         out.append(LiveInvariantResult(
-            "erc4626-solvency",
+            "erc4626-asset-shortfall" if status == "failed" else "erc4626-solvency",
             "convertToAssets(totalSupply) <= totalAssets",
             status,
             "convertToAssets=%s totalAssets=%s tol=%s balance=%s preview=%s"
@@ -466,7 +466,7 @@ def _erc4626_checks(addr: str, rpc: str, timeout_s: float, klass: str) -> list[L
                 tol = max(1, conv_one // 200)
                 overpay = preview_overpays(preview, conv_one)
                 out.append(LiveInvariantResult(
-                    "erc4626-preview-consistency",
+                    "erc4626-preview-overpay" if overpay else "erc4626-preview-consistency",
                     "previewRedeem <= convertToAssets",
                     "failed" if overpay else "held",
                     "previewRedeem(%s)=%s convertToAssets=%s tol=%s" % (one, preview, conv_one, tol),
