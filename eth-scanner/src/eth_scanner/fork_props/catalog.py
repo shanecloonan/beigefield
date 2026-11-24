@@ -12,7 +12,7 @@ CLASS_PROPERTIES: dict[str, list[dict[str, Any]]] = {
             "id": "erc4626-solvency",
             "name": "convertToAssets(totalSupply) <= totalAssets",
             "severity": "high",
-            "summary": "Share claim must not exceed accounted assets (with tolerance).",
+            "summary": "Fails only when the asset balance is short of the claim. Async redeems, custodian supply, and a clean price ratio stay unknown.",
         },
         {
             "id": "erc4626-asset-balance",

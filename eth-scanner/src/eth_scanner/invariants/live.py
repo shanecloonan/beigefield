@@ -243,6 +243,92 @@ def preview_failure_stands(rpc_url: str, address: str, timeout_s: float = 12) ->
     return preview_overpays(preview, converted)
 
 
+def clean_constant_ratio(converted: int, total_assets: int) -> bool:
+    """True when the claim is an integer multiple of book assets, 2x or more.
+
+    A ratio of exactly 3.000 is a price-versus-equity quote, not missing tokens.
+    """
+    if total_assets <= 0 or converted <= total_assets:
+        return False
+    nearest = (int(converted) + int(total_assets) // 2) // int(total_assets)
+    if nearest < 2:
+        return False
+    expected = int(total_assets) * nearest
+    return abs(int(converted) - expected) <= max(1, expected // 10000)
+
+
+def classify_solvency(
+    *,
+    converted: int,
+    total_assets: int,
+    balance: Optional[int],
+    preview_state: str,
+) -> str:
+    """held, failed, unknown, or unread.
+
+    Unknown covers an async redeem (previewRedeem reverts), a clean constant
+    price ratio, and a custodian whose cash covers totalAssets while
+    totalSupply is a larger supply. Failed only when the asset balance is
+    short of the converted claim and does not cover the reported assets.
+    unread means a balance read failed before that shortfall could be shown.
+    """
+    tol = max(1, int(total_assets) // 200) if total_assets else 1
+    if int(converted) <= int(total_assets) + tol:
+        return "held"
+    if clean_constant_ratio(converted, total_assets):
+        return "unknown"
+    if preview_state == "revert":
+        return "unknown"
+    if balance is None:
+        return "unread"
+    if balance + tol >= int(total_assets):
+        return "unknown"
+    if balance + tol < int(converted):
+        return "failed"
+    return "unknown"
+
+
+def solvency_failure_stands(rpc_url: str, address: str, timeout_s: float = 12) -> Optional[bool]:
+    """Re-read erc4626 solvency. None if the read does not decide.
+
+    False means the stored shortfall does not stand.
+    """
+    if not rpc_url or not address:
+        return None
+    assets_state, total_assets = _view_uint(rpc_url, address, SEL["totalAssets()"], timeout_s)
+    supply_state, supply = _view_uint(rpc_url, address, SEL["totalSupply()"], timeout_s)
+    if assets_state != "ok" or supply_state != "ok" or total_assets is None or supply is None:
+        return None
+    if supply <= 0:
+        return False
+    conv_state, converted = _view_uint(
+        rpc_url, address, SEL["convertToAssets(uint256)"] + ("%064x" % supply), timeout_s,
+    )
+    if conv_state != "ok" or converted is None:
+        return None
+    asset = _call_addr(rpc_url, address, SEL["asset()"], timeout_s)
+    balance = None
+    if asset:
+        bal_state, balance = _view_uint(
+            rpc_url, asset, SEL["balanceOf(address)"] + _pad_addr(address), timeout_s,
+        )
+        if bal_state != "ok":
+            balance = None
+    shares = preview_probe_shares(supply)
+    preview_state, _preview = _view_uint(
+        rpc_url, address, SEL["previewRedeem(uint256)"] + ("%064x" % shares), timeout_s,
+    )
+    verdict = classify_solvency(
+        converted=converted,
+        total_assets=total_assets,
+        balance=balance,
+        preview_state=preview_state,
+    )
+    if verdict == "unread":
+        return None
+    return verdict == "failed"
+
+
 def _erc4626_checks(addr: str, rpc: str, timeout_s: float, klass: str) -> list[LiveInvariantResult]:
     out: list[LiveInvariantResult] = []
     asset = _call_addr(rpc, addr, SEL["asset()"], timeout_s)
@@ -287,6 +373,7 @@ def _erc4626_checks(addr: str, rpc: str, timeout_s: float, klass: str) -> list[L
                 extras={"pps_1e18": pps, "totalAssets": total_assets, "totalSupply": supply},
             ))
 
+    bal = _call_uint(rpc, asset, SEL["balanceOf(address)"] + _pad_addr(addr), timeout_s)
     conv_data = SEL["convertToAssets(uint256)"] + ("%064x" % supply)
     converted = _call_uint(rpc, addr, conv_data, timeout_s)
     if converted is None:
@@ -297,19 +384,38 @@ def _erc4626_checks(addr: str, rpc: str, timeout_s: float, klass: str) -> list[L
         ))
     else:
         tol = max(1, total_assets // 200)
-        ok = converted <= total_assets + tol
+        shares = preview_probe_shares(supply) if supply else 0
+        preview_state = "error"
+        if shares:
+            preview_state, _preview = _view_uint(
+                rpc, addr, SEL["previewRedeem(uint256)"] + ("%064x" % shares), timeout_s,
+            )
+        verdict = classify_solvency(
+            converted=converted,
+            total_assets=total_assets,
+            balance=bal,
+            preview_state=preview_state,
+        )
+        status = "unknown" if verdict == "unread" else verdict
         out.append(LiveInvariantResult(
-            "erc4626-solvency",
+            "erc4626-asset-shortfall" if status == "failed" else "erc4626-solvency",
             "convertToAssets(totalSupply) <= totalAssets",
-            "held" if ok else "failed",
-            "convertToAssets=%s totalAssets=%s tol=%s" % (converted, total_assets, tol),
+            status,
+            "convertToAssets=%s totalAssets=%s tol=%s balance=%s preview=%s"
+            % (converted, total_assets, tol, bal, preview_state),
             contract_class=klass,
-            extras={"converted": converted, "totalAssets": total_assets, "totalSupply": supply, "asset": asset},
+            extras={
+                "converted": converted,
+                "totalAssets": total_assets,
+                "totalSupply": supply,
+                "asset": asset,
+                "balance": bal,
+                "preview": preview_state,
+            },
         ))
 
     out.append(_donation_result(supply, total_assets, klass))
 
-    bal = _call_uint(rpc, asset, SEL["balanceOf(address)"] + _pad_addr(addr), timeout_s)
     if bal is not None and total_assets is not None:
         tol = max(1, total_assets // 200)
         if bal + tol >= total_assets:
@@ -360,7 +466,7 @@ def _erc4626_checks(addr: str, rpc: str, timeout_s: float, klass: str) -> list[L
                 tol = max(1, conv_one // 200)
                 overpay = preview_overpays(preview, conv_one)
                 out.append(LiveInvariantResult(
-                    "erc4626-preview-consistency",
+                    "erc4626-preview-overpay" if overpay else "erc4626-preview-consistency",
                     "previewRedeem <= convertToAssets",
                     "failed" if overpay else "held",
                     "previewRedeem(%s)=%s convertToAssets=%s tol=%s" % (one, preview, conv_one, tol),
@@ -719,12 +825,25 @@ def enrich_owner_kind(rpc: str, owner: str, timeout_s: float = 8.0) -> str:
 
 
 def _call_uint(rpc: str, to: str, selector_or_data: str, timeout_s: float) -> Optional[int]:
+    state, value = _view_uint(rpc, to, selector_or_data, timeout_s)
+    if state != "ok":
+        return None
+    return value
+
+
+def _view_uint(rpc: str, to: str, selector_or_data: str, timeout_s: float) -> tuple[str, Optional[int]]:
+    """(ok|revert|error, value). A revert is not an RPC failure."""
     data = selector_or_data if selector_or_data.startswith("0x") else "0x" + selector_or_data
     try:
         raw = _eth_call(rpc, to, data, timeout_s)
+    except _RevertError:
+        return "revert", None
     except Exception:  # noqa: BLE001
-        return None
-    return _decode_uint(raw)
+        return "error", None
+    value = _decode_uint(raw)
+    if value is None:
+        return "error", None
+    return "ok", value
 
 
 def _call_addr(rpc: str, to: str, selector: str, timeout_s: float) -> Optional[str]:
