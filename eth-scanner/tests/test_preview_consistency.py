@@ -67,7 +67,7 @@ class PreviewRuleTests(unittest.TestCase):
             "chain": "ethereum",
             "heat": 3,
             "blend_heat": 3,
-            "heat_breakdown": {"invariants_failed": 3, "drain_reason": "erc4626-solvency"},
+            "heat_breakdown": {"invariants_failed": 3, "drain_reason": "erc4626-share-price"},
         }]
         store = Store(rows)
         with patch("eth_scanner.invariants.live.preview_failure_stands", return_value=False):
