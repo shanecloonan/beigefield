@@ -8,8 +8,11 @@ runtime is the code that was deployed. Verified source for that runtime
 comes from Sourcify. Detector leads are the catch. They add no heat.
 
 The protocol address is the address DefiLlama lists. It is not always
-the contract that was exploited. Rows that are proxies, or that have no
-verified source, stay out of the recall denominator.
+the contract that was exploited. EIP-1967 proxies, clones, and rows
+with no verified source stay out of the recall denominator. A legacy
+(non-EIP-1967) proxy is scored with its implementation source, and an
+EIP-2535 diamond is scored with its facet sources. The source is not
+cut at 200,000 characters.
 
 Scored rows are reported in three buckets: an off-chain label (key,
 phishing, DNS, rug), a listed address whose source is a token, and a
@@ -179,11 +182,47 @@ def resolve_incidents(hacks: list[dict[str, Any]], protocols: list[dict[str, Any
 
 
 def score_source(address: str, source: str) -> bool:
-    """True when a custom detector leads. The lead adds no heat."""
+    """True when a custom detector leads. The lead adds no heat.
+
+    The whole verified source is scored. A 200,000-character cut dropped
+    leads that sat later in a multi-file bundle.
+    """
     if not (source or "").strip():
         return False
-    findings = run_custom_detectors(address=address, source=source[:200_000])
+    findings = run_custom_detectors(address=address, source=source)
     return bool(findings)
+
+
+def assemble_runtime_source(
+    chain: str,
+    address: str,
+    source: str,
+    *,
+    fetch_source: Callable[[str, str], str],
+    rpc_url: str = "",
+) -> str:
+    """Proxy source plus the implementation or facet sources. Read-only.
+
+    A failed read leaves the original source in place, so a row cannot
+    go from hot to cold because a follow-up fetch missed.
+    """
+    if not (source or "").strip() or not rpc_url:
+        return source or ""
+    from eth_scanner.research.proxy import follow_runtime_addresses
+
+    try:
+        extras = follow_runtime_addresses(address, source, rpc_url=rpc_url)
+    except (OSError, TimeoutError, RuntimeError, ValueError):
+        return source
+    parts = [source]
+    for extra in extras:
+        try:
+            text = fetch_source(chain, extra)
+        except (OSError, TimeoutError, RuntimeError, ValueError):
+            text = ""
+        if isinstance(text, str) and text.strip():
+            parts.append(text)
+    return "\n".join(parts)
 
 
 def recall_report(rows: list[dict[str, Any]], *, incidents: int = 0) -> dict[str, Any]:
@@ -322,16 +361,34 @@ def _source_from_sourcify(payload: Any) -> str:
     return "\n".join(parts)
 
 
-def mark_scored(rows: list[dict[str, Any]], *, fetch_source: Callable[[str, str], str]) -> None:
+def mark_scored(
+    rows: list[dict[str, Any]],
+    *,
+    fetch_source: Callable[[str, str], str],
+    rpc_for: Optional[Callable[[str], str]] = None,
+) -> None:
     from concurrent.futures import ThreadPoolExecutor
 
     pending = [row for row in rows if row.get("pre_incident") and row["chain"] in CHAIN_ID]
 
     def _one(row: dict[str, Any]) -> tuple[dict[str, Any], str]:
         try:
-            return row, fetch_source(row["chain"], row["address"])
+            source = fetch_source(row["chain"], row["address"])
         except Exception:
             return row, ""
+        if not (source or "").strip():
+            return row, ""
+        rpc = ""
+        if rpc_for is not None:
+            try:
+                rpc = rpc_for(row["chain"]) or ""
+            except Exception:
+                rpc = ""
+        if rpc:
+            source = assemble_runtime_source(
+                row["chain"], row["address"], source, fetch_source=fetch_source, rpc_url=rpc,
+            )
+        return row, source
 
     if not pending:
         return
@@ -402,7 +459,7 @@ def live_report() -> dict[str, Any]:
         return cfg.public_rpcs[0] if cfg and cfg.public_rpcs else ""
 
     mark_immutable(rows, rpc_for=rpc_for)
-    mark_scored(rows, fetch_source=fetch_sourcify)
+    mark_scored(rows, fetch_source=fetch_sourcify, rpc_for=rpc_for)
     report = recall_report(rows, incidents=len(hacks))
     report["labeled_safe"] = _labeled_safe()
     scored_rows = [row for row in rows if row.get("scored")]

@@ -10,6 +10,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from eth_scanner.benchmark import incident_recall as recall
+from eth_scanner.research.keccak import selector4
+from eth_scanner.research.proxy import (
+    OZ_LEGACY_IMPLEMENTATION_SLOT,
+    encode_address_array,
+    encode_bytes4_array,
+    follow_runtime_addresses,
+)
 
 
 class IncidentRecall(unittest.TestCase):
@@ -142,6 +149,86 @@ class IncidentRecall(unittest.TestCase):
         self.assertEqual(rows[0]["technique"], "Reentrancy")
         self.assertNotIn("description", rows[0])
         self.assertNotIn("flash-borrows", str(rows[0]))
+
+    def test_a_lead_past_200k_characters_still_counts(self):
+        source = "/* " + ("a" * 200_000) + " */\ncontract C { function f(address target) public { target.call(''); } }"
+        self.assertTrue(recall.score_source("0x" + "11" * 20, source))
+
+    def test_a_token_is_not_followed_to_another_address(self):
+        token = (
+            "contract T { function transfer(address a, uint256 n) public {} "
+            "function approve(address a, uint256 n) public {} }"
+        )
+        calls: list = []
+
+        def storage(addr, slot):
+            calls.append(slot)
+            return "0x" + "22" * 32
+
+        self.assertEqual(
+            follow_runtime_addresses("0x" + "11" * 20, token, get_storage=storage),
+            [],
+        )
+        self.assertEqual(calls, [])
+
+    def test_a_legacy_proxy_follows_the_zeppelin_slot(self):
+        source = (
+            "contract TokenProxy { function upgradeTo(address n) public {} "
+            "function changeAdmin(address a) public {} }"
+        )
+        impl = "0x" + "22" * 20
+
+        def storage(addr, slot):
+            if slot == OZ_LEGACY_IMPLEMENTATION_SLOT:
+                return "0x" + "00" * 12 + "22" * 20
+            return "0x" + "00" * 32
+
+        self.assertEqual(
+            follow_runtime_addresses("0x" + "11" * 20, source, get_storage=storage),
+            [impl],
+        )
+
+    def test_a_diamond_follows_the_loupe(self):
+        source = "contract Diamond { fallback() external payable {} }"
+        facet = selector4("facetAddresses()")
+
+        def caller(addr, data):
+            if data == facet:
+                return encode_address_array(["0x" + "33" * 20])
+            return encode_bytes4_array([])
+
+        self.assertEqual(
+            follow_runtime_addresses("0x" + "11" * 20, source, eth_call_fn=caller),
+            ["0x" + "33" * 20],
+        )
+
+    def test_mark_scored_includes_the_implementation_source(self):
+        proxy = "0x" + "11" * 20
+        rows = [{
+            "chain": "ethereum",
+            "address": proxy,
+            "pre_incident": True,
+            "classification": "",
+            "technique": "",
+        }]
+        proxy_src = "contract TokenProxy { function upgradeTo(address n) public {} }"
+        impl_src = "contract Impl { function f(address t) public { t.call(''); } }"
+
+        def fetch(chain, address):
+            return proxy_src if address == proxy else ""
+
+        original = recall.assemble_runtime_source
+
+        def assemble(chain, address, source, **kwargs):
+            return source + "\n" + impl_src
+
+        recall.assemble_runtime_source = assemble
+        try:
+            recall.mark_scored(rows, fetch_source=fetch, rpc_for=lambda chain: "http://rpc")
+        finally:
+            recall.assemble_runtime_source = original
+        self.assertTrue(rows[0]["scored"])
+        self.assertTrue(rows[0]["hot"])
 
     def test_unchecked_call_is_a_lead(self):
         source = "contract C { function f(address target) public { target.call(''); } }"
