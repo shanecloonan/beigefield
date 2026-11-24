@@ -187,7 +187,9 @@ class StrongCursor(unittest.TestCase):
         self.assertEqual(progress.findings_stored, 1)
         deep = [r for r in store.test_runs if str(r.get("dedupe_key", "")).startswith("strong-deep:")]
         self.assertEqual(len(deep), 1)
-        self.assertEqual(deep[0]["heat"], 2)
+        self.assertEqual(deep[0]["heat"], 0)
+        self.assertIsInstance(deep[0]["heat_breakdown"], dict)
+        self.assertFalse(deep[0]["heat_breakdown"].get("live_confirmed"))
         self.assertEqual(store.test_findings[0]["engine"], "slither")
         self.assertEqual(store.test_findings[0]["raw"]["heat_contribution"], 0)
 
