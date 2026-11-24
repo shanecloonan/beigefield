@@ -209,6 +209,55 @@ def corroborated_heat(
     return min(w.corroborated_lead_cap, n * w.corroborated_lead)
 
 
+_SHAPE_LEADS = ("share-balance", "spot-price", "reentrancy")
+
+
+def shape_lead_names(source: str = "", extra: Optional[list[str]] = None) -> list[str]:
+    """The three recall leads present on a source or already stored on a row."""
+    names: list[str] = []
+    if source:
+        from eth_scanner.benchmark.leads import benchmark_lead_names
+        for name in benchmark_lead_names(source):
+            if name not in names:
+                names.append(name)
+    for name in extra or []:
+        if name in _SHAPE_LEADS and name not in names:
+            names.append(name)
+    return names
+
+
+def fork_backed(records: Optional[list[dict[str, Any]]]) -> bool:
+    """A conservation failure above the value-delta threshold."""
+    if not records:
+        return False
+    from eth_scanner.engines.conservation import high_confidence
+    return bool(high_confidence(list(records)))
+
+
+def gated_lead_points(
+    leads: list[str],
+    *,
+    backing: int,
+    conservation: Optional[list[dict[str, Any]]] = None,
+    taken: Optional[set[str]] = None,
+    weights: Optional[HeatWeights] = None,
+) -> tuple[int, list[str]]:
+    """Heat for shape leads. Bare leads score 0. Each lead name counts once."""
+    w = weights or load_heat_weights()
+    names: list[str] = []
+    for name in leads:
+        if name in _SHAPE_LEADS and name not in names:
+            names.append(name)
+    if not names:
+        return 0, []
+    if int(backing or 0) <= 0 and not fork_backed(conservation):
+        return 0, names
+    skip = set(taken or ())
+    counted = [name for name in names if name not in skip]
+    points = min(w.corroborated_lead_cap, len(counted) * w.corroborated_lead)
+    return points, names
+
+
 def evidence_heat(
     *,
     funds_usd: Optional[float],
@@ -217,6 +266,9 @@ def evidence_heat(
     eoa_admin: bool = False,
     corroborated: Optional[list[dict[str, Any]]] = None,
     weights: Optional[HeatWeights] = None,
+    source: str = "",
+    conservation: Optional[list[dict[str, Any]]] = None,
+    lead_ids: Optional[list[str]] = None,
 ) -> tuple[int, dict[str, Any]]:
     """Compose heat from evidence only. Funds are ranking metadata, not heat."""
     w = weights or load_heat_weights()
@@ -234,7 +286,18 @@ def evidence_heat(
     if eoa:
         skip.add(_EOA_FACT)
     corr = corroborated_heat(list(corroborated or []), w, skip_facts=skip)
-    total = min(w.max_heat, inv + priv + eoa + corr)
+    taken = set(skip)
+    for item in corroborated or []:
+        if item.get("confirmed"):
+            taken.add(evidence_fact(item))
+    gated, lead_names = gated_lead_points(
+        shape_lead_names(source, lead_ids),
+        backing=inv + priv + eoa + corr,
+        conservation=conservation,
+        taken=taken,
+        weights=w,
+    )
+    total = min(w.max_heat, inv + priv + eoa + corr + gated)
     from eth_scanner.drain import score_drain
     drain = score_drain(
         funds_usd=funds_usd,
@@ -252,6 +315,8 @@ def evidence_heat(
         "privileged_confidence": 0 if _PRIV_FACT in contradicted else (1 if priv_on else 0),
         "eoa_admin": eoa,
         "corroborated_leads": corr,
+        "gated_leads": gated,
+        "gated_lead_ids": lead_names,
         "contradictions": sorted(contradicted),
         "total": total,
         "drain_probability": drain["drain_probability"],

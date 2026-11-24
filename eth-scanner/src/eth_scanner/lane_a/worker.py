@@ -213,6 +213,7 @@ def run_one(
                     privileged_callable=priv,
                     eoa_admin=eoa,
                     corroborated=list(eng.confirmed),
+                    source=(artifact.content or "") if artifact else "",
                 )
                 heat_bd = dict(heat_bd)
                 heat_bd["engine_leads"] = len(eng.leads)

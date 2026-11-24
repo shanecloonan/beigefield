@@ -1411,6 +1411,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "conservation-fork":
         from eth_scanner.engines.conservation import (
             apply_conservation,
+            lead_names_on_row,
             run_conservation,
             select_targets,
         )
@@ -1452,9 +1453,26 @@ def main(argv: list[str] | None = None) -> int:
                         work_dir=settings.work_dir / "conservation",
                     )
                     if not args.dry_run and settings.persist_remote and report.get("records"):
-                        patched = apply_conservation(row, list(report["records"]))
-                        patched["heat"] = row.get("heat")
                         from eth_scanner.engines.fork_verify import persist_fork_verify
+                        from eth_scanner.engines.rescore import adjust_heat
+                        patched = apply_conservation(row, list(report["records"]))
+                        breakdown = dict(patched.get("heat_breakdown") or {})
+                        ids = [str(name) for name in (breakdown.get("gated_lead_ids") or [])]
+                        for name in lead_names_on_row(row):
+                            if name not in ids:
+                                ids.append(name)
+                        breakdown["gated_lead_ids"] = ids
+                        breakdown["conservation"] = list(patched["heat_breakdown"]["conservation"])
+                        adjusted = adjust_heat(
+                            heat=int(row.get("heat") or 0),
+                            breakdown=breakdown,
+                            eoa_stands=None,
+                            privileged_stands=None,
+                        )
+                        patched["heat"] = adjusted["heat"]
+                        breakdown["gated_leads"] = adjusted["gated_leads"]
+                        breakdown["total"] = adjusted["heat"]
+                        patched["heat_breakdown"] = breakdown
                         persist_fork_verify(store, row, patched)
                         report = dict(report)
                         report["persisted"] = True

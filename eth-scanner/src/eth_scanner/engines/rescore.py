@@ -1,4 +1,8 @@
-"""Recompute stored heat after a read-only check. Heat never rises here.
+"""Recompute stored heat after a read-only check.
+
+Heat does not rise unless the row has a high-confidence fork failure.
+That failure may add the gated shape-lead points. Every other pass only
+drops points a live read no longer supports.
 
 An EOA stamp is kept only when eth_getCode succeeds and the code is empty.
 A privileged stamp is kept only when the selector is dispatched and a garbage
@@ -10,7 +14,14 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from eth_scanner.engines.corroborate import confirm_privileged_call, read_code
-from eth_scanner.heat import HeatWeights, corroborated_heat, evidence_fact, load_heat_weights
+from eth_scanner.heat import (
+    HeatWeights,
+    corroborated_heat,
+    evidence_fact,
+    fork_backed,
+    gated_lead_points,
+    load_heat_weights,
+)
 
 _PRIV = "privileged-callable"
 _EOA = "eoa-admin"
@@ -79,9 +90,29 @@ def adjust_heat(
             w,
         )
         corr = max(0, corr - rejected)
-    total = min(w.max_heat, inv + priv + eoa + corr)
+    records = bd.get("conservation") if isinstance(bd.get("conservation"), list) else []
+    stored_ids = bd.get("gated_lead_ids") if isinstance(bd.get("gated_lead_ids"), list) else []
+    fork_ok = fork_backed(records)
+    backing = inv + priv + eoa + corr
+    taken = set(skip)
+    for row in admin_rows:
+        fact = str(row.get("fact") or "")
+        if fact and fact not in skip:
+            taken.add(fact)
+    gated, lead_names = gated_lead_points(
+        [str(name) for name in stored_ids],
+        backing=backing,
+        conservation=records,
+        taken=taken,
+        weights=w,
+    )
+    # An old row does not grow a lead for the first time without the fork failure.
+    if not fork_ok:
+        gated = min(gated, _points(bd, "gated_leads"))
     old = max(0, int(heat or 0))
-    new = min(old, total)
+    base = min(old, backing)
+    supported = min(w.max_heat, base + gated)
+    new = supported if fork_ok else min(old, supported)
     return {
         "heat": new,
         "changed": new != old,
@@ -89,6 +120,8 @@ def adjust_heat(
         "privileged_callable": priv,
         "corroborated_leads": corr,
         "invariants_failed": inv,
+        "gated_leads": gated,
+        "gated_lead_ids": lead_names,
         "heat_contribution": 0,
     }
 
@@ -130,6 +163,7 @@ def _evidence_points(breakdown: dict[str, Any]) -> int:
         + _points(breakdown, "privileged_callable")
         + _points(breakdown, "invariants_failed")
         + _points(breakdown, "corroborated_leads")
+        + _points(breakdown, "gated_leads")
     )
 
 
@@ -306,7 +340,10 @@ def _candidates(store: Any, limit: int) -> list[dict[str, Any]]:
 
 
 def rescore_rows(store: Any, rpc_url: str, *, limit: int = 30) -> dict[str, Any]:
-    """Lower stored heat when a live read contradicts it. Never raises heat.
+    """Lower stored heat when a live read contradicts it.
+
+    A high-confidence fork failure already stored on the row may add the
+    gated shape-lead points. Nothing else raises heat.
 
     Every stored scan for that contract is rewritten, so the all-time peak
     falls with the false pattern. Original peak is kept for audit. A row whose
@@ -418,6 +455,8 @@ def rescore_rows(store: Any, rpc_url: str, *, limit: int = 30) -> dict[str, Any]
             new_bd["privileged_callable"] = adjusted["privileged_callable"]
             new_bd["corroborated_leads"] = adjusted["corroborated_leads"]
             new_bd["invariants_failed"] = adjusted["invariants_failed"]
+            new_bd["gated_leads"] = adjusted["gated_leads"]
+            new_bd["gated_lead_ids"] = adjusted["gated_lead_ids"]
             new_bd["total"] = adjusted["heat"]
             new_bd["peak_heat"] = recomputed
             new_bd["rescore"] = "evidence-read"

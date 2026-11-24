@@ -285,7 +285,7 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
                 detail=detail, ir_confidence=ir_conf, src_confidence=src_conf,
                 funds_usd=funds_usd,
             ))
-            heat, heat_bd = evidence_heat(funds_usd=funds_usd, invariant_results=[])
+            heat, heat_bd = evidence_heat(funds_usd=funds_usd, invariant_results=[], source=source)
             return _done(
                 "manual-review", traces, src_conf, ir_conf, heat, notes,
                 extra="analysis failed — funds >= floor; needs human read (Do Not Auto-Dismiss).",
@@ -346,6 +346,7 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
             privileged_callable=privileged,
             eoa_admin=eoa_admin,
             weights=weights,
+            source=source,
         )
         promote, why = should_promote_lane_b(
             funds_usd=funds_usd,
@@ -583,6 +584,7 @@ def run_lane_a(ctx: FunnelContext) -> FunnelResult:
         privileged_callable=privileged,
         eoa_admin=eoa_admin,
         weights=weights,
+        source=source,
     )
     traces.append(_trace(
         "S5b", "heat",
@@ -890,6 +892,8 @@ def _done(
             heat_breakdown = dict(heat_breakdown)
             heat_breakdown["total"] = 0
             heat_breakdown["funds_in_heat"] = 0
+            heat_breakdown["gated_leads"] = 0
+            heat_breakdown["gated_lead_ids"] = []
     return FunnelResult(
         bucket=bucket,
         dropped=False,
