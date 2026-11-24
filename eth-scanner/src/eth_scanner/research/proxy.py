@@ -1,4 +1,4 @@
-"""EIP-1967 implementation resolution + diamond facet listing.
+"""EIP-1967 implementation resolution, legacy proxy slots, and diamond facet listing.
 
 No weak proxy guesses. Facets come from an explicit list or a read-only
 EIP-2535 loupe `eth_call` (`facetAddresses` / `facetFunctionSelectors` /
@@ -25,6 +25,17 @@ LoupeCall = Callable[[str, str], str]
 EIP1967_IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"
 EIP1967_ADMIN_SLOT = "0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103"
 EIP1967_BEACON_SLOT = "0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50"
+# keccak256("org.zeppelinos.proxy.implementation") — OpenZeppelin proxies before EIP-1967.
+OZ_LEGACY_IMPLEMENTATION_SLOT = "0x7050c9e0f4ca769c69bd3a8ef740bc37934f8e2c036e5a723fd8ee048ed3f8c3"
+# keccak256("PROXIABLE") — EIP-1822.
+EIP1822_IMPLEMENTATION_SLOT = "0xc5f16f0fcc639fa48a6947836d9850f504798523bf8c9a3a87d5876cf622bcf7"
+_MAX_FOLLOW = 24
+_DIAMOND_HINT = re.compile(
+    r"\b(?:Diamond|LibDiamond|facetAddresses|diamondCut|IDiamondLoupe|IDiamondCut)\b",
+)
+_PROXY_HINT = re.compile(
+    r"\b(?:upgradeToAndCall|upgradeTo|changeAdmin|AdminUpgradeabilityProxy|UpgradeabilityProxy)\b",
+)
 
 _DIAMOND_LOUPE_NAMES = frozenset({
     "facetaddresses", "facetaddress", "facets", "facetfunctionselectors", "diamondcut",
@@ -336,3 +347,70 @@ def list_diamond_facets(
         notes.append("ETH_RPC_URL unset — loupe eth_call not attempted")
     notes.append("diamond loupe/cut surface without an explicit facet list — diamond-facets-missing")
     return [], "diamond-facets-missing", notes
+
+
+def _remember(found: list[str], seen: set[str], addr: Optional[str]) -> None:
+    if not addr or len(found) >= _MAX_FOLLOW:
+        return
+    cleaned = addr.strip().lower()
+    if not re.fullmatch(r"0x[0-9a-f]{40}", cleaned):
+        return
+    if cleaned in seen or set(cleaned[2:]) <= {"0"}:
+        return
+    seen.add(cleaned)
+    found.append(cleaned)
+
+
+def follow_runtime_addresses(
+    address: str,
+    source: str,
+    *,
+    rpc_url: str = "",
+    get_storage: Optional[Callable[[str, str], str]] = None,
+    eth_call_fn: Optional[LoupeCall] = None,
+) -> list[str]:
+    """Implementation and facet addresses for a non-EIP-1967 proxy or a diamond.
+
+    Read-only. A token source is not followed. EIP-1967 is a different path.
+    At most 24 addresses, and no bytecode guessing.
+    """
+    text = strip_comments(source or "", "solidity")
+    diamond = bool(_DIAMOND_HINT.search(text))
+    proxy = bool(_PROXY_HINT.search(text))
+    if not diamond and not proxy:
+        return []
+    if not rpc_url and get_storage is None and eth_call_fn is None:
+        return []
+
+    found: list[str] = []
+    seen = {(address or "").strip().lower()}
+
+    if proxy:
+        reader = get_storage or (
+            (lambda addr, slot, _rpc=rpc_url: eth_get_storage_at(_rpc, addr, slot))
+            if rpc_url else None
+        )
+        if reader is not None:
+            for slot in (OZ_LEGACY_IMPLEMENTATION_SLOT, EIP1822_IMPLEMENTATION_SLOT):
+                try:
+                    word = reader(address, slot)
+                except (OSError, TimeoutError, RuntimeError, urllib.error.URLError, ValueError):
+                    continue
+                _remember(found, seen, storage_word_to_address(word))
+        if not found:
+            caller = eth_call_fn
+            if caller is None and rpc_url:
+                def caller(addr: str, data: str, _rpc: str = rpc_url) -> str:
+                    return eth_call(_rpc, addr, data)
+            if caller is not None:
+                try:
+                    raw = caller(address, _calldata_noargs("implementation()"))
+                except (OSError, TimeoutError, RuntimeError, urllib.error.URLError, ValueError):
+                    raw = ""
+                _remember(found, seen, storage_word_to_address(raw))
+
+    if diamond:
+        facets, _notes = fetch_loupe_facets(address, rpc_url=rpc_url, eth_call_fn=eth_call_fn)
+        for facet in facets:
+            _remember(found, seen, facet.address)
+    return found
