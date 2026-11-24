@@ -377,7 +377,12 @@ def rescore_rows(store: Any, rpc_url: str, *, limit: int = 30) -> dict[str, Any]
             not _has_components(_best_breakdown([item])) and _stored_heat(item) > explained_cap
             for item in siblings
         )
-        if not proved and not (explained and bare):
+        # Heat with no component breakdown is unexplained. Lower it; never raise.
+        unexplained = (not explained) and any(
+            not _has_components(_best_breakdown([item])) and _stored_heat(item) > 0
+            for item in siblings
+        )
+        if not proved and not (explained and bare) and not unexplained:
             if len(skipped) < 15:
                 skipped.append({
                     "address": address,

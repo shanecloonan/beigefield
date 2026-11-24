@@ -93,14 +93,16 @@ class RescorePeakTests(unittest.TestCase):
         self.assertEqual(rows[1]["heat_breakdown"]["peak_heat"], 0)
         self.assertEqual(rows[0]["heat_breakdown"]["peak_heat"], 0)
 
-    def test_unexplained_heat_is_not_wiped(self) -> None:
+    def test_unexplained_heat_is_lowered(self) -> None:
         rows = [{"id": "bare", "address": HYDRO, "chain": "ethereum", "heat": 12, "blend_heat": 12, "heat_breakdown": {}}]
         store = Store(rows)
         with patch("eth_scanner.engines.rescore.live_flags", return_value=(False, False)):
             report = rescore_rows(store, "http://rpc.example", limit=10)
-        self.assertEqual(report["updated"], 0)
-        self.assertEqual(rows[0]["heat"], 12)
-        self.assertEqual(report["skipped"][0]["reason"], "no-probe-points")
+        self.assertEqual(report["updated"], 1)
+        self.assertEqual(rows[0]["heat"], 0)
+        self.assertEqual(rows[0]["blend_heat"], 0)
+        self.assertEqual(rows[0]["heat_breakdown"]["original_peak"], 12)
+        self.assertEqual(rows[0]["heat_breakdown"]["peak_heat"], 0)
 
     def test_retired_probe_drops_without_a_live_read(self) -> None:
         retired = dict(FALSE)

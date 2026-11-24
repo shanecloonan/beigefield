@@ -501,6 +501,18 @@ def _absorb(progress, cand, light, funds, report, store) -> None:
     progress.findings_stored += n
 
 
+def _supported_heat(heat_after: int, changed: bool, breakdown: dict[str, Any]) -> int:
+    """Heat this pass actually confirmed. A quiet pass does not copy the old row."""
+    if not isinstance(breakdown, dict) or not breakdown.get("live_confirmed"):
+        return 0
+    if changed:
+        return max(0, int(heat_after or 0))
+    try:
+        return max(0, int(breakdown.get("total") or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 def _persist(store, cand, light, funds, report, heat_after, changed, breakdown) -> int:
     save_run = getattr(store, "save_test_scan_run", None)
     save_findings = getattr(store, "save_test_scan_findings", None)
@@ -520,7 +532,8 @@ def _persist(store, cand, light, funds, report, heat_after, changed, breakdown) 
         "candidate_reason": cand.candidate_reason,
         "tier": cand.tier,
         "bucket": light.get("bucket"),
-        "heat": heat_after if changed else int(light.get("heat") or 0),
+        "heat": _supported_heat(heat_after, changed, breakdown),
+        "heat_breakdown": breakdown if isinstance(breakdown, dict) else {},
         "status": "done" if status == "done" else status,
         "dropped": False,
         "notes": [
