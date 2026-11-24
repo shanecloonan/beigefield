@@ -1,8 +1,9 @@
 """Recall leads for share-balance, spot-price, and reentrancy shapes.
 
-These are shape leads for the incident benchmark. They do not add heat,
-and they do not run on a source that has no pool, vault, or market function.
-No path is constructed and no transaction is sent.
+These are shape leads. Naming one does not add heat. Heat is applied only
+by the evidence gate, and only when a fork failure or another evidence fact
+backs the same contract. They do not run on a source that has no pool, vault,
+or market function. No path is constructed and no transaction is sent.
 """
 
 from __future__ import annotations
@@ -51,7 +52,7 @@ _PRICE_VIEW = re.compile(
 
 
 def benchmark_lead_names(source: str) -> list[str]:
-    """Share-balance, spot-price, and reentrancy shapes. Names only. Heat stays 0."""
+    """Share-balance, spot-price, and reentrancy shapes. Names only."""
     text = source or ""
     clean = strip_comments(text, "solidity")
     if not _PROTOCOL.search(clean):
@@ -68,7 +69,7 @@ def benchmark_lead_names(source: str) -> list[str]:
 
 
 def has_benchmark_lead(source: str) -> bool:
-    """True when a share, spot-price, or reentrancy shape is present. Heat stays 0."""
+    """True when a share, spot-price, or reentrancy shape is present."""
     return bool(benchmark_lead_names(source))
 
 
