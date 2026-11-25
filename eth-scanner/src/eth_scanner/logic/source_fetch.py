@@ -1,7 +1,9 @@
 """Fetch verified source from Sourcify, then Etherscan. Cache the text.
 
-The API key never appears in the result. A failed lookup returns an empty
-source and adds no heat.
+The same Sourcify response also keeps compiler metadata and the storage
+layout. The API key never appears in the result. A failed lookup returns an
+empty source and adds no heat. A layout is evidence for later checks, not a
+finding by itself.
 """
 
 from __future__ import annotations
@@ -15,8 +17,12 @@ from eth_scanner.ingest.unpack import flatten_sources, parse_etherscan_sources
 from eth_scanner.store.supabase import normalize_address
 
 Fetch = Callable[[str], Any]
-SOURCIFY = "https://sourcify.dev/server/v2/contract/{chain_id}/{address}?fields=stdJsonInput"
+SOURCIFY = (
+    "https://sourcify.dev/server/v2/contract/{chain_id}/{address}"
+    "?fields=stdJsonInput,metadata,storageLayout"
+)
 MAX_SOURCE_CHARS = 1_500_000
+MAX_SLOTS = 64
 
 
 def _http_json(url: str, timeout_s: float = 12.0) -> Any:
@@ -73,6 +79,66 @@ def _cap(text: str) -> str:
     return text[:MAX_SOURCE_CHARS]
 
 
+def _short(value: Any, limit: int = 80) -> str:
+    return " ".join(str(value or "").split())[:limit]
+
+
+def metadata_summary(payload: Any) -> dict[str, Any]:
+    """Compiler and language only. Settings and bytecode stay out of the result."""
+    empty = {"present": False, "language": "", "compiler": "", "contract": ""}
+    if not isinstance(payload, dict):
+        return empty
+    meta = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+    compilation = payload.get("compilation") if isinstance(payload.get("compilation"), dict) else {}
+    compiler = ""
+    if isinstance(meta.get("compiler"), dict):
+        compiler = _short(meta["compiler"].get("version"))
+    if not compiler:
+        compiler = _short(compilation.get("compilerVersion") or compilation.get("compiler"))
+    language = _short(meta.get("language") or compilation.get("language"), 40)
+    contract = _short(compilation.get("name") or "")
+    present = bool(compiler or language or meta)
+    return {
+        "present": present,
+        "language": language,
+        "compiler": compiler,
+        "contract": contract,
+    }
+
+
+def storage_slots(payload: Any) -> list[dict[str, Any]]:
+    """Slot, offset, label, and type. The types map itself is not stored."""
+    if not isinstance(payload, dict):
+        return []
+    layout = payload.get("storageLayout") or payload.get("storage_layout")
+    if not isinstance(layout, dict):
+        return []
+    types = layout.get("types") if isinstance(layout.get("types"), dict) else {}
+    rows: list[dict[str, Any]] = []
+    for item in list(layout.get("storage") or [])[:MAX_SLOTS]:
+        if not isinstance(item, dict):
+            continue
+        type_id = item.get("type")
+        type_name = type_id if isinstance(type_id, str) else ""
+        spec = types.get(type_id) if isinstance(type_id, str) else None
+        if isinstance(spec, dict) and spec.get("label"):
+            type_name = str(spec.get("label"))
+        try:
+            offset = int(item.get("offset") or 0)
+        except (TypeError, ValueError):
+            offset = 0
+        slot = _short(item.get("slot"), 66)
+        if not slot and not item.get("label"):
+            continue
+        rows.append({
+            "label": _short(item.get("label"), 80),
+            "slot": slot,
+            "offset": max(0, offset),
+            "type": _short(type_name, 80),
+        })
+    return rows
+
+
 def _cache_path(cache_dir: Path, address: str) -> Path:
     return cache_dir / ("%s.sol.json" % address)
 
@@ -89,8 +155,13 @@ def _read_cache(cache_dir: Optional[Path], address: str) -> Optional[dict[str, A
         return None
     if not isinstance(data, dict) or not str(data.get("source") or "").strip():
         return None
+    if "storage_layout" not in data or "metadata" not in data:
+        return None
     data["cached"] = True
     data["address"] = address
+    data["storage_layout"] = list(data.get("storage_layout") or [])
+    data["metadata"] = data.get("metadata") if isinstance(data.get("metadata"), dict) else {}
+    data["heat_contribution"] = 0
     return data
 
 
@@ -104,6 +175,8 @@ def _write_cache(cache_dir: Optional[Path], row: dict[str, Any]) -> None:
         "via": row.get("via") or "",
         "source": row.get("source") or "",
         "verified": True,
+        "metadata": row.get("metadata") or {},
+        "storage_layout": list(row.get("storage_layout") or []),
     }), encoding="utf-8")
 
 
@@ -127,6 +200,8 @@ def fetch_verified_source(
         "via": "",
         "verified": False,
         "cached": False,
+        "metadata": {"present": False, "language": "", "compiler": "", "contract": ""},
+        "storage_layout": [],
         "heat_contribution": 0,
         "note": "",
     }
@@ -134,22 +209,44 @@ def fetch_verified_source(
     try:
         payload = getter(SOURCIFY.format(chain_id=int(chain_id), address=addr))
         text = solidity_from_payload(payload)
+        meta = metadata_summary(payload)
+        slots = storage_slots(payload)
     except Exception as exc:  # noqa: BLE001 — a missed fetch is an empty source
         text = ""
+        meta = report["metadata"]
+        slots = []
         report["note"] = "sourcify unavailable (%s)" % type(exc).__name__
     if text.strip():
-        report.update(source=text, via="sourcify", verified=True, note="")
+        report.update(
+            source=text,
+            via="sourcify",
+            verified=True,
+            note="",
+            metadata=meta,
+            storage_layout=slots,
+        )
         _write_cache(cache_dir, report)
         return report
     if etherscan_get is not None:
         try:
             payload = etherscan_get(addr)
             text = solidity_from_payload(payload)
+            meta = metadata_summary(payload)
+            slots = storage_slots(payload)
         except Exception as exc:  # noqa: BLE001
             text = ""
+            meta = report["metadata"]
+            slots = []
             report["note"] = (report["note"] + "; etherscan unavailable (%s)" % type(exc).__name__).strip("; ")
         if text.strip():
-            report.update(source=text, via="etherscan", verified=True, note="")
+            report.update(
+                source=text,
+                via="etherscan",
+                verified=True,
+                note="",
+                metadata=meta,
+                storage_layout=slots,
+            )
             _write_cache(cache_dir, report)
             return report
     if not report["note"]:

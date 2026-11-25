@@ -930,6 +930,14 @@ def main(argv: list[str] | None = None) -> int:
     static.add_argument("--json", action="store_true")
     static.add_argument("--dry-run", action="store_true")
 
+    layout = sub.add_parser(
+        "source-layout",
+        help="Sourcify metadata and storage layout, then Etherscan source (no broadcast)",
+    )
+    layout.add_argument("--address", required=True, help="0x…")
+    layout.add_argument("--json", action="store_true")
+    layout.add_argument("--dry-run", action="store_true")
+
     seq = sub.add_parser(
         "sequence-invariants",
         help="Multi-call ERC-4626 conservation model (no chain, no broadcast)",
@@ -1442,6 +1450,44 @@ def main(argv: list[str] | None = None) -> int:
                     report.get("static_evidence"),
                     len(report.get("engines") or []),
                     (report.get("store") or {}).get("saved"),
+                )
+            )
+        return 0
+
+    if args.cmd == "source-layout":
+        from eth_scanner.heat import evidence_heat
+        from eth_scanner.logic.source_fetch import fetch_verified_source
+        fetched = fetch_verified_source(
+            str(args.address),
+            cache_dir=settings.work_dir / "source-cache",
+        )
+        _heat, breakdown = evidence_heat(
+            funds_usd=None,
+            invariant_results=[],
+            source_record=fetched,
+        )
+        payload = {
+            "address": fetched.get("address"),
+            "via": fetched.get("via") or "",
+            "verified": bool(fetched.get("verified")),
+            "cached": bool(fetched.get("cached")),
+            "metadata": fetched.get("metadata") or {},
+            "storage_layout": fetched.get("storage_layout") or [],
+            "storage_slots": breakdown.get("storage_slots", 0),
+            "heat": 0,
+            "heat_contribution": 0,
+            "note": fetched.get("note") or "Layout and metadata add no heat.",
+        }
+        if args.json:
+            print(json.dumps(payload, indent=2))
+        else:
+            print(
+                "source-layout %s via=%s slots=%s compiler=%s"
+                % (
+                    payload["address"],
+                    payload["via"] or "none",
+                    payload["storage_slots"],
+                    (payload["metadata"] or {}).get("compiler") or "none",
                 )
             )
         return 0

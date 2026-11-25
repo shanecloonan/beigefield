@@ -280,6 +280,7 @@ def evidence_heat(
     corpus_findings: Optional[list[Any]] = None,
     clone_match: Optional[dict[str, Any]] = None,
     bytecode_surface: Optional[dict[str, Any]] = None,
+    source_record: Optional[dict[str, Any]] = None,
     unprotected_value: bool = False,
     unverified_proxy: bool = False,
     deployed_at: Optional[str] = None,
@@ -357,6 +358,17 @@ def evidence_heat(
         surface_show = bool(scored_surface["show"])
         surface_overlap = str(scored_surface["overlap"] or "")
         surface_selectors = int(scored_surface["selectors"])
+    layout_show = False
+    metadata_show = False
+    layout_slots = 0
+    compiler = ""
+    if isinstance(source_record, dict):
+        slots = source_record.get("storage_layout") or []
+        meta = source_record.get("metadata") if isinstance(source_record.get("metadata"), dict) else {}
+        layout_slots = len(slots) if isinstance(slots, list) else 0
+        layout_show = layout_slots > 0
+        metadata_show = bool(meta.get("present"))
+        compiler = str(meta.get("compiler") or "")[:80]
     from eth_scanner.logic.priority import ADMIN_ONLY_CAP, priority_points
     priority = priority_points(
         unprotected_value=unprotected_value,
@@ -420,6 +432,10 @@ def evidence_heat(
         "bytecode_surface": surface_show,
         "surface_selectors": surface_selectors,
         "surface_overlap": surface_overlap,
+        "storage_layout": layout_show,
+        "storage_slots": layout_slots,
+        "source_metadata": metadata_show,
+        "compiler": compiler,
         "unprotected_evidence": unprotected_points,
         "proxy_evidence": proxy_points,
         "fresh_evidence": fresh_points,

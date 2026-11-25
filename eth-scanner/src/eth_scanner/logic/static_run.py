@@ -184,14 +184,21 @@ def run_static_command(
     report["verified"] = bool(text.strip())
     report["cached"] = bool(fetched.get("cached"))
     report["fetch_note"] = fetched.get("note") or ""
+    report["metadata"] = fetched.get("metadata") or {}
+    report["storage_layout"] = list(fetched.get("storage_layout") or [])
     heat, breakdown = evidence_heat(
         funds_usd=None,
         invariant_results=[],
         static_findings=report["findings"],
+        source_record=fetched or None,
     )
     report["heat"] = heat
     report["heat_breakdown"] = {
         "static_evidence": breakdown.get("static_evidence", 0),
+        "storage_layout": breakdown.get("storage_layout", False),
+        "storage_slots": breakdown.get("storage_slots", 0),
+        "source_metadata": breakdown.get("source_metadata", False),
+        "compiler": breakdown.get("compiler") or "",
         "total": breakdown.get("total", 0),
     }
     if breakdown.get("static_findings"):
