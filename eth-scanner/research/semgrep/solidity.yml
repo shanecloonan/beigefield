@@ -1,0 +1,65 @@
+# Local Solidity rules. Defensive detectors only — they name a shape, they
+# do not build a transaction. Point ETH_SCANNER_SEMGREP_RULES at a checkout
+# of Decurity/semgrep-smart-contracts to add that pack. The default scan uses
+# this file and does not download a ruleset.
+rules:
+  - id: unprotected-initializer
+    languages: [solidity]
+    severity: ERROR
+    message: A public initialize writes an owner and has no initializer guard.
+    metadata:
+      confidence: high
+      category: access-control
+    patterns:
+      - pattern: |
+          function initialize(...) public {
+            ...
+            owner = $NEW;
+            ...
+          }
+      - pattern-not: |
+          function initialize(...) public initializer { ... }
+
+  - id: tx-origin-auth
+    languages: [solidity]
+    severity: WARNING
+    message: tx.origin is used in a comparison that gates a call.
+    metadata:
+      confidence: medium
+      category: access-control
+    pattern: require(tx.origin == $WHO);
+
+  - id: delegatecall-user-target
+    languages: [solidity]
+    severity: ERROR
+    message: delegatecall target is a function argument.
+    metadata:
+      confidence: high
+      category: delegatecall
+    pattern-either:
+      - pattern: (bool $OK,) = $TARGET.delegatecall($DATA);
+      - pattern: $TARGET.delegatecall($DATA);
+
+  - id: spot-price-value
+    languages: [solidity]
+    severity: WARNING
+    message: A reserves read is followed by a token transfer in the same function.
+    metadata:
+      confidence: high
+      category: oracle
+    pattern: |
+      $P.getReserves();
+      ...
+      $T.transfer($TO, $AMT);
+
+  - id: share-inflation-empty
+    languages: [solidity]
+    severity: ERROR
+    message: Shares are minted from a balance while totalSupply can be zero.
+    metadata:
+      confidence: high
+      category: rounding
+    pattern: |
+      totalSupply() == 0;
+      ...
+      _mint($TO, $AMT);

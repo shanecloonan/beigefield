@@ -920,6 +920,16 @@ def main(argv: list[str] | None = None) -> int:
     blend.add_argument("--timeout", type=int, default=90)
     blend.add_argument("--json", action="store_true")
 
+    static = sub.add_parser(
+        "static-analyze",
+        help="Slither, Aderyn, and Semgrep on verified source (timeouts, no broadcast)",
+    )
+    static.add_argument("--address", default="", help="0x… fetched from Sourcify, then Etherscan")
+    static.add_argument("--source", default="", help="local Solidity file; skips the fetch")
+    static.add_argument("--timeout", type=int, default=60, help="per-engine seconds, clamped to 5–180")
+    static.add_argument("--json", action="store_true")
+    static.add_argument("--dry-run", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -1367,6 +1377,37 @@ def main(argv: list[str] | None = None) -> int:
                         (rep.get("agreement") or {}).get("multi_engine_clusters"),
                     )
                 )
+        return 0
+
+    if args.cmd == "static-analyze":
+        from eth_scanner.logic.static_run import clamp_timeout, run_static_command
+        if not args.address and not args.source:
+            print("static-analyze: pass --address and/or --source", file=sys.stderr)
+            return 2
+        source_text = ""
+        if args.source:
+            source_text = Path(args.source).read_text(encoding="utf-8", errors="replace")
+        report = run_static_command(
+            address=str(args.address or ""),
+            source=source_text,
+            timeout_s=clamp_timeout(args.timeout),
+            cache_dir=settings.work_dir / "source-cache",
+            store=store,
+        )
+        if args.json:
+            print(json.dumps(report, indent=2))
+        else:
+            print(
+                "static-analyze %s via=%s heat=%s static=%s engines=%d stored=%s"
+                % (
+                    report.get("address") or "(local)",
+                    report.get("source_via") or "none",
+                    report.get("heat"),
+                    report.get("static_evidence"),
+                    len(report.get("engines") or []),
+                    (report.get("store") or {}).get("saved"),
+                )
+            )
         return 0
 
     if args.cmd == "fork-verify":

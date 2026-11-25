@@ -8,8 +8,13 @@ Heat comes only from evidence:
   (b) privileged function callable by an outsider
   (c) single-EOA admin over eoa_admin_min_usd
   (d) Slither/Mythril/clone leads ONLY when a read-only corroboration confirms
+  (e) allowlisted static detectors (static_evidence). High-confidence
+      funds rules weigh the most. Generic, informational, and admin-gated
+      hits stay at 0.
 
-Slither/Mythril hits alone are leads (0 heat). Never a verdict. Never auto-yes.
+A generic Slither/Mythril hit is still a lead (0 heat). An allowlisted
+high-confidence detector is the static_evidence component, not a verdict.
+Never auto-yes.
 """
 
 from __future__ import annotations
@@ -269,6 +274,7 @@ def evidence_heat(
     source: str = "",
     conservation: Optional[list[dict[str, Any]]] = None,
     lead_ids: Optional[list[str]] = None,
+    static_findings: Optional[list[Any]] = None,
 ) -> tuple[int, dict[str, Any]]:
     """Compose heat from evidence only. Funds are ranking metadata, not heat."""
     w = weights or load_heat_weights()
@@ -297,7 +303,14 @@ def evidence_heat(
         taken=taken,
         weights=w,
     )
-    total = min(w.max_heat, inv + priv + eoa + corr + gated)
+    static_points = 0
+    static_rows: list[dict[str, Any]] = []
+    if static_findings:
+        from eth_scanner.logic.static_norm import score_static
+        scored = score_static(list(static_findings))
+        static_points = int(scored["points"])
+        static_rows = list(scored["rows"])
+    total = min(w.max_heat, inv + priv + eoa + corr + gated + static_points)
     from eth_scanner.drain import score_drain
     drain = score_drain(
         funds_usd=funds_usd,
@@ -317,6 +330,7 @@ def evidence_heat(
         "corroborated_leads": corr,
         "gated_leads": gated,
         "gated_lead_ids": lead_names,
+        "static_evidence": static_points,
         "contradictions": sorted(contradicted),
         "total": total,
         "drain_probability": drain["drain_probability"],
@@ -325,6 +339,8 @@ def evidence_heat(
         "drain_reason": drain["reason"],
         "weights": w.to_dict(),
     }
+    if static_rows:
+        breakdown["static_findings"] = static_rows
     return total, breakdown
 
 
