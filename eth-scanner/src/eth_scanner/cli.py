@@ -641,6 +641,16 @@ def main(argv: list[str] | None = None) -> int:
     dec.add_argument("--verified", action="store_true")
     dec.add_argument("--json", action="store_true")
 
+    short = sub.add_parser(
+        "decompile-shortlist",
+        help="Heimdall triage for one unverified shortlist contract. Leads add no heat.",
+    )
+    short.add_argument("--address", required=True)
+    short.add_argument("--bytecode", default="")
+    short.add_argument("--on-shortlist", action="store_true")
+    short.add_argument("--verified", action="store_true")
+    short.add_argument("--json", action="store_true")
+
     hack = sub.add_parser(
         "defihacklabs-index",
         help="Count public DeFiHackLabs incident names. Metadata only, no heat.",
@@ -1171,6 +1181,33 @@ def main(argv: list[str] | None = None) -> int:
         shown = {k: v for k, v in report.items() if k != "content"}
         shown["content_chars"] = len(report.get("content") or "")
         print(_json.dumps(shown, indent=2))
+        return 0
+
+    if args.cmd == "decompile-shortlist":
+        import json as _json
+        from eth_scanner.decompile.heimdall import decompile_shortlist
+        report = decompile_shortlist(
+            args.address,
+            on_shortlist=bool(args.on_shortlist),
+            verified=bool(args.verified),
+            bytecode=args.bytecode or "",
+        )
+        public = {
+            "address": report.get("address"),
+            "status": report.get("skipped") or ("ran" if report.get("ran") else "skipped"),
+            "tool": report.get("tool"),
+            "leads": [row.get("id") for row in (report.get("leads") or [])],
+            "heat": report.get("heat"),
+            "pin": (report.get("pin") or {}).get("version"),
+            "note": report.get("note"),
+        }
+        if args.json:
+            print(_json.dumps(public, indent=2))
+        else:
+            print(
+                "decompile-shortlist %s status=%s leads=%d heat=%s"
+                % (public["address"], public["status"], len(public["leads"]), public["heat"])
+            )
         return 0
 
     if args.cmd == "defihacklabs-index":
