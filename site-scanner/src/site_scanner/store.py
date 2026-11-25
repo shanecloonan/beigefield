@@ -117,7 +117,11 @@ def save_hit(report: dict[str, Any]) -> dict[str, Any]:
         "score_state": report.get("score_state") or "provisional",
         "pending_stages": report.get("pending_stages") or [],
         "findings": report.get("findings") or [],
-        "heat_breakdown": {"facts": report.get("facts") or [], "mode": report.get("mode") or "passive"},
+        "heat_breakdown": {
+            "facts": report.get("facts") or [],
+            "mode": report.get("mode") or "passive",
+            "tech": report.get("tech") or [],
+        },
         "mode": report.get("mode") or "passive",
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
