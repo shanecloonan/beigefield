@@ -350,3 +350,16 @@ test("a weird-token tag does not change heat", () => {
   assert.equal(board.leaderboard[0].heat, 3);
   assert.deepEqual(board.leaderboard[0].evidence_tags, ["invariant", "weird"]);
 });
+
+test("a decompile triage tag does not change heat", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 0,
+      status: "done",
+      heat_breakdown: { decompile_triage: true },
+    },
+  ]);
+  assert.equal(board.leaderboard[0].heat, 0);
+  assert.deepEqual(board.leaderboard[0].evidence_tags, ["decompile"]);
+});

@@ -18,6 +18,15 @@ from eth_scanner.types import SourceArtifact
 
 FUNDS_FLOOR_USD = 100.0
 
+# Direct release asset. Never the upstream install script.
+HEIMDALL_PIN = {
+    "version": "0.9.3",
+    "url": "https://github.com/Jon-Becker/heimdall-rs/releases/download/0.9.3/heimdall-linux-amd64",
+    "license": "MIT",
+}
+
+_VALUE_NAMES = ("withdraw", "redeem", "transferFrom")
+
 
 def decompile_unverified_funded(
     address: str,
@@ -159,3 +168,83 @@ def _first_text(folder: Path) -> str:
             except OSError:
                 continue
     return ""
+
+
+def triage_decompiled(content: str) -> list[dict[str, str]]:
+    """Lead names from decompiled text. The text itself is not returned."""
+    import re
+
+    from eth_scanner.heuristics.patterns import skim_known_patterns
+
+    leads: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for row in skim_known_patterns(content or ""):
+        name = str(row.get("id") or "")
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        leads.append({"id": name, "kind": "lead"})
+    for name in _VALUE_NAMES:
+        if re.search(r"\b%s\b" % name, content or ""):
+            lead_id = "value-moving-%s" % name
+            if lead_id not in seen:
+                seen.add(lead_id)
+                leads.append({"id": lead_id, "kind": "lead"})
+    return leads[:12]
+
+
+def decompile_shortlist(
+    address: str,
+    *,
+    on_shortlist: bool,
+    verified: bool = False,
+    bytecode: str = "",
+    heimdall=None,
+) -> dict:
+    """Decompile one unverified shortlist contract and name the leads.
+
+    Pattern leads add no heat. A contract that is not on the shortlist is
+    not decompiled. The decompiled text is not kept.
+    """
+    from eth_scanner.heat import evidence_heat
+
+    report = {
+        "address": address,
+        "src_confidence": "low",
+        "heat_contribution": 0,
+        "heat": 0,
+        "pin": dict(HEIMDALL_PIN),
+        "ran": False,
+        "tool": "none",
+        "leads": [],
+        "skipped": None,
+        "note": "",
+    }
+    if not on_shortlist:
+        report["skipped"] = "not-shortlist"
+        report["note"] = "Heimdall runs only for an unverified shortlist contract."
+        return report
+    if verified:
+        report["skipped"] = "verified"
+        report["note"] = "Verified source is kept. Decompilation is not run."
+        return report
+    text = _from_runner(heimdall, address, bytecode) if heimdall is not None else _try_heimdall(address, bytecode)[0]
+    if not text:
+        report["skipped"] = "no-tool"
+        report["note"] = "Heimdall is not available. Nothing was decompiled."
+        return report
+    report["ran"] = True
+    report["tool"] = "heimdall"
+    report["leads"] = triage_decompiled(text)
+    report["note"] = "Decompiled leads are triage only and add no heat."
+    _heat, breakdown = evidence_heat(
+        funds_usd=None,
+        invariant_results=[],
+        decompile_triage=report,
+    )
+    report["heat"] = _heat
+    report["heat_breakdown"] = {
+        "decompile_triage": breakdown.get("decompile_triage"),
+        "total": breakdown.get("total"),
+    }
+    return report
