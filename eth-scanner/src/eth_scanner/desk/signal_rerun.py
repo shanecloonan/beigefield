@@ -20,15 +20,13 @@ from urllib import request as urlrequest
 
 from eth_scanner.chain.cu_budget import CU_ESTIMATES, DEFAULT_UNKNOWN_CU, CuBudget
 
-# Lane A (code, balances, storage, capped traces) plus a short anvil fork.
-# The fork number is a ceiling: anvil's lazy reads are counted for real by
-# the local proxy, and the pass stops when the running total crosses the cap.
-SCAN_CU = 8_000
-FORK_CU = 32_000
-PER_CONTRACT_CU = SCAN_CU + FORK_CU
+# Run 45523821596 spent 258,956 CU on 100 contracts, about 2,600 each.
+# The old 40,000 figure counted a fork ceiling that the proxy never reached.
+PER_CONTRACT_CU = 2_600
 DEFAULT_BUDGET_CU = 4_000_000
 PAGE = 1000
-MAX_ROWS = 40_000
+# A stuck offset must not loop forever. The live tables are about 101,000 rows.
+MAX_ROWS = 250_000
 
 # Anvil's fork traffic uses these on top of the published scan methods.
 # A zero cost is a free local probe (client version, net version).
@@ -53,6 +51,14 @@ _MAYBE = {"maybe"}
 _URL = re.compile(r"https?://\S+", re.I)
 _CALLDATA = re.compile(r"0x[0-9a-fA-F]{16,}")
 _SEED = Path(__file__).with_name("signal_rerun_seed.json")
+_SEEN = Path(__file__).with_name("signal_rerun_seen.json")
+_EVIDENCE_KEYS = (
+    "invariants_failed",
+    "privileged_callable",
+    "eoa_admin",
+    "corroborated_leads",
+    "gated_leads",
+)
 
 
 def redact(text: str) -> str:
@@ -69,8 +75,6 @@ def estimate_cu(count: int) -> dict[str, int]:
     return {
         "contracts": n,
         "cu_per_contract": PER_CONTRACT_CU,
-        "scan_cu": SCAN_CU,
-        "fork_cu": FORK_CU,
         "estimated_cu": n * PER_CONTRACT_CU,
     }
 
@@ -318,6 +322,7 @@ def load_seed() -> list[dict[str, Any]]:
 
 
 def _page(store: Any, table: str, select: str) -> tuple[list[dict[str, Any]], str]:
+    """Read every row. A short page ends the walk. The cap is only a safety stop."""
     req = getattr(store, "_req", None)
     if not callable(req):
         return [], "store has no remote query"
@@ -340,8 +345,8 @@ def _page(store: Any, table: str, select: str) -> tuple[list[dict[str, Any]], st
         if len(batch) < PAGE:
             break
         offset += PAGE
-    if offset >= MAX_ROWS:
-        return rows, "stopped after %d rows" % MAX_ROWS
+    else:
+        return rows, "stopped after %d rows" % len(rows)
     return rows, ""
 
 
@@ -607,6 +612,102 @@ def _lock_rpc(url: str) -> None:
     live.resolve_rpc_urls = only  # type: ignore[method-assign]
 
 
+def load_seen() -> set[str]:
+    """Addresses the first pass already finished with no verdict change."""
+    try:
+        raw = json.loads(_SEEN.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return set()
+    skip = raw.get("skip") if isinstance(raw, dict) else []
+    return {safe_address(item) for item in skip or [] if safe_address(item)}
+
+
+def evidence_components(breakdown: dict[str, Any], *, drainable: bool = False) -> dict[str, int]:
+    """Heat parts that are current evidence. A stored peak is not one of them."""
+    parts: dict[str, int] = {}
+    for key in _EVIDENCE_KEYS:
+        if key == "corroborated_leads":
+            parts[key] = max(_num(breakdown.get("corroborated_leads")), _num(breakdown.get("corroborated")))
+        else:
+            parts[key] = _num(breakdown.get(key))
+    parts["exploit_poc_heat"] = _num(breakdown.get("exploit_poc_heat")) if drainable else 0
+    parts["total"] = min(12, sum(value for key, value in parts.items() if key != "total"))
+    return parts
+
+
+def apply_evidence_heat(result: Any, historical_peak: int) -> dict[str, int]:
+    """Replace the score with the fresh evidence sum. Keep the old peak beside it."""
+    breakdown = dict(getattr(result, "heat_breakdown", None) or {})
+    drainable = bool(breakdown.get("drainable"))
+    parts = evidence_components(breakdown, drainable=drainable)
+    result.heat = parts["total"]
+    for key, value in parts.items():
+        if key != "total":
+            breakdown[key] = value
+    breakdown["total"] = parts["total"]
+    breakdown["original_peak"] = int(historical_peak or 0)
+    result.heat_breakdown = breakdown
+    return parts
+
+
+def persist_desk(store: Any, result: Any, address: str, parts: dict[str, int], historical_peak: int) -> str:
+    """Write the row the public board reads. The first pass never did this."""
+    breakdown = dict(getattr(result, "heat_breakdown", None) or {})
+    breakdown["original_peak"] = int(historical_peak or 0)
+    verdict_row = {
+        "heat": parts["total"],
+        "blend_heat": parts["total"],
+        "heat_breakdown": breakdown,
+        "notes": list(getattr(result, "notes", None) or []),
+        "drop_reason": getattr(result, "drop_reason", "") or "",
+    }
+    verdict = desk_verdict(verdict_row)
+    bucket = {"yes": "drain-found", "maybe": "maybe", "no": "no"}[verdict]
+    body = {
+        "dedupe_key": "signal-rerun:%s" % address,
+        "kind": "lane-a",
+        "chain": "ethereum",
+        "address": address,
+        "contract_name": getattr(result, "contract_name", None),
+        "heat": parts["total"],
+        "blend_heat": parts["total"],
+        "blend_bucket": bucket,
+        "heat_breakdown": breakdown,
+        "invariant_results": list(getattr(result, "invariant_results", None) or []),
+        "bucket": getattr(result, "bucket", None),
+        "status": "done",
+        "discovery_source": "signal_rerun",
+        "funds_usd": getattr(result, "funds_usd", None),
+        "notes": list(getattr(result, "notes", None) or []),
+        "raw": {"source": "signal-rerun", "original_peak": int(historical_peak or 0)},
+    }
+    save = getattr(store, "save_test_scan_run", None)
+    if not callable(save):
+        return "desk store cannot write test_scan_runs"
+    try:
+        save(body)
+    except Exception as exc:  # noqa: BLE001
+        return redact(str(exc))[:200]
+    req = getattr(store, "_req", None)
+    if callable(req):
+        try:
+            req(
+                "PATCH",
+                "test_scan_runs",
+                {
+                    "heat": parts["total"],
+                    "blend_heat": parts["total"],
+                    "blend_bucket": bucket,
+                    "heat_breakdown": breakdown,
+                },
+                query={"dedupe_key": "eq.signal-rerun:%s" % address},
+                prefer="return=minimal",
+            )
+        except Exception:  # noqa: BLE001 — heat on the inserted row still ranks
+            pass
+    return ""
+
+
 def _snapshot(candidate: dict[str, Any]) -> dict[str, Any]:
     latest = candidate.get("latest") if isinstance(candidate.get("latest"), dict) else {}
     return {
@@ -632,10 +733,13 @@ def run_signal_rerun(
 ) -> dict[str, Any]:
     """Collect, cut to the CU budget, then re-score. Fail soft on 429 and on the cap."""
     collected = collect_candidates(store)
-    selected, deferred = prioritize(collected["ethereum"], budget_cu=budget_cu)
+    seen = load_seen()
+    pending = [row for row in collected["ethereum"] if row["address"] not in seen]
+    selected, deferred = prioritize(pending, budget_cu=budget_cu)
     plan = {
         "rows_read": collected["rows_read"],
         "signals": len(collected["ethereum"]),
+        "skipped_finished": len(collected["ethereum"]) - len(pending),
         "selected": len(selected),
         "deferred_budget": deferred,
         "other_chain": collected["other_chain"],
@@ -718,15 +822,24 @@ def run_signal_rerun(
                     unfinished = [_snapshot(row) for row in selected[index + 1:]]
                     break
                 continue
+            parts = apply_evidence_heat(result, int(before["peak"]))
+            try:
+                store.save_result(candidate["address"], result)
+            except Exception:  # noqa: BLE001 — the desk row is the one the site reads
+                pass
+            desk_error = persist_desk(store, result, candidate["address"], parts, int(before["peak"]))
             after = result_row(result)
             new_verdict = desk_verdict(after)
-            new_heat = _num(after["heat"])
+            new_heat = parts["total"]
             before.update({
                 "new_verdict": new_verdict,
                 "new_heat": new_heat,
+                "evidence": {key: parts[key] for key in parts if key != "total" and parts[key]},
                 "fork": fork_from_result(result),
                 "changed": new_verdict != before["old_verdict"] or new_heat != before["old_heat"],
             })
+            if desk_error:
+                before["desk_error"] = desk_error
             rerun.append(before)
         else:
             stop = stop or "done"
