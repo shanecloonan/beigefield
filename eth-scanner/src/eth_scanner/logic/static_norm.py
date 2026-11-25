@@ -76,6 +76,8 @@ RULE_ALIASES = {
     "tx-origin-used-for-auth": "tx-origin-auth",
     "selfdestruct": "public-selfdestruct",
     "suicidal": "suicidal",
+    "unchecked-return-value": "unchecked-transfer",
+    "unsafe-delegatecall": "controlled-delegatecall",
 }
 
 _ADMIN_GUARD = re.compile(

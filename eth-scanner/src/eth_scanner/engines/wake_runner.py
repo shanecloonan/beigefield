@@ -53,6 +53,19 @@ def run_wake(
     return report
 
 
+def wake_rule(detector: str, impact: str = "info") -> str:
+    """Map a Wake detector onto the static allowlist. Unknown names stay as leads."""
+    name = (detector or "").strip().lower().replace("_", "-")
+    level = (impact or "info").strip().lower()
+    if name == "reentrancy":
+        return "reentrancy-eth" if level in {"high", "medium"} else "reentrancy-no-eth"
+    if name == "unchecked-return-value":
+        return "unchecked-transfer"
+    if name == "unsafe-delegatecall":
+        return "controlled-delegatecall"
+    return name[:80]
+
+
 def parse_wake(raw: str) -> list[dict[str, Any]]:
     """Keep detector, impact, and confidence. Drop every other field."""
     try:
@@ -108,3 +121,74 @@ def _run_cli(source: str, *, timeout_s: int) -> str:
         if exported.is_file():
             return exported.read_text(encoding="utf-8")
     return proc.stdout or ""
+
+
+def run_wake_fuzz(
+    project: str,
+    *,
+    on_shortlist: bool = False,
+    timeout_s: int = 20,
+    runner: Optional[Callable[[list[str], int], tuple[int, str]]] = None,
+    which: Optional[Callable[[str], Optional[str]]] = None,
+) -> dict[str, Any]:
+    """Short Wake test run. Only a project that already has tests, and only on the shortlist.
+
+    The output sequence is not stored. Fuzz output adds no heat.
+    """
+    report: dict[str, Any] = {
+        "engine": "wake",
+        "status": "skipped",
+        "ran": False,
+        "heat": 0,
+        "heat_contribution": 0,
+        "note": "",
+    }
+    if not on_shortlist:
+        report["note"] = "Wake fuzz runs only for a shortlist contract."
+        return report
+    root = Path(project or "")
+    if not root.is_dir():
+        report["note"] = "Wake fuzz needs a local project directory."
+        return report
+    tests = root / "tests"
+    if not tests.is_dir() or not any(tests.glob("test_*.py")):
+        report["note"] = "No Wake tests in the project. Fuzz was not run."
+        return report
+    located = which("wake") if which is not None else _wake_bin()
+    if runner is None and not located:
+        report["note"] = "wake is not installed. Fuzz was not run."
+        return report
+    budget = max(10, min(30, int(timeout_s or 20)))
+    argv = [located or "wake", "test", "--", "-q", "--maxfail=1", "--tb=no"]
+    try:
+        code, text = (runner or _fuzz_cli)(argv, budget)
+    except subprocess.TimeoutExpired:
+        report["status"] = "timeout"
+        report["ran"] = True
+        report["note"] = "Wake fuzz timed out. No heat."
+        return report
+    except Exception as exc:  # noqa: BLE001
+        report["status"] = "error"
+        report["note"] = "Wake fuzz failed (%s). No heat." % type(exc).__name__
+        return report
+    report["ran"] = True
+    failed = code != 0 or "failed" in (text or "").lower()
+    report["status"] = "failed" if failed else "ok"
+    report["note"] = (
+        "Wake fuzz reported a failure. The sequence was not stored."
+        if failed
+        else "Wake fuzz finished. No heat."
+    )
+    return report
+
+
+def _fuzz_cli(argv: list[str], timeout_s: int) -> tuple[int, str]:
+    proc = subprocess.run(
+        argv,
+        capture_output=True,
+        text=True,
+        timeout=timeout_s,
+        check=False,
+    )
+    text = (proc.stdout or "") + "\n" + (proc.stderr or "")
+    return proc.returncode, text[:500]

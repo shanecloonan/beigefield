@@ -260,6 +260,17 @@ python -m eth_scanner hevm-value \
   --json
 ```
 
+## Wake
+
+Wake stays the existing ISC detector. The pin is `eth-wake` 5.0.0, already installed by the deep workflow, and the unit-test job does not install it. `wake detect` now runs beside Slither, Aderyn, and Semgrep. A high or medium `reentrancy`, an `unsafe-delegatecall`, and an `unchecked-return-value` use the same static weights as those bugs. Any other detector name stays a lead and adds 0. `wake-detect` still prints names only. `wake-fuzz` runs only with `--on-shortlist`, only in a project that already has tests, and it does not store the sequence. Fuzz output adds no heat. The board shows `wake` when a detector run finished.
+
+```bash
+python -m eth_scanner wake-fuzz \
+  --project ./vault \
+  --on-shortlist \
+  --json
+```
+
 Slither, Aderyn, and Semgrep each get a timeout (`--timeout`, clamped to 5–180 seconds). Semgrep uses `research/semgrep/solidity.yml`. Set `ETH_SCANNER_SEMGREP_RULES` to a local checkout of a Decurity-style Solidity pack to add those rules; the default run does not download a ruleset.
 
 Findings are normalized to one scale. An allowlisted high-confidence funds detector adds 3 points of `static_evidence`, a medium detector adds 1, and the component caps at 6. Ownable / AccessControl hits, style checks, and informational detectors add 0. The points are a heat component, not a verdict.

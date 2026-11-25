@@ -389,3 +389,16 @@ test("a hevm tag shows a run and does not change the stored heat", () => {
   assert.equal(board.leaderboard[0].heat, 0);
   assert.deepEqual(board.leaderboard[0].evidence_tags, ["hevm"]);
 });
+
+test("a wake tag shows a run and does not change the stored heat", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 0,
+      status: "done",
+      heat_breakdown: { wake: true },
+    },
+  ]);
+  assert.equal(board.leaderboard[0].heat, 0);
+  assert.deepEqual(board.leaderboard[0].evidence_tags, ["wake"]);
+});

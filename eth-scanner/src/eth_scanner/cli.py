@@ -805,10 +805,19 @@ def main(argv: list[str] | None = None) -> int:
 
     wake = sub.add_parser(
         "wake-detect",
-        help="Run Ackee Wake when it is installed. Detector names add no heat.",
+        help="Run Ackee Wake when it is installed. This command stores names only.",
     )
     wake.add_argument("--source", default=None, help="local Solidity file")
     wake.add_argument("--json", action="store_true")
+
+    fuzz = sub.add_parser(
+        "wake-fuzz",
+        help="Short Wake test run for a shortlist project that already has tests. Adds no heat.",
+    )
+    fuzz.add_argument("--project", required=True)
+    fuzz.add_argument("--on-shortlist", action="store_true")
+    fuzz.add_argument("--timeout", type=int, default=20)
+    fuzz.add_argument("--json", action="store_true")
 
     ai = sub.add_parser(
         "explain",
@@ -1500,6 +1509,26 @@ def main(argv: list[str] | None = None) -> int:
         if args.source:
             text = Path(args.source).read_text(encoding="utf-8", errors="replace")
         print(_json.dumps(run_wake(text), indent=2))
+        return 0
+
+    if args.cmd == "wake-fuzz":
+        import json as _json
+        from eth_scanner.engines.wake_runner import run_wake_fuzz
+        report = run_wake_fuzz(
+            str(args.project),
+            on_shortlist=bool(args.on_shortlist),
+            timeout_s=int(args.timeout or 20),
+        )
+        public = {
+            "status": report.get("status"),
+            "ran": report.get("ran"),
+            "heat": report.get("heat"),
+            "note": report.get("note"),
+        }
+        if args.json:
+            print(_json.dumps(public, indent=2))
+        else:
+            print("wake-fuzz status=%s heat=%s" % (public["status"], public["heat"]))
         return 0
 
     if args.cmd == "strong-deep" or (
