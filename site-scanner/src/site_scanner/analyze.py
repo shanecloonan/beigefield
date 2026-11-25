@@ -7,6 +7,7 @@ from typing import Any
 
 from site_scanner.fingerprint import fingerprint_pages
 from site_scanner.heat import score_facts
+from site_scanner.passive import passive_on
 from site_scanner.redact import redact
 
 _OLD_LIBS = (
@@ -64,8 +65,6 @@ def facts_for_page(page: dict[str, Any]) -> list[str]:
         facts.append("exposed-env")
     if path == "/.git/HEAD" and status == 200 and lowered.startswith("ref: refs/"):
         facts.append("exposed-git")
-    if status == 200 and ("<title>index of" in lowered or "directory listing for" in lowered):
-        facts.append("open-directory")
     if path.startswith("/admin") and status == 200 and any(tok in lowered for tok in ("dashboard", "admin panel", "wp-admin")):
         facts.append("open-admin")
 
@@ -81,6 +80,7 @@ def facts_for_page(page: dict[str, Any]) -> list[str]:
         facts.append("supabase-schema-open")
     if page.get("firebase_root_open"):
         facts.append("firebase-root-open")
+    facts.extend(item["id"] for item in passive_on(page))
     return facts
 
 
@@ -97,14 +97,18 @@ def cloud_hints(body: str) -> dict[str, str]:
 def report_for(host: str, pages: list[dict[str, Any]], *, active_ran: bool) -> dict[str, Any]:
     fact_ids: list[str] = []
     evidence: list[dict[str, str]] = []
+    passive_notes: dict[str, str] = {}
     for page in pages:
         raw = str(page.get("body") or "")
         redacted, kinds = redact(raw)
         safe = dict(page)
         safe["raw_body"] = raw
-        safe["body"] = redacted[:400]
+        # Detection sees the whole redacted page. Findings store a short note, not the body.
+        safe["body"] = redacted
         for fact in facts_for_page(safe):
             fact_ids.append(fact)
+        for item in passive_on(safe):
+            passive_notes.setdefault(item["id"], item["evidence"])
         if kinds:
             evidence.append({
                 "path": str(page.get("path") or "/"),
@@ -128,6 +132,9 @@ def report_for(host: str, pages: list[dict[str, Any]], *, active_ran: bool) -> d
         })
     for finding in scored["findings"]:
         if finding["id"] == "challenged":
+            continue
+        if finding["id"] in passive_notes:
+            finding["evidence"] = passive_notes[finding["id"]]
             continue
         if finding["id"] == "known-eol":
             finding["evidence"] = ", ".join(

@@ -106,7 +106,18 @@ class ScanTests(unittest.TestCase):
         self.assertEqual(hosts, ["app.example"])
 
     def test_pending_stage_does_not_change_heat(self) -> None:
-        page = {"path": "/", "scheme": "https", "status": 200, "headers": {"content-security-policy": "default-src 'self'", "strict-transport-security": "max-age=10"}, "body": "<html>ok</html>"}
+        page = {
+            "path": "/",
+            "scheme": "https",
+            "status": 200,
+            "headers": {
+                "content-security-policy": "default-src 'self'",
+                "strict-transport-security": "max-age=10",
+                "x-content-type-options": "nosniff",
+                "x-frame-options": "DENY",
+            },
+            "body": "<html>ok</html>",
+        }
         quiet = report_for("owned.example", [page], active_ran=False)
         done = report_for("owned.example", [page], active_ran=True)
         self.assertEqual(quiet["heat"], 0)
@@ -313,6 +324,165 @@ class ScanTests(unittest.TestCase):
         self.assertIn("jQuery 1.12.4", eol["evidence"])
         self.assertNotIn("Nginx", eol["evidence"])
         self.assertGreater(eol["heat"], 0)
+
+    def test_passive_header_and_cookie_notes_hide_cookie_values(self) -> None:
+        report = report_for("app.example", [{
+            "path": "/",
+            "scheme": "https",
+            "status": 200,
+            "headers": {
+                "content-security-policy": "default-src *; script-src 'unsafe-inline' 'unsafe-eval' https:",
+                "strict-transport-security": "max-age=10",
+                "server": "nginx/1.24.0",
+                "x-powered-by": "PHP/7.4.33",
+                "set-cookie": [
+                    "sid=secretvalue; Path=/",
+                    "theme=light",
+                    "ok=1; HttpOnly; Secure; SameSite=Lax",
+                ],
+            },
+            "body": "<html>ok</html>",
+        }], active_ran=True)
+        self.assertIn("cookie-no-httponly", report["facts"])
+        self.assertIn("cookie-no-secure", report["facts"])
+        self.assertIn("cookie-no-samesite", report["facts"])
+        self.assertIn("csp-unsafe-inline", report["facts"])
+        self.assertIn("csp-unsafe-eval", report["facts"])
+        self.assertIn("csp-wildcard", report["facts"])
+        self.assertIn("server-banner", report["facts"])
+        self.assertIn("missing-nosniff", report["facts"])
+        self.assertIn("missing-frame-options", report["facts"])
+        self.assertNotIn("cookie-samesite-none", report["facts"])
+        blob = str(report)
+        self.assertNotIn("secretvalue", blob)
+        cookie = next(item for item in report["findings"] if item["id"] == "cookie-no-httponly")
+        self.assertIn("sid", cookie["evidence"])
+        self.assertNotIn("theme", cookie["evidence"])
+        secure = next(item for item in report["findings"] if item["id"] == "cookie-no-secure")
+        self.assertIn("theme", secure["evidence"])
+        banner = next(item for item in report["findings"] if item["id"] == "server-banner")
+        self.assertIn("nginx/1.24.0", banner["evidence"])
+        self.assertLess(report["heat"], 12)
+        self.assertGreaterEqual(report["heat"], 3)
+
+    def test_frame_ancestors_and_a_hardened_cookie_are_quiet(self) -> None:
+        report = report_for("app.example", [{
+            "path": "/",
+            "scheme": "https",
+            "status": 200,
+            "headers": {
+                "content-security-policy": "default-src 'self'; frame-ancestors 'none'",
+                "strict-transport-security": "max-age=30",
+                "x-content-type-options": "nosniff",
+                "server": "cloudflare",
+                "set-cookie": "sid=1; HttpOnly; Secure; SameSite=Lax",
+            },
+            "body": "<html>ok</html>",
+        }], active_ran=True)
+        self.assertEqual(report["heat"], 0)
+        self.assertNotIn("missing-frame-options", report["facts"])
+        self.assertNotIn("server-banner", report["facts"])
+        self.assertNotIn("csp-wildcard", report["facts"])
+        self.assertFalse(any(fact.startswith("cookie-") for fact in report["facts"]))
+
+    def test_content_findings_cite_the_issue_and_not_the_body(self) -> None:
+        secret = "AKIAIOSFODNN7EXAMPLE"
+        report = report_for("app.example", [
+            {
+                "path": "/",
+                "scheme": "https",
+                "status": 200,
+                "headers": {
+                    "content-security-policy": "default-src 'self'",
+                    "strict-transport-security": "max-age=10",
+                    "x-content-type-options": "nosniff",
+                    "x-frame-options": "SAMEORIGIN",
+                },
+                "body": "<html><script src=\"http://cdn.example/app.js?token=%s\"></script><p>db 10.1.2.3</p></html>" % secret,
+            },
+            {
+                "path": "/boom",
+                "scheme": "https",
+                "status": 500,
+                "headers": {},
+                "body": "Traceback (most recent call last):\npassword=%s\n" % secret,
+            },
+            {
+                "path": "/files/",
+                "scheme": "https",
+                "status": 200,
+                "headers": {},
+                "body": "<html><title>Index of /files/</title><a href=\"../\">Parent Directory</a></html>",
+            },
+        ], active_ran=True)
+        self.assertIn("mixed-content", report["facts"])
+        self.assertIn("private-ip", report["facts"])
+        self.assertIn("verbose-error", report["facts"])
+        self.assertIn("open-directory", report["facts"])
+        mixed = next(item for item in report["findings"] if item["id"] == "mixed-content")
+        self.assertIn("cdn.example", mixed["evidence"])
+        self.assertNotIn(secret, mixed["evidence"])
+        self.assertNotIn("token=", mixed["evidence"])
+        private = next(item for item in report["findings"] if item["id"] == "private-ip")
+        self.assertIn("10.1.2.3", private["evidence"])
+        error = next(item for item in report["findings"] if item["id"] == "verbose-error")
+        self.assertIn("python-traceback", error["evidence"])
+        self.assertNotIn(secret, error["evidence"])
+        self.assertNotIn("password", error["evidence"])
+        quoted = report_for("app.example", [{
+            "path": "/",
+            "scheme": "https",
+            "status": 200,
+            "headers": {
+                "content-security-policy": "default-src 'self'",
+                "strict-transport-security": "max-age=10",
+                "x-content-type-options": "nosniff",
+                "x-frame-options": "DENY",
+            },
+            "body": "<html>A stack trace: is just a phrase. <script src=\"http://127.0.0.1/app.js\"></script></html>",
+        }], active_ran=True)
+        self.assertNotIn("verbose-error", quoted["facts"])
+        self.assertNotIn("mixed-content", quoted["facts"])
+
+    def test_fetch_keeps_every_set_cookie(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            self.assertEqual(request.headers["user-agent"], USER_AGENT)
+            return httpx.Response(
+                200,
+                text="<html>ok</html>",
+                headers=[
+                    ("set-cookie", "sid=secretvalue; Path=/"),
+                    ("set-cookie", "theme=light"),
+                    ("content-security-policy", "default-src 'self'"),
+                    ("strict-transport-security", "max-age=10"),
+                    ("x-content-type-options", "nosniff"),
+                    ("x-frame-options", "DENY"),
+                ],
+            )
+
+        async def no_sleep(_seconds: float) -> None:
+            return None
+
+        transport = httpx.MockTransport(handler)
+        client = httpx.AsyncClient(transport=transport, headers={"User-Agent": USER_AGENT})
+        try:
+            pages = fetch_host(
+                "cookies.example",
+                active=False,
+                pause_s=0,
+                client=client,
+                tls_check=lambda _host: {"tls_expired": False, "tls_soon": False},
+                sleep=no_sleep,
+            )
+        finally:
+            asyncio.run(client.aclose())
+        home = next(page for page in pages if page["path"] == "/")
+        cookies = home["headers"]["set-cookie"]
+        self.assertIsInstance(cookies, list)
+        self.assertEqual(len(cookies), 2)
+        report = report_for("cookies.example", pages, active_ran=False)
+        self.assertIn("cookie-no-secure", report["facts"])
+        self.assertNotIn("secretvalue", str(report))
 
 
 if __name__ == "__main__":
