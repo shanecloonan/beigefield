@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from site_scanner.active import exposure
 from site_scanner.fingerprint import fingerprint_pages
 from site_scanner.heat import score_facts
 from site_scanner.passive import passive_on
@@ -61,12 +62,9 @@ def facts_for_page(page: dict[str, Any]) -> list[str]:
     elif page.get("tls_soon"):
         facts.append("tls-soon")
 
-    if path == "/.env" and status == 200 and re.search(r"(?i)(secret|password|api[_-]?key)\s*=", body):
-        facts.append("exposed-env")
-    if path == "/.git/HEAD" and status == 200 and lowered.startswith("ref: refs/"):
-        facts.append("exposed-git")
-    if path.startswith("/admin") and status == 200 and any(tok in lowered for tok in ("dashboard", "admin panel", "wp-admin")):
-        facts.append("open-admin")
+    hit = exposure(page)
+    if hit:
+        facts.append(hit["id"])
 
     _redacted, kinds = redact(str(page.get("raw_body") or body))
     if kinds:
@@ -98,17 +96,28 @@ def report_for(host: str, pages: list[dict[str, Any]], *, active_ran: bool) -> d
     fact_ids: list[str] = []
     evidence: list[dict[str, str]] = []
     passive_notes: dict[str, str] = {}
+    active_notes: dict[str, str] = {}
+    home = ""
+    for page in pages:
+        if str(page.get("path") or "/") in {"/", ""}:
+            home = redact(str(page.get("body") or ""))[0].strip()
+            break
     for page in pages:
         raw = str(page.get("body") or "")
         redacted, kinds = redact(raw)
         safe = dict(page)
         safe["raw_body"] = raw
+        if home and str(page.get("path") or "/") not in {"/", ""} and redacted.strip() == home:
+            safe["same_as_home"] = True
         # Detection sees the whole redacted page. Findings store a short note, not the body.
         safe["body"] = redacted
         for fact in facts_for_page(safe):
             fact_ids.append(fact)
         for item in passive_on(safe):
             passive_notes.setdefault(item["id"], item["evidence"])
+        hit = exposure(safe)
+        if hit:
+            active_notes.setdefault(hit["id"], hit["evidence"])
         if kinds:
             evidence.append({
                 "path": str(page.get("path") or "/"),
@@ -132,6 +141,9 @@ def report_for(host: str, pages: list[dict[str, Any]], *, active_ran: bool) -> d
         })
     for finding in scored["findings"]:
         if finding["id"] == "challenged":
+            continue
+        if finding["id"] in active_notes:
+            finding["evidence"] = active_notes[finding["id"]]
             continue
         if finding["id"] in passive_notes:
             finding["evidence"] = passive_notes[finding["id"]]
