@@ -1,1 +1,1 @@
-small-value queue pass: re-score 100 small-value (<=$500k) high-probability contracts plus all historical signals through Lane A with fork verify on. Pushing this file to main starts eth-scanner-signal-rerun.yml.
+Alchemy topped up Nov 25 2026 ~11:39 CT — retrigger small-value queue
