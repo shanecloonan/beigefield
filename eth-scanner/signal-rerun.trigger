@@ -1,1 +1,1 @@
-Alchemy topped up Nov 25 2026 ~11:39 CT — retrigger small-value queue
+Vault revert was misread as provider auth (run 45667260022). Retrigger so the unfinished signals finish. 4M CU budget unchanged.
