@@ -11,6 +11,8 @@ Heat comes only from evidence:
   (e) allowlisted static detectors (static_evidence). High-confidence
       funds rules weigh the most. Generic, informational, and admin-gated
       hits stay at 0.
+  (f) a bytecode surface. EIP-7702 delegation and a value-moving clone
+      weigh 2 (`surface_evidence`). Selector recovery alone weighs 0.
 
 A generic Slither/Mythril hit is still a lead (0 heat). An allowlisted
 high-confidence detector is the static_evidence component, not a verdict.
@@ -277,6 +279,7 @@ def evidence_heat(
     static_findings: Optional[list[Any]] = None,
     corpus_findings: Optional[list[Any]] = None,
     clone_match: Optional[dict[str, Any]] = None,
+    bytecode_surface: Optional[dict[str, Any]] = None,
     unprotected_value: bool = False,
     unverified_proxy: bool = False,
     deployed_at: Optional[str] = None,
@@ -343,6 +346,17 @@ def evidence_heat(
         except (TypeError, ValueError):
             clone_points = 0
         clone_points = min(3, clone_points)
+    surface_points = 0
+    surface_show = False
+    surface_overlap = ""
+    surface_selectors = 0
+    if isinstance(bytecode_surface, dict):
+        from eth_scanner.logic.bytecode_surface import score_surface
+        scored_surface = score_surface(bytecode_surface)
+        surface_points = int(scored_surface["points"])
+        surface_show = bool(scored_surface["show"])
+        surface_overlap = str(scored_surface["overlap"] or "")
+        surface_selectors = int(scored_surface["selectors"])
     from eth_scanner.logic.priority import ADMIN_ONLY_CAP, priority_points
     priority = priority_points(
         unprotected_value=unprotected_value,
@@ -357,7 +371,7 @@ def evidence_heat(
     fork = fork_backed(conservation)
     substantive = (
         inv + priv + corr + static_points + corpus_points + clone_points
-        + unprotected_points + proxy_points + fresh_points
+        + unprotected_points + proxy_points + fresh_points + surface_points
     )
     admin_capped = bool(eoa and gated and substantive == 0 and not fork)
     if admin_capped:
@@ -402,6 +416,10 @@ def evidence_heat(
         "static_evidence": static_points,
         "corpus_evidence": corpus_points,
         "clone_evidence": clone_points,
+        "surface_evidence": surface_points,
+        "bytecode_surface": surface_show,
+        "surface_selectors": surface_selectors,
+        "surface_overlap": surface_overlap,
         "unprotected_evidence": unprotected_points,
         "proxy_evidence": proxy_points,
         "fresh_evidence": fresh_points,

@@ -172,11 +172,16 @@ def write_project(
     properties: list[str] | None = None,
     seeds: list[dict[str, Any]] | None = None,
     sequences: list[dict[str, Any]] | None = None,
+    surface: dict[str, Any] | None = None,
 ) -> Path:
     """contracts: [{name, source, address?}]. Local anvil / forge only."""
     root = Path(dest)
     (root / "src").mkdir(parents=True, exist_ok=True)
     (root / "test").mkdir(parents=True, exist_ok=True)
+    if surface:
+        from eth_scanner.logic.bytecode_surface import interface_source, write_surface_inputs
+        write_surface_inputs(root, surface)
+        contracts = list(contracts) + [{"name": "RecoveredSurface", "source": interface_source(surface)}]
     names: list[str] = []
     fnames: list[str] = []
     for item in contracts:

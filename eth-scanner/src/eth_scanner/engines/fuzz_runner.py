@@ -131,6 +131,16 @@ def run_lead_fuzz(
     dest = base / "engine-fuzz" / (address.lower()[-16:] or "target")
     try:
         from eth_scanner.engines.fuzz_harness import harness_solc_version
+        surface = None
+        if (runtime_bytecode or "").strip():
+            from eth_scanner.logic.bytecode_surface import recover_surface
+            use_whatsabi = os.environ.get("ETH_SCANNER_WHATSABI", "1") != "0"
+            surface = recover_surface(runtime_bytecode, use_whatsabi=use_whatsabi)
+            if surface.get("functions") or surface.get("proxy_kind"):
+                report.notes.append(
+                    "bytecode surface selectors=%d proxy=%s"
+                    % (len(surface.get("functions") or []), surface.get("proxy_kind") or "none")
+                )
         project, props = write_live_fuzz_project(
             dest,
             address=address,
@@ -142,6 +152,7 @@ def run_lead_fuzz(
             runtime_bytecode=runtime_bytecode,
             source_dir=source_dir,
             include_target_sources=False,
+            surface=surface,
         )
         report.property_ids = props
         report.properties_checked = len(props)

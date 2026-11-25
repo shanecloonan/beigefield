@@ -174,6 +174,7 @@ export function evidenceTags(breakdown: Record<string, unknown> | null): string[
   if (amount("static_evidence") > 0) tags.push("static");
   if (amount("corpus_evidence") > 0) tags.push("corpus");
   if (amount("clone_evidence") > 0) tags.push("clone");
+  if (amount("surface_evidence") > 0 || flagged("bytecode_surface")) tags.push("surface");
   if (amount("unprotected_evidence") > 0) tags.push("unprotected");
   if (amount("proxy_evidence") > 0) tags.push("proxy");
   if (amount("fresh_evidence") > 0) tags.push("fresh");

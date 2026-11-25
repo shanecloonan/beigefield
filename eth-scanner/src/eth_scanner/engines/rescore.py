@@ -119,6 +119,7 @@ def adjust_heat(
             "unprotected_evidence",
             "proxy_evidence",
             "fresh_evidence",
+            "surface_evidence",
         )
     )
     base = min(old, backing + extra)

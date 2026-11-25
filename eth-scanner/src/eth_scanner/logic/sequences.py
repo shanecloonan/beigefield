@@ -126,11 +126,18 @@ def _wealth(state: _Books, actor: str = "attacker") -> int:
     return state.wallet.get(actor, 0) + _fair_claim(state, state.shares.get(actor, 0))
 
 
-def run_sequence_invariants(kind: str = "fair", start_balance: Optional[int] = None) -> dict[str, Any]:
+def run_sequence_invariants(
+    kind: str = "fair",
+    start_balance: Optional[int] = None,
+    allowed_actions: Optional[set[str]] = None,
+) -> dict[str, Any]:
     """Run the capped catalog. `kind` is a local model, not a live contract.
 
     `start_balance` is the outsider's starting wallet, the way a fork test
     uses `vm.deal`. It does not create a finding by itself.
+
+    `allowed_actions` drops a sequence that calls a function the bytecode
+    surface did not recover. A dropped sequence is not a failure.
     """
     model = kind if kind in _MODELS else "fair"
     opening = _START if start_balance is None else max(0, int(start_balance))
@@ -139,9 +146,13 @@ def run_sequence_invariants(kind: str = "fair", start_balance: Optional[int] = N
     profit = True
     attacker_delta = 0
     ran = 0
+    skipped = 0
     for sequence in SEQUENCES[:MAX_SEQUENCES]:
         steps = tuple(sequence[:MAX_DEPTH])
         if not steps:
+            continue
+        if allowed_actions is not None and any(action not in allowed_actions for action, _, _ in steps):
+            skipped += 1
             continue
         ran += 1
         state = _Books(model, opening)
@@ -174,6 +185,8 @@ def run_sequence_invariants(kind: str = "fair", start_balance: Optional[int] = N
     return {
         "model": model,
         "sequences": ran,
+        "skipped_sequences": skipped,
+        "allowed_actions": sorted(allowed_actions) if allowed_actions is not None else None,
         "depth_cap": MAX_DEPTH,
         "start_balance": opening,
         "results": rows,

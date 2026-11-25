@@ -206,6 +206,20 @@ python -m eth_scanner static-analyze \
   --json --dry-run
 ```
 
+## Bytecode surface
+
+Unverified runtime bytecode is read by evmole `0.10.1` (MIT, `pip install evmole==0.10.1`) and whatsabi `0.30.0` (MIT, `npm install @shazow/whatsabi` where `eth-scanner/tools/whatsabi_surface.mjs` can import it). The two reports are unioned. evmole's state mutability wins when both tools saw the selector. A missing tool is a skip. The only built-in pattern is the EIP-7702 designator and the EIP-1167 clone prefix.
+
+An EIP-7702 delegation adds 2 points of `surface_evidence`. A clone that recovers a state-changing value selector adds 2. An EIP-1967 implementation is shown on the board and adds 0, because an unverified upgradeable proxy is already `proxy_evidence`. The tag is `surface`.
+
+Recovered selectors are written to `corpus/ityfuzz/selectors.txt` and `src/RecoveredSelectors.sol`. The Foundry harness gains a conservation check that calls those signatures with amount 1. Sequences whose action was not recovered are skipped, not failed. No calldata is stored and nothing is broadcast.
+
+```bash
+python -m eth_scanner bytecode-surface --code-file runtime.hex --json
+```
+
+Set `ETH_SCANNER_WHATSABI=0` to keep the fork fuzz path on evmole only.
+
 ## Sequence invariants
 
 A fixed catalog of at most 8 unprivileged sequences, each at most 4 calls (deposit, donate, withdraw, redeem), checks three properties: `totalAssets` covers `convertToAssets(totalSupply)`, share price does not fall on a non-admin sequence, and the attacker’s balance does not rise. The one-call probe is the first sequence. The same three checks run inside the local-fork Foundry harness after each outsider call. A missing ERC-4626 view is skipped. An extraction still marks the fork report drainable. A solvency or price failure does not.
