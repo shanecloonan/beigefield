@@ -1,0 +1,10 @@
+[
+  {"chain": "ethereum", "address": "0x1b2cb79a4564206f53ba80b4d780f251b4ae6765", "peak_heat": 3, "contract_name": "OptinProxy", "verdict": "maybe"},
+  {"chain": "ethereum", "address": "0xda4d2152b2230e33c80b0a88b7c28b1c464ee3c2", "peak_heat": 3, "contract_name": "xU3LPStable", "verdict": "no"},
+  {"chain": "ethereum", "address": "0x6110d61dd1133b0f845f1025d6678cd22a11a2fe", "peak_heat": 3, "contract_name": "SpiceFiNFT4626", "verdict": "no"},
+  {"chain": "ethereum", "address": "0x7ee64f74792c307446cd92d23e551efae3172a28", "peak_heat": 7, "contract_name": "MigratableWethTransmuter", "verdict": "no"},
+  {"chain": "ethereum", "address": "0x4d5f47fa6a74757f35c14fd3a6ef8e3c9bc514e8", "peak_heat": 1, "contract_name": "ATokenInstance", "verdict": "no"},
+  {"chain": "ethereum", "address": "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6", "peak_heat": 3, "contract_name": "SfrxUSD", "verdict": "no"},
+  {"chain": "ethereum", "address": "0xbceb5f6877d979ec621ae694da1102cb95691ad3", "peak_heat": 3, "contract_name": "LYTPool", "verdict": "no"},
+  {"chain": "ethereum", "address": "0xda06ee2dacf9245aa80072a4407debdea0d7e341", "peak_heat": 3, "contract_name": "StakedAvantCoinV2", "verdict": "no"}
+]

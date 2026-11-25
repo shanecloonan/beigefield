@@ -654,6 +654,16 @@ def main(argv: list[str] | None = None) -> int:
     rescore.add_argument("--limit", type=int, default=30)
     rescore.add_argument("--json", action="store_true")
 
+    rerun = sub.add_parser(
+        "signal-rerun",
+        help="Re-score historical Maybe and heat signals. Read-only. Holds the scan-cycle lease.",
+    )
+    rerun.add_argument("--budget-cu", type=int, default=4_000_000)
+    rerun.add_argument("--deadline-minutes", type=float, default=60.0)
+    rerun.add_argument("--lease-wait-minutes", type=float, default=20.0)
+    rerun.add_argument("--dry-run", action="store_true")
+    rerun.add_argument("--json", action="store_true")
+
     similar = sub.add_parser(
         "similarity-search",
         help="Rank functions by structural similarity. A neighbor is a lead and adds no heat.",
@@ -1097,6 +1107,24 @@ def main(argv: list[str] | None = None) -> int:
             }, indent=2))
             return 0
         print(_json.dumps(_rescore.rescore_rows(_supabase.open_store(settings), rpc, limit=max(1, args.limit)), indent=2))
+        return 0
+
+    if args.cmd == "signal-rerun":
+        import json as _json
+        import os
+        from eth_scanner.desk.signal_rerun import run_signal_rerun
+        os.environ["ETH_SCANNER_FORK_VERIFY"] = "1"
+        os.environ["ETH_SCANNER_FORK_VERIFY_REDACT"] = "1"
+        os.environ.setdefault("ETH_SCANNER_FUZZ_MIN_HEAT", "0")
+        report = run_signal_rerun(
+            store,
+            settings,
+            budget_cu=max(0, int(args.budget_cu)),
+            deadline_s=max(60.0, float(args.deadline_minutes) * 60.0),
+            lease_wait_s=max(0.0, float(args.lease_wait_minutes) * 60.0),
+            dry_run=bool(args.dry_run),
+        )
+        print(_json.dumps(report, indent=2, default=str))
         return 0
 
     if args.cmd == "similarity-search":
