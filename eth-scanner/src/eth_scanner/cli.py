@@ -937,6 +937,12 @@ def main(argv: list[str] | None = None) -> int:
     seq.add_argument("--model", default="fair", help="fair, dilute, inflation, leaky, or short")
     seq.add_argument("--json", action="store_true")
 
+    pert = sub.add_parser(
+        "perturb-invariants",
+        help="Rerun sequence invariants with a dealt balance and a perturbed price (no broadcast)",
+    )
+    pert.add_argument("--json", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -1442,6 +1448,26 @@ def main(argv: list[str] | None = None) -> int:
                 "sequence-invariants model=%s sequences=%s heat=%s failed=%s"
                 % (report["model"], report["sequences"], heat, ",".join(failed) or "none")
             )
+        return 0
+
+    if args.cmd == "perturb-invariants":
+        from eth_scanner.logic.perturb import perturbation_heat
+        heat, breakdown, report = perturbation_heat()
+        payload = {
+            "heat": heat,
+            "invariants_failed": breakdown.get("invariants_failed", 0),
+            "dealt_balance": report["dealt_balance"],
+            "funded_failures": report["funded_failures"],
+            "spot_delta": report["spot_delta"],
+            "chainlink_delta": report["chainlink_delta"],
+            "results": report["results"],
+            "note": report["note"],
+        }
+        if args.json:
+            print(json.dumps(payload, indent=2))
+        else:
+            failed = [row["id"] for row in report["results"] if row["status"] == "failed"]
+            print("perturb-invariants heat=%s failed=%s" % (heat, ",".join(failed) or "none"))
         return 0
 
     if args.cmd == "fork-verify":

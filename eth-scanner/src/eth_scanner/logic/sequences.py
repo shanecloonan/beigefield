@@ -37,12 +37,12 @@ _MODELS = frozenset({"fair", "dilute", "inflation", "leaky", "short"})
 
 
 class _Books:
-    def __init__(self, kind: str) -> None:
+    def __init__(self, kind: str, start: int = _START) -> None:
         self.kind = kind
         self.assets = 0
         self.supply = 0
         self.shares = {"attacker": 0, "victim": 0}
-        self.wallet = {"attacker": _START, "victim": _START}
+        self.wallet = {"attacker": int(start), "victim": int(start)}
 
 
 def _fair_claim(state: _Books, shares: int) -> int:
@@ -126,9 +126,14 @@ def _wealth(state: _Books, actor: str = "attacker") -> int:
     return state.wallet.get(actor, 0) + _fair_claim(state, state.shares.get(actor, 0))
 
 
-def run_sequence_invariants(kind: str = "fair") -> dict[str, Any]:
-    """Run the capped catalog. `kind` is a local model, not a live contract."""
+def run_sequence_invariants(kind: str = "fair", start_balance: Optional[int] = None) -> dict[str, Any]:
+    """Run the capped catalog. `kind` is a local model, not a live contract.
+
+    `start_balance` is the outsider's starting wallet, the way a fork test
+    uses `vm.deal`. It does not create a finding by itself.
+    """
     model = kind if kind in _MODELS else "fair"
+    opening = _START if start_balance is None else max(0, int(start_balance))
     solvency = True
     monotonic = True
     profit = True
@@ -139,7 +144,7 @@ def run_sequence_invariants(kind: str = "fair") -> dict[str, Any]:
         if not steps:
             continue
         ran += 1
-        state = _Books(model)
+        state = _Books(model, opening)
         start = _wealth(state)
         seen_price = 0
         for action, actor, amount in steps:
@@ -170,6 +175,7 @@ def run_sequence_invariants(kind: str = "fair") -> dict[str, Any]:
         "model": model,
         "sequences": ran,
         "depth_cap": MAX_DEPTH,
+        "start_balance": opening,
         "results": rows,
         "heat_note": "local sequence model; no chain writes",
     }
