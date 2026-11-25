@@ -416,6 +416,32 @@ def tranco_hosts(*, limit: int = 10) -> list[str]:
     return parse_tranco(raw, limit=limit)
 
 
+def take_batch(pool: list[str], seen: list[str], limit: int) -> tuple[list[str], list[str], bool]:
+    """The next hosts in a pool, skipping ones this cycle already scanned.
+
+    When the unseen remainder is shorter than the batch, the cycle wraps.
+    The returned seen list is only the new batch, so the following run
+    continues through the rest of the pool instead of repeating this one.
+    """
+    size = max(0, int(limit))
+    ordered = [host for host in pool if host]
+    if size == 0 or not ordered:
+        return [], list(seen), False
+    seen_set = set(seen)
+    fresh = [host for host in ordered if host not in seen_set]
+    if len(fresh) >= size:
+        chosen = fresh[:size]
+        return chosen, list(seen) + chosen, False
+    chosen = list(fresh)
+    for host in ordered:
+        if host in chosen:
+            continue
+        chosen.append(host)
+        if len(chosen) >= size:
+            break
+    return chosen[:size], chosen[:size], True
+
+
 def source_counts(
     hosts: Iterable[str],
     *,

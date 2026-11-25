@@ -18,6 +18,7 @@ from site_scanner.discover import (
     parse_tranco,
     sample_tranco_lines,
     source_counts,
+    take_batch,
     usable_host,
 )
 from site_scanner.migrate import missing_ddl_secrets, pg_env
@@ -193,6 +194,29 @@ class ScanTests(unittest.TestCase):
         ], now=now, hours=1, limit=5)
         self.assertEqual(fallback, ["old.example"])
         self.assertEqual(hosts_from_san("DNS:alpha.example, DNS:*.beta.example"), ["alpha.example", "beta.example"])
+
+    def test_the_cursor_walks_forward_and_then_wraps(self) -> None:
+        pool = ["owned.example", "a.example", "b.example", "c.example", "d.example"]
+        first, seen, wrapped = take_batch(pool, [], 2)
+        self.assertEqual(first, ["owned.example", "a.example"])
+        self.assertFalse(wrapped)
+        second, seen, wrapped = take_batch(pool, seen, 2)
+        self.assertEqual(second, ["b.example", "c.example"])
+        self.assertFalse(wrapped)
+        third, seen, wrapped = take_batch(pool, seen, 2)
+        self.assertEqual(third, ["d.example", "owned.example"])
+        self.assertTrue(wrapped)
+        self.assertEqual(seen, ["d.example", "owned.example"])
+        self.assertEqual(take_batch([], ["a.example"], 2), ([], ["a.example"], False))
+
+    def test_the_schedule_is_hourly_with_a_small_batch(self) -> None:
+        from pathlib import Path
+        text = Path(__file__).resolve().parents[2].joinpath(".github/workflows/site-scanner.yml").read_text()
+        self.assertIn('cron: "47 * * * *"', text)
+        self.assertIn("cancel-in-progress: false", text)
+        self.assertIn("--limit 6", text)
+        self.assertIn("workflow_dispatch", text)
+        self.assertNotIn("*/10 * * * *", text)
 
 
 if __name__ == "__main__":

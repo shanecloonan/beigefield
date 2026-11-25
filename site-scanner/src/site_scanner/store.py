@@ -37,14 +37,19 @@ def _error_code(raw: str) -> str:
     return ""
 
 
-def _req(method: str, query: dict[str, str] | None = None, body: dict[str, Any] | None = None) -> tuple[list[dict[str, Any]], int]:
+def _req(
+    method: str,
+    query: dict[str, str] | None = None,
+    body: dict[str, Any] | None = None,
+    table: str = "site_scan_hits",
+) -> tuple[list[dict[str, Any]], int]:
     url, key = _env()
     if not url or not key:
         raise StoreError(0, "no-store")
     qs = ("?" + urllib.parse.urlencode(query)) if query else ""
     data = json.dumps(body).encode("utf-8") if body is not None and method != "GET" else None
     request = urllib.request.Request(
-        "%s/rest/v1/site_scan_hits%s" % (url, qs),
+        "%s/rest/v1/%s%s" % (url, table, qs),
         data=data,
         method=method,
         headers={
@@ -128,3 +133,47 @@ def save_hit(report: dict[str, Any]) -> dict[str, Any]:
         "heat": heat,
         "peak_heat": body["peak_heat"],
     }
+
+
+CURSOR_ID = "site-scan"
+
+
+def load_cursor() -> dict[str, Any]:
+    """Hosts already scanned in this cycle. Empty when the store is missing."""
+    url, key = _env()
+    if not url or not key:
+        return {"seen": [], "cycle": 0, "status": "no-store"}
+    try:
+        rows, _status = _req(
+            "GET",
+            {"select": "seen,cycle", "id": "eq.%s" % CURSOR_ID, "limit": "1"},
+            table="site_scan_cursor",
+        )
+    except StoreError as exc:
+        return {"seen": [], "cycle": 0, "status": "error", "code": exc.code}
+    if not rows:
+        return {"seen": [], "cycle": 0, "status": "ok"}
+    seen = rows[0].get("seen") if isinstance(rows[0].get("seen"), list) else []
+    try:
+        cycle = int(rows[0].get("cycle") or 0)
+    except (TypeError, ValueError):
+        cycle = 0
+    return {"seen": [str(item) for item in seen if item], "cycle": cycle, "status": "ok"}
+
+
+def save_cursor(seen: list[str], cycle: int) -> dict[str, Any]:
+    """Remember the hosts this cycle has already covered. Capped so the row stays small."""
+    url, key = _env()
+    if not url or not key:
+        return {"status": "skipped", "reason": "no-store"}
+    body = {
+        "id": CURSOR_ID,
+        "seen": seen[-500:],
+        "cycle": int(cycle),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        _req("POST", {"on_conflict": "id"}, body, table="site_scan_cursor")
+    except StoreError as exc:
+        return {"status": "skipped", "reason": "http-%s" % exc.status, "code": exc.code}
+    return {"status": "ok", "cycle": int(cycle), "seen": len(body["seen"])}
