@@ -271,6 +271,18 @@ python -m eth_scanner wake-fuzz \
   --json
 ```
 
+## Storage snapshot
+
+`storage-decode` reads a Sourcify layout from a loopback anvil snapshot. It decodes addresses, booleans, and fixed-width integers. Mappings, arrays, and strings are left undecoded. A public URL is refused before any call, so this does not walk a live Alchemy endpoint. The decoded values add no heat. The board keeps showing them as `layout`.
+
+```bash
+python -m eth_scanner storage-decode \
+  --address 0x1111111111111111111111111111111111111111 \
+  --fork-url http://127.0.0.1:8545 \
+  --layout layout.json \
+  --json
+```
+
 Slither, Aderyn, and Semgrep each get a timeout (`--timeout`, clamped to 5–180 seconds). Semgrep uses `research/semgrep/solidity.yml`. Set `ETH_SCANNER_SEMGREP_RULES` to a local checkout of a Decurity-style Solidity pack to add those rules; the default run does not download a ruleset.
 
 Findings are normalized to one scale. An allowlisted high-confidence funds detector adds 3 points of `static_evidence`, a medium detector adds 1, and the component caps at 6. Ownable / AccessControl hits, style checks, and informational detectors add 0. The points are a heat component, not a verdict.
