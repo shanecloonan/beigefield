@@ -21,6 +21,13 @@ export type SiteHit = {
   created_at?: unknown;
 };
 
+export type SiteRender = {
+  status: string;
+  scripts: number;
+  console_errors: number;
+  storage_keys: string[];
+};
+
 export type SiteRow = {
   host: string;
   url: string;
@@ -30,6 +37,7 @@ export type SiteRow = {
   pending_stages: string[];
   findings: { id?: string; title?: string; heat?: number; evidence?: string; remediation?: string; stage?: string }[];
   tech: SiteTech[];
+  render: SiteRender | null;
   mode: string;
   scanned_at: string | null;
 };
@@ -66,6 +74,24 @@ function techFrom(value: unknown): SiteTech[] {
     if (out.length >= 12) break;
   }
   return out;
+}
+
+function renderFrom(value: unknown): SiteRender | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = (value as { render?: unknown }).render;
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as { status?: unknown; scripts?: unknown; console_errors?: unknown; storage_keys?: unknown };
+  const status = String(row.status || "");
+  if (status !== "rendered" && status !== "challenged") return null;
+  const keys = Array.isArray(row.storage_keys)
+    ? row.storage_keys.map((item) => String(item)).filter(Boolean).slice(0, 8)
+    : [];
+  return {
+    status,
+    scripts: num(row.scripts),
+    console_errors: num(row.console_errors),
+    storage_keys: keys,
+  };
 }
 
 export function summarizeRuns(rows: unknown[]): SiteRun[] {
@@ -113,6 +139,7 @@ const WEIGHTS: Record<string, number> = {
   "private-ip": 3,
   "verbose-error": 4,
   "mixed-content": 3,
+  "storage-token": 3,
   "open-admin": 4,
   "secret-in-page": 8,
   "old-library": 6,
@@ -175,6 +202,7 @@ export function summarizeSiteHits(rows: SiteHit[], limit = 100): SiteRow[] {
       pending_stages: pending,
       findings: scored.findings,
       tech: techFrom(row.heat_breakdown),
+      render: renderFrom(row.heat_breakdown),
       mode: String(row.mode || "passive"),
       scanned_at: row.updated_at ? String(row.updated_at) : row.created_at ? String(row.created_at) : null,
     };

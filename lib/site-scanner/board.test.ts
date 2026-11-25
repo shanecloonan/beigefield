@@ -62,6 +62,24 @@ test("a host keeps its tech stack and an end-of-life library adds heat", () => {
   assert.equal(rows[0].tech[0].eol, true);
   assert.equal(rows[0].tech[1].eol, false);
   assert.equal(rows[0].findings[0].evidence, "jQuery 1.12.4");
+  assert.equal(rows[0].render, null);
+});
+
+test("a rendered inventory is kept beside the host", () => {
+  const rows = summarizeSiteHits([
+    {
+      host: "rendered.example",
+      heat: 3,
+      peak_heat: 3,
+      heat_breakdown: {
+        render: { status: "rendered", scripts: 4, console_errors: 1, storage_keys: ["auth_token"] },
+      },
+      findings: [{ id: "storage-token", title: "A token-like name is in localStorage", evidence: "localStorage key: auth_token", remediation: "Move it." }],
+    },
+  ]);
+  assert.equal(rows[0].heat, 3);
+  assert.equal(rows[0].render?.scripts, 4);
+  assert.deepEqual(rows[0].render?.storage_keys, ["auth_token"]);
 });
 
 test("run history keeps counts and drops a row without an id", () => {

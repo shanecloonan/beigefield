@@ -161,6 +161,7 @@ def save_hit(report: dict[str, Any]) -> dict[str, Any]:
             "facts": report.get("facts") or [],
             "mode": report.get("mode") or "passive",
             "tech": report.get("tech") or [],
+            "render": report.get("render") or {},
         },
         "mode": report.get("mode") or "passive",
         "updated_at": datetime.now(timezone.utc).isoformat(),

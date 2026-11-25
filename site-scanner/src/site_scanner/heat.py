@@ -51,6 +51,7 @@ FACTS: dict[str, tuple[int, str, str, str]] = {
     "private-ip": (3, "exposure", "A private address is in a public response", "Remove internal addresses from headers and HTML."),
     "verbose-error": (4, "exposure", "A verbose error is in a public response", "Show a generic error page and log the details on the server."),
     "mixed-content": (3, "exposure", "An HTTPS page loads active content over HTTP", "Load scripts, frames, and stylesheets over HTTPS."),
+    "storage-token": (3, "exposure", "A token-like name is in localStorage", "Keep session tokens in HttpOnly cookies, not in localStorage."),
     "open-admin": (4, "exposure", "An admin path responds without a gate", "Require authentication before the admin page is rendered."),
     "secret-in-page": (8, "secrets", "A secret-shaped token is in a public response", "Remove the token from client code and rotate it."),
     "old-library": (6, "fingerprint", "A public page loads a library with a known old line", "Upgrade the library to a supported release."),

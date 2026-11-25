@@ -10,6 +10,7 @@ from site_scanner.fingerprint import fingerprint_pages
 from site_scanner.heat import score_facts
 from site_scanner.passive import passive_on
 from site_scanner.redact import redact
+from site_scanner.render import render_summary, storage_note
 
 _OLD_LIBS = (
     ("jquery-1.", "jquery 1.x"),
@@ -79,6 +80,9 @@ def facts_for_page(page: dict[str, Any]) -> list[str]:
     if page.get("firebase_root_open"):
         facts.append("firebase-root-open")
     facts.extend(item["id"] for item in passive_on(page))
+    stored = storage_note([str(item) for item in (page.get("storage_keys") or [])])
+    if stored:
+        facts.append(stored["id"])
     return facts
 
 
@@ -118,6 +122,9 @@ def report_for(host: str, pages: list[dict[str, Any]], *, active_ran: bool) -> d
         hit = exposure(safe)
         if hit:
             active_notes.setdefault(hit["id"], hit["evidence"])
+        stored = storage_note([str(item) for item in (safe.get("storage_keys") or [])])
+        if stored:
+            active_notes.setdefault(stored["id"], stored["evidence"])
         if kinds:
             evidence.append({
                 "path": str(page.get("path") or "/"),
@@ -158,7 +165,7 @@ def report_for(host: str, pages: list[dict[str, Any]], *, active_ran: bool) -> d
             finding["evidence"] = match["note"]
         else:
             finding["evidence"] = finding["title"]
-    return {
+    result = {
         "host": host,
         "heat": scored["heat"],
         "score_state": scored["score_state"],
@@ -168,3 +175,7 @@ def report_for(host: str, pages: list[dict[str, Any]], *, active_ran: bool) -> d
         "tech": [{"name": item["name"], "version": item["version"], "source": item["source"], "eol": item["eol"]} for item in tech],
         "mode": "active-baseline" if active_ran else "passive",
     }
+    summary = render_summary(pages)
+    if summary:
+        result["render"] = summary
+    return result
