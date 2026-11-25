@@ -348,6 +348,7 @@ def write_fork_verify_project(
         "unprivileged_sequence_cannot_extract",
         "erc4626-asset-shortfall",
         "share-price-monotonic",
+        "funded_perturbed_outsider_cannot_extract",
     ]
     (root / "test" / "ForkVerifyProperties.t.sol").write_text(
         _fork_verify_sol(_hex40(address), _hex40(ATTACKER_ADDRESS), sels),
@@ -666,6 +667,7 @@ def _write_fork_verify_std(dest: Path) -> None:
         "interface Vm {\n"
         "    function deal(address account, uint256 newBalance) external;\n"
         "    function prank(address msgSender) external;\n"
+        "    function mockCall(address callee, bytes calldata data, bytes calldata returnData) external;\n"
         "}\n",
         encoding="utf-8",
     )
@@ -695,6 +697,8 @@ def _fork_verify_sol(target_hex40: str, attacker_hex40: str, selectors: list[str
     total_assets = selector4("totalAssets()")[2:]
     total_supply = selector4("totalSupply()")[2:]
     convert_assets = selector4("convertToAssets(uint256)")[2:]
+    latest_answer = selector4("latestAnswer()")[2:]
+    get_reserves = selector4("getReserves()")[2:]
     return (
         "// SPDX-License-Identifier: MIT\n"
         "pragma solidity ^0.8.20;\n\n"
@@ -782,6 +786,27 @@ def _fork_verify_sol(target_hex40: str, attacker_hex40: str, selectors: list[str
         "            uint256 t0 = TARGET.balance;\n"
         "            vm.prank(ATTACKER);\n"
         "            (bool ok,) = TARGET.call{value: pay}(abi.encodePacked(sel));\n"
+        "            ok;\n"
+        "            if (_extracted(a0, t0) || _extracted(attackerStart, targetStart)) {\n"
+        '                revert("profit-attacker-balance");\n'
+        "            }\n"
+        "            _guard(price0);\n"
+        "        }\n"
+        "    }\n\n"
+        "    /// Deal a large balance and override price views on this contract, then repeat the sequence.\n"
+        "    /// An external feed the contract calls is not overridden.\n"
+        "    function test_funded_perturbed_outsider_cannot_extract() public {\n"
+        "        vm.deal(ATTACKER, 1_000_000 ether);\n"
+        "        attackerStart = ATTACKER.balance;\n"
+        f'        vm.mockCall(TARGET, abi.encodeWithSelector(bytes4(hex"{latest_answer}")), abi.encode(int256(50e8)));\n'
+        f'        vm.mockCall(TARGET, abi.encodeWithSelector(bytes4(hex"{get_reserves}")), abi.encode(uint112(1), uint112(1000000), uint32(1)));\n'
+        "        uint256 price0 = _price();\n"
+        "        uint256 n = sels.length < 8 ? sels.length : 8;\n"
+        "        for (uint256 i = 0; i < n; i++) {\n"
+        "            uint256 a0 = ATTACKER.balance;\n"
+        "            uint256 t0 = TARGET.balance;\n"
+        "            vm.prank(ATTACKER);\n"
+        "            (bool ok,) = TARGET.call(abi.encodePacked(sels[i]));\n"
         "            ok;\n"
         "            if (_extracted(a0, t0) || _extracted(attackerStart, targetStart)) {\n"
         '                revert("profit-attacker-balance");\n'

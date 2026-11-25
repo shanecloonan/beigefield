@@ -216,6 +216,16 @@ python -m eth_scanner sequence-invariants --model fair --json
 
 No RPC, no broadcast, and no call trace is stored.
 
+## Funded actor and price perturbation
+
+The same properties are run again after two local changes. The outsider’s wallet is set to a dealt balance (`10**24` in the model, `1_000_000 ether` in the fork harness). A spot reserve is skewed with that inventory, and a Chainlink-style answer is scaled by 10 and by 0. The dealt balance is not wealth: the fair model stays at heat 0. A payout that grows because of the skewed spot or the scaled answer is `profit-spot-reserve` or `profit-chainlink-answer`.
+
+On a fork, the harness deals the balance and overrides `latestAnswer` and `getReserves` on the contract under test, then repeats at most eight outsider calls. A feed the contract calls on some other address is not overridden. No extra RPC method is added.
+
+```bash
+python -m eth_scanner perturb-invariants --json
+```
+
 ## Buckets
 
 | Bucket | Meaning |
