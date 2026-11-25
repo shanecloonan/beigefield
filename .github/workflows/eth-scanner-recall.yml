@@ -1,0 +1,30 @@
+# Weekly recall gate. Labels only. The three corpora are not checked out.
+name: eth-scanner-recall
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recall:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Score authored bug-class labels
+        run: |
+          cd eth-scanner && PYTHONPATH=src python - <<'PY'
+          from eth_scanner.benchmark.corpus_recall import recall_report
+          report = recall_report()
+          print({k: report[k] for k in ("labeled", "hits", "misses", "recall", "baseline", "passes_baseline")})
+          if not report["passes_baseline"]:
+              raise SystemExit("recall fell below the baseline")
+          PY
+          PYTHONPATH=src python -m unittest tests.test_corpus_recall -q
