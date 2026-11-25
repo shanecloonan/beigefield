@@ -1,0 +1,73 @@
+# Modest pass over the non-Ethereum EVM chains. One chain at a time so the
+# shared Alchemy cap is not hit by five hosts at once. A missing RPC is not
+# a failure: discovery reuses the ETH_RPC_URL key, then a public endpoint.
+# Ethereum's 10-minute monitor is a different workflow and is not changed.
+name: evm-scanner-monitor
+
+on:
+  schedule:
+    - cron: "20 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      chain:
+        description: "bsc, arbitrum, base, optimism, or polygon. Empty runs every chain."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: evm-scanner-monitor-${{ matrix.chain }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        chain: [bsc, arbitrum, base, optimism, polygon]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install scanner
+        run: python -m pip install -e ./eth-scanner
+      - name: Discover funded contracts
+        env:
+          CHAIN: ${{ matrix.chain }}
+          ONLY: ${{ github.event.inputs.chain }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          ETH_SCANNER_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          ETH_RPC_URL: ${{ secrets.ETH_RPC_URL }}
+          BSC_RPC_URL: ${{ secrets.BSC_RPC_URL }}
+          ARBITRUM_RPC_URL: ${{ secrets.ARBITRUM_RPC_URL }}
+          BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
+          OPTIMISM_RPC_URL: ${{ secrets.OPTIMISM_RPC_URL }}
+          POLYGON_RPC_URL: ${{ secrets.POLYGON_RPC_URL }}
+        run: |
+          set -euo pipefail
+          if [ -n "${ONLY:-}" ] && [ "$ONLY" != "$CHAIN" ]; then
+            echo "dispatch asked for ${ONLY}; skipping ${CHAIN}"
+            exit 0
+          fi
+          LIMIT=4
+          case "$CHAIN" in
+            bsc|arbitrum|base) LIMIT=8 ;;
+          esac
+          if [ -z "${ETH_RPC_URL:-}" ]; then
+            echo "ETH_RPC_URL unset — public RPC fallback. Not a failure."
+          fi
+          ARGS=(evm-discover --chain "$CHAIN" --limit "$LIMIT" --json)
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
+            echo "SUPABASE secrets missing — dry run."
+            ARGS+=(--dry-run)
+          fi
+          python -m eth_scanner "${ARGS[@]}" || {
+            echo "discover soft-failed for ${CHAIN}"
+            exit 0
+          }
