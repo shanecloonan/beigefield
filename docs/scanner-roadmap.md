@@ -71,6 +71,7 @@ Configured in `eth-scanner/src/eth_scanner/heat.py` (`ETH_SCANNER_HEAT_*`):
 | Bytecode surface (evmole + whatsabi) | Yes — `surface_evidence`. An EIP-7702 delegation weighs 2. An EIP-1167 clone with a state-changing value selector weighs 2. An EIP-1967 resolution is shown and adds 0, because `proxy_evidence` already covers that proxy. Recovered selectors feed the local harness |
 | Sourcify storage layout and compiler metadata | Shown as `layout` and `metadata`. Both add 0. The layout is the input for later storage and upgrade checks |
 | External ERC-4626 suites (a16z, crytic) | Shown as `erc4626` and `properties`. Preparing the harness adds 0. A property that fails on a local fork is invariant heat. Medusa and Echidna output adds 0 until a live call confirms it |
+| Weird-token accounting | Shown as `weird`. Fee, rebase, missing return, pause, blocklist, approval race, and extreme decimals are original probes. The shape adds 0. A shortfall between credited assets and tokens held is invariant heat |
 | Unprotected value move, unverified upgradeable proxy, fresh high TVL | Yes — `unprotected_evidence` 3, `proxy_evidence` 2, `fresh_evidence` 2 (≤30 days and ≥ $100k). An EOA admin plus shape leads, with none of these, stays at 5 or below |
 | Single-engine generic detector | **No** heat alone |
 | Multi-engine agreement on a concrete finding | Raises **confidence**; may unlock heat only when paired with funds + failed invariant / privileged evidence (Phase A policy) |

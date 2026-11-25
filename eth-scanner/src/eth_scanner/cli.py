@@ -950,6 +950,18 @@ def main(argv: list[str] | None = None) -> int:
     external.add_argument("--json", action="store_true")
     external.add_argument("--write-dir", default="", help="work directory; default is the scanner work dir")
 
+    weird = sub.add_parser(
+        "weird-tokens",
+        help="Original vault-accounting probes for unusual tokens (no broadcast)",
+    )
+    weird.add_argument("--address", required=True, help="vault 0x…")
+    weird.add_argument("--asset", default="", help="underlying token, only for a local decimals() read")
+    weird.add_argument("--vault-source", default="", help="local Solidity file for the vault or adapter")
+    weird.add_argument("--asset-source", default="", help="local Solidity file for the token")
+    weird.add_argument("--decimals", type=int, default=None)
+    weird.add_argument("--fork-url", default="", help="local anvil only, one decimals() read, never printed")
+    weird.add_argument("--json", action="store_true")
+
     seq = sub.add_parser(
         "sequence-invariants",
         help="Multi-call ERC-4626 conservation model (no chain, no broadcast)",
@@ -1538,6 +1550,43 @@ def main(argv: list[str] | None = None) -> int:
                     public["crytic"],
                     public["heat"],
                 )
+            )
+        return 0 if public["status"] != "invalid" else 2
+
+    if args.cmd == "weird-tokens":
+        from eth_scanner.logic.weird_tokens import run_weird_probes
+        vault_source = ""
+        asset_source = ""
+        if args.vault_source:
+            vault_source = Path(args.vault_source).read_text(encoding="utf-8", errors="replace")
+        if args.asset_source:
+            asset_source = Path(args.asset_source).read_text(encoding="utf-8", errors="replace")
+        report = run_weird_probes(
+            vault=str(args.address),
+            vault_source=vault_source,
+            asset_source=asset_source,
+            decimals=args.decimals,
+            fork_url=str(args.fork_url or ""),
+            asset=str(args.asset or ""),
+        )
+        public = {
+            "status": report.get("status"),
+            "vault": report.get("vault"),
+            "adapter": report.get("adapter"),
+            "behaviors": report.get("behaviors") or [],
+            "results": [
+                {"id": row.get("id"), "status": row.get("status")}
+                for row in (report.get("results") or [])
+            ],
+            "heat": report.get("heat"),
+            "note": report.get("note"),
+        }
+        if args.json:
+            print(json.dumps(public, indent=2))
+        else:
+            print(
+                "weird-tokens %s status=%s adapter=%s heat=%s"
+                % (public["vault"] or args.address, public["status"], public["adapter"], public["heat"])
             )
         return 0 if public["status"] != "invalid" else 2
 
