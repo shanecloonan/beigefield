@@ -1,0 +1,33 @@
+# Mined-block watch. One log query and at most three receipts.
+# No mempool. Skips when ETH_RPC_URL or a watch list is unset.
+name: eth-scanner-shaped
+
+on:
+  schedule:
+    - cron: "11 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shaped:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Flag mined shapes
+        env:
+          ETH_RPC_URL: ${{ secrets.ETH_RPC_URL }}
+          ETH_SCANNER_WATCH: ${{ vars.ETH_SCANNER_WATCH }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ETH_RPC_URL:-}" ] || [ -z "${ETH_SCANNER_WATCH:-}" ]; then
+            echo "ETH_RPC_URL or ETH_SCANNER_WATCH unset — shaped watch skipped."
+            exit 0
+          fi
+          python -m pip install -e ./eth-scanner
+          python -m eth_scanner watch-shaped --blocks 20 --watched "$ETH_SCANNER_WATCH" --json

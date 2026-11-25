@@ -312,6 +312,14 @@ python -m eth_scanner upgrade-layout \
 A weekly job scores ten authored bug-class labels with the corpus patterns and the three shape leads. The baseline is 0.9: nine classes hit, and signature replay is the miss. scabench and Web3Bugs stay outside the tree. DeFiVulnLabs is not fetched. The snippets are original shapes, and the score adds no heat.
 
 
+## Shaped-transaction watch
+
+`watch-shaped` reads mined receipts. A fresh contract whose funds rose is ordered ahead of one whose funds did not. A flash-loan log plus at least eight logs, touching a watched address, is a shape. Bytecode clones from a local index are queued with it. `--blocks` uses `ETH_RPC_URL` for one `eth_getLogs` and at most three receipts, capped at 800 CU. Pending-transaction methods are refused. The board shows `shaped`. Heat stays 0.
+
+```bash
+python -m eth_scanner watch-shaped --creates fresh.json --watched 0x2222222222222222222222222222222222222222 --json
+```
+
 ## Incident replay
 
 `exploit-replay` measures whether detector leads would have flagged a victim named in a public incident. The DeFiHackLabs tree is an external checkout and is refused if it is inside this repo. Only the victim address, chain, and fork block are kept. `--fetch-source` reads Sourcify. With `ETH_RPC_URL` set, one `eth_getCode` runs at the block before the incident and stops at `--cu-cap` (default 4,000). A missing archive node is a skip. The printed recall sits next to the authored 0.9 bug-class baseline. The board shows `replay`. Heat stays 0.
