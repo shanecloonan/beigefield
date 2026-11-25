@@ -194,6 +194,7 @@ export function evidenceTags(breakdown: Record<string, unknown> | null): string[
   if (flagged("specs")) tags.push("specs");
   if (flagged("replay")) tags.push("replay");
   if (flagged("shaped")) tags.push("shaped");
+  if (flagged("flow") || amount("flow_score") > 0) tags.push("flow");
   return tags;
 }
 

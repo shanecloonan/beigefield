@@ -455,6 +455,19 @@ test("a replay tag shows an incident flag and does not change heat", () => {
   assert.deepEqual(board.leaderboard[0].evidence_tags, ["replay"]);
 });
 
+test("a flow tag shows a multi-contract path and does not change heat", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 1,
+      status: "done",
+      heat_breakdown: { flow: true, flow_score: 2 },
+    },
+  ]);
+  assert.equal(board.leaderboard[0].heat, 1);
+  assert.deepEqual(board.leaderboard[0].evidence_tags, ["flow"]);
+});
+
 test("a shaped tag shows a mined flash-loan hit and does not change heat", () => {
   const board = summarizeBlendRuns([
     {
