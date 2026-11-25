@@ -1127,6 +1127,19 @@ def main(argv: list[str] | None = None) -> int:
     flow.add_argument("--selectors", default="", help="comma-separated bytecode selectors")
     flow.add_argument("--json", action="store_true")
 
+    system = sub.add_parser(
+        "system-fork",
+        help="Name fund-flow dependencies for a loopback anvil. Heat stays 0.",
+    )
+    system.add_argument("--address", required=True, help="0x… target")
+    system.add_argument("--source", required=True, help="verified Solidity file")
+    system.add_argument("--on-shortlist", action="store_true")
+    system.add_argument("--verified", action="store_true")
+    system.add_argument("--fork-url", default="", help="loopback anvil URL; a public URL is refused and never printed")
+    system.add_argument("--run", action="store_true", help="read eth_getCode on that loopback anvil")
+    system.add_argument("--write-dir", default="", help="where to write the dependency set and the view test")
+    system.add_argument("--json", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -2248,6 +2261,48 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 "fund-flow nodes=%s edges=%s score=%s"
                 % (public["nodes"], public["edges"], public["flow_score"])
+            )
+        return 0
+
+    if args.cmd == "system-fork":
+        import json as _json
+        from eth_scanner.forks.system import plan_system, public_report
+        source = Path(args.source).read_text(encoding="utf-8", errors="replace")
+        caller = None
+        if args.run and args.fork_url:
+            from eth_scanner.ingest.rpc_client import rpc_call
+
+            def caller(url, method, params):
+                if method in {
+                    "eth_sendTransaction",
+                    "eth_sendRawTransaction",
+                    "eth_sendUnsignedTransaction",
+                    "eth_newPendingTransactionFilter",
+                    "eth_getFilterChanges",
+                    "txpool_content",
+                    "txpool_inspect",
+                    "eth_subscribe",
+                }:
+                    raise ValueError("system fork refuses a broadcast")
+                return rpc_call(url, method, params, timeout_s=8)
+
+        report = plan_system(
+            source,
+            address=str(args.address or ""),
+            fork_url=str(args.fork_url or ""),
+            on_shortlist=bool(args.on_shortlist),
+            verified=bool(args.verified),
+            execute=bool(args.run),
+            caller=caller,
+            dest=Path(args.write_dir) if args.write_dir else None,
+        )
+        public = public_report(report)
+        if args.json:
+            print(_json.dumps(public, indent=2))
+        else:
+            print(
+                "system-fork status=%s dependencies=%s loaded=%s"
+                % (public["status"], len(public["dependencies"]), public["loaded"])
             )
         return 0
 

@@ -468,6 +468,19 @@ test("a flow tag shows a multi-contract path and does not change heat", () => {
   assert.deepEqual(board.leaderboard[0].evidence_tags, ["flow"]);
 });
 
+test("a system tag shows a loopback dependency set and does not change heat", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 1,
+      status: "done",
+      heat_breakdown: { system: true },
+    },
+  ]);
+  assert.equal(board.leaderboard[0].heat, 1);
+  assert.deepEqual(board.leaderboard[0].evidence_tags, ["system"]);
+});
+
 test("a shaped tag shows a mined flash-loan hit and does not change heat", () => {
   const board = summarizeBlendRuns([
     {

@@ -310,6 +310,8 @@ During a scan, the similarity and cross-contract stages finish from the source a
 
 `fund-flow` links external calls, token approvals, and value-moving edges among oracles, AMMs, lending, and bridges. The path score is a lead. The board shows `flow`. Heat stays 0.
 
+`system-fork` names up to 12 of those dependency addresses for a loopback anvil, so a later local invariant run can hit the real integrations. `--run` only reads `eth_getCode` on that anvil. A public URL is refused. The board shows `system`. Heat stays 0.
+
 `watch-shaped` ranks fresh contracts that gained TVL ahead of flat ones and flags a mined transaction that has a flash-loan log plus many logs and touches a watched address. Matching runtime hashes are queued with it. Mempool methods are refused. The board shows `shaped`. Heat stays 0.
 
 `exploit-replay` reads an external DeFiHackLabs checkout for the victim address, chain, and block only. A weekly job samples 15 incidents, reads `eth_getCode` at the previous block under a 4,000 CU cap, and scores detector leads. The authored 0.9 bug-class baseline is reported beside that recall. The board shows `replay` when a row stores the flag. Heat stays 0.

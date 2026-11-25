@@ -320,6 +320,19 @@ A weekly job scores ten authored bug-class labels with the corpus patterns and t
 python -m eth_scanner fund-flow --source vault.sol --json
 ```
 
+## System fork
+
+`system-fork` takes the fund-flow dependency set for one verified shortlist contract and keeps at most 12 addresses. Oracles, AMMs, lending markets, and bridges are kept ahead of other external addresses. The command writes that set and a read-only code-size check. `--run` calls `eth_getCode` on a loopback anvil and does not start one. A public URL is refused and is not printed. No transaction is sent. The board shows `system`. Heat stays 0.
+
+```bash
+python -m eth_scanner system-fork \
+  --address 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+  --source vault.sol \
+  --on-shortlist --verified \
+  --fork-url http://127.0.0.1:8545 \
+  --json
+```
+
 ## Shaped-transaction watch
 
 `watch-shaped` reads mined receipts. A fresh contract whose funds rose is ordered ahead of one whose funds did not. A flash-loan log plus at least eight logs, touching a watched address, is a shape. Bytecode clones from a local index are queued with it. `--blocks` uses `ETH_RPC_URL` for one `eth_getLogs` and at most three receipts, capped at 800 CU. Pending-transaction methods are refused. The board shows `shaped`. Heat stays 0.
