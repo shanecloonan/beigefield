@@ -7,6 +7,8 @@ export const CHAIN_FILTERS = [
   { id: "bsc", label: "BNB" },
   { id: "arbitrum", label: "Arbitrum" },
   { id: "base", label: "Base" },
+  { id: "optimism", label: "Optimism" },
+  { id: "polygon", label: "Polygon" },
   { id: "solana", label: "Solana" },
   { id: "all", label: "All" },
 ] as const;
@@ -16,5 +18,7 @@ export function normalizeChain(value: unknown): string {
   if (!text || text === "eth" || text === "mainnet") return DEFAULT_CHAIN;
   if (text === "bnb" || text === "bnb-chain" || text === "binance") return "bsc";
   if (text === "arb" || text === "arbitrum-one") return "arbitrum";
+  if (text === "op") return "optimism";
+  if (text === "matic" || text === "pol") return "polygon";
   return text;
 }

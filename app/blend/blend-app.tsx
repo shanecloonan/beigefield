@@ -203,6 +203,9 @@ export default function BlendApp() {
                     <span className="min-w-0">
                       {row.contract_name && <span className="mr-2 text-brand-200">{row.contract_name}</span>}
                       <span className="font-mono text-[10px] text-brand-400">{row.address}</span>
+                      <span className="ml-2 inline-block rounded border border-brand-700 px-1.5 py-0.5 uppercase tracking-wider text-brand-400">
+                        {row.chain || "ethereum"}
+                      </span>
                     </span>
                     <span className="shrink-0 uppercase tracking-wider text-brand-400">
                       {row.liveness === "dead" ? "Dead" : "Exploited"}
@@ -251,7 +254,11 @@ export default function BlendApp() {
                       {row.contract_name && <span className="block text-brand-100">{row.contract_name}</span>}
                       <span className="block font-mono text-[10px] text-brand-400">{row.address}</span>
                     </td>
-                    <td className="px-3 py-2 uppercase tracking-wider text-brand-400">{row.chain || "ethereum"}</td>
+                    <td className="px-3 py-2">
+                      <span className="inline-block rounded border border-brand-700 px-1.5 py-0.5 uppercase tracking-wider text-brand-300">
+                        {row.chain || "ethereum"}
+                      </span>
+                    </td>
                     <td className="px-3 py-2 tabular-nums text-brand-100">
                       {row.peak_heat ?? row.heat}
                       {row.liveness && row.liveness !== "live" ? (
