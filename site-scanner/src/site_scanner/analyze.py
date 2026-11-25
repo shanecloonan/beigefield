@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from site_scanner.fingerprint import fingerprint_pages
 from site_scanner.heat import score_facts
 from site_scanner.redact import redact
 
@@ -109,6 +110,10 @@ def report_for(host: str, pages: list[dict[str, Any]], *, active_ran: bool) -> d
                 "path": str(page.get("path") or "/"),
                 "note": "secret kinds: %s" % ", ".join(kinds),
             })
+    tech = fingerprint_pages(pages)
+    eol = [item for item in tech if item.get("eol") and item.get("version")]
+    if eol:
+        fact_ids.append("known-eol")
     scored = score_facts([fact for fact in fact_ids if fact != "challenged"], active_ran=active_ran)
     if "challenged" in fact_ids:
         scored["facts"] = sorted(set(scored["facts"]) | {"challenged"})
@@ -124,6 +129,11 @@ def report_for(host: str, pages: list[dict[str, Any]], *, active_ran: bool) -> d
     for finding in scored["findings"]:
         if finding["id"] == "challenged":
             continue
+        if finding["id"] == "known-eol":
+            finding["evidence"] = ", ".join(
+                "%s %s" % (item["name"], item["version"]) for item in eol
+            )
+            continue
         match = next((item for item in evidence if finding["id"] == "secret-in-page"), None)
         if match and finding["id"] == "secret-in-page":
             finding["evidence"] = match["note"]
@@ -136,5 +146,6 @@ def report_for(host: str, pages: list[dict[str, Any]], *, active_ran: bool) -> d
         "pending_stages": scored["pending_stages"],
         "findings": scored["findings"],
         "facts": scored["facts"],
+        "tech": [{"name": item["name"], "version": item["version"], "source": item["source"], "eol": item["eol"]} for item in tech],
         "mode": "active-baseline" if active_ran else "passive",
     }

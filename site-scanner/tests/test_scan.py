@@ -11,6 +11,7 @@ import asyncio
 import httpx
 
 from site_scanner.fetch import USER_AGENT, _robots_disallows, _same_origin, fetch_host
+from site_scanner.fingerprint import match_page
 from site_scanner.analyze import report_for
 from site_scanner.discover import (
     hosts_from_certstream,
@@ -283,6 +284,35 @@ class ScanTests(unittest.TestCase):
         self.assertGreaterEqual(calls["n"], 2)
         self.assertEqual(pages[0]["status"], 200)
         self.assertEqual(pages[0]["path"], "/robots.txt")
+
+    def test_a_version_is_evidence_and_only_known_eol_adds_heat(self) -> None:
+        catalog = {
+            "jQuery": {"scriptSrc": "jquery[.-](\\d+\\.\\d+\\.\\d+)\\;version:\\1"},
+            "Nginx": {"headers": {"server": "nginx(?:/(\\d+\\.\\d+\\.\\d+))?\\;version:\\1"}},
+            "DemoLib": {"js": {"DemoLib.version": "(\\d+\\.\\d+)\\;version:\\1"}},
+        }
+        page = {
+            "path": "/",
+            "status": 200,
+            "headers": {"server": "nginx/1.24.0"},
+            "body": "<script src=\"/jquery-1.12.4.min.js\"></script>",
+            "js_globals": {"DemoLib.version": "2.1"},
+        }
+        hits = match_page(page, catalog=catalog)
+        by_name = {item["name"]: item for item in hits}
+        self.assertEqual(by_name["jQuery"]["version"], "1.12.4")
+        self.assertTrue(by_name["jQuery"]["eol"])
+        self.assertEqual(by_name["Nginx"]["version"], "1.24.0")
+        self.assertFalse(by_name["Nginx"]["eol"])
+        self.assertEqual(by_name["DemoLib"]["version"], "2.1")
+        self.assertEqual(by_name["DemoLib"]["source"], "js")
+        self.assertEqual(by_name["jQuery"]["heat_contribution"], 0)
+        report = report_for("app.example", [page], active_ran=True)
+        self.assertIn("known-eol", report["facts"])
+        eol = next(item for item in report["findings"] if item["id"] == "known-eol")
+        self.assertIn("jQuery 1.12.4", eol["evidence"])
+        self.assertNotIn("Nginx", eol["evidence"])
+        self.assertGreater(eol["heat"], 0)
 
 
 if __name__ == "__main__":

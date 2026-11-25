@@ -28,6 +28,7 @@ FACTS: dict[str, tuple[int, str, str, str]] = {
     "open-admin": (4, "exposure", "An admin path responds without a gate", "Require authentication before the admin page is rendered."),
     "secret-in-page": (8, "secrets", "A secret-shaped token is in a public response", "Remove the token from client code and rotate it."),
     "old-library": (6, "fingerprint", "A public page loads a library with a known old line", "Upgrade the library to a supported release."),
+    "known-eol": (4, "fingerprint", "A detected library is a known end-of-life release", "Upgrade that library to a release the project still supports."),
     "supabase-schema-open": (8, "cloud", "Supabase OpenAPI schema is readable", "Require a key for /rest/v1/ and enable RLS. Row data was not read."),
     "firebase-root-open": (8, "cloud", "Firebase root JSON is readable", "Tighten the Realtime Database rules. The body was not stored."),
     "dangling-host": (7, "takeover", "The response is a provider's missing-site page", "Remove the dangling DNS record or reclaim the name at the provider."),
