@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
-import time
 
 from site_scanner.allow import active_allowed, host_of
 from site_scanner.analyze import report_for
 from site_scanner.cloud import annotate_cloud
 from site_scanner.discover import FALLBACK_HOSTS, crt_hosts, live_discovery, take_batch, tranco_hosts
-from site_scanner.fetch import fetch_host
+from site_scanner.fetch import fetch_host_async
 from site_scanner.store import load_cursor, save_cursor, save_hit
 
 
@@ -27,12 +27,27 @@ def _hosts(args: argparse.Namespace) -> list[str]:
 
 
 def scan_host(host: str, *, bounty: set[str], pause_s: float = 0.35) -> dict:
+    return asyncio.run(scan_host_async(host, bounty=bounty, pause_s=pause_s))
+
+
+async def scan_host_async(host: str, *, bounty: set[str], pause_s: float = 0.35) -> dict:
     allowed = active_allowed(host, bounty)
-    pages = fetch_host(host, active=allowed, pause_s=pause_s)
+    pages = await fetch_host_async(host, active=allowed, pause_s=pause_s)
     annotate_cloud(pages)
     report = report_for(host, pages, active_ran=allowed)
     report["persist"] = save_hit(report)
     return report
+
+
+async def scan_hosts(hosts: list[str], bounty: set[str], *, pause_s: float = 0.35, concurrency: int = 2) -> list[dict]:
+    """At most `concurrency` hosts at once. Each host still waits between its own requests."""
+    gate = asyncio.Semaphore(max(1, concurrency))
+
+    async def one(host: str) -> dict:
+        async with gate:
+            return await scan_host_async(host, bounty=bounty, pause_s=pause_s)
+
+    return list(await asyncio.gather(*(one(host) for host in hosts)))
 
 
 def main() -> None:
@@ -65,11 +80,7 @@ def main() -> None:
     else:
         bounty = {host_of(item) for item in args.bounty_hosts.split(",") if item.strip()}
         hosts = _hosts(args)
-    reports = []
-    for index, host in enumerate(hosts):
-        if index:
-            time.sleep(0.25)
-        reports.append(scan_host(host, bounty=bounty))
+    reports = asyncio.run(scan_hosts(hosts, bounty))
     if cursor_note.get("status") == "pending":
         saved = save_cursor(list(cursor_note.pop("_seen") or []), int(cursor_note.get("cycle") or 0))
         cursor_note["status"] = saved.get("status")

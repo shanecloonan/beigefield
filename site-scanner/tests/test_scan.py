@@ -6,7 +6,11 @@ import unittest
 from datetime import datetime, timezone
 
 from site_scanner.allow import active_allowed
-from site_scanner.fetch import _robots_disallows, _same_origin
+import asyncio
+
+import httpx
+
+from site_scanner.fetch import USER_AGENT, _robots_disallows, _same_origin, fetch_host
 from site_scanner.analyze import report_for
 from site_scanner.discover import (
     hosts_from_certstream,
@@ -217,6 +221,68 @@ class ScanTests(unittest.TestCase):
         self.assertIn("--limit 6", text)
         self.assertIn("workflow_dispatch", text)
         self.assertNotIn("*/10 * * * *", text)
+
+    def test_a_challenge_is_not_retried_and_adds_no_heat(self) -> None:
+        calls = {"n": 0}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            calls["n"] += 1
+            self.assertEqual(request.headers["user-agent"], USER_AGENT)
+            self.assertIn("beigefield.com", request.headers["user-agent"])
+            return httpx.Response(403, text="Just a moment... cf-browser-verification", headers={"server": "cloudflare"})
+
+        async def no_sleep(_seconds: float) -> None:
+            return None
+
+        transport = httpx.MockTransport(handler)
+        client = httpx.AsyncClient(transport=transport, headers={"User-Agent": USER_AGENT})
+        try:
+            pages = fetch_host(
+                "blocked.example",
+                active=False,
+                pause_s=0,
+                client=client,
+                tls_check=lambda _host: {"tls_expired": False, "tls_soon": False},
+                sleep=no_sleep,
+            )
+        finally:
+            asyncio.run(client.aclose())
+        self.assertEqual(calls["n"], 1)
+        self.assertTrue(pages[0]["challenged"])
+        self.assertEqual(pages[0]["body"], "")
+        report = report_for("blocked.example", pages, active_ran=False)
+        self.assertEqual(report["heat"], 0)
+        self.assertIn("challenged", report["facts"])
+        self.assertEqual(report["findings"][0]["heat"], 0)
+
+    def test_a_transient_status_is_retried_once(self) -> None:
+        calls = {"n": 0}
+
+        def handler(_request: httpx.Request) -> httpx.Response:
+            calls["n"] += 1
+            if calls["n"] == 1:
+                return httpx.Response(503, text="unavailable")
+            return httpx.Response(200, text="User-agent: *\nDisallow: /private\n")
+
+        async def no_sleep(_seconds: float) -> None:
+            return None
+
+        transport = httpx.MockTransport(handler)
+        client = httpx.AsyncClient(transport=transport)
+        try:
+            pages = fetch_host(
+                "retry.example",
+                active=False,
+                pause_s=0,
+                client=client,
+                tls_check=lambda _host: {"tls_expired": False, "tls_soon": False},
+                sleep=no_sleep,
+            )
+        finally:
+            asyncio.run(client.aclose())
+        self.assertGreaterEqual(calls["n"], 2)
+        self.assertEqual(pages[0]["status"], 200)
+        self.assertEqual(pages[0]["path"], "/robots.txt")
 
 
 if __name__ == "__main__":
