@@ -943,6 +943,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     pert.add_argument("--json", action="store_true")
 
+    corp = sub.add_parser(
+        "corpus-scan",
+        help="Match SWC and incident-family patterns in source (no writeups, no broadcast)",
+    )
+    corp.add_argument("--source", required=True, help="local Solidity file")
+    corp.add_argument("--json", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -1468,6 +1475,30 @@ def main(argv: list[str] | None = None) -> int:
         else:
             failed = [row["id"] for row in report["results"] if row["status"] == "failed"]
             print("perturb-invariants heat=%s failed=%s" % (heat, ",".join(failed) or "none"))
+        return 0
+
+    if args.cmd == "corpus-scan":
+        from eth_scanner.heat import evidence_heat
+        from eth_scanner.logic.corpus import corpus_report
+        text = Path(args.source).read_text(encoding="utf-8", errors="replace")
+        report = corpus_report(text)
+        heat, breakdown = evidence_heat(
+            funds_usd=None,
+            invariant_results=[],
+            corpus_findings=report["findings"],
+        )
+        payload = {
+            "heat": heat,
+            "corpus_evidence": breakdown.get("corpus_evidence", 0),
+            "families_loaded": report["families_loaded"],
+            "findings": report["findings"],
+            "note": report["note"],
+        }
+        if args.json:
+            print(json.dumps(payload, indent=2))
+        else:
+            rules = [row.get("rule") for row in report["findings"] if row.get("counted")]
+            print("corpus-scan heat=%s rules=%s" % (heat, ",".join(str(r) for r in rules) or "none"))
         return 0
 
     if args.cmd == "fork-verify":

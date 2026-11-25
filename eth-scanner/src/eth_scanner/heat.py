@@ -275,6 +275,7 @@ def evidence_heat(
     conservation: Optional[list[dict[str, Any]]] = None,
     lead_ids: Optional[list[str]] = None,
     static_findings: Optional[list[Any]] = None,
+    corpus_findings: Optional[list[Any]] = None,
 ) -> tuple[int, dict[str, Any]]:
     """Compose heat from evidence only. Funds are ranking metadata, not heat."""
     w = weights or load_heat_weights()
@@ -310,7 +311,27 @@ def evidence_heat(
         scored = score_static(list(static_findings))
         static_points = int(scored["points"])
         static_rows = list(scored["rows"])
-    total = min(w.max_heat, inv + priv + eoa + corr + gated + static_points)
+    corpus_points = 0
+    corpus_rows: list[dict[str, Any]] = []
+    if corpus_findings:
+        from eth_scanner.logic.static_norm import score_static
+        scored = score_static(list(corpus_findings))
+        taken_rules = {str(row.get("rule") or "") for row in static_rows if row.get("counted")}
+        kept: list[dict[str, Any]] = []
+        for row in scored["rows"]:
+            item = dict(row)
+            if item.get("rule") in taken_rules:
+                item["counted"] = False
+                item["weight_applied"] = 0
+            elif item.get("counted"):
+                room = 6 - corpus_points
+                applied = min(int(item.get("weight_applied") or 0), room)
+                item["weight_applied"] = applied
+                item["counted"] = applied > 0
+                corpus_points += applied
+            kept.append(item)
+        corpus_rows = kept
+    total = min(w.max_heat, inv + priv + eoa + corr + gated + static_points + corpus_points)
     from eth_scanner.drain import score_drain
     drain = score_drain(
         funds_usd=funds_usd,
@@ -331,6 +352,7 @@ def evidence_heat(
         "gated_leads": gated,
         "gated_lead_ids": lead_names,
         "static_evidence": static_points,
+        "corpus_evidence": corpus_points,
         "contradictions": sorted(contradicted),
         "total": total,
         "drain_probability": drain["drain_probability"],
@@ -341,6 +363,8 @@ def evidence_heat(
     }
     if static_rows:
         breakdown["static_findings"] = static_rows
+    if corpus_rows:
+        breakdown["corpus_findings"] = corpus_rows
     return total, breakdown
 
 
