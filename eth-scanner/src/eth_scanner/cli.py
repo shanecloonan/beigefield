@@ -803,6 +803,13 @@ def main(argv: list[str] | None = None) -> int:
     maybe.add_argument("--note", default="")
     maybe.add_argument("--json", action="store_true")
 
+    pyro = sub.add_parser(
+        "pyrometer",
+        help="Pyrometer range analysis. High-confidence funds bounds are static evidence.",
+    )
+    pyro.add_argument("--source", default=None, help="local Solidity file")
+    pyro.add_argument("--json", action="store_true")
+
     wake = sub.add_parser(
         "wake-detect",
         help="Run Ackee Wake when it is installed. This command stores names only.",
@@ -1517,6 +1524,25 @@ def main(argv: list[str] | None = None) -> int:
             lower_by=args.lower,
             note=args.note,
         ), indent=2))
+        return 0
+
+    if args.cmd == "pyrometer":
+        import json as _json
+        from eth_scanner.engines.pyrometer_runner import run_pyrometer
+        text = ""
+        if args.source:
+            text = Path(args.source).read_text(encoding="utf-8", errors="replace")
+        report = run_pyrometer(text)
+        public = {
+            "status": report.get("status"),
+            "ranges": report.get("ranges") or [],
+            "heat_contribution": report.get("heat_contribution"),
+            "note": report.get("note"),
+        }
+        if args.json:
+            print(_json.dumps(public, indent=2))
+        else:
+            print("pyrometer status=%s heat=%s" % (public["status"], public["heat_contribution"]))
         return 0
 
     if args.cmd == "wake-detect":
