@@ -13,9 +13,9 @@ export default function Home() {
         <h1>Beigefield</h1>
         <span className="rule" aria-hidden="true" />
         <p>Blockchain Research</p>
-        <nav className="lockup-nav" aria-label="Tools">
-          <Link href="/blend">Blend</Link>
-          <Link href="/scan">Scan</Link>
+        <nav className="lockup-actions" aria-label="Sections">
+          <Link href="/blend">Blockchain</Link>
+          <Link href="/scan">Web</Link>
         </nav>
       </main>
     </div>
