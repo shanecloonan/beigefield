@@ -178,6 +178,11 @@ def _write_crytic_config(dest: Path, root: Path) -> dict[str, Any]:
             "callSequenceLength": 20,
             "targetContracts": [CRYTIC_CONTRACT],
             "corpusDir": "corpus",
+            "testing": {
+                "stopOnFailedTest": True,
+                "assertionTesting": {"enabled": True, "testViewMethods": False},
+                "propertyTesting": {"enabled": True, "testPrefixes": ["verify_", "property_"]},
+            },
         },
         "compilation": {
             "platform": "crytic-compile",
@@ -185,7 +190,7 @@ def _write_crytic_config(dest: Path, root: Path) -> dict[str, Any]:
         },
     }
     echidna = "\n".join([
-        "testMode: property",
+        "testMode: assertion",
         "testLimit: 50",
         "timeout: %d" % FUZZ_TIMEOUT_S,
         "workers: 1",

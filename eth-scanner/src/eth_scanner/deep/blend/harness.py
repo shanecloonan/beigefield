@@ -134,7 +134,7 @@ def seeded_harness(
         ident = _safe_id(prop)
         props.append(
             """
-    /// Seeded property %s. Evidence for the fuzzers. Not a transaction.
+    /// Seeded property %s. One body. Foundry, Echidna, and Medusa call it.
     function property_%s() public returns (bool) {
         uint256 beforeBal = outsider.balance;
         _exercise(address(0));
@@ -142,11 +142,9 @@ def seeded_harness(
     }
 
     function echidna_%s() public returns (bool) {
-        uint256 beforeBal = outsider.balance;
-        _exercise(address(0));
-        return outsider.balance <= beforeBal;
+        return property_%s();
     }
-""" % (prop, ident, ident)
+""" % (prop, ident, ident, ident)
         )
     return """
     /// Target-shaped exercise. Calls the verified surface with bounded amounts.
@@ -233,19 +231,15 @@ contract ConservationHarness {
         _check(target);
     }
 
-    /// Echidna property. False means the outsider balance rose. Local simulation only.
-    function echidna_no_caller_profit() public returns (bool) {
+    /// One conservation body. Medusa calls it. Echidna returns its result.
+    function property_no_caller_profit() public returns (bool) {
         uint256 beforeBal = outsider.balance;
         _check(address(0));
         return outsider.balance <= beforeBal;
     }
 
-    /// Medusa property. True means the outsider did not gain. Local only.
-    function property_no_caller_profit() public returns (bool) {
-        uint256 beforeBal = outsider.balance;
-        (bool ok, ) = address(0).call(abi.encodeWithSignature("skim()"));
-        ok;
-        return outsider.balance <= beforeBal;
+    function echidna_no_caller_profit() public returns (bool) {
+        return property_no_caller_profit();
     }
 
     /// Medusa assertion entry. Compile or setUp failure is a skip.

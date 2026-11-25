@@ -234,6 +234,17 @@ def write_live_fuzz_project(
         encoding="utf-8",
     )
     (root / "medusa.json").write_text(_medusa_json(), encoding="utf-8")
+    (root / "echidna.yaml").write_text(
+        "\n".join([
+            "testMode: property",
+            "testLimit: 50",
+            "timeout: 55",
+            "workers: 1",
+            "coverage: false",
+            "",
+        ]),
+        encoding="utf-8",
+    )
     return root, props
 
 
@@ -531,6 +542,44 @@ contract LiveProperties is Test {{
     function check_no_third_party_balance_drop() public {{
         test_no_third_party_balance_drop();
     }}
+
+    // One body per property. Foundry calls test_, Medusa calls property_,
+    // and Echidna calls echidna_, which returns the Medusa result.
+    function property_solvency_assets_cover_shares() public returns (bool) {{
+        test_solvency_assets_cover_shares();
+        return true;
+    }}
+
+    function echidna_solvency_assets_cover_shares() public returns (bool) {{
+        return property_solvency_assets_cover_shares();
+    }}
+
+    function property_share_price_round_trip(uint96 assets) public returns (bool) {{
+        testFuzz_share_price_round_trip(assets);
+        return true;
+    }}
+
+    function echidna_share_price_round_trip(uint96 assets) public returns (bool) {{
+        return property_share_price_round_trip(assets);
+    }}
+
+    function property_access_control_non_owner() public returns (bool) {{
+        test_access_control_non_owner();
+        return true;
+    }}
+
+    function echidna_access_control_non_owner() public returns (bool) {{
+        return property_access_control_non_owner();
+    }}
+
+    function property_no_third_party_balance_drop() public returns (bool) {{
+        test_no_third_party_balance_drop();
+        return true;
+    }}
+
+    function echidna_no_third_party_balance_drop() public returns (bool) {{
+        return property_no_third_party_balance_drop();
+    }}
 {extra}}}
 """
 
@@ -550,7 +599,14 @@ def _medusa_json() -> str:
     "deployerAddress": "0x10000",
     "senderAddresses": ["0x20000", "0x30000"],
     "blockNumberDelayMax": 0,
-    "blockTimestampDelayMax": 0
+    "blockTimestampDelayMax": 0,
+    "testing": {
+      "stopOnFailedTest": true,
+      "testAllContracts": false,
+      "assertionTesting": {"enabled": true, "testViewMethods": false},
+      "propertyTesting": {"enabled": true, "testPrefixes": ["property_"]},
+      "optimizationTesting": {"enabled": false}
+    }
   },
   "compilation": {
     "platform": "crytic-compile",
