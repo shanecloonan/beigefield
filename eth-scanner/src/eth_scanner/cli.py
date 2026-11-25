@@ -1089,6 +1089,16 @@ def main(argv: list[str] | None = None) -> int:
     specs.add_argument("--run", action="store_true", help="start a local engine binary when one is installed")
     specs.add_argument("--json", action="store_true")
 
+    replay = sub.add_parser(
+        "exploit-replay",
+        help="Score a sample of external incident headers. No exploit bodies. Heat stays 0.",
+    )
+    replay.add_argument("--checkout", required=True, help="DeFiHackLabs directory outside this repo")
+    replay.add_argument("--sample", type=int, default=15, help="incidents this run, clamped to 1–20")
+    replay.add_argument("--fetch-source", action="store_true", help="read Sourcify for the victim address")
+    replay.add_argument("--cu-cap", type=int, default=4000, help="Alchemy compute units for historical code reads")
+    replay.add_argument("--json", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -2072,6 +2082,40 @@ def main(argv: list[str] | None = None) -> int:
                 % (public["address"], public["status"], len(public["properties"]))
             )
         return 0 if public["status"] != "invalid" else 2
+
+    if args.cmd == "exploit-replay":
+        import json as _json
+        import os as _os
+        from eth_scanner.benchmark.exploit_replay import live_report as replay_report
+        from eth_scanner.ingest.rpc_client import rpc_call
+
+        caller = None
+        rpc = (_os.environ.get("ETH_RPC_URL") or "").strip()
+        if rpc:
+            def caller(method, params, _rpc=rpc):  # type: ignore[no-redef]
+                return rpc_call(_rpc, method, params, timeout_s=12)
+
+        report = replay_report(
+            Path(args.checkout),
+            sample=int(args.sample or 15),
+            fetch_source=bool(args.fetch_source),
+            caller=caller,
+            cu_cap=int(args.cu_cap or 4000),
+        )
+        if args.json:
+            print(_json.dumps(report, indent=2))
+        else:
+            print(
+                "exploit-replay status=%s sampled=%s recall=%s authored=%s cu=%s"
+                % (
+                    report.get("status"),
+                    report.get("sampled"),
+                    report.get("recall"),
+                    report.get("authored_recall"),
+                    (report.get("cu") or {}).get("spent"),
+                )
+            )
+        return 0 if report.get("authored_passes", True) else 1
 
     if args.cmd == "fork-verify":
         from eth_scanner.engines.fork_verify import (
