@@ -179,6 +179,7 @@ export function evidenceTags(breakdown: Record<string, unknown> | null): string[
   if (flagged("source_metadata")) tags.push("metadata");
   if (flagged("erc4626_suite")) tags.push("erc4626");
   if (flagged("crytic_properties")) tags.push("properties");
+  if (flagged("weird_tokens")) tags.push("weird");
   if (amount("unprotected_evidence") > 0) tags.push("unprotected");
   if (amount("proxy_evidence") > 0) tags.push("proxy");
   if (amount("fresh_evidence") > 0) tags.push("fresh");

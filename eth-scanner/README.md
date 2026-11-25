@@ -211,6 +211,18 @@ python -m eth_scanner external-suites \
   --json
 ```
 
+## Weird-token accounting
+
+The probes for fee-on-transfer, rebasing, missing return, pause, blocklist, approval race, and extreme decimals are original. The unlicensed weird-erc20 suite is not vendored. A token shape adds no heat. Heat is added only when the adapter credits more assets than the tokens it holds, or takes tokens and mints no shares. `--fork-url` is used only when it is a local anvil, and only for one `decimals()` read. The URL is not printed. The board shows `weird` when a probe ran.
+
+```bash
+python -m eth_scanner weird-tokens \
+  --address 0x1111111111111111111111111111111111111111 \
+  --vault-source vault.sol \
+  --asset-source token.sol \
+  --json
+```
+
 Slither, Aderyn, and Semgrep each get a timeout (`--timeout`, clamped to 5–180 seconds). Semgrep uses `research/semgrep/solidity.yml`. Set `ETH_SCANNER_SEMGREP_RULES` to a local checkout of a Decurity-style Solidity pack to add those rules; the default run does not download a ruleset.
 
 Findings are normalized to one scale. An allowlisted high-confidence funds detector adds 3 points of `static_evidence`, a medium detector adds 1, and the component caps at 6. Ownable / AccessControl hits, style checks, and informational detectors add 0. The points are a heat component, not a verdict.

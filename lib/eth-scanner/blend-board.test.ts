@@ -337,3 +337,16 @@ test("external suite tags do not change heat", () => {
   assert.equal(board.leaderboard[0].heat, 0);
   assert.deepEqual(board.leaderboard[0].evidence_tags, ["erc4626", "properties"]);
 });
+
+test("a weird-token tag does not change heat", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 3,
+      status: "done",
+      heat_breakdown: { invariants_failed: 3, weird_tokens: true },
+    },
+  ]);
+  assert.equal(board.leaderboard[0].heat, 3);
+  assert.deepEqual(board.leaderboard[0].evidence_tags, ["invariant", "weird"]);
+});
