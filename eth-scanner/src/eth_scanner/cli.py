@@ -938,6 +938,18 @@ def main(argv: list[str] | None = None) -> int:
     layout.add_argument("--json", action="store_true")
     layout.add_argument("--dry-run", action="store_true")
 
+    external = sub.add_parser(
+        "external-suites",
+        help="Thin fork harness for the external AGPL ERC-4626 suites (no broadcast)",
+    )
+    external.add_argument("--address", required=True, help="vault 0x…")
+    external.add_argument("--asset", default="", help="underlying asset 0x…")
+    external.add_argument("--class", dest="contract_class", default="", help="skip unless this is an ERC-4626")
+    external.add_argument("--fork-url", default="http://127.0.0.1:8545", help="used only with --run, and only if it is local")
+    external.add_argument("--run", action="store_true", help="run forge on a local anvil fork")
+    external.add_argument("--json", action="store_true")
+    external.add_argument("--write-dir", default="", help="work directory; default is the scanner work dir")
+
     seq = sub.add_parser(
         "sequence-invariants",
         help="Multi-call ERC-4626 conservation model (no chain, no broadcast)",
@@ -1491,6 +1503,43 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         return 0
+
+    if args.cmd == "external-suites":
+        from eth_scanner.logic.external_suites import prepare_external_suites
+        dest = Path(args.write_dir) if args.write_dir else settings.work_dir / "external-suites"
+        report = prepare_external_suites(
+            vault=str(args.address),
+            asset=str(args.asset or ""),
+            dest=dest,
+            fork_url="" if not args.run else str(args.fork_url or ""),
+            run=bool(args.run),
+            contract_class=str(args.contract_class or ""),
+        )
+        public = {
+            "status": report.get("status"),
+            "vault": report.get("vault"),
+            "asset": report.get("asset"),
+            "erc4626": report.get("erc4626"),
+            "crytic": report.get("crytic"),
+            "properties": report.get("properties") or [],
+            "results": report.get("results") or [],
+            "heat": report.get("heat"),
+            "note": report.get("note"),
+        }
+        if args.json:
+            print(json.dumps(public, indent=2))
+        else:
+            print(
+                "external-suites %s status=%s erc4626=%s crytic=%s heat=%s"
+                % (
+                    public["vault"] or args.address,
+                    public["status"],
+                    public["erc4626"],
+                    public["crytic"],
+                    public["heat"],
+                )
+            )
+        return 0 if public["status"] != "invalid" else 2
 
     if args.cmd == "sequence-invariants":
         from eth_scanner.logic.sequences import known_models, sequence_heat

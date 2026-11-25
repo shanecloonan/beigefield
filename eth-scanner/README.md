@@ -199,6 +199,18 @@ Verified source is read from Sourcify first, then Etherscan when a key is alread
 python -m eth_scanner source-layout --address 0x1111111111111111111111111111111111111111 --json --dry-run
 ```
 
+## External ERC-4626 suites
+
+`a16z/erc4626-tests` and `crytic/properties` are AGPL-3.0. They are git submodules under `eth-scanner/external` and are never imported or copied into this package. `external-suites` writes a thin MIT Foundry adapter in the work directory and points Medusa and Echidna at the crytic checkout. The command skips a suite that is not checked out. `--run` refuses any fork URL that is not a local anvil, and it does not print the URL. A property failure on that local fork counts as invariant heat. Fuzzer output does not. The board shows `erc4626` and `properties` when the adapter or the config was written.
+
+```bash
+git submodule update --init --depth 1
+python -m eth_scanner external-suites \
+  --address 0x1111111111111111111111111111111111111111 \
+  --asset 0x2222222222222222222222222222222222222222 \
+  --json
+```
+
 Slither, Aderyn, and Semgrep each get a timeout (`--timeout`, clamped to 5–180 seconds). Semgrep uses `research/semgrep/solidity.yml`. Set `ETH_SCANNER_SEMGREP_RULES` to a local checkout of a Decurity-style Solidity pack to add those rules; the default run does not download a ruleset.
 
 Findings are normalized to one scale. An allowlisted high-confidence funds detector adds 3 points of `static_evidence`, a medium detector adds 1, and the component caps at 6. Ownable / AccessControl hits, style checks, and informational detectors add 0. The points are a heat component, not a verdict.

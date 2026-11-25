@@ -1,0 +1,6 @@
+[submodule "eth-scanner/external/erc4626-tests"]
+	path = eth-scanner/external/erc4626-tests
+	url = https://github.com/a16z/erc4626-tests.git
+[submodule "eth-scanner/external/crytic-properties"]
+	path = eth-scanner/external/crytic-properties
+	url = https://github.com/crytic/properties.git
