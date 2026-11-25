@@ -1,1 +1,1 @@
-one-shot signal rerun, second pass. Pushing this file to main starts eth-scanner-signal-rerun.yml.
+small-value queue pass: re-score 100 small-value (<=$500k) high-probability contracts plus all historical signals through Lane A with fork verify on. Pushing this file to main starts eth-scanner-signal-rerun.yml.
