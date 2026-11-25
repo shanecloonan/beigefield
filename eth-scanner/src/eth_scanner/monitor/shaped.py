@@ -272,6 +272,25 @@ def live_logs(
     }
 
 
+def queue_rows(plan: dict[str, Any]) -> list[dict[str, Any]]:
+    """Targets the fresh-deploy lane scans first. The reason stays a label."""
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in plan.get("queue") or []:
+        addr = _addr(row.get("address"))
+        if not addr or addr in seen:
+            continue
+        seen.add(addr)
+        rows.append({
+            "address": addr,
+            "discovery_source": "fresh-deploy",
+            "reason": str(row.get("source") or "fresh-deploy"),
+            "funds_usd": row.get("funds_usd"),
+            "heat_contribution": 0,
+        })
+    return rows
+
+
 def refuse_mempool(method: str) -> None:
     if method in _MEMPOOL:
         raise ValueError("mempool methods are not used")

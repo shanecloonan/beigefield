@@ -1109,6 +1109,7 @@ def main(argv: list[str] | None = None) -> int:
     watch.add_argument("--index", default="", help="JSON bytecode index of address and runtime_hash")
     watch.add_argument("--hashes", default="", help="JSON object of address to runtime hash")
     watch.add_argument("--blocks", type=int, default=0, help="mined lookback when ETH_RPC_URL is set; 0 stays offline")
+    watch.add_argument("--enqueue", action="store_true", help="upsert the queue as fresh-deploy targets")
     watch.add_argument("--json", action="store_true")
 
     args, rest = p.parse_known_args(argv)
@@ -2134,7 +2135,8 @@ def main(argv: list[str] | None = None) -> int:
         import os as _os
         from eth_scanner.chain.cu_budget import CuBudget
         from eth_scanner.ingest.rpc_client import rpc_call
-        from eth_scanner.monitor.shaped import fetch_receipts, live_logs, plan_watch, refuse_mempool
+        from eth_scanner.monitor.shaped import fetch_receipts, live_logs, plan_watch, queue_rows, refuse_mempool
+        from eth_scanner.types import Target
 
         def _load(path: str, fallback):
             if not path:
@@ -2174,12 +2176,25 @@ def main(argv: list[str] | None = None) -> int:
         )
         if cu is not None:
             report["cu"] = cu
+        queued = queue_rows(report)
+        enqueued = 0
+        if args.enqueue:
+            for row in queued:
+                funds = row.get("funds_usd")
+                store.upsert_target(Target(
+                    address=row["address"],
+                    status="pending",
+                    discovery_source="fresh-deploy",
+                    funds_usd=float(funds) if isinstance(funds, (int, float)) else None,
+                ))
+                enqueued += 1
         public = {
             "status": report.get("status"),
             "shaped": report.get("shaped"),
             "hits": len(report.get("hits") or []),
             "queue": [row.get("address") for row in (report.get("queue") or [])],
             "clones": [row.get("address") for row in (report.get("clones") or [])],
+            "enqueued": enqueued,
             "heat": 0,
             "heat_breakdown": {"shaped": bool(report.get("shaped"))},
             "cu": (report.get("cu") or {}).get("spent"),

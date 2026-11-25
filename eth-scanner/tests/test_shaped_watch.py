@@ -12,6 +12,7 @@ from eth_scanner.monitor.shaped import (
     flash_topics,
     plan_watch,
     prioritize,
+    queue_rows,
     refuse_mempool,
     shaped_transactions,
 )
@@ -76,6 +77,10 @@ class ShapedWatchTests(unittest.TestCase):
         self.assertEqual(report["hits"][0]["touched"], [WATCHED])
         self.assertEqual(report["clones"][0]["address"], CLONE)
         self.assertEqual(report["queue"][0]["address"], WATCHED)
+        queued = queue_rows(report)
+        self.assertEqual(queued[0]["discovery_source"], "fresh-deploy")
+        self.assertEqual(queued[0]["reason"], "shaped")
+        self.assertEqual(queued[0]["heat_contribution"], 0)
         blob = json.dumps(report)
         self.assertNotIn("deadbeef", blob)
         self.assertNotIn("input", blob)
