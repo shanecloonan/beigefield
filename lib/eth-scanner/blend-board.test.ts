@@ -298,3 +298,16 @@ test("evidence tags come from the breakdown and do not change heat", () => {
     "fresh",
   ]);
 });
+
+test("a bytecode surface tag does not change the stored heat", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 2,
+      status: "done",
+      heat_breakdown: { surface_evidence: 2, bytecode_surface: true },
+    },
+  ]);
+  assert.equal(board.leaderboard[0].heat, 2);
+  assert.deepEqual(board.leaderboard[0].evidence_tags, ["surface"]);
+});

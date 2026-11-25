@@ -146,6 +146,7 @@ def write_live_fuzz_project(
     source_dir: Optional[Path] = None,
     allow_mock_etch: bool = False,
     include_target_sources: bool = False,
+    surface: Optional[dict] = None,
 ) -> tuple[Path, list[str]]:
     """Materialize a Foundry (+ Medusa/Halmos) project with forge-std + etch setUp.
 
@@ -219,10 +220,16 @@ def write_live_fuzz_project(
     if not etch_hex and allow_mock_etch:
         etch_hex = MOCK_BOUND_RUNTIME_HEX
 
+    extra = ""
+    if surface:
+        from eth_scanner.logic.bytecode_surface import surface_test_source, write_surface_inputs
+        extra = surface_test_source(surface)
+        write_surface_inputs(root, surface)
     (root / "test" / "LiveProperties.t.sol").write_text(
         _live_properties_sol(
             addr_hex, name, contract_class, props,
             etch_hex=etch_hex,
+            extra=extra,
         ),
         encoding="utf-8",
     )
@@ -367,6 +374,7 @@ def _live_properties_sol(
     props: list[str],
     *,
     etch_hex: str = "",
+    extra: str = "",
 ) -> str:
     """Generate Foundry/Halmos test contract with vm.etch setUp."""
     prop_comments = "\n".join("/// - %s" % p for p in props)
@@ -523,7 +531,7 @@ contract LiveProperties is Test {{
     function check_no_third_party_balance_drop() public {{
         test_no_third_party_balance_drop();
     }}
-}}
+{extra}}}
 """
 
 

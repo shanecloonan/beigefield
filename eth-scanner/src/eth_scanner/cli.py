@@ -958,6 +958,14 @@ def main(argv: list[str] | None = None) -> int:
     clones.add_argument("--index", default="", help="JSON index; default data/exploit_bytecode_index.json")
     clones.add_argument("--json", action="store_true")
 
+    surface = sub.add_parser(
+        "bytecode-surface",
+        help="Union evmole and whatsabi selectors for an unverified contract (no broadcast)",
+    )
+    surface.add_argument("--code-file", required=True, help="file containing runtime bytecode hex")
+    surface.add_argument("--json", action="store_true")
+    surface.add_argument("--write-dir", default="", help="write the local harness inputs here")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -1533,6 +1541,39 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 "clone-match heat=%s kind=%s id=%s"
                 % (heat, found.get("kind"), found.get("id") or "none")
+            )
+        return 0
+
+    if args.cmd == "bytecode-surface":
+        from eth_scanner.heat import evidence_heat
+        from eth_scanner.logic.bytecode_surface import recover_surface, write_surface_inputs
+        code = Path(args.code_file).read_text(encoding="utf-8", errors="replace")
+        found = recover_surface(code)
+        heat, breakdown = evidence_heat(
+            funds_usd=None,
+            invariant_results=[],
+            bytecode_surface=found,
+        )
+        payload = {
+            "heat": heat,
+            "surface_evidence": breakdown.get("surface_evidence", 0),
+            "bytecode_surface": breakdown.get("bytecode_surface", False),
+            "surface_overlap": breakdown.get("surface_overlap") or "",
+            "functions": found.get("functions") or [],
+            "storage": found.get("storage") or [],
+            "proxy_kind": found.get("proxy_kind") or "",
+            "implementation": found.get("implementation") or "",
+            "tools": found.get("tools") or {},
+            "note": found.get("note") or "Selectors feed the local harness. A delegation is evidence, not a verdict.",
+        }
+        if args.write_dir:
+            payload["wrote"] = write_surface_inputs(Path(args.write_dir), found)
+        if args.json:
+            print(json.dumps(payload, indent=2))
+        else:
+            print(
+                "bytecode-surface heat=%s selectors=%d proxy=%s"
+                % (heat, len(payload["functions"]), payload["proxy_kind"] or "none")
             )
         return 0
 
