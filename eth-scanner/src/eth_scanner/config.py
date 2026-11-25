@@ -121,6 +121,7 @@ class Settings:
     supabase_url: str = DEFAULT_SUPABASE_URL
     supabase_service_role_key: str = ""
     eth_rpc_url: str = ""
+    archive_rpc_url: str = ""
     dry_run: bool = False
     work_dir: Path = DEFAULT_WORK_DIR
     heat_threshold: int = DEFAULT_HEAT_THRESHOLD
@@ -181,6 +182,7 @@ def load_settings() -> Settings:
         supabase_url=url.rstrip("/"),
         supabase_service_role_key=service_key,
         eth_rpc_url=os.environ.get("ETH_RPC_URL", ""),
+        archive_rpc_url=os.environ.get("ARCHIVE_RPC_URL", ""),
         dry_run=dry,
         work_dir=work,
         heat_threshold=heat,

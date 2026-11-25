@@ -508,6 +508,19 @@ test("a disclosure draft shows its triage and does not change heat", () => {
   assert.deepEqual(board.leaderboard[0].evidence_tags, ["disclosure"]);
 });
 
+test("an archive tag shows a configured archive RPC and does not change heat", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 2,
+      status: "done",
+      heat_breakdown: { archive: true },
+    },
+  ]);
+  assert.equal(board.leaderboard[0].heat, 2);
+  assert.deepEqual(board.leaderboard[0].evidence_tags, ["archive"]);
+});
+
 test("a shaped tag shows a mined flash-loan hit and does not change heat", () => {
   const board = summarizeBlendRuns([
     {

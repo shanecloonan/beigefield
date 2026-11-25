@@ -1162,6 +1162,14 @@ def main(argv: list[str] | None = None) -> int:
     disclose.add_argument("--write-dir", default="", help="where to write the draft")
     disclose.add_argument("--json", action="store_true")
 
+    archive = sub.add_parser(
+        "archive-plan",
+        help="Choose an archive RPC or fall back to the current one. Nothing is probed. Heat stays 0.",
+    )
+    archive.add_argument("--historical", action="store_true", help="prefer ARCHIVE_RPC_URL for an old block")
+    archive.add_argument("--method", default="", help="JSON-RPC method name; send methods are refused")
+    archive.add_argument("--json", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -2150,14 +2158,21 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "exploit-replay":
         import json as _json
-        import os as _os
         from eth_scanner.benchmark.exploit_replay import live_report as replay_report
+        from eth_scanner.chain.archive import historical_url, plan_archive, public_plan
         from eth_scanner.ingest.rpc_client import rpc_call
 
         caller = None
-        rpc = (_os.environ.get("ETH_RPC_URL") or "").strip()
+        choice = public_plan(plan_archive(historical=True))
+        rpc = historical_url()
         if rpc:
             def caller(method, params, _rpc=rpc):  # type: ignore[no-redef]
+                if method in {
+                    "eth_sendTransaction",
+                    "eth_sendRawTransaction",
+                    "eth_sendUnsignedTransaction",
+                }:
+                    raise ValueError("historical read refuses a broadcast")
                 return rpc_call(_rpc, method, params, timeout_s=12)
 
         report = replay_report(
@@ -2167,6 +2182,7 @@ def main(argv: list[str] | None = None) -> int:
             caller=caller,
             cu_cap=int(args.cu_cap or 4000),
         )
+        report["rpc_source"] = choice["source"]
         if args.json:
             print(_json.dumps(report, indent=2))
         else:
@@ -2362,6 +2378,17 @@ def main(argv: list[str] | None = None) -> int:
             print(_json.dumps(public, indent=2))
         else:
             print("disclose status=%s triage=%s sent=%s" % (public["status"], public["triage"], public["sent"]))
+        return 0
+
+    if args.cmd == "archive-plan":
+        import json as _json
+        from eth_scanner.chain.archive import plan_archive, public_plan
+        report = plan_archive(historical=bool(args.historical), method=str(args.method or ""))
+        public = public_plan(report)
+        if args.json:
+            print(_json.dumps(public, indent=2))
+        else:
+            print("archive-plan source=%s fallback=%s" % (public["source"], public["fallback"]))
         return 0
 
     if args.cmd == "fork-verify":

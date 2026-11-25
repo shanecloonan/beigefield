@@ -1,0 +1,8 @@
+[Unit]
+Description=Erigon 3 archive RPC (sample; this repository does not enable it)
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/erigon --datadir=/var/lib/erigon --prune.mode=archive --http.addr=127.0.0.1 --http.port=8545 --http.api=eth,web3,net,debug,trace
+Restart=no
+# The binary is not installed by this repository. Do not start the unit.

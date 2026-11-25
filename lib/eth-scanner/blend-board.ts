@@ -209,6 +209,7 @@ export function evidenceTags(breakdown: Record<string, unknown> | null): string[
   if (flagged("system")) tags.push("system");
   if (flagged("fuzz_corpus")) tags.push("fuzz-corpus");
   if (flagged("disclosure") || disclosureStatus(breakdown)) tags.push("disclosure");
+  if (flagged("archive")) tags.push("archive");
   return tags;
 }
 

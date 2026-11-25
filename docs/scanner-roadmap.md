@@ -316,6 +316,8 @@ During a scan, the similarity and cross-contract stages finish from the source a
 
 `disclose` writes a draft with triage unreviewed, reviewing, fp, or credible. `--lookup` GETs security.txt. Immunefi, Cantina, and SEAL 911 stay public URLs. The draft is not sent. The board shows `disclosure` and the status. Heat stays 0.
 
+`archive-plan` selects `ARCHIVE_RPC_URL` for a historical or trace read and falls back to `ETH_RPC_URL` when the archive URL is unset. The URL is not printed. Trace support is not probed, so a 1,000 CU `debug_traceTransaction` is not spent. Send methods are refused. `infra/erigon` is a loopback Erigon 3.8.2 archive sample and is not started. The board shows `archive` when the archive URL is configured. Heat stays 0.
+
 `watch-shaped` ranks fresh contracts that gained TVL ahead of flat ones and flags a mined transaction that has a flash-loan log plus many logs and touches a watched address. Matching runtime hashes are queued with it. Mempool methods are refused. The board shows `shaped`. Heat stays 0.
 
 `exploit-replay` reads an external DeFiHackLabs checkout for the victim address, chain, and block only. A weekly job samples 15 incidents, reads `eth_getCode` at the previous block under a 4,000 CU cap, and scores detector leads. The authored 0.9 bug-class baseline is reported beside that recall. The board shows `replay` when a row stores the flag. Heat stays 0.
