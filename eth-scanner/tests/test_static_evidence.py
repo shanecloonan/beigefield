@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from eth_scanner.deep.runners import EngineRunResult
 from eth_scanner.heat import evidence_heat
-from eth_scanner.logic.source_fetch import fetch_verified_source, solidity_from_payload
+from eth_scanner.logic.source_fetch import fetch_verified_source, metadata_summary, solidity_from_payload, storage_slots
 from eth_scanner.logic.static_norm import clean_evidence, score_static
 from eth_scanner.logic.static_run import local_semgrep_argv, run_static_command
 from eth_scanner.store.supabase import MemoryStore, SupabaseStore
@@ -150,6 +150,42 @@ class Fetch(unittest.TestCase):
         self.assertEqual(row["source"], "")
         self.assertFalse(row["verified"])
         self.assertEqual(row["heat_contribution"], 0)
+        self.assertEqual(row["storage_layout"], [])
+
+    def test_layout_and_metadata_are_kept_and_add_no_heat(self):
+        payload = {
+            "stdJsonInput": {"sources": {"A.sol": {"content": "contract A { uint256 x; }"}}},
+            "metadata": {"language": "Solidity", "compiler": {"version": "0.8.20+commit.a1b79de6"}},
+            "storageLayout": {
+                "storage": [
+                    {"label": "x", "slot": "0", "offset": 0, "type": "t_uint256"},
+                    {"label": "owner", "slot": "1", "offset": 0, "type": "t_address"},
+                ],
+                "types": {
+                    "t_uint256": {"label": "uint256"},
+                    "t_address": {"label": "address"},
+                },
+            },
+        }
+        self.assertEqual(metadata_summary(payload)["compiler"], "0.8.20+commit.a1b79de6")
+        slots = storage_slots(payload)
+        self.assertEqual(slots[0]["type"], "uint256")
+        self.assertEqual(len(slots), 2)
+
+        def fetch(url: str):
+            self.assertIn("metadata", url)
+            self.assertIn("storageLayout", url)
+            self.assertNotIn("fields=all", url)
+            return payload
+
+        row = fetch_verified_source(ADDR, fetch_json=fetch, etherscan_get=None)
+        heat, bd = evidence_heat(funds_usd=None, invariant_results=[], source_record=row)
+        self.assertEqual(heat, 0)
+        self.assertTrue(bd["storage_layout"])
+        self.assertTrue(bd["source_metadata"])
+        self.assertEqual(bd["storage_slots"], 2)
+        self.assertEqual(bd["compiler"], "0.8.20+commit.a1b79de6")
+        self.assertNotIn("bytecode", json.dumps(row["metadata"]))
 
 
 class Command(unittest.TestCase):

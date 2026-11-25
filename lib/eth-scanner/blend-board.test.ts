@@ -311,3 +311,16 @@ test("a bytecode surface tag does not change the stored heat", () => {
   assert.equal(board.leaderboard[0].heat, 2);
   assert.deepEqual(board.leaderboard[0].evidence_tags, ["surface"]);
 });
+
+test("storage layout and metadata tags do not change heat", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 3,
+      status: "done",
+      heat_breakdown: { static_evidence: 3, storage_layout: true, source_metadata: true, storage_slots: 4 },
+    },
+  ]);
+  assert.equal(board.leaderboard[0].heat, 3);
+  assert.deepEqual(board.leaderboard[0].evidence_tags, ["static", "layout", "metadata"]);
+});
