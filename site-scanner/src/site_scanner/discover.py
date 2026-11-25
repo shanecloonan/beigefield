@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Iterable
 
 from site_scanner.allow import host_of
+from site_scanner.fetch import USER_AGENT
 
 # Hosts the scheduled job always includes. Active checks stay on the allowlist.
 SCHEDULED_OWNED = (
@@ -186,7 +187,7 @@ def mix_hosts(
 
 
 def _read(url: str, *, limit: int, timeout: float) -> bytes:
-    request = urllib.request.Request(url, headers={"User-Agent": "beigefield-site-scanner/0.1"})
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return response.read(limit)
 

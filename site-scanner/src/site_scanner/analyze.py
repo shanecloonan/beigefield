@@ -34,6 +34,10 @@ def _header(headers: dict[str, str], name: str) -> str:
 def facts_for_page(page: dict[str, Any]) -> list[str]:
     """One page: url, status, headers, body. Body must already be redacted by the caller if stored."""
     facts: list[str] = []
+    if page.get("challenged"):
+        return ["challenged"]
+    if page.get("skipped") == "robots":
+        return []
     status = int(page.get("status") or 0)
     headers = page.get("headers") if isinstance(page.get("headers"), dict) else {}
     body = str(page.get("body") or "")
@@ -105,8 +109,21 @@ def report_for(host: str, pages: list[dict[str, Any]], *, active_ran: bool) -> d
                 "path": str(page.get("path") or "/"),
                 "note": "secret kinds: %s" % ", ".join(kinds),
             })
-    scored = score_facts(fact_ids, active_ran=active_ran)
+    scored = score_facts([fact for fact in fact_ids if fact != "challenged"], active_ran=active_ran)
+    if "challenged" in fact_ids:
+        scored["facts"] = sorted(set(scored["facts"]) | {"challenged"})
+        scored["findings"].append({
+            "id": "challenged",
+            "fact": "challenged",
+            "stage": "fetch",
+            "title": "The host returned a bot check",
+            "heat": 0,
+            "remediation": "Nothing else was requested from that host.",
+            "evidence": "The response was a challenge or a WAF block. It was not retried.",
+        })
     for finding in scored["findings"]:
+        if finding["id"] == "challenged":
+            continue
         match = next((item for item in evidence if finding["id"] == "secret-in-page"), None)
         if match and finding["id"] == "secret-in-page":
             finding["evidence"] = match["note"]

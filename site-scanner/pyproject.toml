@@ -3,6 +3,7 @@ name = "site-scanner"
 version = "0.1.0"
 description = "Passive website misconfiguration scanner. Heat comes from evidence. Active checks stay on an allowlist."
 requires-python = ">=3.10"
+dependencies = ["httpx[http2]>=0.27"]
 
 [project.scripts]
 site-scanner = "site_scanner.cli:main"

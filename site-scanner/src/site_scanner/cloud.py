@@ -7,10 +7,11 @@ import urllib.request
 from typing import Any
 
 from site_scanner.analyze import cloud_hints
+from site_scanner.fetch import USER_AGENT
 
 
 def _get(url: str, headers: dict[str, str] | None = None) -> tuple[int, str]:
-    request = urllib.request.Request(url, method="GET", headers=headers or {"User-Agent": "beigefield-site-scanner/0.1"})
+    request = urllib.request.Request(url, method="GET", headers=headers or {"User-Agent": USER_AGENT})
     try:
         with urllib.request.urlopen(request, timeout=8) as response:
             body = response.read(20_000).decode("utf-8", errors="replace")
