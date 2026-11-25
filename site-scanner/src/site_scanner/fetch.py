@@ -1,4 +1,4 @@
-"""Async GETs of a page and a short list of well-known paths. No payloads.
+"""Async GETs of a page and, when allowed, a fixed list of well-known paths. No payloads.
 
 httpx is the client, with HTTP/2 when the server allows it. Each host is
 rate-limited, timeouts are bounded, and a transient failure is retried once.
@@ -17,9 +17,10 @@ from typing import Any, Awaitable, Callable
 
 import httpx
 
+from site_scanner.active import ACTIVE_PATHS
+
 USER_AGENT = "beigefield-site-scanner/0.2 (+https://beigefield.com)"
-PASSIVE_PATHS = ("/robots.txt", "/", "/.env", "/.git/HEAD", "/admin")
-ACTIVE_PATHS = ("/.well-known/security.txt", "/debug")
+PASSIVE_PATHS = ("/robots.txt", "/")
 _MAX_BODY = 80_000
 _TIMEOUT = 6.0
 _SCRIPT = re.compile(r"<script[^>]+src=[\"']([^\"']+)[\"']", re.I)

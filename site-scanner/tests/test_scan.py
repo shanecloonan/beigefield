@@ -10,7 +10,8 @@ import asyncio
 
 import httpx
 
-from site_scanner.fetch import USER_AGENT, _robots_disallows, _same_origin, fetch_host
+from site_scanner.active import ACTIVE_PATHS
+from site_scanner.fetch import PASSIVE_PATHS, USER_AGENT, _robots_disallows, _same_origin, fetch_host
 from site_scanner.fingerprint import match_page
 from site_scanner.analyze import report_for
 from site_scanner.discover import (
@@ -483,6 +484,121 @@ class ScanTests(unittest.TestCase):
         report = report_for("cookies.example", pages, active_ran=False)
         self.assertIn("cookie-no-secure", report["facts"])
         self.assertNotIn("secretvalue", str(report))
+
+    def test_passive_fetch_stays_on_the_home_page(self) -> None:
+        seen: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            self.assertEqual(request.method, "GET")
+            self.assertEqual(request.url.query, b"")
+            seen.append(request.url.path)
+            return httpx.Response(200, text="<html>ok</html>")
+
+        async def no_sleep(_seconds: float) -> None:
+            return None
+
+        transport = httpx.MockTransport(handler)
+        client = httpx.AsyncClient(transport=transport)
+        try:
+            fetch_host(
+                "public.example",
+                active=False,
+                pause_s=0,
+                client=client,
+                tls_check=lambda _host: {"tls_expired": False, "tls_soon": False},
+                sleep=no_sleep,
+            )
+        finally:
+            asyncio.run(client.aclose())
+        self.assertEqual(seen, list(PASSIVE_PATHS))
+        self.assertNotIn("/.env", seen)
+        self.assertNotIn("/.git/HEAD", seen)
+
+    def test_active_fetch_is_a_fixed_get_list(self) -> None:
+        seen: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            self.assertEqual(request.method, "GET")
+            self.assertEqual(request.url.query, b"")
+            seen.append(request.url.path)
+            if request.url.path == "/robots.txt":
+                return httpx.Response(200, text="User-agent: *\nDisallow: /.env\n")
+            return httpx.Response(200, text="<html>ok</html>")
+
+        async def no_sleep(_seconds: float) -> None:
+            return None
+
+        transport = httpx.MockTransport(handler)
+        client = httpx.AsyncClient(transport=transport)
+        try:
+            fetch_host(
+                "owned.example",
+                active=True,
+                pause_s=0,
+                client=client,
+                tls_check=lambda _host: {"tls_expired": False, "tls_soon": False},
+                sleep=no_sleep,
+            )
+        finally:
+            asyncio.run(client.aclose())
+        self.assertNotIn("/.env", seen)
+        self.assertIn("/.git/HEAD", seen)
+        self.assertIn("/phpinfo.php", seen)
+        self.assertIn("/server-status", seen)
+        self.assertIn("/wp-config.php.bak", seen)
+        allowed = set(PASSIVE_PATHS) | set(ACTIVE_PATHS)
+        self.assertTrue(all(path in allowed for path in seen))
+
+    def test_a_catch_all_page_is_not_an_exposure(self) -> None:
+        shell = "<html><title>Home</title><p>Welcome. Our dashboard ships soon.</p></html>"
+        pages = [{"path": "/", "scheme": "https", "status": 200, "headers": _QUIET_HEADERS, "body": shell}]
+        pages.extend(
+            {"path": path, "scheme": "https", "status": 200, "headers": {}, "body": shell}
+            for path in ("/.env", "/.git/HEAD", "/phpinfo.php", "/server-status", "/wp-config.php.bak", "/admin")
+        )
+        pages.append({
+            "path": "/.env",
+            "scheme": "https",
+            "status": 403,
+            "headers": {},
+            "body": "API_KEY=supersecretvalue",
+        })
+        report = report_for("owned.example", pages, active_ran=True)
+        for fact in ("exposed-env", "exposed-git", "exposed-backup", "exposed-phpinfo", "exposed-server-status", "open-admin"):
+            self.assertNotIn(fact, report["facts"])
+
+    def test_signed_exposures_name_the_path_and_hide_the_secret(self) -> None:
+        report = report_for("owned.example", [
+            {"path": "/", "scheme": "https", "status": 200, "headers": _QUIET_HEADERS, "body": "<html>ok</html>"},
+            {"path": "/.env.bak", "status": 200, "headers": {}, "body": "API_KEY=supersecretvalue\n"},
+            {"path": "/.git/HEAD", "status": 200, "headers": {}, "body": "ref: refs/heads/main\n"},
+            {"path": "/phpinfo.php", "status": 200, "headers": {}, "body": "<title>phpinfo()</title>\nPHP Version 8.1.2\nAKIAIOSFODNN7EXAMPLE"},
+            {"path": "/server-status", "status": 200, "headers": {}, "body": "<h1>Apache Server Status</h1>"},
+            {"path": "/wp-config.php.bak", "status": 200, "headers": {}, "body": "define('DB_PASSWORD', 'hunter2');"},
+            {"path": "/wp-admin/", "status": 200, "headers": {}, "body": '<div id="wpbody">Dashboard</div>'},
+        ], active_ran=True)
+        self.assertIn("exposed-backup", report["facts"])
+        self.assertIn("exposed-git", report["facts"])
+        self.assertIn("exposed-phpinfo", report["facts"])
+        self.assertIn("exposed-server-status", report["facts"])
+        self.assertIn("open-admin", report["facts"])
+        blob = str(report["findings"])
+        self.assertNotIn("supersecretvalue", blob)
+        self.assertNotIn("hunter2", blob)
+        self.assertNotIn("AKIAIOSFODNN7EXAMPLE", blob)
+        backup = next(item for item in report["findings"] if item["id"] == "exposed-backup")
+        self.assertIn("/.env.bak", backup["evidence"])
+        self.assertNotIn("supersecretvalue", backup["evidence"])
+        self.assertGreaterEqual(report["heat"], 8)
+        self.assertLessEqual(report["heat"], 12)
+
+
+_QUIET_HEADERS = {
+    "content-security-policy": "default-src 'self'",
+    "strict-transport-security": "max-age=10",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+}
 
 
 if __name__ == "__main__":
