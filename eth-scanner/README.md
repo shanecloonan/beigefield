@@ -234,6 +234,20 @@ python -m eth_scanner decompile-shortlist \
   --json
 ```
 
+## Certora
+
+Certora Prover stays an unmodified GPL command-line tool. It is not imported or vendored. `certora-check` runs only with `--on-shortlist` and `--verified`, and only for `erc20` or `erc4626`. The specs are ours. A missing `certoraRun` binary is a skip, and the unit-test job does not install the JDK, z3, or cvc5 build. Set `ETH_SCANNER_CERTORA_BIN` to a local binary. The command never prints a key and never puts one on the command line. One violated rule adds 6 points of `certora_evidence`. A hold adds 0. The summary stored is the rule name. The board shows `certora`.
+
+```bash
+python -m eth_scanner certora-check \
+  --address 0x1111111111111111111111111111111111111111 \
+  --source vault.sol \
+  --kind erc4626 \
+  --on-shortlist \
+  --verified \
+  --json
+```
+
 Slither, Aderyn, and Semgrep each get a timeout (`--timeout`, clamped to 5–180 seconds). Semgrep uses `research/semgrep/solidity.yml`. Set `ETH_SCANNER_SEMGREP_RULES` to a local checkout of a Decurity-style Solidity pack to add those rules; the default run does not download a ruleset.
 
 Findings are normalized to one scale. An allowlisted high-confidence funds detector adds 3 points of `static_evidence`, a medium detector adds 1, and the component caps at 6. Ownable / AccessControl hits, style checks, and informational detectors add 0. The points are a heat component, not a verdict.

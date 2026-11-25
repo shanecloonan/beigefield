@@ -651,6 +651,18 @@ def main(argv: list[str] | None = None) -> int:
     short.add_argument("--verified", action="store_true")
     short.add_argument("--json", action="store_true")
 
+    certora = sub.add_parser(
+        "certora-check",
+        help="Certora CLI on one verified shortlist contract. A violated rule adds heat.",
+    )
+    certora.add_argument("--address", required=True)
+    certora.add_argument("--source", required=True, help="local verified Solidity file")
+    certora.add_argument("--kind", required=True, choices=["erc20", "erc4626"])
+    certora.add_argument("--on-shortlist", action="store_true")
+    certora.add_argument("--verified", action="store_true")
+    certora.add_argument("--timeout", type=int, default=120)
+    certora.add_argument("--json", action="store_true")
+
     hack = sub.add_parser(
         "defihacklabs-index",
         help="Count public DeFiHackLabs incident names. Metadata only, no heat.",
@@ -1209,6 +1221,35 @@ def main(argv: list[str] | None = None) -> int:
                 % (public["address"], public["status"], len(public["leads"]), public["heat"])
             )
         return 0
+
+    if args.cmd == "certora-check":
+        import json as _json
+        from eth_scanner.logic.certora_prover import run_certora
+        source = Path(args.source).read_text(encoding="utf-8", errors="replace")
+        report = run_certora(
+            address=str(args.address),
+            source=source,
+            kind=str(args.kind),
+            on_shortlist=bool(args.on_shortlist),
+            verified=bool(args.verified),
+            timeout_s=int(args.timeout or 120),
+        )
+        public = {
+            "status": report.get("status"),
+            "address": report.get("address"),
+            "kind": report.get("kind"),
+            "violated": [row.get("id") for row in (report.get("violated") or [])],
+            "heat": report.get("heat"),
+            "note": report.get("note"),
+        }
+        if args.json:
+            print(_json.dumps(public, indent=2))
+        else:
+            print(
+                "certora-check %s status=%s heat=%s"
+                % (public["address"] or args.address, public["status"], public["heat"])
+            )
+        return 0 if public["status"] != "invalid" else 2
 
     if args.cmd == "defihacklabs-index":
         import json as _json

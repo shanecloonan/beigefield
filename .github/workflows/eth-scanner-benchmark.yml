@@ -35,4 +35,4 @@ jobs:
           PY
       - name: Unit tests for benchmark module
         run: |
-          cd eth-scanner && PYTHONPATH=src python -m unittest tests.test_benchmark tests.test_conservation tests.test_gated_leads tests.test_signal_rerun tests.test_static_evidence tests.test_sequences tests.test_perturb tests.test_corpus tests.test_clones tests.test_priority tests.test_bytecode_surface tests.test_external_suites tests.test_weird_tokens tests.test_heimdall_funded tests.test_fork_verify -q
+          cd eth-scanner && PYTHONPATH=src python -m unittest tests.test_benchmark tests.test_conservation tests.test_gated_leads tests.test_signal_rerun tests.test_static_evidence tests.test_sequences tests.test_perturb tests.test_corpus tests.test_clones tests.test_priority tests.test_bytecode_surface tests.test_external_suites tests.test_weird_tokens tests.test_heimdall_funded tests.test_fork_verify tests.test_certora_prover -q

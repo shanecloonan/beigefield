@@ -284,6 +284,7 @@ def evidence_heat(
     external_suite: Optional[dict[str, Any]] = None,
     weird_tokens: Optional[dict[str, Any]] = None,
     decompile_triage: Optional[dict[str, Any]] = None,
+    certora: Optional[dict[str, Any]] = None,
     unprotected_value: bool = False,
     unverified_proxy: bool = False,
     deployed_at: Optional[str] = None,
@@ -384,9 +385,14 @@ def evidence_heat(
     proxy_points = int(priority["proxy_evidence"])
     fresh_points = int(priority["fresh_evidence"])
     fork = fork_backed(conservation)
+    certora_points = 0
+    certora_ran = isinstance(certora, dict) and bool(certora.get("ran"))
+    if certora_ran and (certora or {}).get("violated"):
+        certora_points = 6
     substantive = (
         inv + priv + corr + static_points + corpus_points + clone_points
         + unprotected_points + proxy_points + fresh_points + surface_points
+        + certora_points
     )
     admin_capped = bool(eoa and gated and substantive == 0 and not fork)
     if admin_capped:
@@ -443,6 +449,8 @@ def evidence_heat(
         "crytic_properties": bool(isinstance(external_suite, dict) and external_suite.get("crytic")),
         "weird_tokens": bool(isinstance(weird_tokens, dict) and weird_tokens.get("ran")),
         "decompile_triage": bool(isinstance(decompile_triage, dict) and decompile_triage.get("ran")),
+        "certora": certora_ran,
+        "certora_evidence": certora_points,
         "unprotected_evidence": unprotected_points,
         "proxy_evidence": proxy_points,
         "fresh_evidence": fresh_points,
