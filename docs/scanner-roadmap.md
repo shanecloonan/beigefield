@@ -314,6 +314,8 @@ During a scan, the similarity and cross-contract stages finish from the source a
 
 `fuzz-corpus` names an Actions cache slot per engine and source hash. The key is `fuzz-corpus-<engine>-<hash>-<run_id>` and the restore prefix drops the run id. Seeds stay out of git. The manual job does not start Echidna, Medusa, or ityfuzz. The board shows `fuzz-corpus`. Heat stays 0.
 
+`disclose` writes a draft with triage unreviewed, reviewing, fp, or credible. `--lookup` GETs security.txt. Immunefi, Cantina, and SEAL 911 stay public URLs. The draft is not sent. The board shows `disclosure` and the status. Heat stays 0.
+
 `watch-shaped` ranks fresh contracts that gained TVL ahead of flat ones and flags a mined transaction that has a flash-loan log plus many logs and touches a watched address. Matching runtime hashes are queued with it. Mempool methods are refused. The board shows `shaped`. Heat stays 0.
 
 `exploit-replay` reads an external DeFiHackLabs checkout for the victim address, chain, and block only. A weekly job samples 15 incidents, reads `eth_getCode` at the previous block under a 4,000 CU cap, and scores detector leads. The authored 0.9 bug-class baseline is reported beside that recall. The board shows `replay` when a row stores the flag. Heat stays 0.

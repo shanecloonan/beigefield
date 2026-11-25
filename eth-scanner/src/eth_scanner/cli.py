@@ -1149,6 +1149,19 @@ def main(argv: list[str] | None = None) -> int:
     corpus.add_argument("--write-dir", default="", help="where to write the corpus directories and plan.json")
     corpus.add_argument("--json", action="store_true")
 
+    disclose = sub.add_parser(
+        "disclose",
+        help="Write a disclosure draft. Nothing is sent. Heat stays 0.",
+    )
+    disclose.add_argument("--address", default="", help="0x… target")
+    disclose.add_argument("--domain", default="", help="public host for a security.txt GET")
+    disclose.add_argument("--slug", default="", help="public Immunefi and Cantina slug")
+    disclose.add_argument("--status", default="unreviewed", help="unreviewed, reviewing, fp, or credible")
+    disclose.add_argument("--note", default="", help="short note; exploit text is refused")
+    disclose.add_argument("--lookup", action="store_true", help="GET security.txt and do not send it anywhere")
+    disclose.add_argument("--write-dir", default="", help="where to write the draft")
+    disclose.add_argument("--json", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -2329,6 +2342,26 @@ def main(argv: list[str] | None = None) -> int:
             print(_json.dumps(public, indent=2))
         else:
             print("fuzz-corpus status=%s hash=%s" % (public["status"], public["code_hash"]))
+        return 0
+
+    if args.cmd == "disclose":
+        import json as _json
+        from eth_scanner.disclosure.draft import draft_disclosure, https_get, public_report as draft_public
+        report = draft_disclosure(
+            address=str(args.address or ""),
+            domain=str(args.domain or ""),
+            slug=str(args.slug or ""),
+            status=str(args.status or "unreviewed"),
+            note=str(args.note or ""),
+            lookup=bool(args.lookup),
+            fetch=https_get if args.lookup else None,
+            dest=Path(args.write_dir) if args.write_dir else None,
+        )
+        public = draft_public(report)
+        if args.json:
+            print(_json.dumps(public, indent=2))
+        else:
+            print("disclose status=%s triage=%s sent=%s" % (public["status"], public["triage"], public["sent"]))
         return 0
 
     if args.cmd == "fork-verify":

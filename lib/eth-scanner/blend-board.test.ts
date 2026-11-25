@@ -494,6 +494,20 @@ test("a fuzz corpus tag shows a saved seed set and does not change heat", () => 
   assert.deepEqual(board.leaderboard[0].evidence_tags, ["fuzz-corpus"]);
 });
 
+test("a disclosure draft shows its triage and does not change heat", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 1,
+      status: "done",
+      heat_breakdown: { disclosure: true, disclosure_status: "credible" },
+    },
+  ]);
+  assert.equal(board.leaderboard[0].heat, 1);
+  assert.equal(board.leaderboard[0].disclosure_status, "credible");
+  assert.deepEqual(board.leaderboard[0].evidence_tags, ["disclosure"]);
+});
+
 test("a shaped tag shows a mined flash-loan hit and does not change heat", () => {
   const board = summarizeBlendRuns([
     {
