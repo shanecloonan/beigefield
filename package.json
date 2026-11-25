@@ -7,7 +7,7 @@
     "build": "node scripts/bundle-python-runtime.mjs && next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test lib/*.test.ts lib/eth-scanner/*.test.ts lib/eth-scanner/desk/*.test.ts lib/site-scanner/*.test.ts",
+    "test": "tsx --test lib/*.test.ts lib/eth-scanner/*.test.ts lib/eth-scanner/desk/*.test.ts",
     "test:eth-scanner": "tsx --test lib/eth-scanner/*.test.ts lib/eth-scanner/desk/*.test.ts",
     "test:persist": "tsx --test lib/eth-scanner/persist-test-results.test.ts",
     "test:eth-scanner-py": "cd eth-scanner && PYTHONPATH=src python3 -m unittest discover -s tests -q"

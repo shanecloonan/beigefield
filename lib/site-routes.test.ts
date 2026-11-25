@@ -7,12 +7,12 @@ function read(path: string): string {
 }
 
 describe("homepage routes", () => {
-  it("offers Blockchain and Web and leaves /blend in place", () => {
+  it("offers Blockchain and leaves /blend in place", () => {
     const home = read("../app/page.tsx");
     assert.match(home, /href="\/blend"/);
     assert.match(home, />Blockchain</);
-    assert.match(home, /href="\/scan"/);
-    assert.match(home, />Web</);
+    assert.equal(home.includes('href="/scan"'), false);
+    assert.equal(home.includes(">Web<"), false);
     assert.equal(home.includes('href="/eth"'), false);
     assert.equal(home.includes('href="/sol"'), false);
     assert.equal(home.includes(">Ethereum<"), false);

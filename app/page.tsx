@@ -15,7 +15,6 @@ export default function Home() {
         <p>Blockchain Research</p>
         <nav className="lockup-actions" aria-label="Sections">
           <Link href="/blend">Blockchain</Link>
-          <Link href="/scan">Web</Link>
         </nav>
       </main>
     </div>
