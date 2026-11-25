@@ -122,6 +122,7 @@ def adjust_heat(
             "surface_evidence",
             "certora_evidence",
             "upgrade_evidence",
+            "smt_evidence",
         )
     )
     base = min(old, backing + extra)

@@ -185,6 +185,7 @@ export function evidenceTags(breakdown: Record<string, unknown> | null): string[
   if (flagged("hevm")) tags.push("hevm");
   if (flagged("wake")) tags.push("wake");
   if (flagged("pyrometer")) tags.push("pyrometer");
+  if (amount("smt_evidence") > 0 || flagged("smt")) tags.push("smt");
   if (amount("upgrade_evidence") > 0 || flagged("upgrade")) tags.push("upgrade");
   if (amount("unprotected_evidence") > 0) tags.push("unprotected");
   if (amount("proxy_evidence") > 0) tags.push("proxy");
