@@ -74,6 +74,7 @@ Configured in `eth-scanner/src/eth_scanner/heat.py` (`ETH_SCANNER_HEAT_*`):
 | Weird-token accounting | Shown as `weird`. Fee, rebase, missing return, pause, blocklist, approval race, and extreme decimals are original probes. The shape adds 0. A shortfall between credited assets and tokens held is invariant heat |
 | Heimdall shortlist triage | Shown as `decompile`. Pin 0.9.3 is the release binary. Pattern leads from the decompiled text add 0 |
 | Certora Prover | Shown as `certora`. GPL CLI only, not linked. A violated ERC-20 or ERC-4626 rule on a verified shortlist contract adds 6. A hold or a missing binary adds 0 |
+| hevm value check | Shown as `hevm`. AGPL CLI only, not linked. A symbolic path on a shortlist contract adds 0. Heat is the live invariant only when a local call measures a non-owner value move. A missing binary adds 0 |
 | Unprotected value move, unverified upgradeable proxy, fresh high TVL | Yes — `unprotected_evidence` 3, `proxy_evidence` 2, `fresh_evidence` 2 (≤30 days and ≥ $100k). An EOA admin plus shape leads, with none of these, stays at 5 or below |
 | Single-engine generic detector | **No** heat alone |
 | Multi-engine agreement on a concrete finding | Raises **confidence**; may unlock heat only when paired with funds + failed invariant / privileged evidence (Phase A policy) |

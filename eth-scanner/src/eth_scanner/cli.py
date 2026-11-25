@@ -663,6 +663,18 @@ def main(argv: list[str] | None = None) -> int:
     certora.add_argument("--timeout", type=int, default=120)
     certora.add_argument("--json", action="store_true")
 
+    hevm = sub.add_parser(
+        "hevm-value",
+        help="hevm symbolic value check on one shortlist contract. Heat only after a local call confirms.",
+    )
+    hevm.add_argument("--address", required=True)
+    hevm.add_argument("--fork-url", required=True, help="loopback anvil URL; a public URL is refused")
+    hevm.add_argument("--on-shortlist", action="store_true")
+    hevm.add_argument("--bytecode", default="")
+    hevm.add_argument("--owner", default="")
+    hevm.add_argument("--timeout", type=int, default=30)
+    hevm.add_argument("--json", action="store_true")
+
     hack = sub.add_parser(
         "defihacklabs-index",
         help="Count public DeFiHackLabs incident names. Metadata only, no heat.",
@@ -1247,6 +1259,34 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(
                 "certora-check %s status=%s heat=%s"
+                % (public["address"] or args.address, public["status"], public["heat"])
+            )
+        return 0 if public["status"] != "invalid" else 2
+
+    if args.cmd == "hevm-value":
+        import json as _json
+        from eth_scanner.logic.hevm_value import run_hevm_value
+        report = run_hevm_value(
+            address=str(args.address),
+            on_shortlist=bool(args.on_shortlist),
+            fork_url=str(args.fork_url or ""),
+            bytecode=str(args.bytecode or ""),
+            owner=str(args.owner or ""),
+            timeout_s=int(args.timeout or 30),
+        )
+        public = {
+            "status": report.get("status"),
+            "address": report.get("address"),
+            "selector": report.get("selector"),
+            "confirmed": report.get("confirmed"),
+            "heat": report.get("heat"),
+            "note": report.get("note"),
+        }
+        if args.json:
+            print(_json.dumps(public, indent=2))
+        else:
+            print(
+                "hevm-value %s status=%s heat=%s"
                 % (public["address"] or args.address, public["status"], public["heat"])
             )
         return 0 if public["status"] != "invalid" else 2
