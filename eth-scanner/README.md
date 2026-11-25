@@ -266,7 +266,15 @@ Wake stays the existing ISC detector. The pin is `eth-wake` 5.0.0, already insta
 
 Pyrometer (Apache-2.0) runs in that same static pass when the `pyrometer` binary is already installed. The unit-test job does not install it. A high-confidence funds-related precision loss, rounding bound, or overflow bound weighs 3 inside `static_evidence`. Any other range adds 0, and the underlined source is not kept. The board shows `pyrometer`.
 
+`smt-check` runs `solc` (GPL-3.0, not linked) with `--model-checker-engine chc` or `bmc` and `--model-checker-timeout`. It runs only with `--on-shortlist`. A proved overflow, underflow, division by zero, or assert weighs 1, or 3 when the function moves value. An unproved warning adds 0, and the counterexample hex is not stored. The board shows `smt`.
+
 ```bash
+python -m eth_scanner smt-check \
+  --source Target.sol \
+  --on-shortlist \
+  --engine chc \
+  --timeout 10 \
+  --json
 python -m eth_scanner pyrometer --source Target.sol --json
 python -m eth_scanner wake-fuzz \
   --project ./vault \

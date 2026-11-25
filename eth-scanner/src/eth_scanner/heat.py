@@ -288,6 +288,7 @@ def evidence_heat(
     hevm: Optional[dict[str, Any]] = None,
     wake: Optional[dict[str, Any]] = None,
     pyrometer: Optional[dict[str, Any]] = None,
+    smt: Optional[dict[str, Any]] = None,
     upgrade: Optional[dict[str, Any]] = None,
     unprotected_value: bool = False,
     unverified_proxy: bool = False,
@@ -395,10 +396,16 @@ def evidence_heat(
         certora_points = 6
     upgrade_ran = isinstance(upgrade, dict) and bool(upgrade.get("ran"))
     upgrade_points = 3 if upgrade_ran and (upgrade or {}).get("clashes") else 0
+    smt_ran = isinstance(smt, dict) and bool(smt.get("ran"))
+    try:
+        smt_points = max(0, int((smt or {}).get("points") or 0)) if smt_ran else 0
+    except (TypeError, ValueError):
+        smt_points = 0
+    smt_points = min(3, smt_points)
     substantive = (
         inv + priv + corr + static_points + corpus_points + clone_points
         + unprotected_points + proxy_points + fresh_points + surface_points
-        + certora_points + upgrade_points
+        + certora_points + upgrade_points + smt_points
     )
     admin_capped = bool(eoa and gated and substantive == 0 and not fork)
     if admin_capped:
@@ -460,6 +467,8 @@ def evidence_heat(
         "hevm": isinstance(hevm, dict) and bool(hevm.get("ran")),
         "wake": isinstance(wake, dict) and bool(wake.get("ran")),
         "pyrometer": isinstance(pyrometer, dict) and bool(pyrometer.get("ran")),
+        "smt": smt_ran,
+        "smt_evidence": smt_points,
         "upgrade": upgrade_ran,
         "upgrade_evidence": upgrade_points,
         "unprotected_evidence": unprotected_points,

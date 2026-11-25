@@ -663,6 +663,16 @@ def main(argv: list[str] | None = None) -> int:
     certora.add_argument("--timeout", type=int, default=120)
     certora.add_argument("--json", action="store_true")
 
+    smt = sub.add_parser(
+        "smt-check",
+        help="solc SMTChecker on one shortlist contract. A proved violation is low-medium evidence.",
+    )
+    smt.add_argument("--source", required=True, help="local verified Solidity file")
+    smt.add_argument("--on-shortlist", action="store_true")
+    smt.add_argument("--engine", default="chc", choices=["chc", "bmc"])
+    smt.add_argument("--timeout", type=int, default=10, help="model-checker timeout in seconds")
+    smt.add_argument("--json", action="store_true")
+
     hevm = sub.add_parser(
         "hevm-value",
         help="hevm symbolic value check on one shortlist contract. Heat only after a local call confirms.",
@@ -1295,6 +1305,36 @@ def main(argv: list[str] | None = None) -> int:
                 % (public["address"] or args.address, public["status"], public["heat"])
             )
         return 0 if public["status"] != "invalid" else 2
+
+    if args.cmd == "smt-check":
+        import json as _json
+        from eth_scanner.engines.smt_checker import run_smt
+        from eth_scanner.heat import evidence_heat
+        text = Path(args.source).read_text(encoding="utf-8", errors="replace")
+        report = run_smt(
+            text,
+            on_shortlist=bool(args.on_shortlist),
+            engine=str(args.engine or "chc"),
+            timeout_s=int(args.timeout or 10),
+        )
+        heat, breakdown = evidence_heat(
+            funds_usd=None,
+            invariant_results=[],
+            smt={"ran": bool(report.get("ran")), "points": report.get("points") or 0},
+        )
+        public = {
+            "status": report.get("status"),
+            "ran": report.get("ran"),
+            "violations": report.get("violations") or [],
+            "heat": heat,
+            "smt_evidence": breakdown.get("smt_evidence"),
+            "note": report.get("note"),
+        }
+        if args.json:
+            print(_json.dumps(public, indent=2))
+        else:
+            print("smt-check status=%s heat=%s" % (public["status"], public["heat"]))
+        return 0
 
     if args.cmd == "hevm-value":
         import json as _json
