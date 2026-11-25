@@ -1,1 +1,1 @@
-Post-#203 rescore. Re-run heat signals and the small-value queue through Lane A with fork verify on, after the measured-delta drain fix. 4M CU budget unchanged.
+Under-$5k high-likelihood batch. Next 75 contracts from eth-scanner/data/small_value_under5k_queue.json, 250,000 CU cap, read-only fork verify. Push this file again for the next batch. Historical rescore is workflow_dispatch mode historical.
