@@ -21,6 +21,14 @@ from eth_scanner.logic.priority import (
 
 _OPEN = """
 contract Vault {
+    function pay(address to, uint256 amount) external {
+        token.transfer(to, amount);
+    }
+}
+"""
+
+_WITHDRAW = """
+contract Vault {
     function withdraw(uint256 amount) external {
         token.transfer(msg.sender, amount);
     }
@@ -49,6 +57,7 @@ class Detectors(unittest.TestCase):
     def test_open_transfer_counts_and_an_owner_guard_does_not(self):
         self.assertTrue(unprotected_value_mover(_OPEN))
         self.assertFalse(unprotected_value_mover(_OWNED))
+        self.assertFalse(unprotected_value_mover(_WITHDRAW))
 
     def test_proxy_requires_an_unverified_marker(self):
         self.assertFalse(unverified_upgradeable_proxy(verified=True, bytecode="3659cfe6"))

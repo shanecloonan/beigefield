@@ -228,7 +228,7 @@ python -m eth_scanner perturb-invariants --json
 
 ## Exploit-pattern corpus
 
-SWC-shaped detectors and the curated family ids in `data/known_vulnerable_clones.json` match source text. DeFiHackLabs still contributes only public titles and dates; a title may be tagged with a pattern family such as oracle or reentrancy. Writeups and proof-of-concept files are not fetched. A guarded `onlyOwner`, `onlyRole`, or `initializer` match is dropped. Counted hits use the same weights as static evidence (`corpus_evidence`, cap 6) and are not counted again when the same rule already scored as `static_evidence`.
+SWC-shaped detectors and the curated family ids in `data/known_vulnerable_clones.json` match source text. DeFiHackLabs still contributes only public titles and dates; a title may be tagged with a pattern family such as oracle or reentrancy. Writeups and proof-of-concept files are not fetched. A guarded `onlyOwner`, `onlyRole`, or `initializer` match is dropped. Delegatecall counts when a public function uses an address argument as the target. A value call counts as reentrancy when a balance write follows it in that function. A library helper does not. Counted hits use the same weights as static evidence (`corpus_evidence`, cap 6) and are not counted again when the same rule already scored as `static_evidence`.
 
 ```bash
 python -m eth_scanner corpus-scan --source tests/fixtures/gated_vault.sol --json
@@ -244,7 +244,7 @@ python -m eth_scanner clone-match --code-file runtime.hex --json
 
 ## What reaches heat 6
 
-An EOA admin and a shape lead, with no other evidence, stay at 5. A fork conservation failure can still put three shape leads at 6, and a privileged call plus a live confirmation stays at 7. These add heat on their own: an unprotected value-moving function (3), an unverified upgradeable proxy (2), and a deployment no older than 30 days that holds at least $100k (2). Sequence and oracle failures stay inside `invariants_failed` and are labeled for the board. `original_peak` is the heat before a rescore and is not added back. Rescore keeps stored static, corpus, clone, unprotected, proxy, and fresh points, and it does not raise heat except for the existing fork-backed shape leads.
+An EOA admin and a shape lead, with no other evidence, stay at 5. A fork conservation failure can still put three shape leads at 6, and a privileged call plus a live confirmation stays at 7. These add heat on their own: a public function that sends value to a caller-chosen address (3), an unverified upgradeable proxy (2), and a deployment no older than 30 days that holds at least $100k (2). A withdraw that pays msg.sender, an only* or ifAdmin function, and an interface declaration do not. Sequence and oracle failures stay inside `invariants_failed` and are labeled for the board. `original_peak` is the heat before a rescore and is not added back. Rescore keeps stored static, corpus, clone, unprotected, proxy, and fresh points, and it does not raise heat except for the existing fork-backed shape leads.
 
 ## Buckets
 

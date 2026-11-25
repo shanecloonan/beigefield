@@ -18,24 +18,37 @@ FRESH_MIN_USD = 100_000
 FRESH_DAYS = 30
 ADMIN_ONLY_CAP = 5
 
-_FN = re.compile(r"function\s+\w+\s*\([^;]*?\)\s*([^{;]*)\{", re.S)
-_GUARD = re.compile(r"\bonlyOwner\b|\bonlyRole\b|\bonlyAdmin\b|\bview\b|\bpure\b")
-_VALUE = re.compile(
-    r"\.transfer\s*\(|\.transferFrom\s*\(|\.send\s*\(|\.call\s*\{value|_mint\s*\(|safeTransfer"
-)
+_FN = re.compile(r"function\s+\w+\s*\(([^;]*?)\)\s*([^{;]*)\{", re.S)
+_GUARD = re.compile(r"\bonly[A-Za-z0-9_]*\b|\bifAdmin\b|\bview\b|\bpure\b")
+_SEND = re.compile(r"\.transfer\s*\(|\.transferFrom\s*\(|\.send\s*\(|\.call\s*\{value|safeTransfer")
 _PROXY = ("upgradeto", "upgradetoandcall", "eip1967.proxy", "3659cfe6", "proxiableuuid")
 
 
 def unprotected_value_mover(source: str) -> bool:
-    """A public function moves value and its header has no admin guard."""
+    """A public function sends value to an address the caller chose.
+
+    A withdraw that pays msg.sender is the ordinary vault path and does not count.
+    """
     text = source or ""
     for match in _FN.finditer(text):
-        header = match.group(1) or ""
-        if _GUARD.search(header):
+        params, header = match.group(1), match.group(2)
+        if _GUARD.search(header) or re.search(r"\binternal\b|\bprivate\b", header):
             continue
-        body = text[match.end():match.end() + 400]
-        if _VALUE.search(body):
-            return True
+        if not re.search(r"\bpublic\b|\bexternal\b", header):
+            continue
+        body = text[match.end():match.end() + 500]
+        for name in re.findall(r"address\s+(?:payable\s+)?(\w+)", params):
+            if re.search(r"\b%s\b" % re.escape(name), body) and _SEND.search(body):
+                sent = re.search(
+                    r"(?:transfer|transferFrom|send|safeTransfer)\s*\(\s*%s\b" % re.escape(name),
+                    body,
+                )
+                paid = re.search(
+                    r"\.call\s*\{[^}]*value[^}]*\}\s*\(\s*%s\b" % re.escape(name),
+                    body,
+                )
+                if sent or paid:
+                    return True
     return False
 
 
