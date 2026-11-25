@@ -1,0 +1,24 @@
+# Sample only. Do not start this file from CI and do not provision a host.
+# The published RPC is loopback. Inside the container the HTTP listener is
+# 0.0.0.0 so the published port can reach it. An external address is not set.
+# Expect 2–4 TB of NVMe at the datadir before the first sync.
+# Pruning is irreversible: archive has to be selected before that sync.
+
+services:
+  erigon:
+    image: erigontech/erigon:v3.8.2
+    restart: "no"
+    ports:
+      - "127.0.0.1:8545:8545"
+    volumes:
+      - erigon-data:/var/lib/erigon
+    command:
+      - --datadir=/var/lib/erigon
+      - --prune.mode=archive
+      - --http.addr=0.0.0.0
+      - --http.port=8545
+      - --http.api=eth,web3,net,debug,trace
+      - --http.vhosts=localhost,127.0.0.1
+
+volumes:
+  erigon-data:

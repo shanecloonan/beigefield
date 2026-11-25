@@ -354,6 +354,14 @@ python -m eth_scanner disclose \
   --json
 ```
 
+## Archive RPC
+
+`archive-plan` prefers `ARCHIVE_RPC_URL` for a historical or trace read and uses `ETH_RPC_URL` when the archive URL is unset. The command does not print either URL. It does not call `debug_traceTransaction`, which is about 1,000 CU, to see if trace is enabled. Send and mempool methods are refused. `exploit-replay` uses the same choice for its historical `eth_getCode` and still falls back to the current RPC. `infra/erigon` holds a docker-compose file and a systemd unit for Erigon 3.8.2 with `--prune.mode=archive`, the RPC published on `127.0.0.1:8545` only, and a 2–4 TB NVMe note. Those files are not started. The board shows `archive` when an archive URL is configured. Heat stays 0.
+
+```bash
+python -m eth_scanner archive-plan --historical --json
+```
+
 ## Shaped-transaction watch
 
 `watch-shaped` reads mined receipts. A fresh contract whose funds rose is ordered ahead of one whose funds did not. A flash-loan log plus at least eight logs, touching a watched address, is a shape. Bytecode clones from a local index are queued with it. `--blocks` uses `ETH_RPC_URL` for one `eth_getLogs` and at most three receipts, capped at 800 CU. Pending-transaction methods are refused. The board shows `shaped`. Heat stays 0.
