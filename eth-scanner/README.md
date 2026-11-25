@@ -283,6 +283,17 @@ python -m eth_scanner storage-decode \
   --json
 ```
 
+## Upgrade layout
+
+`upgrade-layout` diffs the previous implementation layout against the next one. OpenZeppelin is not imported or vendored. A variable that is removed, moved, or retyped is a clash and adds 3. A variable appended after the old layout, or written into a `__gap` while later variables stay put, adds 0. The board shows `upgrade`.
+
+```bash
+python -m eth_scanner upgrade-layout \
+  --before previous.json \
+  --after next.json \
+  --json
+```
+
 Slither, Aderyn, and Semgrep each get a timeout (`--timeout`, clamped to 5–180 seconds). Semgrep uses `research/semgrep/solidity.yml`. Set `ETH_SCANNER_SEMGREP_RULES` to a local checkout of a Decurity-style Solidity pack to add those rules; the default run does not download a ruleset.
 
 Findings are normalized to one scale. An allowlisted high-confidence funds detector adds 3 points of `static_evidence`, a medium detector adds 1, and the component caps at 6. Ownable / AccessControl hits, style checks, and informational detectors add 0. The points are a heat component, not a verdict.

@@ -287,6 +287,7 @@ def evidence_heat(
     certora: Optional[dict[str, Any]] = None,
     hevm: Optional[dict[str, Any]] = None,
     wake: Optional[dict[str, Any]] = None,
+    upgrade: Optional[dict[str, Any]] = None,
     unprotected_value: bool = False,
     unverified_proxy: bool = False,
     deployed_at: Optional[str] = None,
@@ -391,10 +392,12 @@ def evidence_heat(
     certora_ran = isinstance(certora, dict) and bool(certora.get("ran"))
     if certora_ran and (certora or {}).get("violated"):
         certora_points = 6
+    upgrade_ran = isinstance(upgrade, dict) and bool(upgrade.get("ran"))
+    upgrade_points = 3 if upgrade_ran and (upgrade or {}).get("clashes") else 0
     substantive = (
         inv + priv + corr + static_points + corpus_points + clone_points
         + unprotected_points + proxy_points + fresh_points + surface_points
-        + certora_points
+        + certora_points + upgrade_points
     )
     admin_capped = bool(eoa and gated and substantive == 0 and not fork)
     if admin_capped:
@@ -455,6 +458,8 @@ def evidence_heat(
         "certora_evidence": certora_points,
         "hevm": isinstance(hevm, dict) and bool(hevm.get("ran")),
         "wake": isinstance(wake, dict) and bool(wake.get("ran")),
+        "upgrade": upgrade_ran,
+        "upgrade_evidence": upgrade_points,
         "unprotected_evidence": unprotected_points,
         "proxy_evidence": proxy_points,
         "fresh_evidence": fresh_points,
