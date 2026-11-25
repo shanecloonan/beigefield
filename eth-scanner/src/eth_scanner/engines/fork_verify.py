@@ -346,6 +346,8 @@ def write_fork_verify_project(
     props = [
         "unprivileged_known_selectors_cannot_extract",
         "unprivileged_sequence_cannot_extract",
+        "erc4626-asset-shortfall",
+        "share-price-monotonic",
     ]
     (root / "test" / "ForkVerifyProperties.t.sol").write_text(
         _fork_verify_sol(_hex40(address), _hex40(ATTACKER_ADDRESS), sels),
@@ -686,8 +688,13 @@ def _write_fork_verify_std(dest: Path) -> None:
 
 
 def _fork_verify_sol(target_hex40: str, attacker_hex40: str, selectors: list[str]) -> str:
+    from eth_scanner.research.keccak import selector4
+
     sel_lits = ", ".join('bytes4(hex"%s")' % _sel_hex(s) for s in selectors)
     n = max(1, len(selectors))
+    total_assets = selector4("totalAssets()")[2:]
+    total_supply = selector4("totalSupply()")[2:]
+    convert_assets = selector4("convertToAssets(uint256)")[2:]
     return (
         "// SPDX-License-Identifier: MIT\n"
         "pragma solidity ^0.8.20;\n\n"
@@ -713,8 +720,37 @@ def _fork_verify_sol(target_hex40: str, attacker_hex40: str, selectors: list[str
         "    function _extracted(uint256 a0, uint256 t0) internal view returns (bool) {\n"
         "        return ATTACKER.balance > a0 && TARGET.balance < t0;\n"
         "    }\n\n"
-        "    /// Deterministic probe of known function selectors as the outsider.\n"
+        "    /// ERC-4626 views. A contract that does not answer them is skipped.\n"
+        "    function _vault() internal view returns (bool ok, uint256 assets, uint256 supply, uint256 claimed) {\n"
+        f'        (bool aOk, bytes memory aRaw) = TARGET.staticcall(abi.encodeWithSelector(bytes4(hex"{total_assets}")));\n'
+        f'        (bool sOk, bytes memory sRaw) = TARGET.staticcall(abi.encodeWithSelector(bytes4(hex"{total_supply}")));\n'
+        "        if (!aOk || !sOk || aRaw.length < 32 || sRaw.length < 32) return (false, 0, 0, 0);\n"
+        "        assets = abi.decode(aRaw, (uint256));\n"
+        "        supply = abi.decode(sRaw, (uint256));\n"
+        f'        (bool cOk, bytes memory cRaw) = TARGET.staticcall(abi.encodeWithSelector(bytes4(hex"{convert_assets}"), supply));\n'
+        "        if (!cOk || cRaw.length < 32) return (false, 0, 0, 0);\n"
+        "        claimed = abi.decode(cRaw, (uint256));\n"
+        "        ok = true;\n"
+        "    }\n\n"
+        "    function _price() internal view returns (uint256) {\n"
+        "        (bool ok, uint256 assets, uint256 supply, uint256 claimed) = _vault();\n"
+        "        claimed;\n"
+        "        if (!ok || supply == 0) return 0;\n"
+        "        if (assets > type(uint256).max / 1e18) return assets / supply;\n"
+        "        return assets * 1e18 / supply;\n"
+        "    }\n\n"
+        "    function _guard(uint256 priceBefore) internal view {\n"
+        "        (bool ok, uint256 assets,, uint256 claimed) = _vault();\n"
+        "        if (!ok) return;\n"
+        "        if (claimed > assets + 1) revert(\"erc4626-asset-shortfall\");\n"
+        "        uint256 priceNow = _price();\n"
+        "        if (priceBefore > 0 && priceNow > 0 && priceNow + 1 < priceBefore) {\n"
+        "            revert(\"share-price-monotonic\");\n"
+        "        }\n"
+        "    }\n\n"
+        "    /// One call per selector, then the same calls as a sequence.\n"
         "    function test_unprivileged_known_selectors_cannot_extract() public {\n"
+        "        uint256 price0 = _price();\n"
         "        for (uint256 i = 0; i < sels.length; i++) {\n"
         "            uint256 a0 = ATTACKER.balance;\n"
         "            uint256 t0 = TARGET.balance;\n"
@@ -724,14 +760,16 @@ def _fork_verify_sol(target_hex40: str, attacker_hex40: str, selectors: list[str
         "            if (_extracted(a0, t0)) {\n"
         '                revert("profit-attacker-balance");\n'
         "            }\n"
+        "            _guard(price0);\n"
         "        }\n"
         "        if (_extracted(attackerStart, targetStart)) {\n"
         '            revert("profit-attacker-balance");\n'
         "        }\n"
         "    }\n\n"
-        "    /// Random short sequences of selector (+ optional value) calls from the outsider.\n"
+        "    /// Up to eight calls from the outsider. Depth stays inside the fuzz cap.\n"
         "    function testFuzz_unprivileged_sequence_cannot_extract(uint256 seed, uint8 nRaw) public {\n"
         "        if (sels.length == 0) return;\n"
+        "        uint256 price0 = _price();\n"
         "        uint256 steps = bound(uint256(nRaw), 1, 8);\n"
         "        for (uint256 i = 0; i < steps; i++) {\n"
         "            uint256 mix = uint256(keccak256(abi.encode(seed, i)));\n"
@@ -748,6 +786,7 @@ def _fork_verify_sol(target_hex40: str, attacker_hex40: str, selectors: list[str
         "            if (_extracted(a0, t0) || _extracted(attackerStart, targetStart)) {\n"
         '                revert("profit-attacker-balance");\n'
         "            }\n"
+        "            _guard(price0);\n"
         "        }\n"
         "    }\n"
         "}\n"
@@ -939,8 +978,11 @@ def _run_forge_verify(
         # e.g. "No contracts to fuzz" — not a conservation break.
         report.notes.append("ignoring forge harness/setup failure")
     sequence = _sanitize_sequence(_extract_sequence(blob) or "")
-    if not sequence and "profit-attacker-balance" in (blob or ""):
-        sequence = "profit-attacker-balance"
+    if not sequence:
+        for label in ("profit-attacker-balance", "erc4626-asset-shortfall", "share-price-monotonic"):
+            if label in (blob or ""):
+                sequence = label
+                break
     if not sequence and failed:
         sequence = "forge fail: %s" % failed[0]
     for name in failed[:8]:
@@ -957,14 +999,27 @@ def _run_forge_verify(
         ))
     report.sequence = sequence[:800]
     # A profit-invariant break is success of the *stage* (drainable), not a tool crash.
-    broke = bool(report.failures) or "profit-attacker-balance" in (blob or "")
-    if broke:
+    text = blob or ""
+    profit_hit = "profit-attacker-balance" in text or any(
+        "profit-attacker-balance" in (
+            str(getattr(item, "property_id", "") or "") + str(getattr(item, "evidence", "") or "")
+        )
+        for item in report.failures
+    )
+    accounting_hit = any(name in text for name in ("erc4626-asset-shortfall", "share-price-monotonic"))
+    if profit_hit:
         report.ran = True
         report.skipped = False
         report.drainable = True
         report.status = "broken"
         report.notes.append("conservation invariant broke on local fork")
         report.notes.append("sequence: %s" % (report.sequence[:240] or "(see forge fail name)"))
+    elif accounting_hit:
+        report.ran = True
+        report.skipped = False
+        report.drainable = False
+        report.status = "accounting"
+        report.notes.append("fork invariant broke without an unprivileged balance increase")
     elif timed_out:
         report.ran = True
         report.skipped = False

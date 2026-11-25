@@ -930,6 +930,13 @@ def main(argv: list[str] | None = None) -> int:
     static.add_argument("--json", action="store_true")
     static.add_argument("--dry-run", action="store_true")
 
+    seq = sub.add_parser(
+        "sequence-invariants",
+        help="Multi-call ERC-4626 conservation model (no chain, no broadcast)",
+    )
+    seq.add_argument("--model", default="fair", help="fair, dilute, inflation, leaky, or short")
+    seq.add_argument("--json", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -1407,6 +1414,33 @@ def main(argv: list[str] | None = None) -> int:
                     len(report.get("engines") or []),
                     (report.get("store") or {}).get("saved"),
                 )
+            )
+        return 0
+
+    if args.cmd == "sequence-invariants":
+        from eth_scanner.logic.sequences import known_models, sequence_heat
+        model = str(args.model or "fair")
+        if model not in known_models():
+            print("sequence-invariants: model must be one of %s" % ", ".join(known_models()), file=sys.stderr)
+            return 2
+        heat, breakdown, report = sequence_heat(model)
+        payload = {
+            "model": report["model"],
+            "sequences": report["sequences"],
+            "depth_cap": report["depth_cap"],
+            "heat": heat,
+            "static_evidence": breakdown.get("static_evidence", 0),
+            "invariants_failed": breakdown.get("invariants_failed", 0),
+            "results": report["results"],
+            "note": report["heat_note"],
+        }
+        if args.json:
+            print(json.dumps(payload, indent=2))
+        else:
+            failed = [row["id"] for row in report["results"] if row["status"] == "failed"]
+            print(
+                "sequence-invariants model=%s sequences=%s heat=%s failed=%s"
+                % (report["model"], report["sequences"], heat, ",".join(failed) or "none")
             )
         return 0
 
