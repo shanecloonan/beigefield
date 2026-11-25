@@ -135,6 +135,27 @@ def _map_url(host: str, pages: list[dict[str, Any]]) -> str:
     return ""
 
 
+def _fold_headers(items: list[tuple[str, str]]) -> dict[str, Any]:
+    """Keep every Set-Cookie. Other headers keep the last value."""
+    grouped: dict[str, list[str]] = {}
+    order: list[str] = []
+    for key, value in items:
+        slot = grouped.get(key)
+        if slot is None:
+            grouped[key] = [value]
+            order.append(key)
+        else:
+            slot.append(value)
+    folded: dict[str, Any] = {}
+    for key in order:
+        values = grouped[key]
+        if key.lower() == "set-cookie" and len(values) > 1:
+            folded[key] = values
+        else:
+            folded[key] = values[-1]
+    return folded
+
+
 def _client() -> httpx.AsyncClient:
     return httpx.AsyncClient(
         http2=True,
@@ -177,7 +198,7 @@ async def _get(
             try:
                 response = await client.get(url)
                 body = response.text[:_MAX_BODY]
-                headers = {key: value for key, value in response.headers.items()}
+                headers = _fold_headers(list(response.headers.multi_items()))
                 page = {"status": int(response.status_code), "headers": headers, "body": body}
             except httpx.HTTPError as exc:
                 last = {"status": 0, "headers": {}, "body": "", "error": type(exc).__name__}
@@ -317,12 +338,12 @@ def _fetch_with_opener(
         try:
             with opener(request, timeout=_TIMEOUT) as response:
                 body = response.read(_MAX_BODY + 1)[:_MAX_BODY].decode("utf-8", errors="replace")
-                headers = {key: value for key, value in response.headers.items()}
+                headers = _fold_headers(list(response.headers.items()))
                 page = {"status": int(getattr(response, "status", 200) or 200), "headers": headers, "body": body}
         except urllib.error.HTTPError as exc:
             body = exc.read(_MAX_BODY) if exc.fp else b""
             text = body[:_MAX_BODY].decode("utf-8", errors="replace") if isinstance(body, bytes) else ""
-            headers = {key: value for key, value in exc.headers.items()} if exc.headers else {}
+            headers = _fold_headers(list(exc.headers.items())) if exc.headers else {}
             page = {"status": int(exc.code), "headers": headers, "body": text}
         except Exception as exc:
             page = {"status": 0, "headers": {}, "body": "", "error": str(exc)[:160]}
