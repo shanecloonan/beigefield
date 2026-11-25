@@ -268,6 +268,8 @@ Pyrometer (Apache-2.0) runs in that same static pass when the `pyrometer` binary
 
 `smt-check` runs `solc` (GPL-3.0, not linked) with `--model-checker-engine chc` or `bmc` and `--model-checker-timeout`. It runs only with `--on-shortlist`. A proved overflow, underflow, division by zero, or assert weighs 1, or 3 when the function moves value. An unproved warning adds 0, and the counterexample hex is not stored. The board shows `smt`.
 
+The live harness and the conservation harness each keep one body per property. Foundry calls `test_`, Medusa calls `property_`, and Echidna returns that result. Vault checks are unchanged. crytic `verify_` properties stay in the external checkout; Echidna runs them in assertion mode and Medusa enables assertion testing. Chimera is MIT and is not vendored. This adds no heat.
+
 ```bash
 python -m eth_scanner smt-check \
   --source Target.sol \

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
@@ -62,6 +63,16 @@ class HarnessGeneration(unittest.TestCase):
             self.assertIn("proof of bug", low)
             self.assertIn('address(bytes20(hex"', sol)
             self.assertNotIn("function invariant_", sol)
+            self.assertIn("function property_solvency_assets_cover_shares", sol)
+            self.assertIn("return property_solvency_assets_cover_shares()", sol)
+            self.assertIn("function echidna_access_control_non_owner", sol)
+            echidna = (root / "echidna.yaml").read_text(encoding="utf-8")
+            self.assertIn("testMode: property", echidna)
+            medusa = json.loads((root / "medusa.json").read_text(encoding="utf-8"))
+            self.assertEqual(
+                medusa["fuzzing"]["testing"]["propertyTesting"]["testPrefixes"],
+                ["property_"],
+            )
             toml = (root / "foundry.toml").read_text(encoding="utf-8")
             self.assertIn("isolate = false", toml)
             self.assertGreaterEqual(len(props), 2)
