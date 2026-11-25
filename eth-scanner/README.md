@@ -226,6 +226,14 @@ On a fork, the harness deals the balance and overrides `latestAnswer` and `getRe
 python -m eth_scanner perturb-invariants --json
 ```
 
+## Exploit-pattern corpus
+
+SWC-shaped detectors and the curated family ids in `data/known_vulnerable_clones.json` match source text. DeFiHackLabs still contributes only public titles and dates; a title may be tagged with a pattern family such as oracle or reentrancy. Writeups and proof-of-concept files are not fetched. A guarded `onlyOwner`, `onlyRole`, or `initializer` match is dropped. Counted hits use the same weights as static evidence (`corpus_evidence`, cap 6) and are not counted again when the same rule already scored as `static_evidence`.
+
+```bash
+python -m eth_scanner corpus-scan --source tests/fixtures/gated_vault.sol --json
+```
+
 ## Buckets
 
 | Bucket | Meaning |

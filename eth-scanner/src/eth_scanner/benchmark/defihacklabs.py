@@ -17,6 +17,12 @@ _ROW = re.compile(r"^\[(\d{8})\s+([^\]]+)\]")
 _UNSAFE_NAME = re.compile(r"\.sol\b|function\s|calldata|0x[0-9a-f]{8,}", re.I)
 
 
+def incident_family(name: str) -> str:
+    """Pattern family for a public title. Delegates to the corpus map. Still not a recipe."""
+    from eth_scanner.logic.corpus import incident_family as _family
+    return _family(name)
+
+
 def parse_index(text: str) -> list[dict[str, str]]:
     """Keep date and name. Drop everything after the closing bracket."""
     rows: list[dict[str, str]] = []
@@ -73,6 +79,13 @@ def index_report(
     matched = [row for row in affected if str(row.get("name") or "").lower() in names]
     report["labeled_affected"] = len(affected)
     report["matched_affected"] = len(matched)
+    families: dict[str, int] = {}
+    for row in rows:
+        family = incident_family(row["name"])
+        if not family:
+            continue
+        families[family] = families.get(family, 0) + 1
+    report["families"] = families
     return report
 
 
