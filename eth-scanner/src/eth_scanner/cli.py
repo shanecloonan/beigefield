@@ -981,6 +981,15 @@ def main(argv: list[str] | None = None) -> int:
     layout.add_argument("--json", action="store_true")
     layout.add_argument("--dry-run", action="store_true")
 
+    decoded = sub.add_parser(
+        "storage-decode",
+        help="Decode static layout slots from a local anvil snapshot. Adds no heat.",
+    )
+    decoded.add_argument("--address", required=True)
+    decoded.add_argument("--fork-url", required=True, help="loopback anvil URL; a public URL is refused")
+    decoded.add_argument("--layout", required=True, help="JSON file of storage layout rows")
+    decoded.add_argument("--json", action="store_true")
+
     external = sub.add_parser(
         "external-suites",
         help="Thin fork harness for the external AGPL ERC-4626 suites (no broadcast)",
@@ -1624,6 +1633,37 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         return 0
+
+    if args.cmd == "storage-decode":
+        from eth_scanner.chain.storage_fidelity import read_snapshot
+        try:
+            loaded = json.loads(Path(args.layout).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            print(json.dumps({
+                "status": "invalid",
+                "heat": 0,
+                "note": "Layout file is not JSON.",
+            }, indent=2))
+            return 2
+        rows = loaded.get("storage_layout") if isinstance(loaded, dict) else loaded
+        if not isinstance(rows, list):
+            rows = []
+        report = read_snapshot(str(args.address), rows, str(args.fork_url or ""))
+        public = {
+            "status": report.get("status"),
+            "address": report.get("address"),
+            "values": report.get("values") or [],
+            "heat": report.get("heat"),
+            "note": report.get("note"),
+        }
+        if args.json:
+            print(json.dumps(public, indent=2))
+        else:
+            print(
+                "storage-decode %s status=%s values=%d heat=%s"
+                % (public["address"], public["status"], len(public["values"]), public["heat"])
+            )
+        return 0 if public["status"] != "invalid" else 2
 
     if args.cmd == "source-layout":
         from eth_scanner.heat import evidence_heat

@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from eth_scanner.chain.cu_budget import CuBudget
-from eth_scanner.chain.storage_fidelity import apply_local, load_storage, write_evidence
+from eth_scanner.chain.storage_fidelity import apply_local, decode_word, load_storage, read_snapshot, write_evidence
 from eth_scanner.ingest.rpc_client import RpcTransientError
 
 ADDR = "0x" + "cd" * 20
@@ -98,6 +98,35 @@ class StorageFidelity(unittest.TestCase):
         self.assertEqual(report["slots"], [])
         self.assertTrue(report["degraded"])
         self.assertEqual(report["heat_contribution"], 0)
+
+    def test_snapshot_decode_refuses_a_public_rpc(self):
+        rpc = _Rpc()
+        report = read_snapshot(ADDR, [
+            {"label": "totalAssets", "slot": "0", "offset": 0, "type": "uint256"},
+        ], "https://eth-mainnet.g.alchemy.com/v2/SECRET", rpc=rpc)
+        self.assertEqual(rpc.seen, [])
+        self.assertEqual(report["heat"], 0)
+        self.assertNotIn("SECRET", json.dumps(report))
+
+    def test_snapshot_decodes_static_slots_only(self):
+        word = "0x" + "00" * 12 + "ab" * 20
+        packed = "0x" + format(7 << 128, "064x")
+        rpc = _Rpc(responses={
+            "eth_getStorageAt": lambda params: word if params[1].endswith("0") else packed,
+        })
+        report = read_snapshot(ADDR, [
+            {"label": "asset", "slot": "0", "offset": 0, "type": "address"},
+            {"label": "balances", "slot": "1", "offset": 0, "type": "mapping(address => uint256)"},
+            {"label": "high", "slot": "2", "offset": 16, "type": "uint128"},
+        ], "http://127.0.0.1:8545", rpc=rpc, budget=CuBudget(1500))
+        labels = {row["label"]: row["value"] for row in report["values"]}
+        self.assertEqual(labels["asset"], "0x" + "ab" * 20)
+        self.assertEqual(labels["high"], "7")
+        self.assertNotIn("balances", labels)
+        self.assertEqual(len(rpc.seen), 2)
+        self.assertEqual(report["heat"], 0)
+        self.assertTrue(report["heat_breakdown"]["storage_layout"])
+        self.assertEqual(decode_word("0x" + "ff" * 32, "int8", 0), "-1")
 
     def test_no_rpc_skips(self):
         report = load_storage(ADDR, "", budget=CuBudget(1500), rpc=_Rpc())

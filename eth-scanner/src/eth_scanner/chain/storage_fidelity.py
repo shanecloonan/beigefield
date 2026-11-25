@@ -1,5 +1,8 @@
 """Load touched storage into a local simulation from a read-only trace or proof.
 
+Elementary layout slots can also be decoded from a loopback anvil snapshot.
+That read never uses a public RPC. Dynamic types are left undecoded.
+
 ``debug_traceTransaction`` with ``prestateTracer`` is preferred. When debug
 is missing, ``eth_getProof`` then ``eth_getStorageAt`` read the slots the
 caller already named (EIP-1967 by default). Loaded slots are evidence.
@@ -13,6 +16,7 @@ state.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -133,6 +137,104 @@ def apply_local(
             continue
         caller(local_rpc_url, "anvil_setStorageAt", [target, slot, value], timeout_s=8.0)
     return True, "slots copied onto the local anvil"
+
+
+def decode_word(word: str, type_name: str, offset: int = 0) -> Optional[str]:
+    """Decode one static layout field. Mappings, arrays, and strings stay undecoded."""
+    width = _type_width(type_name)
+    if width is None or offset < 0 or offset + width > 32:
+        return None
+    raw = _word(word)
+    if not raw:
+        return None
+    shifted = (int(raw, 16) >> (offset * 8)) & ((1 << (width * 8)) - 1)
+    name = (type_name or "").strip().lower()
+    if name == "address":
+        return "0x" + format(shifted, "040x")
+    if name == "bool":
+        return "true" if shifted else "false"
+    if name == "bytes32":
+        return "0x" + format(shifted, "064x")
+    if name.startswith("int") and shifted >= 1 << (width * 8 - 1):
+        shifted -= 1 << (width * 8)
+    return str(shifted)
+
+
+def read_snapshot(
+    address: str,
+    layout: list[dict[str, Any]],
+    fork_url: str,
+    *,
+    budget: Optional[CuBudget] = None,
+    rpc: Optional[RpcFn] = None,
+) -> dict[str, Any]:
+    """Read layout slots from a local anvil and decode the static ones.
+
+    A public URL is refused before any call. The values add no heat.
+    """
+    target = normalize_address(address)
+    report: dict[str, Any] = {
+        "status": "skipped",
+        "address": target,
+        "heat": 0,
+        "heat_contribution": 0,
+        "values": [],
+        "note": "",
+        "heat_breakdown": {"storage_layout": False, "storage_slots": 0, "total": 0},
+    }
+    if not target:
+        report["status"] = "invalid"
+        report["note"] = "Address is not 20 bytes of hex."
+        return report
+    if not local_rpc(fork_url):
+        report["note"] = "Storage decode reads only a local anvil snapshot."
+        return report
+    rows = [row for row in list(layout or []) if isinstance(row, dict)][:_MAX_SLOTS]
+    if not rows:
+        report["status"] = "empty"
+        report["note"] = "No storage layout to decode."
+        return report
+    book = budget or CuBudget(cap_from_env("ETH_SCANNER_STORAGE_CU", DEFAULT_STORAGE_CU))
+    caller = rpc or _default_rpc
+    values: list[dict[str, str]] = []
+    for row in rows:
+        decoded_type = str(row.get("type") or "")
+        if _type_width(decoded_type) is None:
+            continue
+        slot = _layout_slot(str(row.get("slot") or ""))
+        if not slot:
+            continue
+        if not book.allow("eth_getStorageAt"):
+            report["note"] = "compute-unit cap reached while reading storage"
+            break
+        try:
+            raw = caller(fork_url, "eth_getStorageAt", [target, slot, "latest"], timeout_s=8.0)
+        except (CuBudgetExceeded, RpcUnavailable, RpcTransientError, RuntimeError, OSError, TimeoutError):
+            report["note"] = "local storage read failed"
+            break
+        try:
+            offset = int(row.get("offset") or 0)
+        except (TypeError, ValueError):
+            offset = 0
+        decoded = decode_word(str(raw or ""), decoded_type, offset)
+        if decoded is None:
+            continue
+        values.append({
+            "label": str(row.get("label") or "")[:80],
+            "slot": slot,
+            "type": decoded_type[:80],
+            "value": decoded,
+        })
+    report["values"] = values
+    report["status"] = "ok" if values else ("empty" if not report["note"] else "degraded")
+    if values and not report["note"]:
+        report["note"] = "Decoded static slots from the local snapshot."
+    report["heat_breakdown"] = {
+        "storage_layout": bool(values),
+        "storage_slots": len(values),
+        "total": 0,
+    }
+    return report
 
 
 def write_evidence(dest: Path, report: dict[str, Any]) -> Path:
@@ -270,6 +372,33 @@ def _named_slots(named: list[str]) -> list[str]:
         if len(rows) >= _MAX_SLOTS:
             break
     return rows
+
+
+_TYPE_WIDTH = re.compile(r"^(u?int)(\d+)$")
+
+
+def _type_width(type_name: str) -> Optional[int]:
+    name = (type_name or "").strip().lower()
+    if name == "address":
+        return 20
+    if name == "bool":
+        return 1
+    if name == "bytes32":
+        return 32
+    match = _TYPE_WIDTH.fullmatch(name)
+    if not match:
+        return None
+    bits = int(match.group(2))
+    if 8 <= bits <= 256 and bits % 8 == 0:
+        return bits // 8
+    return None
+
+
+def _layout_slot(raw: str) -> str:
+    text = (raw or "").strip()
+    if text.isdigit():
+        return "0x" + format(int(text), "064x")
+    return _slot(text)
 
 
 def _slot(raw: str) -> str:
