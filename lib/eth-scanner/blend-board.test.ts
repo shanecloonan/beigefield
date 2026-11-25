@@ -363,3 +363,16 @@ test("a decompile triage tag does not change heat", () => {
   assert.equal(board.leaderboard[0].heat, 0);
   assert.deepEqual(board.leaderboard[0].evidence_tags, ["decompile"]);
 });
+
+test("a certora tag shows a violation without changing the stored heat", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 6,
+      status: "done",
+      heat_breakdown: { certora: true, certora_evidence: 6 },
+    },
+  ]);
+  assert.equal(board.leaderboard[0].heat, 6);
+  assert.deepEqual(board.leaderboard[0].evidence_tags, ["certora"]);
+});
