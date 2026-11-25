@@ -1,0 +1,116 @@
+# Persist Echidna, Medusa, and ityfuzz seeds in the Actions cache.
+# The key is fuzz-corpus-<engine>-<hash>-<run_id>. The restore prefix
+# drops the run id so the newest seeds for that source come back.
+# This job does not start a fuzzer and does not contact a network.
+# An empty directory is not saved.
+
+name: eth-scanner-fuzz-corpus
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_path:
+        description: "Repo-relative Solidity file to hash. Empty uses the built-in property."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  corpus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Plan corpus keys
+        id: plan
+        env:
+          FUZZ_RUN_ID: ${{ github.run_id }}
+          FUZZ_SOURCE: ${{ inputs.source_path }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          import sys
+          from pathlib import Path
+
+          sys.path.insert(0, "eth-scanner/src")
+          from eth_scanner.fuzz.corpus import DEFAULT_SOURCE, github_output, plan_corpus
+
+          raw = (os.environ.get("FUZZ_SOURCE") or "").strip()
+          if raw:
+              root = Path(".").resolve()
+              path = (root / raw).resolve()
+              if root not in path.parents or path.suffix != ".sol":
+                  raise SystemExit("source must be a Solidity file inside this repo")
+              source = path.read_text(encoding="utf-8")
+          else:
+              source = DEFAULT_SOURCE
+          report = plan_corpus(
+              source,
+              run_id=os.environ.get("FUZZ_RUN_ID") or "local",
+              dest=Path("fuzz-corpus"),
+          )
+          if report.get("status") != "ok":
+              raise SystemExit(report.get("note") or "corpus plan failed")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              handle.write(github_output(report))
+          PY
+
+      - uses: actions/cache/restore@v4
+        id: echidna
+        with:
+          path: ${{ steps.plan.outputs.echidna_path }}
+          key: ${{ steps.plan.outputs.echidna_key }}
+          restore-keys: |
+            ${{ steps.plan.outputs.echidna_restore }}
+      - uses: actions/cache/restore@v4
+        id: medusa
+        with:
+          path: ${{ steps.plan.outputs.medusa_path }}
+          key: ${{ steps.plan.outputs.medusa_key }}
+          restore-keys: |
+            ${{ steps.plan.outputs.medusa_restore }}
+      - uses: actions/cache/restore@v4
+        id: ityfuzz
+        with:
+          path: ${{ steps.plan.outputs.ityfuzz_path }}
+          key: ${{ steps.plan.outputs.ityfuzz_key }}
+          restore-keys: |
+            ${{ steps.plan.outputs.ityfuzz_restore }}
+
+      - name: Save only when a seed is present
+        id: seeds
+        run: |
+          set -euo pipefail
+          present=false
+          for dir in \
+            "${{ steps.plan.outputs.echidna_path }}" \
+            "${{ steps.plan.outputs.medusa_path }}" \
+            "${{ steps.plan.outputs.ityfuzz_path }}"
+          do
+            if [ -d "$dir" ] && find "$dir" -type f -size +0c | grep -q .; then
+              present=true
+            fi
+          done
+          echo "present=$present" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache/save@v4
+        if: steps.seeds.outputs.present == 'true' && steps.echidna.outputs.cache-hit != 'true'
+        with:
+          path: ${{ steps.plan.outputs.echidna_path }}
+          key: ${{ steps.plan.outputs.echidna_key }}
+      - uses: actions/cache/save@v4
+        if: steps.seeds.outputs.present == 'true' && steps.medusa.outputs.cache-hit != 'true'
+        with:
+          path: ${{ steps.plan.outputs.medusa_path }}
+          key: ${{ steps.plan.outputs.medusa_key }}
+      - uses: actions/cache/save@v4
+        if: steps.seeds.outputs.present == 'true' && steps.ityfuzz.outputs.cache-hit != 'true'
+        with:
+          path: ${{ steps.plan.outputs.ityfuzz_path }}
+          key: ${{ steps.plan.outputs.ityfuzz_key }}
