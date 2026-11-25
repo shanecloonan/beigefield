@@ -44,6 +44,7 @@ type Board = {
     pending_stages?: string[];
     original_peak?: number | null;
     evidence_tags?: string[];
+    disclosure_status?: "" | "unreviewed" | "reviewing" | "fp" | "credible";
   }[];
   flagged?: {
     address: string;
@@ -287,6 +288,11 @@ export default function BlendApp() {
                       {row.evidence_tags && row.evidence_tags.length > 0 ? (
                         <span className="mt-0.5 block text-[10px] uppercase tracking-wider text-brand-400">
                           {row.evidence_tags.join(" · ")}
+                        </span>
+                      ) : null}
+                      {row.disclosure_status ? (
+                        <span className="mt-0.5 block text-[10px] uppercase tracking-wider text-brand-400">
+                          Draft {row.disclosure_status === "fp" ? "FP" : row.disclosure_status}
                         </span>
                       ) : null}
                     </td>

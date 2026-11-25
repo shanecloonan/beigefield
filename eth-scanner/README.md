@@ -341,6 +341,19 @@ python -m eth_scanner system-fork \
 python -m eth_scanner fuzz-corpus --source vault.sol --run-id 101 --json
 ```
 
+## Disclosure draft
+
+`disclose` writes a local draft for one address. The triage status is unreviewed, reviewing, fp, or credible. `--lookup` reads `/.well-known/security.txt` and `/security.txt` with GET. Immunefi, Cantina, and SEAL 911 are recorded as public URLs. The command does not send mail, submit a form, or post a message. A private host is refused. The board shows `disclosure` and the triage status. Heat stays 0.
+
+```bash
+python -m eth_scanner disclose \
+  --address 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+  --domain example.com \
+  --slug example \
+  --status unreviewed \
+  --json
+```
+
 ## Shaped-transaction watch
 
 `watch-shaped` reads mined receipts. A fresh contract whose funds rose is ordered ahead of one whose funds did not. A flash-loan log plus at least eight logs, touching a watched address, is a shape. Bytecode clones from a local index are queued with it. `--blocks` uses `ETH_RPC_URL` for one `eth_getLogs` and at most three receipts, capped at 800 CU. Pending-transaction methods are refused. The board shows `shaped`. Heat stays 0.

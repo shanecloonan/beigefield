@@ -55,6 +55,8 @@ export type LeaderRow = {
   pending_stages: string[];
   /** Display labels from the heat breakdown. Empty when the scan stored none. */
   evidence_tags: string[];
+  /** Draft triage. Empty when the scan stored none. */
+  disclosure_status: "" | "unreviewed" | "reviewing" | "fp" | "credible";
 };
 
 export type BlendBoard = {
@@ -159,6 +161,15 @@ function scoreOf(row: BlendRunLike): { state: "" | "provisional" | "final"; pend
   return { state, pending };
 }
 
+/** Draft triage stored on a scan. Unknown values stay blank. */
+export function disclosureStatus(
+  breakdown: Record<string, unknown> | null,
+): "" | "unreviewed" | "reviewing" | "fp" | "credible" {
+  const raw = String(breakdown?.disclosure_status || "").trim().toLowerCase();
+  if (raw === "unreviewed" || raw === "reviewing" || raw === "fp" || raw === "credible") return raw;
+  return "";
+}
+
 /** Labels the board can show. Points stay in the breakdown; this list is display only. */
 export function evidenceTags(breakdown: Record<string, unknown> | null): string[] {
   if (!breakdown) return [];
@@ -197,6 +208,7 @@ export function evidenceTags(breakdown: Record<string, unknown> | null): string[
   if (flagged("flow") || amount("flow_score") > 0) tags.push("flow");
   if (flagged("system")) tags.push("system");
   if (flagged("fuzz_corpus")) tags.push("fuzz-corpus");
+  if (flagged("disclosure") || disclosureStatus(breakdown)) tags.push("disclosure");
   return tags;
 }
 
@@ -222,6 +234,7 @@ function toRow(address: string, row: BlendRunLike): LeaderRow {
     pending_stages: score.pending,
     original_peak: null,
     evidence_tags: evidenceTags(breakdownOf(row)),
+    disclosure_status: disclosureStatus(breakdownOf(row)),
   };
 }
 
