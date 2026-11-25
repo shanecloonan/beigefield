@@ -1,18 +1,28 @@
 # Passive website checks. Random hosts come from CT logs, Tranco, and bounty
 # scope. Active paths run only for owned hosts and in-scope bounty assets.
 # No injection, no fuzzing, no row dumps.
+#
+# Cadence: hourly at :47 UTC (every hour at :47 Central, CST is UTC-6).
+# The repo is private, so GitHub bills Actions minutes. The free allowance
+# is 2,000 minutes a month. A 2-minute run every 10 minutes is about 8,640
+# minutes a month, every 15 minutes about 5,760, and every 30 minutes about
+# 2,880. Hourly is about 1,440, the tightest schedule whose own cost fits
+# inside 2,000. The Ethereum crons already use far more than 2,000, measured
+# from recent scheduled runs, so this does not put the account back under
+# the allowance. Each run scans 6 hosts and advances a cursor.
 name: site-scanner
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "17 9 * * *"
+    - cron: "47 * * * *"
   push:
     branches: [main]
     paths:
       - site-scanner/**
       - .github/workflows/site-scanner.yml
       - supabase/migrations/20261122120000_site_scan_hits.sql
+      - supabase/migrations/20261125034700_site_scan_cursor.sql
 
 permissions:
   contents: read
@@ -24,7 +34,7 @@ concurrency:
 jobs:
   scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -51,14 +61,16 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: python -m site_scanner.migrate --sql supabase/migrations/20261122120000_site_scan_hits.sql
+        run: |
+          python -m site_scanner.migrate --sql supabase/migrations/20261122120000_site_scan_hits.sql
+          python -m site_scanner.migrate --sql supabase/migrations/20261125034700_site_scan_cursor.sql
       - name: Scan owned and discovered hosts
         env:
           PYTHONPATH: site-scanner/src:eth-scanner/src
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: |
-          python -m site_scanner scan --discover --limit 24 --json > /tmp/site-scan.json
+          python -m site_scanner scan --discover --limit 6 --json > /tmp/site-scan.json
           python - <<'PY'
           import json
           report = json.load(open("/tmp/site-scan.json", encoding="utf-8"))
@@ -78,6 +90,7 @@ jobs:
               "status": report.get("status"),
               "scanned": report.get("scanned"),
               "sources": report.get("sources") or {},
+              "cursor": report.get("cursor") or {},
               "reports": slim,
           }))
           PY

@@ -9,9 +9,9 @@ import time
 from site_scanner.allow import active_allowed, host_of
 from site_scanner.analyze import report_for
 from site_scanner.cloud import annotate_cloud
-from site_scanner.discover import FALLBACK_HOSTS, crt_hosts, live_discovery, tranco_hosts
+from site_scanner.discover import FALLBACK_HOSTS, crt_hosts, live_discovery, take_batch, tranco_hosts
 from site_scanner.fetch import fetch_host
-from site_scanner.store import save_hit
+from site_scanner.store import load_cursor, save_cursor, save_hit
 
 
 def _hosts(args: argparse.Namespace) -> list[str]:
@@ -47,8 +47,21 @@ def main() -> None:
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
     sources = {"owned": 0, "bounty": 0, "certificate": 0, "tranco": 0}
+    cursor_note: dict = {"status": "unused"}
     if args.discover:
-        hosts, bounty, sources = live_discovery(limit=max(1, args.limit))
+        batch = max(1, args.limit)
+        pool, bounty, sources = live_discovery(limit=max(batch * 8, 24))
+        state = load_cursor()
+        hosts, seen_next, wrapped = take_batch(pool, list(state.get("seen") or []), batch)
+        cycle = int(state.get("cycle") or 0) + (1 if wrapped else 0)
+        cursor_note = {
+            "status": "pending",
+            "cycle": cycle,
+            "wrapped": wrapped,
+            "batch": len(hosts),
+            "pool": len(pool),
+            "_seen": seen_next,
+        }
     else:
         bounty = {host_of(item) for item in args.bounty_hosts.split(",") if item.strip()}
         hosts = _hosts(args)
@@ -57,7 +70,16 @@ def main() -> None:
         if index:
             time.sleep(0.25)
         reports.append(scan_host(host, bounty=bounty))
-    payload = {"status": "ok", "scanned": len(reports), "sources": sources, "reports": reports}
+    if cursor_note.get("status") == "pending":
+        saved = save_cursor(list(cursor_note.pop("_seen") or []), int(cursor_note.get("cycle") or 0))
+        cursor_note["status"] = saved.get("status")
+    payload = {
+        "status": "ok",
+        "scanned": len(reports),
+        "sources": sources,
+        "cursor": cursor_note,
+        "reports": reports,
+    }
     if args.json:
         print(json.dumps(payload, indent=2))
     else:
