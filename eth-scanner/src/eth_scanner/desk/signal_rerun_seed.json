@@ -1,10 +1,730 @@
 [
-  {"chain": "ethereum", "address": "0x1b2cb79a4564206f53ba80b4d780f251b4ae6765", "peak_heat": 3, "contract_name": "OptinProxy", "verdict": "maybe"},
-  {"chain": "ethereum", "address": "0xda4d2152b2230e33c80b0a88b7c28b1c464ee3c2", "peak_heat": 3, "contract_name": "xU3LPStable", "verdict": "no"},
-  {"chain": "ethereum", "address": "0x6110d61dd1133b0f845f1025d6678cd22a11a2fe", "peak_heat": 3, "contract_name": "SpiceFiNFT4626", "verdict": "no"},
-  {"chain": "ethereum", "address": "0x7ee64f74792c307446cd92d23e551efae3172a28", "peak_heat": 7, "contract_name": "MigratableWethTransmuter", "verdict": "no"},
-  {"chain": "ethereum", "address": "0x4d5f47fa6a74757f35c14fd3a6ef8e3c9bc514e8", "peak_heat": 1, "contract_name": "ATokenInstance", "verdict": "no"},
-  {"chain": "ethereum", "address": "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6", "peak_heat": 3, "contract_name": "SfrxUSD", "verdict": "no"},
-  {"chain": "ethereum", "address": "0xbceb5f6877d979ec621ae694da1102cb95691ad3", "peak_heat": 3, "contract_name": "LYTPool", "verdict": "no"},
-  {"chain": "ethereum", "address": "0xda06ee2dacf9245aa80072a4407debdea0d7e341", "peak_heat": 3, "contract_name": "StakedAvantCoinV2", "verdict": "no"}
+  {
+    "chain": "ethereum",
+    "address": "0x1b2cb79a4564206f53ba80b4d780f251b4ae6765",
+    "peak_heat": 3,
+    "contract_name": "OptinProxy",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xda4d2152b2230e33c80b0a88b7c28b1c464ee3c2",
+    "peak_heat": 3,
+    "contract_name": "xU3LPStable",
+    "verdict": "no"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x6110d61dd1133b0f845f1025d6678cd22a11a2fe",
+    "peak_heat": 3,
+    "contract_name": "SpiceFiNFT4626",
+    "verdict": "no"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x7ee64f74792c307446cd92d23e551efae3172a28",
+    "peak_heat": 7,
+    "contract_name": "MigratableWethTransmuter",
+    "verdict": "no"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x4d5f47fa6a74757f35c14fd3a6ef8e3c9bc514e8",
+    "peak_heat": 1,
+    "contract_name": "ATokenInstance",
+    "verdict": "no"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+    "peak_heat": 3,
+    "contract_name": "SfrxUSD",
+    "verdict": "no"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xbceb5f6877d979ec621ae694da1102cb95691ad3",
+    "peak_heat": 3,
+    "contract_name": "LYTPool",
+    "verdict": "no"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xda06ee2dacf9245aa80072a4407debdea0d7e341",
+    "peak_heat": 3,
+    "contract_name": "StakedAvantCoinV2",
+    "verdict": "no"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x7cd5e2d0056a7a7f09cbb86e540ef4f6dccc97dd",
+    "peak_heat": 9,
+    "contract_name": "xToken xSNXAdminProxy",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x56b49615b468c14237236caffee4d5b7c65a82f8",
+    "peak_heat": 6,
+    "contract_name": "CoinbaseSmartWallet",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x8f0cb368c63fbedf7a90e43fe50f7eb8b9411746",
+    "peak_heat": 6,
+    "contract_name": "Bank of Chain",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xf80e51afb613d764fa61751affd3313c190a86bb",
+    "peak_heat": 6,
+    "contract_name": "Altitude",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x686e8500b6be8812eb198aabbbfa14c95c03fc88",
+    "peak_heat": 6,
+    "contract_name": "GovernanceLockedRevenueDistributionToken",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x2e87d6bfa3f2a932e0c70a32607c0b839404984d",
+    "peak_heat": 6,
+    "contract_name": "MetaMorphoV1_1",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x3ace737610da61d004c748275eafd2ecc99802be",
+    "peak_heat": 6,
+    "contract_name": "VaultV2",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xedc72b49542e4362c677b8369bc23882ed635a75",
+    "peak_heat": 6,
+    "contract_name": "MetaMorphoV1_1",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x1f7bae0549f9f0baf15d0d637900056bb9434c36",
+    "peak_heat": 6,
+    "contract_name": "VaultV3",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x579a3bde631c3d8068cbfe3dc45b0f14ec18dd43",
+    "peak_heat": 6,
+    "contract_name": "BridgeImplementation",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xdcb9a6d103dae1ab571f746bb83ded53e665880a",
+    "peak_heat": 6,
+    "contract_name": "VaultV2",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x241e82c79452f51fbfc89fac6d912e021db1a3b7",
+    "peak_heat": 6,
+    "contract_name": "Hydro",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x7ceb0f01cb7187a2ebed5661ecc4d5701d8f2350",
+    "peak_heat": 6,
+    "contract_name": "VaultV2",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xdb1281191bd51d4e4412b0e3323001759d18939f",
+    "peak_heat": 6,
+    "contract_name": "Vault",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xdc55fe3d11d8eca631d9db6fcc999cd26fe733be",
+    "peak_heat": 6,
+    "contract_name": "EmeraldVault",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x5e5b30c5fd07da26d1e515dfedb1d37c93417652",
+    "peak_heat": 6,
+    "contract_name": "VaultV2",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xc88f47067db2e25851317a2fdae73a22c0777c37",
+    "peak_heat": 6,
+    "contract_name": "oneBTC",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x7b9e07f03116e5f334b2c9f539515ca5e31fd063",
+    "peak_heat": 6,
+    "contract_name": "EmeraldVault",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xd78f89b311c27c4c71487aeb73742665cd13b941",
+    "peak_heat": 6,
+    "contract_name": "VaultV2",
+    "verdict": "maybe"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x84e0a246dd437d911989e89667816a9ed97a1284",
+    "peak_heat": 4,
+    "contract_name": "MagicFox Vaults",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xed6e000def95780fb89734c07ee2ce9f6dcaf110",
+    "peak_heat": 4,
+    "contract_name": "Definitive Yield Vaults",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x7bbcf1b600565ae023a1806ef637af4739de3255",
+    "peak_heat": 4,
+    "contract_name": "PrimeFi",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x96650bebc549456f253974c11fc6cbe28172a2d2",
+    "peak_heat": 4,
+    "contract_name": "Peridot",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xdf53cc6771cec9b4ef97ac726725a16b0fb41aa3",
+    "peak_heat": 4,
+    "contract_name": "Lila Finance",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x10031e7cff689de64f1a5a8ecf4fbbc7aa068927",
+    "peak_heat": 4,
+    "contract_name": "Whitehole Finance",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xafccb724e3aec1657fc9514e3e53a0e71e80622d",
+    "peak_heat": 4,
+    "contract_name": "Vaultka",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x6dd963c510c2d2f09d5eddb48ede45fed063eb36",
+    "peak_heat": 4,
+    "contract_name": "Factor Leverage Vault",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xad3e02e83b886543d1171ff446c130d52068c106",
+    "peak_heat": 4,
+    "contract_name": "Sculptor Finance",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xe6af844d5740b6b297b6dd7fb2ce299ee9e3d16f",
+    "peak_heat": 4,
+    "contract_name": "SolidLizard Lending",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x3c70260eee0a2bfc4b375feb810325801f289fbd",
+    "peak_heat": 4,
+    "contract_name": "OCP Finance",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x17b7163cf1dbd286e262ddc68b553d899b93f526",
+    "peak_heat": 4,
+    "contract_name": "Qubit",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x2eadce7ebdedf3c7291f1f658208a2720ff4b74d",
+    "peak_heat": 4,
+    "contract_name": "Aquarius Loan",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x4d48d503ed04d50418c9abf163b1168ff834e47c",
+    "peak_heat": 4,
+    "contract_name": "Gloop",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x1c7a460413dd4e964f96d8dfc56e7223ce88cd85",
+    "peak_heat": 4,
+    "contract_name": "Seamless V2",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xb3cb6d2f8f2fde203a022201c81a96c167607f15",
+    "peak_heat": 4,
+    "contract_name": "Green Planet",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x657d9aba1dbb59e53f9f3ecaa878447dcfc96dcb",
+    "peak_heat": 5,
+    "contract_name": "YieldNest ynETH MAX",
+    "verdict": "no"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x0391be54e72f7e001f6bbc331777710b4f2999ef",
+    "peak_heat": 4,
+    "contract_name": "Trava Finance",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x5de40c1152c990492eaeaeecc4ecaab788bbc4fd",
+    "peak_heat": 4,
+    "contract_name": "Segment Finance",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xe7df6907120684add86f686e103282ee5cd17b02",
+    "peak_heat": 4,
+    "contract_name": "USDFI Lending",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x2a0a59d6b975828e781ecac125dba40d7ee5ddc0",
+    "peak_heat": 4,
+    "contract_name": "Ripe Protocol",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xf0ce1d83b5fc9c67f157d8b97fd09e2cf8af899e",
+    "peak_heat": 4,
+    "contract_name": "ZebraDAO",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xc47d9753f3b32aa9548a7c3f30b6aec3b2d2798c",
+    "peak_heat": 4,
+    "contract_name": "Tender Finance",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x3082cc23568ea640225c2467653db90e9250aaa0",
+    "peak_heat": 4,
+    "contract_name": "Radiant V2",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xe7e7e741c23a4767831a56a8c99f522c5ac1e7e7",
+    "peak_heat": 4,
+    "contract_name": "Everything",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x3c769d0e8d21d380228dfb7918c6933bb6ecb6d4",
+    "peak_heat": 5,
+    "contract_name": "Ledgity Yield",
+    "verdict": "no"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x73fddfb941c11d16c827169bb94acc227841c396",
+    "peak_heat": 5,
+    "contract_name": "ACoconut",
+    "verdict": "no"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x15f3ee2f609fbae0bc48e3a071d66dd917c682eb",
+    "peak_heat": 5,
+    "contract_name": "SuperReturn",
+    "verdict": "no"
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x93d504070ab0eede5449c89c5ea0f5e34d8103f8",
+    "peak_heat": 3,
+    "contract_name": "Archi Finance",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xfcc9b8a55f63b1fec16622f02c64d85cc53d38a6",
+    "peak_heat": 3,
+    "contract_name": "BorB",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xf45116c2e5be608152ea8a6a73917dfe75b707dc",
+    "peak_heat": 3,
+    "contract_name": "BaseYield",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x9525b6375c19cd507ffe726fa09df237eaf8053b",
+    "peak_heat": 3,
+    "contract_name": "Poor Exchange",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x00438ae909739f750c5df58b222fe0bde900c210",
+    "peak_heat": 3,
+    "contract_name": "Hotpot Finance",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x3295fde99976e6b6b477e6834b2651a22deb1dd7",
+    "peak_heat": 3,
+    "contract_name": "SunFlower Finance",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x6448be0ca45a7581d9c4c9dd665e14ec60b25113",
+    "peak_heat": 3,
+    "contract_name": "Biokript",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x708baac4b235d3f62bd18e58c0594b8b20b2ed5b",
+    "peak_heat": 3,
+    "contract_name": "Satoshi Finance",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xd954ecd262b3df276c39f89506ab39cef0272335",
+    "peak_heat": 3,
+    "contract_name": "Etherberry Finance",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x50aa7a13b28eea97dc6c3f5e8aaa7fe512e7306d",
+    "peak_heat": 3,
+    "contract_name": "X Blue Finance",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xfea6ab80cd850c3e63374bc737479aeec0e8b9a1",
+    "peak_heat": 3,
+    "contract_name": "Solana Farm",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xbcb24afb019be7e93ea9c43b7e22bb55d5b7f45d",
+    "peak_heat": 3,
+    "contract_name": "BSCStation",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x265a65ad2d2f9c6c7482a76f53b79ef12954c46f",
+    "peak_heat": 3,
+    "contract_name": "XBased",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x4788de271f50ea6f5d5d2a5072b8d3c61d650326",
+    "peak_heat": 3,
+    "contract_name": "Basin DAO",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x2303d1b31cf34fd06bbbeb3c1faa003d90fd7218",
+    "peak_heat": 3,
+    "contract_name": "IceSwap",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xd63ebbe933f422bf8bc6f909fa27e467b537ca81",
+    "peak_heat": 3,
+    "contract_name": "Spooky Base",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x322f15d4bedaa20c178fb75b2628663d2da19736",
+    "peak_heat": 3,
+    "contract_name": "Monopoly Finance",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x590830dfdf9a3f68afcdde2694773debdf267774",
+    "peak_heat": 3,
+    "contract_name": "Giza",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xa28bac0427e4a722246ce4e9ad89ec95ff8b87a3",
+    "peak_heat": 3,
+    "contract_name": "Statix Farm",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xb64e280e9d1b5dbec4accedb2257a87b400db149",
+    "peak_heat": 3,
+    "contract_name": "Level Perps",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xbbdaa8700a7caaaf3b4aac1fa6fb5ff76fc14c56",
+    "peak_heat": 3,
+    "contract_name": "NewSpace Finance",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x31c91d8fb96bff40955dd2dbc909b36e8b104dde",
+    "peak_heat": 3,
+    "contract_name": "POISON FINANCE",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xc2181d975c05c8c724b334bced0764c0b86b1d53",
+    "peak_heat": 3,
+    "contract_name": "Global Balanced Liquidity Index",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xcd7cbc46d083a245b45e22cb4be2c569947ce896",
+    "peak_heat": 3,
+    "contract_name": "SamoDAO",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xef0b2ccb53a683fa48799245f376d6a60929f003",
+    "peak_heat": 3,
+    "contract_name": "MoonBase",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xb2dcbd5258a22385240e4ac13fc6726b66f0de96",
+    "peak_heat": 3,
+    "contract_name": "ZenithSwap",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x576bb65b52425d59ac4c702376f88c527f5c7773",
+    "peak_heat": 3,
+    "contract_name": "TroyDefi",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xafe5451185513925f5e757f001425338ff93412d",
+    "peak_heat": 3,
+    "contract_name": "Particles Money",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x31535f7a83083e3f34899f356ecc7246fbf2e82d",
+    "peak_heat": 3,
+    "contract_name": "JaguarSwap",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x5badd826aefa700446fa6d784e6ff97ed6eedca9",
+    "peak_heat": 3,
+    "contract_name": "AfraSwap",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x12c415aafb1a521b42251e972bb7ce6795f7669b",
+    "peak_heat": 3,
+    "contract_name": "Xray Swap",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xa5593837af2b99021fe657c80d70d2365f5cfd38",
+    "peak_heat": 3,
+    "contract_name": "Asgard Dao",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x6012c3a742f92103d238f1c8306cf8fbcdeca8b3",
+    "peak_heat": 3,
+    "contract_name": "LuckyChip",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x58cb98a966f62aa6f2190eb3aa03132a0c3de3d5",
+    "peak_heat": 3,
+    "contract_name": "OpenWorld Farm",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x873177db4eac3581464ffa64deb39b25ce409bfd",
+    "peak_heat": 3,
+    "contract_name": "Narwhal Finance",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xa26303226baa2299ada8d573a6fcd792ab1cfb07",
+    "peak_heat": 3,
+    "contract_name": "Glorb",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x66b70221b22925c4663c46cd15f2f2eaac822ceb",
+    "peak_heat": 3,
+    "contract_name": "boobs.finance",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x37d39950f9c753d62529dbf68fcb4dca4004fbfd",
+    "peak_heat": 3,
+    "contract_name": "SpaceDex",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xc4743d049891ea4333f8b559d09a93c3511f0762",
+    "peak_heat": 3,
+    "contract_name": "BAS3D",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x17a8541b82bf67e10b0874284b4ae66858cb1fd5",
+    "peak_heat": 3,
+    "contract_name": "Possum Finance",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x4ae1a0d592dc4d1c51d37c2aefe6d2572fc47f7a",
+    "peak_heat": 3,
+    "contract_name": "Spectrumswap",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x84fd7cc4cd689fc021ee3d00759b6d255269d538",
+    "peak_heat": 3,
+    "contract_name": "PanKUKU",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x194f360d130f2393a5e9f3117a6a1b78abea1624",
+    "peak_heat": 3,
+    "contract_name": "Summer.fi Pro",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xe594b57e7f11ec1e8af9f003f74fa52b7aefdc9f",
+    "peak_heat": 3,
+    "contract_name": "Horiza",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x28f45ea79c50d3ed9e1fa8a41dc8595f636ec34d",
+    "peak_heat": 3,
+    "contract_name": "Nano Swap",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x4957c1c073557bff33c01a7ca1436d0d2409d439",
+    "peak_heat": 3,
+    "contract_name": "ChampagneSwap",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x602eb0d99a5e3e76d1510372c4d2020e12eaea8a",
+    "peak_heat": 3,
+    "contract_name": "OasisSwap",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0x52da160e9a8cef972ff0a797d4902ed67589f64c",
+    "peak_heat": 3,
+    "contract_name": "TrainSwap",
+    "verdict": ""
+  },
+  {
+    "chain": "ethereum",
+    "address": "0xa6e53f07bd410df069e20ced725bdc9135146fe9",
+    "peak_heat": 3,
+    "contract_name": "RetroDefi",
+    "verdict": ""
+  }
 ]
