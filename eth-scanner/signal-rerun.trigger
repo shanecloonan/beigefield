@@ -1,1 +1,1 @@
-Vault revert was misread as provider auth (run 45667260022). Retrigger so the unfinished signals finish. 4M CU budget unchanged.
+Post-#203 rescore. Re-run heat signals and the small-value queue through Lane A with fork verify on, after the measured-delta drain fix. 4M CU budget unchanged.
