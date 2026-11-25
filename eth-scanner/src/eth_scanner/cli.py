@@ -990,6 +990,14 @@ def main(argv: list[str] | None = None) -> int:
     decoded.add_argument("--layout", required=True, help="JSON file of storage layout rows")
     decoded.add_argument("--json", action="store_true")
 
+    upgrade = sub.add_parser(
+        "upgrade-layout",
+        help="Diff two storage layouts for an unsafe upgrade. A clash adds heat.",
+    )
+    upgrade.add_argument("--before", required=True, help="JSON layout of the previous implementation")
+    upgrade.add_argument("--after", required=True, help="JSON layout of the next implementation")
+    upgrade.add_argument("--json", action="store_true")
+
     external = sub.add_parser(
         "external-suites",
         help="Thin fork harness for the external AGPL ERC-4626 suites (no broadcast)",
@@ -1664,6 +1672,44 @@ def main(argv: list[str] | None = None) -> int:
                 % (public["address"], public["status"], len(public["values"]), public["heat"])
             )
         return 0 if public["status"] != "invalid" else 2
+
+    if args.cmd == "upgrade-layout":
+        from eth_scanner.logic.upgrade_layout import compare_layouts
+
+        def _rows(path: str):
+            try:
+                loaded = json.loads(Path(path).read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                return None
+            rows = loaded.get("storage_layout") if isinstance(loaded, dict) else loaded
+            return rows if isinstance(rows, list) else None
+
+        before = _rows(args.before)
+        after = _rows(args.after)
+        if before is None or after is None:
+            print(json.dumps({
+                "status": "invalid",
+                "heat": 0,
+                "note": "Layout file is not JSON.",
+            }, indent=2))
+            return 2
+        report = compare_layouts(before, after)
+        public = {
+            "status": report.get("status"),
+            "clashes": [
+                {"kind": row.get("kind"), "label": row.get("label")}
+                for row in (report.get("clashes") or [])
+            ],
+            "heat": report.get("heat"),
+            "note": report.get("note"),
+        }
+        if args.json:
+            print(json.dumps(public, indent=2))
+        else:
+            print("upgrade-layout status=%s clashes=%d heat=%s" % (
+                public["status"], len(public["clashes"]), public["heat"],
+            ))
+        return 0
 
     if args.cmd == "source-layout":
         from eth_scanner.heat import evidence_heat
