@@ -1075,6 +1075,20 @@ def main(argv: list[str] | None = None) -> int:
     surface.add_argument("--json", action="store_true")
     surface.add_argument("--write-dir", default="", help="write the local harness inputs here")
 
+    specs = sub.add_parser(
+        "protocol-specs",
+        help="Protocol invariants for one verified shortlist contract. No key uses a template. Heat stays 0.",
+    )
+    specs.add_argument("--address", required=True, help="0x…")
+    specs.add_argument("--source", required=True, help="verified Solidity file")
+    specs.add_argument("--abi", default="", help="optional ABI JSON file")
+    specs.add_argument("--on-shortlist", action="store_true")
+    specs.add_argument("--verified", action="store_true")
+    specs.add_argument("--cache-dir", default="", help="cache directory keyed by source hash")
+    specs.add_argument("--write-dir", default="", help="where to write engine inputs")
+    specs.add_argument("--run", action="store_true", help="start a local engine binary when one is installed")
+    specs.add_argument("--json", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -2019,6 +2033,45 @@ def main(argv: list[str] | None = None) -> int:
                 % (heat, len(payload["functions"]), payload["proxy_kind"] or "none")
             )
         return 0
+
+    if args.cmd == "protocol-specs":
+        import json as _json
+        from eth_scanner.specs.protocol import generate_specs
+        source = Path(args.source).read_text(encoding="utf-8", errors="replace")
+        abi = None
+        if args.abi:
+            abi = _json.loads(Path(args.abi).read_text(encoding="utf-8"))
+        report = generate_specs(
+            address=str(args.address),
+            source=source,
+            on_shortlist=bool(args.on_shortlist),
+            verified=bool(args.verified),
+            abi=abi if isinstance(abi, list) else None,
+            cache_dir=Path(args.cache_dir) if args.cache_dir else None,
+            dest=Path(args.write_dir) if args.write_dir else None,
+            run=bool(args.run),
+        )
+        public = {
+            "status": report.get("status"),
+            "address": report.get("address"),
+            "generator": report.get("generator"),
+            "cache": report.get("cache"),
+            "code_hash": report.get("code_hash"),
+            "properties": report.get("properties") or [],
+            "specs": report.get("specs"),
+            "files": report.get("files") or {},
+            "heat": 0,
+            "heat_breakdown": {"specs": bool(report.get("specs"))},
+            "note": report.get("note"),
+        }
+        if args.json:
+            print(_json.dumps(public, indent=2))
+        else:
+            print(
+                "protocol-specs %s status=%s properties=%d"
+                % (public["address"], public["status"], len(public["properties"]))
+            )
+        return 0 if public["status"] != "invalid" else 2
 
     if args.cmd == "fork-verify":
         from eth_scanner.engines.fork_verify import (

@@ -312,6 +312,19 @@ python -m eth_scanner upgrade-layout \
 A weekly job scores ten authored bug-class labels with the corpus patterns and the three shape leads. The baseline is 0.9: nine classes hit, and signature replay is the miss. scabench and Web3Bugs stay outside the tree. DeFiVulnLabs is not fetched. The snippets are original shapes, and the score adds no heat.
 
 
+## Protocol specs
+
+`protocol-specs` writes invariants for one verified shortlist contract. The properties come from an LLM only when `ETH_SCANNER_LLM_API_KEY` or `OPENAI_API_KEY` is already set. The key is not printed. With no key, a template reads function names and NatSpec and still writes the files. Results are cached by the SHA-256 of the source. Foundry, Echidna, Medusa, Certora, hevm, and a Chimera-style harness (one `test_` / `property_` / `echidna_` body, Chimera itself not vendored) are the outputs. `--run` starts a binary that is already on PATH and never a public RPC. The board shows `specs`. Heat stays 0.
+
+```bash
+python -m eth_scanner protocol-specs \
+  --address 0x1111111111111111111111111111111111111111 \
+  --source vault.sol \
+  --on-shortlist \
+  --verified \
+  --json
+```
+
 Slither, Aderyn, and Semgrep each get a timeout (`--timeout`, clamped to 5–180 seconds). Semgrep uses `research/semgrep/solidity.yml`. Set `ETH_SCANNER_SEMGREP_RULES` to a local checkout of a Decurity-style Solidity pack to add those rules; the default run does not download a ruleset.
 
 Findings are normalized to one scale. An allowlisted high-confidence funds detector adds 3 points of `static_evidence`, a medium detector adds 1, and the component caps at 6. Ownable / AccessControl hits, style checks, and informational detectors add 0. The points are a heat component, not a verdict.

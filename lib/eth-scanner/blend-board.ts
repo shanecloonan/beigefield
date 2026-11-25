@@ -191,6 +191,7 @@ export function evidenceTags(breakdown: Record<string, unknown> | null): string[
   if (amount("proxy_evidence") > 0) tags.push("proxy");
   if (amount("fresh_evidence") > 0) tags.push("fresh");
   if (amount("eoa_admin") > 0) tags.push("admin");
+  if (flagged("specs")) tags.push("specs");
   return tags;
 }
 

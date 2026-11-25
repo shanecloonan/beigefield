@@ -441,3 +441,16 @@ test("an upgrade tag shows a layout clash without changing the stored heat", () 
   assert.equal(board.leaderboard[0].heat, 3);
   assert.deepEqual(board.leaderboard[0].evidence_tags, ["upgrade"]);
 });
+
+test("a protocol spec tag shows the generated properties and does not change heat", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 4,
+      status: "done",
+      heat_breakdown: { specs: true },
+    },
+  ]);
+  assert.equal(board.leaderboard[0].heat, 4);
+  assert.deepEqual(board.leaderboard[0].evidence_tags, ["specs"]);
+});
