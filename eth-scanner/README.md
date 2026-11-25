@@ -206,6 +206,16 @@ python -m eth_scanner static-analyze \
   --json --dry-run
 ```
 
+## Sequence invariants
+
+A fixed catalog of at most 8 unprivileged sequences, each at most 4 calls (deposit, donate, withdraw, redeem), checks three properties: `totalAssets` covers `convertToAssets(totalSupply)`, share price does not fall on a non-admin sequence, and the attacker’s balance does not rise. The one-call probe is the first sequence. The same three checks run inside the local-fork Foundry harness after each outsider call. A missing ERC-4626 view is skipped. An extraction still marks the fork report drainable. A solvency or price failure does not.
+
+```bash
+python -m eth_scanner sequence-invariants --model fair --json
+```
+
+No RPC, no broadcast, and no call trace is stored.
+
 ## Buckets
 
 | Bucket | Meaning |
