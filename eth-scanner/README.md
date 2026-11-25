@@ -312,6 +312,14 @@ python -m eth_scanner upgrade-layout \
 A weekly job scores ten authored bug-class labels with the corpus patterns and the three shape leads. The baseline is 0.9: nine classes hit, and signature replay is the miss. scabench and Web3Bugs stay outside the tree. DeFiVulnLabs is not fetched. The snippets are original shapes, and the score adds no heat.
 
 
+## Incident replay
+
+`exploit-replay` measures whether detector leads would have flagged a victim named in a public incident. The DeFiHackLabs tree is an external checkout and is refused if it is inside this repo. Only the victim address, chain, and fork block are kept. `--fetch-source` reads Sourcify. With `ETH_RPC_URL` set, one `eth_getCode` runs at the block before the incident and stops at `--cu-cap` (default 4,000). A missing archive node is a skip. The printed recall sits next to the authored 0.9 bug-class baseline. The board shows `replay`. Heat stays 0.
+
+```bash
+python -m eth_scanner exploit-replay --checkout /tmp/DeFiHackLabs --sample 15 --json
+```
+
 ## Protocol specs
 
 `protocol-specs` writes invariants for one verified shortlist contract. The properties come from an LLM only when `ETH_SCANNER_LLM_API_KEY` or `OPENAI_API_KEY` is already set. The key is not printed. With no key, a template reads function names and NatSpec and still writes the files. Results are cached by the SHA-256 of the source. Foundry, Echidna, Medusa, Certora, hevm, and a Chimera-style harness (one `test_` / `property_` / `echidna_` body, Chimera itself not vendored) are the outputs. `--run` starts a binary that is already on PATH and never a public RPC. The board shows `specs`. Heat stays 0.

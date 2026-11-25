@@ -442,6 +442,19 @@ test("an upgrade tag shows a layout clash without changing the stored heat", () 
   assert.deepEqual(board.leaderboard[0].evidence_tags, ["upgrade"]);
 });
 
+test("a replay tag shows an incident flag and does not change heat", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 4,
+      status: "done",
+      heat_breakdown: { replay: true },
+    },
+  ]);
+  assert.equal(board.leaderboard[0].heat, 4);
+  assert.deepEqual(board.leaderboard[0].evidence_tags, ["replay"]);
+});
+
 test("a protocol spec tag shows the generated properties and does not change heat", () => {
   const board = summarizeBlendRuns([
     {
