@@ -264,7 +264,10 @@ python -m eth_scanner hevm-value \
 
 Wake stays the existing ISC detector. The pin is `eth-wake` 5.0.0, already installed by the deep workflow, and the unit-test job does not install it. `wake detect` now runs beside Slither, Aderyn, and Semgrep. A high or medium `reentrancy`, an `unsafe-delegatecall`, and an `unchecked-return-value` use the same static weights as those bugs. Any other detector name stays a lead and adds 0. `wake-detect` still prints names only. `wake-fuzz` runs only with `--on-shortlist`, only in a project that already has tests, and it does not store the sequence. Fuzz output adds no heat. The board shows `wake` when a detector run finished.
 
+Pyrometer (Apache-2.0) runs in that same static pass when the `pyrometer` binary is already installed. The unit-test job does not install it. A high-confidence funds-related precision loss, rounding bound, or overflow bound weighs 3 inside `static_evidence`. Any other range adds 0, and the underlined source is not kept. The board shows `pyrometer`.
+
 ```bash
+python -m eth_scanner pyrometer --source Target.sol --json
 python -m eth_scanner wake-fuzz \
   --project ./vault \
   --on-shortlist \

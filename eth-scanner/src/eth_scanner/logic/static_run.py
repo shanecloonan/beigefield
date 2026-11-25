@@ -1,4 +1,4 @@
-"""Run Slither, Aderyn, Semgrep, and Wake on one verified source tree.
+"""Run Slither, Aderyn, Semgrep, Wake, and Pyrometer on one verified source tree.
 
 Each engine has its own timeout. A missing binary is a skip, not a failure.
 Semgrep uses the local rules file unless ETH_SCANNER_SEMGREP_RULES is set.
@@ -60,6 +60,7 @@ def default_engines(source: str, timeout_s: int) -> list[Any]:
     from eth_scanner.deep.runners import EngineRunResult
 
     from eth_scanner.deep.added_engines import _wake_findings
+    from eth_scanner.engines.pyrometer_runner import as_static_findings, run_pyrometer
     from eth_scanner.engines.wake_runner import run_wake
     import json as _json
 
@@ -77,6 +78,13 @@ def default_engines(source: str, timeout_s: int) -> list[Any]:
             note=str(wake.get("note") or "")[:240],
         ),
     ]
+    pyro = run_pyrometer(source, timeout_s=min(20, timeout_s))
+    runs.append(EngineRunResult(
+        "pyrometer",
+        str(pyro.get("status") or "skipped"),
+        findings=as_static_findings(pyro),
+        note=str(pyro.get("note") or "")[:240],
+    ))
     rules = builtin_rules_path()
     bin_path = semgrep_bin()
     if not bin_path:
@@ -204,17 +212,23 @@ def run_static_command(
         row.get("engine") == "wake" and row.get("status") == "ok"
         for row in report["engines"]
     )
+    pyrometer_ran = any(
+        row.get("engine") == "pyrometer" and row.get("status") == "ok"
+        for row in report["engines"]
+    )
     heat, breakdown = evidence_heat(
         funds_usd=None,
         invariant_results=[],
         static_findings=report["findings"],
         source_record=fetched or None,
         wake={"ran": True} if wake_ran else None,
+        pyrometer={"ran": True} if pyrometer_ran else None,
     )
     report["heat"] = heat
     report["heat_breakdown"] = {
         "static_evidence": breakdown.get("static_evidence", 0),
         "wake": breakdown.get("wake", False),
+        "pyrometer": breakdown.get("pyrometer", False),
         "storage_layout": breakdown.get("storage_layout", False),
         "storage_slots": breakdown.get("storage_slots", 0),
         "source_metadata": breakdown.get("source_metadata", False),

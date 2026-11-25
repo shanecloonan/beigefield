@@ -403,6 +403,19 @@ test("a wake tag shows a run and does not change the stored heat", () => {
   assert.deepEqual(board.leaderboard[0].evidence_tags, ["wake"]);
 });
 
+test("a pyrometer tag shows a run and does not change the stored heat", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 3,
+      status: "done",
+      heat_breakdown: { pyrometer: true, static_evidence: 3 },
+    },
+  ]);
+  assert.equal(board.leaderboard[0].heat, 3);
+  assert.deepEqual(board.leaderboard[0].evidence_tags, ["static", "pyrometer"]);
+});
+
 test("an upgrade tag shows a layout clash without changing the stored heat", () => {
   const board = summarizeBlendRuns([
     {

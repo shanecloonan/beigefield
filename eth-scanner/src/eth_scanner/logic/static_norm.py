@@ -27,6 +27,9 @@ HIGH_RULES = frozenset({
     "spot-price-value",
     "share-inflation-empty",
     "public-selfdestruct",
+    "precision-loss",
+    "rounding-bound",
+    "overflow-bound",
 })
 
 MEDIUM_RULES = frozenset({
