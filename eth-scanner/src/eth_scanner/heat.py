@@ -276,6 +276,7 @@ def evidence_heat(
     lead_ids: Optional[list[str]] = None,
     static_findings: Optional[list[Any]] = None,
     corpus_findings: Optional[list[Any]] = None,
+    clone_match: Optional[dict[str, Any]] = None,
 ) -> tuple[int, dict[str, Any]]:
     """Compose heat from evidence only. Funds are ranking metadata, not heat."""
     w = weights or load_heat_weights()
@@ -331,7 +332,14 @@ def evidence_heat(
                 corpus_points += applied
             kept.append(item)
         corpus_rows = kept
-    total = min(w.max_heat, inv + priv + eoa + corr + gated + static_points + corpus_points)
+    clone_points = 0
+    if isinstance(clone_match, dict):
+        try:
+            clone_points = max(0, int(clone_match.get("weight") or 0))
+        except (TypeError, ValueError):
+            clone_points = 0
+        clone_points = min(3, clone_points)
+    total = min(w.max_heat, inv + priv + eoa + corr + gated + static_points + corpus_points + clone_points)
     from eth_scanner.drain import score_drain
     drain = score_drain(
         funds_usd=funds_usd,
@@ -353,6 +361,7 @@ def evidence_heat(
         "gated_lead_ids": lead_names,
         "static_evidence": static_points,
         "corpus_evidence": corpus_points,
+        "clone_evidence": clone_points,
         "contradictions": sorted(contradicted),
         "total": total,
         "drain_probability": drain["drain_probability"],
@@ -365,6 +374,13 @@ def evidence_heat(
         breakdown["static_findings"] = static_rows
     if corpus_rows:
         breakdown["corpus_findings"] = corpus_rows
+    if isinstance(clone_match, dict) and clone_match.get("kind") not in (None, "", "none"):
+        breakdown["clone_match"] = {
+            "id": str(clone_match.get("id") or ""),
+            "kind": str(clone_match.get("kind") or ""),
+            "similarity": clone_match.get("similarity"),
+            "runtime_hash": str(clone_match.get("runtime_hash") or ""),
+        }
     return total, breakdown
 
 
