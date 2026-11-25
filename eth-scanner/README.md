@@ -191,6 +191,21 @@ npm run db:migrate -- infra/supabase/migrations/2026-10-27-eth-scanner-queue.sql
 npm run db:migrate:all
 ```
 
+## Static evidence
+
+Verified source is read from Sourcify first, then Etherscan when a key is already configured. The key is not written into the result. Slither, Aderyn, and Semgrep each get a timeout (`--timeout`, clamped to 5–180 seconds). Semgrep uses `research/semgrep/solidity.yml`. Set `ETH_SCANNER_SEMGREP_RULES` to a local checkout of a Decurity-style Solidity pack to add those rules; the default run does not download a ruleset.
+
+Findings are normalized to one scale. An allowlisted high-confidence funds detector adds 3 points of `static_evidence`, a medium detector adds 1, and the component caps at 6. Ownable / AccessControl hits, style checks, and informational detectors add 0. The points are a heat component, not a verdict.
+
+Rows go to `eth_scan_static_findings` (migration `supabase/migrations/20261125190000_eth_scan_static_findings.sql`) when that table is present, and into the dry-run JSON store otherwise. A missing table skips the remote write and leaves the scan running. A missing binary is a skip.
+
+```bash
+python -m eth_scanner static-analyze \
+  --source tests/fixtures/erc4626_vault_like.sol \
+  --address 0x1111111111111111111111111111111111111111 \
+  --json --dry-run
+```
+
 ## Buckets
 
 | Bucket | Meaning |

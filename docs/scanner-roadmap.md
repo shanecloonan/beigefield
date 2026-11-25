@@ -65,6 +65,7 @@ Configured in `eth-scanner/src/eth_scanner/heat.py` (`ETH_SCANNER_HEAT_*`):
 | Privileged function callable by arbitrary EOA (static `eth_call`) | Yes |
 | EOA admin/upgrader on ≥ $100k | Yes |
 | Code-shape pattern leads | **No** (routing only) |
+| Allowlisted static detector (Slither / Aderyn / Semgrep) | Yes — `static_evidence`. High-confidence funds rules weigh 3, medium 1, cap 6. Admin-gated and generic hits stay 0 |
 | Single-engine generic detector | **No** heat alone |
 | Multi-engine agreement on a concrete finding | Raises **confidence**; may unlock heat only when paired with funds + failed invariant / privileged evidence (Phase A policy) |
 

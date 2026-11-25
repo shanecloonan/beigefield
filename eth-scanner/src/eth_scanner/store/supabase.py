@@ -29,6 +29,51 @@ _RESULT_BUCKETS = frozenset({
 })
 
 
+def _static_table_missing(text: str) -> bool:
+    low = (text or "").lower()
+    return (
+        "pgrst205" in low
+        or "42p01" in low
+        or "does not exist" in low
+        or ("eth_scan_static_findings" in low and ("404" in low or "schema" in low))
+    )
+
+
+def _static_row(address: str, chain: str, row: dict[str, Any]) -> dict[str, Any]:
+    """One stored finding. Evidence is already shortened by the normalizer."""
+    try:
+        weight = int(row.get("weight") or 0)
+    except (TypeError, ValueError):
+        weight = 0
+    try:
+        applied = int(row.get("weight_applied") or 0)
+    except (TypeError, ValueError):
+        applied = 0
+    line = row.get("line")
+    return {
+        "chain": chain,
+        "address": address,
+        "finding_key": str(row.get("finding_key") or row.get("rule") or "static")[:180],
+        "engine": str(row.get("engine") or "static")[:40],
+        "rule": str(row.get("rule") or "unknown")[:80],
+        "severity": str(row.get("severity") or "info")[:20],
+        "confidence": str(row.get("confidence") or "low")[:20],
+        "funds_class": str(row.get("funds_class") or "other")[:40],
+        "title": str(row.get("title") or "")[:180],
+        "evidence": str(row.get("evidence") or "")[:600],
+        "weight": weight,
+        "counted": bool(row.get("counted")),
+        "defensive_only": True,
+        "raw": {
+            "file": str(row.get("file") or "")[:160],
+            "line": line if isinstance(line, int) else None,
+            "contract": str(row.get("contract") or "")[:80],
+            "function": str(row.get("function") or "")[:80],
+            "weight_applied": applied,
+        },
+    }
+
+
 def persistable_bucket(result: FunnelResult) -> str:
     """Bucket value that satisfies eth_scan_results.bucket.
 
@@ -211,6 +256,7 @@ class MemoryStore:
         self.test_runs: list[dict[str, Any]] = []
         self.test_findings: list[dict[str, Any]] = []
         self.blend_stages: list[dict[str, Any]] = []
+        self.static_findings: list[dict[str, Any]] = []
         if work_dir:
             work_dir.mkdir(parents=True, exist_ok=True)
             self._load()
@@ -297,6 +343,26 @@ class MemoryStore:
                 if row.get("status") == "done":
                     out.add(row["bytecode_hash"])
         return out
+
+    def save_static_findings(
+        self,
+        address: str,
+        rows: list[dict[str, Any]],
+        chain: str = "ethereum",
+    ) -> dict[str, Any]:
+        """Replace this address's static rows in the dry-run store."""
+        from eth_scanner.chains.registry import normalize_chain
+
+        addr = normalize_address(address)
+        chosen = normalize_chain(chain)
+        kept = [
+            row for row in self.static_findings
+            if not (row.get("address") == addr and (row.get("chain") or "ethereum") == chosen)
+        ]
+        stored = [_static_row(addr, chosen, row) for row in rows]
+        self.static_findings = kept + stored
+        self._flush()
+        return {"persisted": True, "saved": len(stored), "degraded": False, "remote": False}
 
     def save_artifact(self, address: str, kind: str, payload: dict[str, Any], confidence: str) -> None:
         addr = normalize_address(address)
@@ -762,6 +828,7 @@ class MemoryStore:
         self.test_runs = list(data.get("test_runs", []))
         self.test_findings = list(data.get("test_findings", []))
         self.blend_stages = list(data.get("blend_stages", []))
+        self.static_findings = list(data.get("static_findings", []))
 
     def _flush(self) -> None:
         p = self._path()
@@ -776,6 +843,7 @@ class MemoryStore:
             "test_runs": list(getattr(self, "test_runs", []) or []),
             "test_findings": list(getattr(self, "test_findings", []) or []),
             "blend_stages": list(getattr(self, "blend_stages", []) or []),
+            "static_findings": list(getattr(self, "static_findings", []) or []),
         }, indent=2), encoding="utf-8")
 
 
@@ -901,6 +969,44 @@ class SupabaseStore:
             "select": "bytecode_hash",
         })
         return {r["bytecode_hash"] for r in rows if r.get("bytecode_hash")}
+
+    def save_static_findings(
+        self,
+        address: str,
+        rows: list[dict[str, Any]],
+        chain: str = "ethereum",
+    ) -> dict[str, Any]:
+        """Upsert normalized static findings. A missing table degrades, it does not raise."""
+        from eth_scanner.chains.registry import normalize_chain
+
+        addr = normalize_address(address)
+        chosen = normalize_chain(chain)
+        saved = 0
+        for row in rows:
+            body = _static_row(addr, chosen, row)
+            try:
+                self._req(
+                    "POST",
+                    "eth_scan_static_findings",
+                    body,
+                    query={"on_conflict": "chain,address,finding_key"},
+                    prefer="return=minimal,resolution=merge-duplicates",
+                )
+            except RuntimeError as exc:
+                note = (
+                    "static findings table is not available"
+                    if _static_table_missing(str(exc))
+                    else "static findings write failed"
+                )
+                return {
+                    "persisted": False,
+                    "saved": saved,
+                    "degraded": True,
+                    "remote": True,
+                    "note": note,
+                }
+            saved += 1
+        return {"persisted": True, "saved": saved, "degraded": False, "remote": True}
 
     def save_artifact(self, address: str, kind: str, payload: dict[str, Any], confidence: str) -> None:
         self._req("POST", "eth_scan_artifacts", {
