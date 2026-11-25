@@ -1,6 +1,7 @@
-# One shot: re-score every historical Maybe or heat signal through Lane A
-# with fork verify on. Pushing eth-scanner/signal-rerun.trigger to main starts
-# it. The monitor and the backfill leave fork verify off. This job holds the
+# Read-only Lane A with fork verify on. Pushing eth-scanner/signal-rerun.trigger
+# to main scans the next under-$5k high-likelihood batch (75 contracts, 250k CU).
+# workflow_dispatch mode "historical" re-scores stored signals inside 4M CU.
+# The monitor and the backfill leave fork verify off. This job holds the
 # shared scan-cycle lease so those crons do not scan at the same time.
 name: eth-scanner-signal-rerun
 
@@ -10,6 +11,14 @@ on:
     paths:
       - eth-scanner/signal-rerun.trigger
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "small-value-batch continues the under-$5k queue. historical re-scores stored signals."
+        type: choice
+        options:
+          - small-value-batch
+          - historical
+        default: small-value-batch
 
 permissions:
   contents: read
@@ -52,7 +61,7 @@ jobs:
           command -v anvil && anvil --version | head -1 || echo "anvil missing"
           bash eth-scanner/scripts/install-blend-engines.sh || echo "blend engine install failed open"
 
-      - name: Re-score historical signals
+      - name: Scan the next under-$5k batch, or historical signals
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
@@ -64,6 +73,7 @@ jobs:
           ETH_SCANNER_FUZZ_MIN_HEAT: "0"
           ETH_SCANNER_FUZZ_TIMEOUT_S: "45"
           ETH_SCANNER_FUZZ_RUNS: "8"
+          RERUN_MODE: ${{ github.event.inputs.mode || 'small-value-batch' }}
         run: |
           set -euo pipefail
           if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
@@ -74,6 +84,11 @@ jobs:
             echo "ETH_RPC_URL unset — signal rerun skipped."
             exit 0
           fi
-          echo "signal-rerun fork verify on, fuzz min heat 0, budget 4000000 CU"
           cd eth-scanner
-          python -m eth_scanner signal-rerun --budget-cu 4000000 --deadline-minutes 55 --lease-wait-minutes 20 --json
+          if [ "${RERUN_MODE}" = "historical" ]; then
+            echo "signal-rerun historical, fork verify on, fuzz min heat 0, budget 4000000 CU"
+            python -m eth_scanner signal-rerun --budget-cu 4000000 --deadline-minutes 55 --lease-wait-minutes 20 --json
+          else
+            echo "signal-rerun small-value under 5000, fork verify on, batch 75, budget 250000 CU"
+            python -m eth_scanner signal-rerun --small-value-batch --batch-size 75 --budget-cu 250000 --deadline-minutes 55 --lease-wait-minutes 20 --json
+          fi

@@ -1,5 +1,7 @@
 # Small-value high-probability scan queue (100 contracts)
 
+The follow-up queue, 300 contracts under $5,000, is `small_value_under5k_queue.md`.
+
 Generated 2026-11-25T17:07:08Z · chain: ethereum · 100 contracts
 
 ## Cutoff rules

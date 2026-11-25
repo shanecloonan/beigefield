@@ -726,6 +726,12 @@ def main(argv: list[str] | None = None) -> int:
     rerun.add_argument("--deadline-minutes", type=float, default=60.0)
     rerun.add_argument("--lease-wait-minutes", type=float, default=20.0)
     rerun.add_argument("--dry-run", action="store_true")
+    rerun.add_argument(
+        "--small-value-batch",
+        action="store_true",
+        help="Scan the next under-$5k high-likelihood batch only. Read-only. Caps the CU proxy to that batch.",
+    )
+    rerun.add_argument("--batch-size", type=int, default=75, help="Contracts in one small-value batch (default 75)")
     rerun.add_argument("--json", action="store_true")
 
     similar = sub.add_parser(
@@ -1472,6 +1478,8 @@ def main(argv: list[str] | None = None) -> int:
             deadline_s=max(60.0, float(args.deadline_minutes) * 60.0),
             lease_wait_s=max(0.0, float(args.lease_wait_minutes) * 60.0),
             dry_run=bool(args.dry_run),
+            small_value_batch=bool(args.small_value_batch),
+            batch_size=max(0, int(args.batch_size)),
         )
         print(_json.dumps(report, indent=2, default=str))
         return 0

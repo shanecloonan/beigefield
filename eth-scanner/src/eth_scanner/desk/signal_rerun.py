@@ -871,29 +871,49 @@ def run_signal_rerun(
     lease_wait_s: float = 1200.0,
     dry_run: bool = False,
     scan_one: Any = None,
+    small_value_batch: bool = False,
+    batch_size: int = 0,
 ) -> dict[str, Any]:
-    """Collect, cut to the CU budget, then re-score. Fail soft on 429 and on the cap."""
-    collected = collect_candidates(store)
-    seen = load_seen()
-    pending = [row for row in collected["ethereum"] if row["address"] not in seen]
-    selected, deferred = prioritize(pending, budget_cu=budget_cu)
-    plan = {
-        "rows_read": collected["rows_read"],
-        "signals": len(collected["ethereum"]),
-        "skipped_finished": len(collected["ethereum"]) - len(pending),
-        "selected": len(selected),
-        "deferred_budget": deferred,
-        "other_chain": collected["other_chain"],
-        "notes": list(collected["notes"]),
-        "estimate": estimate_cu(len(selected)),
-        "budget_cu": int(budget_cu),
-    }
-    if dry_run:
-        plan["status"] = "dry-run"
+    """Collect, cut to the CU budget, then re-score. Fail soft on 429 and on the cap.
+
+    ``small_value_batch`` scans the next under-$5k queue batch and does not
+    walk the historical signal tables. The proxy cap stays on that batch.
+    """
+    if small_value_batch:
+        from eth_scanner.desk.small_value_under5k import prepare_batch
+
+        prepared = prepare_batch(store, budget_cu=budget_cu, batch_size=batch_size)
+        budget_cu = int(prepared["budget_cu"])
+        selected = prepared["selected"]
+        plan = dict(prepared["plan"])
+        plan["estimate"] = estimate_cu(len(selected))
+        plan["budget_cu"] = budget_cu
+    else:
+        collected = collect_candidates(store)
+        seen = load_seen()
+        pending = [row for row in collected["ethereum"] if row["address"] not in seen]
+        selected, deferred = prioritize(pending, budget_cu=budget_cu)
+        plan = {
+            "mode": "historical",
+            "rows_read": collected["rows_read"],
+            "signals": len(collected["ethereum"]),
+            "skipped_finished": len(collected["ethereum"]) - len(pending),
+            "selected": len(selected),
+            "deferred_budget": deferred,
+            "other_chain": collected["other_chain"],
+            "notes": list(collected["notes"]),
+            "estimate": estimate_cu(len(selected)),
+            "budget_cu": int(budget_cu),
+        }
+    if dry_run or not selected:
+        plan["status"] = "dry-run" if dry_run else "done"
         plan["rerun"] = []
         plan["changes"] = []
         plan["cu_used"] = 0
-        plan["selected_rows"] = [_snapshot(row) for row in selected]
+        if dry_run:
+            plan["selected_rows"] = [_snapshot(row) for row in selected]
+        if not selected and small_value_batch:
+            plan["notes"].append("no pending under-$5k batch")
         return plan
 
     from eth_scanner.feed.runner import acquire_scan_cycle, refresh_scan_cycle, release_scan_cycle
