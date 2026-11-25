@@ -28,7 +28,7 @@ from site_scanner.discover import (
     usable_host,
 )
 from site_scanner.migrate import missing_ddl_secrets, pg_env
-from site_scanner.store import _error_code
+from site_scanner.store import _error_code, build_run
 from site_scanner.redact import redact
 
 
@@ -233,6 +233,7 @@ class ScanTests(unittest.TestCase):
         self.assertIn("cancel-in-progress: false", text)
         self.assertIn("--limit 6", text)
         self.assertIn("workflow_dispatch", text)
+        self.assertIn("20261125040600_site_scan_runs.sql", text)
         self.assertNotIn("*/10 * * * *", text)
 
     def test_a_challenge_is_not_retried_and_adds_no_heat(self) -> None:
@@ -591,6 +592,22 @@ class ScanTests(unittest.TestCase):
         self.assertNotIn("supersecretvalue", backup["evidence"])
         self.assertGreaterEqual(report["heat"], 8)
         self.assertLessEqual(report["heat"], 12)
+
+    def test_a_run_row_counts_findings_and_drops_the_body(self) -> None:
+        record = build_run(
+            "101",
+            "2026-11-25T04:00:00+00:00",
+            "2026-11-25T04:02:00+00:00",
+            [
+                {"host": "a.example", "findings": [{"id": "exposed-env", "evidence": "credential assignment on /.env"}]},
+                {"host": "b.example", "findings": [], "body": "API_KEY=supersecretvalue"},
+            ],
+        )
+        self.assertEqual(record["run_id"], "101")
+        self.assertEqual(record["hosts_scanned"], 2)
+        self.assertEqual(record["finding_count"], 1)
+        self.assertNotIn("supersecretvalue", str(record))
+        self.assertNotIn("body", record)
 
 
 _QUIET_HEADERS = {

@@ -89,6 +89,46 @@ def probe_store() -> dict[str, Any]:
     return {"status": "ok", "http": status, "rows": len(rows)}
 
 
+def build_run(run_id: str, started_at: str, finished_at: str, reports: list[dict[str, Any]]) -> dict[str, Any]:
+    """Counts for one run. The row does not copy findings or page bodies."""
+    hosts = [str(item.get("host") or "") for item in reports if item.get("host")]
+    findings = 0
+    for item in reports:
+        rows = item.get("findings")
+        if isinstance(rows, list):
+            findings += len(rows)
+    return {
+        "run_id": str(run_id or "")[:80],
+        "started_at": started_at,
+        "finished_at": finished_at,
+        "hosts_scanned": len(hosts),
+        "finding_count": findings,
+    }
+
+
+def save_run(record: dict[str, Any]) -> dict[str, Any]:
+    """Insert or replace one run summary. Nothing from the page body is written."""
+    run_id = str(record.get("run_id") or "")
+    if not run_id:
+        return {"status": "skipped", "reason": "no run"}
+    url, key = _env()
+    if not url or not key:
+        return {"status": "skipped", "reason": "no-store"}
+    body = {
+        "run_id": run_id[:80],
+        "started_at": record.get("started_at"),
+        "finished_at": record.get("finished_at"),
+        "hosts_scanned": int(record.get("hosts_scanned") or 0),
+        "finding_count": int(record.get("finding_count") or 0),
+    }
+    try:
+        saved, status = _req("POST", {"on_conflict": "run_id"}, body, table="site_scan_runs")
+    except StoreError as exc:
+        return {"status": "skipped", "reason": "http-%s" % exc.status, "code": exc.code}
+    wrote = bool(saved) or status in {200, 201, 204}
+    return {"status": "ok" if wrote else "skipped", "reason": "" if wrote else "empty", "run_id": body["run_id"]}
+
+
 def save_hit(report: dict[str, Any]) -> dict[str, Any]:
     """Write one host. Peak heat only rises. Findings are already redacted."""
     host = str(report.get("host") or "").lower()

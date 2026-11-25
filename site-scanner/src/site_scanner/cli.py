@@ -5,13 +5,15 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
+from datetime import datetime, timezone
 
 from site_scanner.allow import active_allowed, host_of
 from site_scanner.analyze import report_for
 from site_scanner.cloud import annotate_cloud
 from site_scanner.discover import FALLBACK_HOSTS, crt_hosts, live_discovery, take_batch, tranco_hosts
 from site_scanner.fetch import fetch_host_async
-from site_scanner.store import load_cursor, save_cursor, save_hit
+from site_scanner.store import build_run, load_cursor, save_cursor, save_hit, save_run
 
 
 def _hosts(args: argparse.Namespace) -> list[str]:
@@ -61,6 +63,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=4)
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
+    started = datetime.now(timezone.utc)
     sources = {"owned": 0, "bounty": 0, "certificate": 0, "tranco": 0}
     cursor_note: dict = {"status": "unused"}
     if args.discover:
@@ -84,11 +87,15 @@ def main() -> None:
     if cursor_note.get("status") == "pending":
         saved = save_cursor(list(cursor_note.pop("_seen") or []), int(cursor_note.get("cycle") or 0))
         cursor_note["status"] = saved.get("status")
+    finished = datetime.now(timezone.utc)
+    run_id = (os.environ.get("GITHUB_RUN_ID") or started.strftime("%Y%m%dT%H%M%SZ")).strip()
+    record = build_run(run_id, started.isoformat(), finished.isoformat(), reports)
     payload = {
         "status": "ok",
         "scanned": len(reports),
         "sources": sources,
         "cursor": cursor_note,
+        "run": {**record, "persist": save_run(record)},
         "reports": reports,
     }
     if args.json:
