@@ -950,6 +950,14 @@ def main(argv: list[str] | None = None) -> int:
     corp.add_argument("--source", required=True, help="local Solidity file")
     corp.add_argument("--json", action="store_true")
 
+    clones = sub.add_parser(
+        "clone-match",
+        help="Match runtime bytecode to a known-exploited hash index (no broadcast)",
+    )
+    clones.add_argument("--code-file", required=True, help="file containing runtime bytecode hex")
+    clones.add_argument("--index", default="", help="JSON index; default data/exploit_bytecode_index.json")
+    clones.add_argument("--json", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -1499,6 +1507,33 @@ def main(argv: list[str] | None = None) -> int:
         else:
             rules = [row.get("rule") for row in report["findings"] if row.get("counted")]
             print("corpus-scan heat=%s rules=%s" % (heat, ",".join(str(r) for r in rules) or "none"))
+        return 0
+
+    if args.cmd == "clone-match":
+        from eth_scanner.heat import evidence_heat
+        from eth_scanner.logic.clones import load_index, match_runtime
+        code = Path(args.code_file).read_text(encoding="utf-8", errors="replace")
+        entries = load_index(Path(args.index) if args.index else None)
+        found = match_runtime(code, entries)
+        heat, breakdown = evidence_heat(
+            funds_usd=None,
+            invariant_results=[],
+            clone_match=found,
+        )
+        payload = {
+            "heat": heat,
+            "clone_evidence": breakdown.get("clone_evidence", 0),
+            "match": found,
+            "index_size": len(entries),
+            "note": "Metadata is stripped before the hash. A match is a lead, not a verdict.",
+        }
+        if args.json:
+            print(json.dumps(payload, indent=2))
+        else:
+            print(
+                "clone-match heat=%s kind=%s id=%s"
+                % (heat, found.get("kind"), found.get("id") or "none")
+            )
         return 0
 
     if args.cmd == "fork-verify":

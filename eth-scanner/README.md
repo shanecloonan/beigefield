@@ -234,6 +234,14 @@ SWC-shaped detectors and the curated family ids in `data/known_vulnerable_clones
 python -m eth_scanner corpus-scan --source tests/fixtures/gated_vault.sol --json
 ```
 
+## Exploit-clone bytecode
+
+Runtime bytecode is normalized by dropping the Solidity CBOR metadata suffix, then hashed. `data/exploit_bytecode_index.json` holds `runtime_hash` or runtime hex of known-exploited contracts and ships with no bytecode. An exact normalized hash adds `clone_evidence` 3. A byte-histogram overlap of at least 0.92 adds 1. Either is a lead, not a verdict. A public Forta feed is used only when `FORTA_ALERTS_URL` points at a free JSON list; alert names are recorded and add no heat.
+
+```bash
+python -m eth_scanner clone-match --code-file runtime.hex --json
+```
+
 ## Buckets
 
 | Bucket | Meaning |
