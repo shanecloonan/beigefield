@@ -178,6 +178,86 @@ class LeaseAndProxy(unittest.TestCase):
         body = {"error": {"code": 429, "message": "Monthly capacity limit exceeded"}}
         self.assertFalse(rerun._is_transient_429(429, body))
         self.assertEqual(rerun._provider_stop(429, body), "monthly capacity")
+        # A 403 capacity response is the plan limit, not an auth failure.
+        denied = {"error": {"code": 403, "message": "Monthly capacity limit exceeded"}}
+        self.assertEqual(rerun._provider_stop(403, denied), "monthly capacity")
+
+    def test_vault_unauthorized_reverts_are_not_provider_auth(self):
+        ownable = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "error": {
+                "code": 3,
+                "message": (
+                    "execution reverted: OwnableUnauthorizedAccount("
+                    "0x0000000000000000000000000000000000000001)"
+                ),
+                "data": "0x118cdaa7" + "00" * 31 + "01",
+            },
+        }
+        access = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "error": {
+                "code": 3,
+                "message": (
+                    "execution reverted: AccessControlUnauthorizedAccount("
+                    "0x0000000000000000000000000000000000000001, 0x1234)"
+                ),
+                "data": "0xe2517d3f",
+            },
+        }
+        name_only = {
+            "error": {"code": 3, "message": "OwnableUnauthorizedAccount"},
+        }
+        access_in_data = {
+            "error": {
+                "message": "execution reverted",
+                "data": "AccessControlUnauthorizedAccount(0x0000000000000000000000000000000000000001)",
+            },
+        }
+        bare_reason = {
+            "error": {"code": 3, "message": "execution reverted: UNAUTHORIZED"},
+        }
+        forbidden_reason = {
+            "error": {"message": "execution reverted: forbidden", "data": "0x08c379a0"},
+        }
+        with self.assertNoLogs("eth_scanner.signal_rerun", level="WARNING"):
+            for body in (ownable, access, name_only, access_in_data, bare_reason, forbidden_reason):
+                self.assertEqual(rerun._provider_stop(200, body), "")
+
+    def test_http_401_is_provider_auth_and_logs_redacted(self):
+        body = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "error": {
+                "code": 401,
+                "message": (
+                    "Must be authenticated! "
+                    "https://eth-mainnet.g.alchemy.com/v2/demoKeyNotReal0123456789"
+                ),
+            },
+        }
+        with self.assertLogs("eth_scanner.signal_rerun", level="WARNING") as caught:
+            self.assertEqual(rerun._provider_stop(401, body), "auth")
+        text = " ".join(caught.output)
+        self.assertIn("401", text)
+        self.assertIn("Must be authenticated", text)
+        self.assertNotIn("alchemy", text.lower())
+        self.assertNotIn("demoKeyNotReal", text)
+        self.assertNotIn("http://", text)
+        self.assertNotIn("https://", text)
+        # Credential wording on HTTP 200 is still auth. A transport 403 is auth.
+        missing = {"error": {"code": -32600, "message": "invalid api key"}}
+        self.assertEqual(rerun._provider_stop(200, missing), "auth")
+        self.assertEqual(
+            rerun._provider_stop(403, {"error": {"message": "Forbidden"}}),
+            "auth",
+        )
+        self.assertEqual(
+            rerun._provider_stop(200, {"error": {"message": "Unauthorized"}}),
+            "auth",
+        )
 
 
 class EvidenceHeat(unittest.TestCase):

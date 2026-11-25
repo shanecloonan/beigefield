@@ -9,6 +9,7 @@ same time. Chain I/O stays read-only. Call sequences are not kept.
 from __future__ import annotations
 
 import json
+import logging
 import re
 import threading
 import time
@@ -19,6 +20,8 @@ from urllib import error as urlerror
 from urllib import request as urlrequest
 
 from eth_scanner.chain.cu_budget import CU_ESTIMATES, DEFAULT_UNKNOWN_CU, CuBudget
+
+log = logging.getLogger("eth_scanner.signal_rerun")
 
 # Run 45523821596 spent 258,956 CU on 100 contracts, about 2,600 each.
 # The old 40,000 figure counted a fork ceiling that the proxy never reached.
@@ -568,6 +571,35 @@ def _post_upstream(url: str, item: dict[str, Any]) -> tuple[int, Any]:
     return last_status, last_body
 
 
+# Contract execution, not a dead API key. Custom-error names contain
+# "unauthorized" / "forbidden" and must not be read as provider auth.
+_REVERT_RE = re.compile(r"execution reverted|vm exception|\brevert(?:ed)?\b", re.I)
+_CUSTOM_ERROR_RE = re.compile(
+    r"(?i)(?<![a-z0-9_])(?:"
+    r"[a-z0-9_]+(?:unauthorized|forbidden)[a-z0-9_]*"
+    r"|(?:unauthorized|forbidden)[a-z0-9_]+"
+    r")(?![a-z0-9_])"
+)
+_REQUEST_AUTH_RE = re.compile(
+    r"must be authenticated|not authenticated|unauthenticated"
+    r"|invalid api[_ -]?key"
+    r"|api[_ -]?key (?:is )?(?:invalid|missing|disabled|required|not found|unknown|unrecognized)"
+    r"|(?:missing|no|absent|unknown|bad|invalid) api[_ -]?key",
+    re.I,
+)
+# The HTTP reason phrase itself, not a word buried in revert data.
+_HTTP_AUTH_PHRASE_RE = re.compile(
+    r"(?i)(?:"
+    r"^\s*(?:(?:https?|status)\s+)?(?:(?:401|403)\s*[-:]?\s*)?(?:unauthorized|forbidden)\s*[!.]*\s*$"
+    r"|(?:^|[^a-z0-9])(?:401|403)\s*[-:]?\s*(?:unauthorized|forbidden)\b"
+    r")"
+)
+_KEY_FIELD_RE = re.compile(
+    r"(?i)\b(api[_ -]?key|apikey|access[_ -]?token|secret|password|bearer)\b\s*[:=]\s*\S+"
+)
+_KEY_TOKEN_RE = re.compile(r"\b(?=[A-Za-z0-9]*[A-Za-z])(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{20,}\b")
+
+
 def _blob(status: int, body: Any) -> str:
     if isinstance(body, dict):
         err = body.get("error")
@@ -584,15 +616,103 @@ def _is_transient_429(status: int, body: Any) -> bool:
     return status == 429 or " 429" in text or "rate limit" in text
 
 
+def _error_message(body: Any) -> str:
+    if isinstance(body, dict):
+        err = body.get("error")
+        if isinstance(err, dict):
+            return str(err.get("message") or "")
+        if err:
+            return str(err)
+        return ""
+    if body is None:
+        return ""
+    return str(body)
+
+
+def _error_code(body: Any) -> Optional[int]:
+    if not isinstance(body, dict):
+        return None
+    err = body.get("error")
+    if not isinstance(err, dict):
+        return None
+    try:
+        return int(err["code"]) if err.get("code") is not None else None
+    except (TypeError, ValueError, KeyError):
+        return None
+
+
+def _error_scan_text(body: Any) -> str:
+    """Message plus revert data, so a custom-error name cannot hide in `data`."""
+    if isinstance(body, dict):
+        err = body.get("error")
+        target: Any = err if err is not None else body
+        if isinstance(target, str):
+            return target
+        try:
+            return json.dumps(target)[:1000]
+        except (TypeError, ValueError):
+            return str(target)[:1000]
+    return str(body or "")[:1000]
+
+
+def _is_execution_revert(body: Any) -> bool:
+    """True for an eth_call revert or a Solidity custom error. Never provider auth."""
+    scan = _error_scan_text(body)
+    if _REVERT_RE.search(scan) or _CUSTOM_ERROR_RE.search(scan):
+        return True
+    # Geth / Alchemy / Infura use JSON-RPC code 3 for an execution revert.
+    return _error_code(body) == 3
+
+
+def _message_is_request_auth(body: Any) -> bool:
+    """True when the JSON-RPC message is about this request's credentials.
+
+    The check looks at the message only. Revert data and custom-error names
+    are not credential failures.
+    """
+    message = _error_message(body).strip()
+    if not message:
+        return False
+    if _REQUEST_AUTH_RE.search(message):
+        return True
+    return bool(_HTTP_AUTH_PHRASE_RE.search(message))
+
+
+def _short_provider_message(body: Any) -> str:
+    message = " ".join(_error_message(body).split())
+    if not message:
+        return ""
+    message = redact(message)
+    message = _KEY_FIELD_RE.sub(lambda match: "%s=[redacted]" % match.group(1), message)
+    message = _KEY_TOKEN_RE.sub("[redacted]", message)
+    return message[:160]
+
+
 def _provider_stop(status: int, body: Any) -> str:
+    """Return a provider stop reason, or "" to keep scanning.
+
+    Auth is a transport HTTP 401/403, or a JSON-RPC message about the
+    request's own credentials. An execution revert, VM error, or custom
+    error such as OwnableUnauthorizedAccount never stops the run.
+    """
     text = _blob(status, body).lower()
+    reason = ""
     if "capacity" in text or "quota" in text or "monthly" in text:
-        return "monthly capacity"
-    if status in {401, 403} or "unauthorized" in text or "forbidden" in text:
-        return "auth"
-    if _is_transient_429(status, body):
-        return "rate limited"
-    return ""
+        reason = "monthly capacity"
+    elif _is_execution_revert(body):
+        reason = ""
+    elif status in {401, 403} or _message_is_request_auth(body):
+        reason = "auth"
+    elif _is_transient_429(status, body):
+        reason = "rate limited"
+    if reason:
+        log.warning(
+            "provider stop %s: http %s; %s",
+            reason,
+            int(status),
+            _short_provider_message(body) or "(no message)",
+        )
+    return reason
 
 
 def _lock_rpc(url: str) -> None:
@@ -613,7 +733,7 @@ def _lock_rpc(url: str) -> None:
 
 
 def load_seen() -> set[str]:
-    """Addresses the first pass already finished with no verdict change."""
+    """Addresses an earlier pass already finished. This job does not scan them again."""
     try:
         raw = json.loads(_SEEN.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
