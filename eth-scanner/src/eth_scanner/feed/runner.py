@@ -1077,6 +1077,39 @@ def _release_cycle(store: ScanStore, owner: str, progress: ScanCycleProgress) ->
         return
 
 
+def acquire_scan_cycle(store: ScanStore, *, wait_s: float = 1200.0, poll_s: float = 20.0) -> str:
+    """Take the shared scan-cycle lease, waiting out a monitor or backfill hold.
+
+    Returns the owner id. Raises TimeoutError when the lease stays taken.
+    """
+    owner = _lease_owner()
+    deadline = time.monotonic() + max(0.0, float(wait_s))
+    while True:
+        if not _cycle_blocked(store, owner) and _claim_cycle(store, owner):
+            return owner
+        if time.monotonic() >= deadline:
+            raise TimeoutError("another scan cycle holds the cursor")
+        time.sleep(max(0.05, float(poll_s)))
+
+
+def refresh_scan_cycle(store: ScanStore, owner: str, address: str = "") -> None:
+    """Extend the lease so a long rerun is not treated as abandoned."""
+    progress = ScanCycleProgress()
+    progress.phase = "signal-rerun"
+    progress.status = "running"
+    progress.current_address = address
+    progress.message = "signal rerun"
+    _touch_cycle(store, owner, progress)
+
+
+def release_scan_cycle(store: ScanStore, owner: str, message: str = "signal rerun finished") -> None:
+    progress = ScanCycleProgress()
+    progress.phase = "signal-rerun"
+    progress.status = "done"
+    progress.message = message[:240]
+    _release_cycle(store, owner, progress)
+
+
 def _next_pending_list(
     store: ScanStore,
     *,

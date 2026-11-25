@@ -1,0 +1,79 @@
+# One shot: re-score every historical Maybe or heat signal through Lane A
+# with fork verify on. Pushing eth-scanner/signal-rerun.trigger to main starts
+# it. The monitor and the backfill leave fork verify off. This job holds the
+# shared scan-cycle lease so those crons do not scan at the same time.
+name: eth-scanner-signal-rerun
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - eth-scanner/signal-rerun.trigger
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eth-scanner-signal-rerun
+  cancel-in-progress: false
+
+jobs:
+  rerun:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install scanner + engines
+        run: |
+          set -euo pipefail
+          python -m pip install -e ./eth-scanner
+          python -m pip install solc-select
+          solc-select install 0.8.20 || true
+          solc-select use 0.8.20 || true
+          python -m pip install "slither-analyzer>=0.10.0" || true
+          python -m venv /tmp/mythril-venv
+          /tmp/mythril-venv/bin/pip install -q --upgrade pip
+          /tmp/mythril-venv/bin/pip install -q "mythril>=0.24.0" || true
+          if [ -x /tmp/mythril-venv/bin/myth ]; then
+            echo "ETH_SCANNER_MYTHRIL_BIN=/tmp/mythril-venv/bin/myth" >> "$GITHUB_ENV"
+          elif [ -x /tmp/mythril-venv/bin/mythril ]; then
+            echo "ETH_SCANNER_MYTHRIL_BIN=/tmp/mythril-venv/bin/mythril" >> "$GITHUB_ENV"
+          fi
+          command -v forge && forge --version | head -1 || echo "forge missing"
+          command -v anvil && anvil --version | head -1 || echo "anvil missing"
+          bash eth-scanner/scripts/install-blend-engines.sh || echo "blend engine install failed open"
+
+      - name: Re-score historical signals
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          ETH_SCANNER_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          ETH_RPC_URL: ${{ secrets.ETH_RPC_URL }}
+          ETHERSCAN_API_KEYS: ${{ secrets.ETHERSCAN_API_KEYS }}
+          ETH_SCANNER_FORK_VERIFY: "1"
+          ETH_SCANNER_FORK_VERIFY_REDACT: "1"
+          ETH_SCANNER_FUZZ_MIN_HEAT: "0"
+          ETH_SCANNER_FUZZ_TIMEOUT_S: "45"
+          ETH_SCANNER_FUZZ_RUNS: "8"
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
+            echo "Missing Actions secrets SUPABASE_URL / SUPABASE_SECRET_KEY — skip."
+            exit 0
+          fi
+          if [ -z "${ETH_RPC_URL:-}" ]; then
+            echo "ETH_RPC_URL unset — signal rerun skipped."
+            exit 0
+          fi
+          echo "signal-rerun fork verify on, fuzz min heat 0, budget 4000000 CU"
+          cd eth-scanner
+          python -m eth_scanner signal-rerun --budget-cu 4000000 --deadline-minutes 55 --lease-wait-minutes 20 --json

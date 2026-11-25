@@ -106,6 +106,14 @@ def fork_verify_enabled() -> bool:
     return str(raw).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def fork_verify_redact() -> bool:
+    """Drop stored call sequences. The signal-rerun job sets this; the default is off."""
+    raw = os.environ.get("ETH_SCANNER_FORK_VERIFY_REDACT")
+    if raw is None or not str(raw).strip():
+        return False
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _env_int(name: str, default: int) -> int:
     raw = os.environ.get(name)
     if raw is None or not str(raw).strip():
@@ -187,7 +195,7 @@ class ForkVerifyReport:
                 if self.failures
                 else "attacker_cannot_extract_target_value"
             ),
-            "sequence": self.sequence[:800],
+            "sequence": "" if fork_verify_redact() else self.sequence[:800],
             "fork_block": self.fork_block,
             "duration_ms": self.duration_ms,
             "label": (
@@ -206,8 +214,16 @@ class ForkVerifyReport:
             "status": "failed" if self.drainable else "held",
             "source": "fork-verify",
             "attacker_delta": 1 if self.drainable else 0,
-            "evidence": (fail.evidence if fail else self.sequence or self.status)[:400],
-            "reproduction": (self.sequence or (fail.reproduction if fail else ""))[:800],
+            "evidence": (
+                (self.status or "held")[:400]
+                if fork_verify_redact()
+                else (fail.evidence if fail else self.sequence or self.status)[:400]
+            ),
+            "reproduction": (
+                ""
+                if fork_verify_redact()
+                else (self.sequence or (fail.reproduction if fail else ""))[:800]
+            ),
             "tool": self.tool or "forge",
             "label": "unprivileged caller extracted value on a local fork — not a live transaction",
         }
