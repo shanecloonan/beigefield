@@ -13,6 +13,7 @@ from site_scanner.analyze import report_for
 from site_scanner.cloud import annotate_cloud
 from site_scanner.discover import FALLBACK_HOSTS, crt_hosts, live_discovery, take_batch, tranco_hosts
 from site_scanner.fetch import fetch_host_async
+from site_scanner.render import RenderBudget, render_enabled, render_home
 from site_scanner.store import build_run, load_cursor, save_cursor, save_hit, save_run
 
 
@@ -32,9 +33,24 @@ def scan_host(host: str, *, bounty: set[str], pause_s: float = 0.35) -> dict:
     return asyncio.run(scan_host_async(host, bounty=bounty, pause_s=pause_s))
 
 
-async def scan_host_async(host: str, *, bounty: set[str], pause_s: float = 0.35) -> dict:
+async def scan_host_async(
+    host: str,
+    *,
+    bounty: set[str],
+    pause_s: float = 0.35,
+    render_budget: RenderBudget | None = None,
+    renderer=None,
+) -> dict:
     allowed = active_allowed(host, bounty)
     pages = await fetch_host_async(host, active=allowed, pause_s=pause_s)
+    if not any(page.get("challenged") for page in pages):
+        extra = None
+        if renderer is not None:
+            extra = await renderer(host)
+        elif render_enabled():
+            extra = await render_home(host, render_budget or RenderBudget())
+        if extra:
+            pages.append(extra)
     annotate_cloud(pages)
     report = report_for(host, pages, active_ran=allowed)
     report["persist"] = save_hit(report)
@@ -44,10 +60,11 @@ async def scan_host_async(host: str, *, bounty: set[str], pause_s: float = 0.35)
 async def scan_hosts(hosts: list[str], bounty: set[str], *, pause_s: float = 0.35, concurrency: int = 2) -> list[dict]:
     """At most `concurrency` hosts at once. Each host still waits between its own requests."""
     gate = asyncio.Semaphore(max(1, concurrency))
+    budget = RenderBudget()
 
     async def one(host: str) -> dict:
         async with gate:
-            return await scan_host_async(host, bounty=bounty, pause_s=pause_s)
+            return await scan_host_async(host, bounty=bounty, pause_s=pause_s, render_budget=budget)
 
     return list(await asyncio.gather(*(one(host) for host in hosts)))
 

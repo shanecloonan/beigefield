@@ -105,6 +105,14 @@ export default function ScanBoard({ board }: { board: SiteBoard }) {
                   ))}
                 </p>
               ) : null}
+              {row.render ? (
+                <p className="mt-2 text-xs text-brand-300">
+                  {row.render.status === "challenged"
+                    ? "Render stopped on a bot check."
+                    : `Rendered · ${row.render.scripts} scripts · ${row.render.console_errors} console errors`}
+                  {row.render.storage_keys.length ? ` · storage ${row.render.storage_keys.join(", ")}` : ""}
+                </p>
+              ) : null}
               <ul className="mt-4 space-y-3">
                 {(row.findings || []).length === 0 ? (
                   <li className="text-sm text-brand-400">No evidence facts on this hit.</li>

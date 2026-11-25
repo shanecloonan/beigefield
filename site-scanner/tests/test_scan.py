@@ -236,6 +236,72 @@ class ScanTests(unittest.TestCase):
         self.assertIn("20261125040600_site_scan_runs.sql", text)
         self.assertNotIn("*/10 * * * *", text)
 
+    def test_playwright_stays_off_the_hourly_run(self) -> None:
+        from pathlib import Path
+        text = Path(__file__).resolve().parents[2].joinpath(".github/workflows/site-scanner.yml").read_text()
+        self.assertIn("inputs.render == true", text)
+        self.assertIn("playwright==1.49.1", text)
+        self.assertIn("SITE_SCAN_RENDER:", text)
+        self.assertNotIn('SITE_SCAN_RENDER: "1"', text)
+        self.assertNotIn("SITE_SCAN_RENDER: '1'", text)
+
+    def test_a_render_keeps_flags_and_drops_values(self) -> None:
+        from site_scanner.render import page_from_snapshot, render_enabled
+        import site_scanner.cli as cli
+
+        self.assertFalse(render_enabled())
+        page = page_from_snapshot({
+            "status": 200,
+            "scripts": ["http://cdn.example/app.js?token=supersecretvalue", "https://cdn.example/ok.js"],
+            "cookies": [{"name": "sid", "value": "supersecretvalue", "httpOnly": False, "secure": False}],
+            "js_globals": {"jQuery.fn.jquery": "1.12.4", "leaked": "AKIAIOSFODNN7EXAMPLE"},
+            "storage_keys": ["theme", "auth_token"],
+            "console_errors": 1,
+            "console_message": "failed AKIAIOSFODNN7EXAMPLE",
+        })
+        self.assertNotIn("supersecretvalue", str(page))
+        self.assertNotIn("AKIAIOSFODNN7EXAMPLE", page["console_note"])
+        self.assertEqual(page["js_globals"], {"jQuery.fn.jquery": "1.12.4"})
+        report = report_for("app.example", [{
+            "path": "/",
+            "scheme": "https",
+            "status": 200,
+            "headers": _QUIET_HEADERS,
+            "body": "<html>ok</html>",
+        }, page], active_ran=True)
+        self.assertIn("mixed-content", report["facts"])
+        self.assertIn("cookie-no-secure", report["facts"])
+        self.assertIn("storage-token", report["facts"])
+        self.assertEqual(report["render"]["scripts"], 2)
+        self.assertEqual(report["render"]["console_errors"], 1)
+        self.assertNotIn("AKIA", report["render"]["console_note"])
+        self.assertNotIn("supersecretvalue", str(report))
+        stored = next(item for item in report["findings"] if item["id"] == "storage-token")
+        self.assertIn("auth_token", stored["evidence"])
+        self.assertNotIn("theme", stored["evidence"])
+
+        challenged = page_from_snapshot({"status": 403, "challenged": True, "cookies": [{"name": "sid", "value": "secretvalue"}]})
+        self.assertEqual(challenged["body"], "")
+        quiet = report_for("blocked.example", [challenged], active_ran=False)
+        self.assertEqual(quiet["heat"], 0)
+        self.assertEqual(quiet["render"]["status"], "challenged")
+        self.assertNotIn("secretvalue", str(quiet))
+
+        async def fake_fetch(_host: str, **_kwargs):
+            return [{"path": "/", "scheme": "https", "status": 200, "headers": _QUIET_HEADERS, "body": "<html>ok</html>"}]
+
+        async def fake_render(_host: str):
+            return page
+
+        original = cli.fetch_host_async
+        cli.fetch_host_async = fake_fetch
+        try:
+            scanned = asyncio.run(cli.scan_host_async("owned.example", bounty=set(), pause_s=0, renderer=fake_render))
+        finally:
+            cli.fetch_host_async = original
+        self.assertEqual(scanned["render"]["status"], "rendered")
+        self.assertIn("storage-token", scanned["facts"])
+
     def test_a_challenge_is_not_retried_and_adds_no_heat(self) -> None:
         calls = {"n": 0}
 
