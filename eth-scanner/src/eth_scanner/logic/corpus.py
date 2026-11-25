@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 _MAX_CHARS = 400_000
-_GUARD = re.compile(r"onlyOwner|onlyRole|initializer", re.I)
+_GUARD = re.compile(r"\bonly[A-Za-z0-9_]*\b|\bifAdmin\b|\binitializer\b", re.I)
 
 # Shape detectors. The rule ids are the static-evidence allowlist.
 PATTERNS: tuple[dict[str, Any], ...] = (
@@ -62,7 +62,10 @@ PATTERNS: tuple[dict[str, Any], ...] = (
         "swc": "",
         "rule": "unprotected-upgrade",
         "family": "defihacklabs-proxy-admin-takeover",
-        "pattern": re.compile(r"function\s+(upgradeTo|upgradeToAndCall|changeAdmin)\s*\([^)]*\)\s*(public|external)\b", re.I),
+        "pattern": re.compile(
+            r"function\s+(upgradeTo|upgradeToAndCall|changeAdmin)\s*\([^)]*\)\s*(public|external)[^{;]*\{",
+            re.I,
+        ),
     },
 )
 
@@ -106,6 +109,50 @@ def load_families(path: Optional[Path] = None) -> list[dict[str, str]]:
     return rows
 
 
+_FN = re.compile(r"function\s+\w+\s*\(([^;]*?)\)\s*([^{;]*)\{", re.S)
+
+
+def _functions(text: str):
+    for match in _FN.finditer(text):
+        params, header = match.group(1), match.group(2)
+        nxt = _FN.search(text, match.end())
+        end = nxt.start() if nxt else min(len(text), match.end() + 1200)
+        yield params, header, text[match.end():end]
+
+
+def _open_external(header: str) -> bool:
+    if _GUARD.search(header) or re.search(r"\binternal\b|\bprivate\b|\bnonReentrant\b", header):
+        return False
+    return bool(re.search(r"\bpublic\b|\bexternal\b", header))
+
+
+def _user_delegatecall(text: str) -> bool:
+    """A public function delegatecalls an address the caller passed in."""
+    for params, header, body in _functions(text):
+        if not _open_external(header):
+            continue
+        for name in re.findall(r"address\s+(?:payable\s+)?(\w+)", params):
+            if re.search(r"\b%s\s*\.delegatecall\s*\(" % re.escape(name), body):
+                return True
+    return False
+
+
+def _state_after_value_call(text: str) -> bool:
+    """A public value call is followed by a balance write in the same function."""
+    write = re.compile(
+        r"\b(?:balances?|_balances|shares|totalSupply|totalAssets)\b(?:\s*\[[^\]]+\])?\s*=",
+        re.I,
+    )
+    call = re.compile(r"\.call\s*\{[^}]*\bvalue\b", re.I)
+    for _params, header, body in _functions(text):
+        if not _open_external(header):
+            continue
+        found = call.search(body)
+        if found and write.search(body[found.end():]):
+            return True
+    return False
+
+
 def scan_source(source: str) -> list[dict[str, Any]]:
     """Return normalized finding dicts. Guarded matches are dropped."""
     text = source or ""
@@ -114,12 +161,20 @@ def scan_source(source: str) -> list[dict[str, Any]]:
     found: list[dict[str, Any]] = []
     seen: set[str] = set()
     for spec in PATTERNS:
-        match = spec["pattern"].search(text)
-        if match is None:
-            continue
-        window = text[max(0, match.start() - 180):match.end() + 40]
-        if _GUARD.search(window):
-            continue
+        rule = str(spec["rule"])
+        if rule == "delegatecall-user-target":
+            if not _user_delegatecall(text):
+                continue
+        elif rule == "reentrancy-eth":
+            if not _state_after_value_call(text):
+                continue
+        else:
+            match = spec["pattern"].search(text)
+            if match is None:
+                continue
+            window = text[max(0, match.start() - 180):match.end() + 40]
+            if _GUARD.search(window):
+                continue
         rule = str(spec["rule"])
         if rule in seen:
             continue

@@ -68,6 +68,7 @@ Configured in `eth-scanner/src/eth_scanner/heat.py` (`ETH_SCANNER_HEAT_*`):
 | Allowlisted static detector (Slither / Aderyn / Semgrep) | Yes — `static_evidence`. High-confidence funds rules weigh 3, medium 1, cap 6. Admin-gated and generic hits stay 0 |
 | SWC and incident-family source pattern | Yes — `corpus_evidence`, same weights, cap 6, and not counted again when static analysis already scored that rule. Writeups are not fetched |
 | Known-exploited runtime bytecode | Yes — `clone_evidence`. Exact normalized hash weighs 3, histogram overlap ≥ 0.92 weighs 1. A match is a lead. Forta names add no heat |
+| Unprotected value move, unverified upgradeable proxy, fresh high TVL | Yes — `unprotected_evidence` 3, `proxy_evidence` 2, `fresh_evidence` 2 (≤30 days and ≥ $100k). An EOA admin plus shape leads, with none of these, stays at 5 or below |
 | Single-engine generic detector | **No** heat alone |
 | Multi-engine agreement on a concrete finding | Raises **confidence**; may unlock heat only when paired with funds + failed invariant / privileged evidence (Phase A policy) |
 

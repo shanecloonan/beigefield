@@ -110,9 +110,27 @@ def adjust_heat(
     if not fork_ok:
         gated = min(gated, _points(bd, "gated_leads"))
     old = max(0, int(heat or 0))
-    base = min(old, backing)
+    extra = sum(
+        _points(bd, key)
+        for key in (
+            "static_evidence",
+            "corpus_evidence",
+            "clone_evidence",
+            "unprotected_evidence",
+            "proxy_evidence",
+            "fresh_evidence",
+        )
+    )
+    base = min(old, backing + extra)
     supported = min(w.max_heat, base + gated)
-    new = supported if fork_ok else min(old, supported)
+    # An admin key plus shape leads, with nothing else, stays under the maybe bar.
+    if inv + priv + corr + extra == 0 and not fork_ok:
+        supported = min(supported, 5)
+    if fork_ok:
+        without_extra = min(w.max_heat, min(old, backing) + gated)
+        new = min(supported, max(old, without_extra))
+    else:
+        new = min(old, supported)
     return {
         "heat": new,
         "changed": new != old,
