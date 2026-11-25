@@ -193,6 +193,7 @@ export function evidenceTags(breakdown: Record<string, unknown> | null): string[
   if (amount("eoa_admin") > 0) tags.push("admin");
   if (flagged("specs")) tags.push("specs");
   if (flagged("replay")) tags.push("replay");
+  if (flagged("shaped")) tags.push("shaped");
   return tags;
 }
 

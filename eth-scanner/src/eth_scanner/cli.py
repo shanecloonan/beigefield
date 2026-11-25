@@ -1099,6 +1099,19 @@ def main(argv: list[str] | None = None) -> int:
     replay.add_argument("--cu-cap", type=int, default=4000, help="Alchemy compute units for historical code reads")
     replay.add_argument("--json", action="store_true")
 
+    watch = sub.add_parser(
+        "watch-shaped",
+        help="Rank fresh TVL and flag mined flash-loan shapes. No mempool. Heat stays 0.",
+    )
+    watch.add_argument("--creates", default="", help="JSON list of fresh contracts with funds_usd")
+    watch.add_argument("--receipts", default="", help="JSON list of mined receipts")
+    watch.add_argument("--watched", default="", help="comma-separated addresses")
+    watch.add_argument("--index", default="", help="JSON bytecode index of address and runtime_hash")
+    watch.add_argument("--hashes", default="", help="JSON object of address to runtime hash")
+    watch.add_argument("--blocks", type=int, default=0, help="mined lookback when ETH_RPC_URL is set; 0 stays offline")
+    watch.add_argument("--enqueue", action="store_true", help="upsert the queue as fresh-deploy targets")
+    watch.add_argument("--json", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -2116,6 +2129,82 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         return 0 if report.get("authored_passes", True) else 1
+
+    if args.cmd == "watch-shaped":
+        import json as _json
+        import os as _os
+        from eth_scanner.chain.cu_budget import CuBudget
+        from eth_scanner.ingest.rpc_client import rpc_call
+        from eth_scanner.monitor.shaped import fetch_receipts, live_logs, plan_watch, queue_rows, refuse_mempool
+        from eth_scanner.types import Target
+
+        def _load(path: str, fallback):
+            if not path:
+                return fallback
+            return _json.loads(Path(path).read_text(encoding="utf-8"))
+
+        watched = [part.strip() for part in str(args.watched or "").split(",") if part.strip()]
+        receipts = _load(args.receipts, [])
+        cu = None
+        rpc = (_os.environ.get("ETH_RPC_URL") or "").strip()
+        if args.blocks and rpc and watched and not receipts:
+            def caller(method, params, _rpc=rpc):
+                refuse_mempool(method)
+                return rpc_call(_rpc, method, params, timeout_s=12)
+
+            try:
+                head = caller("eth_blockNumber", [])
+                number = int(head, 16) if isinstance(head, str) else int(head)
+                budget = CuBudget(800)
+                budget.charge("eth_blockNumber")
+                found = live_logs(caller, head=number, blocks=int(args.blocks), budget=budget)
+                tx_hashes = []
+                for log in found.get("logs") or []:
+                    if isinstance(log, dict) and log.get("transactionHash"):
+                        tx_hashes.append(str(log["transactionHash"]))
+                receipts = fetch_receipts(caller, tx_hashes, budget, limit=3)
+                cu = budget.snapshot()
+            except Exception:
+                receipts = []
+                cu = {"spent": 0, "stopped": True}
+        report = plan_watch(
+            creates=_load(args.creates, []),
+            receipts=receipts,
+            watched=watched,
+            clone_index=_load(args.index, []),
+            hashes=_load(args.hashes, {}),
+        )
+        if cu is not None:
+            report["cu"] = cu
+        queued = queue_rows(report)
+        enqueued = 0
+        if args.enqueue:
+            for row in queued:
+                funds = row.get("funds_usd")
+                store.upsert_target(Target(
+                    address=row["address"],
+                    status="pending",
+                    discovery_source="fresh-deploy",
+                    funds_usd=float(funds) if isinstance(funds, (int, float)) else None,
+                ))
+                enqueued += 1
+        public = {
+            "status": report.get("status"),
+            "shaped": report.get("shaped"),
+            "hits": len(report.get("hits") or []),
+            "queue": [row.get("address") for row in (report.get("queue") or [])],
+            "clones": [row.get("address") for row in (report.get("clones") or [])],
+            "enqueued": enqueued,
+            "heat": 0,
+            "heat_breakdown": {"shaped": bool(report.get("shaped"))},
+            "cu": (report.get("cu") or {}).get("spent"),
+            "note": report.get("note"),
+        }
+        if args.json:
+            print(_json.dumps(public, indent=2))
+        else:
+            print("watch-shaped hits=%s queue=%s" % (public["hits"], len(public["queue"])))
+        return 0
 
     if args.cmd == "fork-verify":
         from eth_scanner.engines.fork_verify import (
