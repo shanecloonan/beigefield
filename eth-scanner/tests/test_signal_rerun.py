@@ -180,6 +180,76 @@ class LeaseAndProxy(unittest.TestCase):
         self.assertEqual(rerun._provider_stop(429, body), "monthly capacity")
 
 
+class EvidenceHeat(unittest.TestCase):
+    def test_a_stored_peak_does_not_become_the_new_heat(self):
+        class Result:
+            def __init__(self):
+                self.heat = 6
+                self.heat_breakdown = {"original_peak": 3, "peak_heat": 3, "total": 6}
+
+        result = Result()
+        parts = rerun.apply_evidence_heat(result, 3)
+        self.assertEqual(parts["total"], 0)
+        self.assertEqual(result.heat, 0)
+        self.assertEqual(result.heat_breakdown["original_peak"], 3)
+
+    def test_failed_invariants_are_kept(self):
+        class Result:
+            def __init__(self):
+                self.heat = 6
+                self.heat_breakdown = {
+                    "invariants_failed": 3,
+                    "gated_leads": 3,
+                    "original_peak": 3,
+                    "total": 6,
+                }
+
+        result = Result()
+        parts = rerun.apply_evidence_heat(result, 3)
+        self.assertEqual(parts["total"], 6)
+        self.assertEqual(result.heat, 6)
+        self.assertEqual(result.heat_breakdown["original_peak"], 3)
+        self.assertEqual(rerun.desk_verdict({"heat": 0, "heat_breakdown": {"original_peak": 6}}), "no")
+
+    def test_pages_past_the_old_forty_thousand_cap(self):
+        class Store:
+            def __init__(self):
+                self.calls = 0
+
+            def _req(self, method, table, query=None):
+                self.calls += 1
+                if self.calls < 41:
+                    return [{"address": "0x" + "11" * 20, "heat": 0, "created_at": str(self.calls)}] * 1000
+                return [{"address": "0x" + "22" * 20, "heat": 1, "created_at": "end"}]
+
+        rows, err = rerun._page(Store(), "eth_scan_results", "address,heat")
+        self.assertEqual(err, "")
+        self.assertEqual(len(rows), 40_001)
+
+    def test_desk_row_uses_evidence_heat(self):
+        store = MemoryStore()
+
+        class Result:
+            def __init__(self):
+                self.heat = 6
+                self.heat_breakdown = {"original_peak": 3, "total": 6}
+                self.notes = []
+                self.contract_name = "Vault"
+                self.invariant_results = []
+                self.bucket = "lane-a-cool"
+                self.funds_usd = None
+                self.drop_reason = ""
+
+        result = Result()
+        parts = rerun.apply_evidence_heat(result, 3)
+        err = rerun.persist_desk(store, result, "0x" + "11" * 20, parts, 3)
+        self.assertEqual(err, "")
+        saved = store.test_runs[0]
+        self.assertEqual(saved["heat"], 0)
+        self.assertEqual(saved["blend_bucket"], "no")
+        self.assertEqual(saved["heat_breakdown"]["original_peak"], 3)
+
+
 class DryRun(unittest.TestCase):
     def test_dry_run_does_not_scan(self):
         store = MemoryStore()
