@@ -294,6 +294,11 @@ python -m eth_scanner upgrade-layout \
   --json
 ```
 
+## Corpus recall
+
+A weekly job scores ten authored bug-class labels with the corpus patterns and the three shape leads. The baseline is 0.9: nine classes hit, and signature replay is the miss. scabench and Web3Bugs stay outside the tree. DeFiVulnLabs is not fetched. The snippets are original shapes, and the score adds no heat.
+
+
 Slither, Aderyn, and Semgrep each get a timeout (`--timeout`, clamped to 5–180 seconds). Semgrep uses `research/semgrep/solidity.yml`. Set `ETH_SCANNER_SEMGREP_RULES` to a local checkout of a Decurity-style Solidity pack to add those rules; the default run does not download a ruleset.
 
 Findings are normalized to one scale. An allowlisted high-confidence funds detector adds 3 points of `static_evidence`, a medium detector adds 1, and the component caps at 6. Ownable / AccessControl hits, style checks, and informational detectors add 0. The points are a heat component, not a verdict.
