@@ -333,6 +333,14 @@ python -m eth_scanner system-fork \
   --json
 ```
 
+## Fuzz corpus
+
+`fuzz-corpus` names an Actions cache slot for Echidna, Medusa, and ityfuzz. The key is `fuzz-corpus-<engine>-<hash>-<run_id>`. The restore prefix drops the run id, so the newest seeds for that source hash are reused. The directory is `fuzz-corpus/` and it is gitignored. The workflow is manual and does not start a fuzzer or contact a network. An empty directory is not saved. The board shows `fuzz-corpus`. Heat stays 0.
+
+```bash
+python -m eth_scanner fuzz-corpus --source vault.sol --run-id 101 --json
+```
+
 ## Shaped-transaction watch
 
 `watch-shaped` reads mined receipts. A fresh contract whose funds rose is ordered ahead of one whose funds did not. A flash-loan log plus at least eight logs, touching a watched address, is a shape. Bytecode clones from a local index are queued with it. `--blocks` uses `ETH_RPC_URL` for one `eth_getLogs` and at most three receipts, capped at 800 CU. Pending-transaction methods are refused. The board shows `shaped`. Heat stays 0.

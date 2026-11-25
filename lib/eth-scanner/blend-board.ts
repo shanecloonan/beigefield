@@ -196,6 +196,7 @@ export function evidenceTags(breakdown: Record<string, unknown> | null): string[
   if (flagged("shaped")) tags.push("shaped");
   if (flagged("flow") || amount("flow_score") > 0) tags.push("flow");
   if (flagged("system")) tags.push("system");
+  if (flagged("fuzz_corpus")) tags.push("fuzz-corpus");
   return tags;
 }
 

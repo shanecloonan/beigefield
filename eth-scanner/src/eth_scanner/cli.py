@@ -1140,6 +1140,15 @@ def main(argv: list[str] | None = None) -> int:
     system.add_argument("--write-dir", default="", help="where to write the dependency set and the view test")
     system.add_argument("--json", action="store_true")
 
+    corpus = sub.add_parser(
+        "fuzz-corpus",
+        help="Name an Actions cache for fuzzer seeds. Nothing is started. Heat stays 0.",
+    )
+    corpus.add_argument("--source", required=True, help="local Solidity file")
+    corpus.add_argument("--run-id", default="local", help="short token appended to the cache key")
+    corpus.add_argument("--write-dir", default="", help="where to write the corpus directories and plan.json")
+    corpus.add_argument("--json", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -2304,6 +2313,22 @@ def main(argv: list[str] | None = None) -> int:
                 "system-fork status=%s dependencies=%s loaded=%s"
                 % (public["status"], len(public["dependencies"]), public["loaded"])
             )
+        return 0
+
+    if args.cmd == "fuzz-corpus":
+        import json as _json
+        from eth_scanner.fuzz.corpus import plan_corpus, public_report as corpus_public
+        source = Path(args.source).read_text(encoding="utf-8", errors="replace")
+        report = plan_corpus(
+            source,
+            run_id=str(args.run_id or "local"),
+            dest=Path(args.write_dir) if args.write_dir else None,
+        )
+        public = corpus_public(report)
+        if args.json:
+            print(_json.dumps(public, indent=2))
+        else:
+            print("fuzz-corpus status=%s hash=%s" % (public["status"], public["code_hash"]))
         return 0
 
     if args.cmd == "fork-verify":

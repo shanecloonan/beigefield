@@ -41,6 +41,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Fuzzer corpora are an Actions cache, not source.
+/fuzz-corpus/
+
 # eth-scanner local artifacts
 /eth-scanner/.runtime/
 /eth-scanner/work/

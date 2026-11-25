@@ -481,6 +481,19 @@ test("a system tag shows a loopback dependency set and does not change heat", ()
   assert.deepEqual(board.leaderboard[0].evidence_tags, ["system"]);
 });
 
+test("a fuzz corpus tag shows a saved seed set and does not change heat", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 1,
+      status: "done",
+      heat_breakdown: { fuzz_corpus: true },
+    },
+  ]);
+  assert.equal(board.leaderboard[0].heat, 1);
+  assert.deepEqual(board.leaderboard[0].evidence_tags, ["fuzz-corpus"]);
+});
+
 test("a shaped tag shows a mined flash-loan hit and does not change heat", () => {
   const board = summarizeBlendRuns([
     {
