@@ -53,6 +53,8 @@ export type LeaderRow = {
   stale: boolean;
   score_state: "" | "provisional" | "final";
   pending_stages: string[];
+  /** Display labels from the heat breakdown. Empty when the scan stored none. */
+  evidence_tags: string[];
 };
 
 export type BlendBoard = {
@@ -157,6 +159,28 @@ function scoreOf(row: BlendRunLike): { state: "" | "provisional" | "final"; pend
   return { state, pending };
 }
 
+/** Labels the board can show. Points stay in the breakdown; this list is display only. */
+export function evidenceTags(breakdown: Record<string, unknown> | null): string[] {
+  if (!breakdown) return [];
+  const amount = (key: string) => {
+    const value = Number(breakdown[key]);
+    return Number.isFinite(value) ? value : 0;
+  };
+  const flagged = (key: string) => breakdown[key] === true || amount(key) > 0;
+  const tags: string[] = [];
+  if (amount("invariants_failed") > 0) tags.push("invariant");
+  if (flagged("sequence")) tags.push("sequence");
+  if (flagged("oracle")) tags.push("oracle");
+  if (amount("static_evidence") > 0) tags.push("static");
+  if (amount("corpus_evidence") > 0) tags.push("corpus");
+  if (amount("clone_evidence") > 0) tags.push("clone");
+  if (amount("unprotected_evidence") > 0) tags.push("unprotected");
+  if (amount("proxy_evidence") > 0) tags.push("proxy");
+  if (amount("fresh_evidence") > 0) tags.push("fresh");
+  if (amount("eoa_admin") > 0) tags.push("admin");
+  return tags;
+}
+
 function toRow(address: string, row: BlendRunLike): LeaderRow {
   const decision = verdictOf(row);
   const name = String(row.contract_name || "").trim();
@@ -178,6 +202,7 @@ function toRow(address: string, row: BlendRunLike): LeaderRow {
     score_state: score.state,
     pending_stages: score.pending,
     original_peak: null,
+    evidence_tags: evidenceTags(breakdownOf(row)),
   };
 }
 

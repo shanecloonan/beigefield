@@ -263,4 +263,38 @@ test("a rescored false peak does not outrank a real historical heat", () => {
   assert.equal(board.leaderboard[1].heat, 0);
   assert.equal(board.leaderboard[1].original_peak, 12);
   assert.equal(board.leaderboard[0].original_peak, null);
+  assert.deepEqual(board.leaderboard[0].evidence_tags, []);
+});
+
+test("evidence tags come from the breakdown and do not change heat", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 7,
+      status: "done",
+      created_at: "2026-11-01T00:00:00Z",
+      heat_breakdown: {
+        invariants_failed: 3,
+        static_evidence: 3,
+        eoa_admin: 0,
+        sequence: true,
+        oracle: true,
+        clone_evidence: 1,
+        unprotected_evidence: 0,
+        proxy_evidence: 2,
+        fresh_evidence: 2,
+        corpus_evidence: 0,
+      },
+    },
+  ]);
+  assert.equal(board.leaderboard[0].heat, 7);
+  assert.deepEqual(board.leaderboard[0].evidence_tags, [
+    "invariant",
+    "sequence",
+    "oracle",
+    "static",
+    "clone",
+    "proxy",
+    "fresh",
+  ]);
 });

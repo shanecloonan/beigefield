@@ -242,6 +242,10 @@ Runtime bytecode is normalized by dropping the Solidity CBOR metadata suffix, th
 python -m eth_scanner clone-match --code-file runtime.hex --json
 ```
 
+## What reaches heat 6
+
+An EOA admin and a shape lead, with no other evidence, stay at 5. A fork conservation failure can still put three shape leads at 6, and a privileged call plus a live confirmation stays at 7. These add heat on their own: an unprotected value-moving function (3), an unverified upgradeable proxy (2), and a deployment no older than 30 days that holds at least $100k (2). Sequence and oracle failures stay inside `invariants_failed` and are labeled for the board. `original_peak` is the heat before a rescore and is not added back. Rescore keeps stored static, corpus, clone, unprotected, proxy, and fresh points, and it does not raise heat except for the existing fork-backed shape leads.
+
 ## Buckets
 
 | Bucket | Meaning |

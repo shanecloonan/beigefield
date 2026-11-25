@@ -42,6 +42,8 @@ type Board = {
     stale?: boolean;
     score_state?: "" | "provisional" | "final";
     pending_stages?: string[];
+    original_peak?: number | null;
+    evidence_tags?: string[];
   }[];
   flagged?: {
     address: string;
@@ -276,6 +278,16 @@ export default function BlendApp() {
                         </span>
                       ) : row.score_state === "final" ? (
                         <span className="mt-0.5 block text-[10px] uppercase tracking-wider text-brand-500">Final</span>
+                      ) : null}
+                      {row.original_peak != null && row.original_peak !== (row.peak_heat ?? row.heat) ? (
+                        <span className="mt-0.5 block text-[10px] uppercase tracking-wider text-brand-500">
+                          was {row.original_peak}
+                        </span>
+                      ) : null}
+                      {row.evidence_tags && row.evidence_tags.length > 0 ? (
+                        <span className="mt-0.5 block text-[10px] uppercase tracking-wider text-brand-400">
+                          {row.evidence_tags.join(" · ")}
+                        </span>
                       ) : null}
                     </td>
                     <td className="px-3 py-2 tabular-nums text-brand-400 hidden sm:table-cell">{row.heat}</td>

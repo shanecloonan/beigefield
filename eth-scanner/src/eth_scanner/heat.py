@@ -277,6 +277,10 @@ def evidence_heat(
     static_findings: Optional[list[Any]] = None,
     corpus_findings: Optional[list[Any]] = None,
     clone_match: Optional[dict[str, Any]] = None,
+    unprotected_value: bool = False,
+    unverified_proxy: bool = False,
+    deployed_at: Optional[str] = None,
+    now: Any = None,
 ) -> tuple[int, dict[str, Any]]:
     """Compose heat from evidence only. Funds are ranking metadata, not heat."""
     w = weights or load_heat_weights()
@@ -339,7 +343,43 @@ def evidence_heat(
         except (TypeError, ValueError):
             clone_points = 0
         clone_points = min(3, clone_points)
-    total = min(w.max_heat, inv + priv + eoa + corr + gated + static_points + corpus_points + clone_points)
+    from eth_scanner.logic.priority import ADMIN_ONLY_CAP, priority_points
+    priority = priority_points(
+        unprotected_value=unprotected_value,
+        unverified_proxy=unverified_proxy,
+        funds_usd=funds_usd,
+        deployed_at=deployed_at,
+        now=now,
+    )
+    unprotected_points = int(priority["unprotected_evidence"])
+    proxy_points = int(priority["proxy_evidence"])
+    fresh_points = int(priority["fresh_evidence"])
+    fork = fork_backed(conservation)
+    substantive = (
+        inv + priv + corr + static_points + corpus_points + clone_points
+        + unprotected_points + proxy_points + fresh_points
+    )
+    admin_capped = bool(eoa and gated and substantive == 0 and not fork)
+    if admin_capped:
+        gated = min(gated, max(0, ADMIN_ONLY_CAP - eoa))
+    failed_ids = {
+        str(row.get("id") or "")
+        for row in invariant_results or []
+        if str(row.get("status") or "") == "failed"
+    }
+    sequence = bool(failed_ids & {
+        "erc4626-asset-shortfall",
+        "share-price-monotonic",
+        "profit-attacker-balance",
+    })
+    oracle = any(
+        name.startswith("profit-spot")
+        or name.startswith("profit-chainlink")
+        or name.startswith("profit-oracle")
+        or "oracle" in name
+        for name in failed_ids
+    )
+    total = min(w.max_heat, substantive + eoa + gated)
     from eth_scanner.drain import score_drain
     drain = score_drain(
         funds_usd=funds_usd,
@@ -362,6 +402,12 @@ def evidence_heat(
         "static_evidence": static_points,
         "corpus_evidence": corpus_points,
         "clone_evidence": clone_points,
+        "unprotected_evidence": unprotected_points,
+        "proxy_evidence": proxy_points,
+        "fresh_evidence": fresh_points,
+        "admin_capped": admin_capped,
+        "sequence": sequence,
+        "oracle": oracle,
         "contradictions": sorted(contradicted),
         "total": total,
         "drain_probability": drain["drain_probability"],
