@@ -23,6 +23,7 @@ on:
       - .github/workflows/site-scanner.yml
       - supabase/migrations/20261122120000_site_scan_hits.sql
       - supabase/migrations/20261125034700_site_scan_cursor.sql
+      - supabase/migrations/20261125040600_site_scan_runs.sql
 
 permissions:
   contents: read
@@ -64,6 +65,7 @@ jobs:
         run: |
           python -m site_scanner.migrate --sql supabase/migrations/20261122120000_site_scan_hits.sql
           python -m site_scanner.migrate --sql supabase/migrations/20261125034700_site_scan_cursor.sql
+          python -m site_scanner.migrate --sql supabase/migrations/20261125040600_site_scan_runs.sql
       - name: Scan owned and discovered hosts
         env:
           PYTHONPATH: site-scanner/src:eth-scanner/src
@@ -86,11 +88,18 @@ jobs:
                   "reason": persist.get("reason") or "",
                   "code": persist.get("code") or "",
               })
+          run = report.get("run") or {}
           print(json.dumps({
               "status": report.get("status"),
               "scanned": report.get("scanned"),
               "sources": report.get("sources") or {},
               "cursor": report.get("cursor") or {},
+              "run": {
+                  "run_id": run.get("run_id"),
+                  "hosts_scanned": run.get("hosts_scanned"),
+                  "finding_count": run.get("finding_count"),
+                  "persist": (run.get("persist") or {}).get("status"),
+              },
               "reports": slim,
           }))
           PY

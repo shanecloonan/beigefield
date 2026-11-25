@@ -5,6 +5,7 @@ type SiteBoard = {
   connected: boolean;
   note: string;
   leaderboard: SiteRow[];
+  runs: { run_id: string; started_at: string | null; finished_at: string | null; hosts_scanned: number; finding_count: number }[];
 };
 
 export default function ScanBoard({ board }: { board: SiteBoard }) {
@@ -18,13 +19,41 @@ export default function ScanBoard({ board }: { board: SiteBoard }) {
         <p className="text-[11px] tracking-[0.2em] uppercase text-gold/80 font-semibold mb-2">Beigefield · Scan</p>
         <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-brand-50">Scan</h1>
         <p className="mt-3 max-w-2xl text-sm text-brand-300">
-          Passive checks on public sites: headers, TLS, well-known files, leaked tokens, and cloud metadata.
-          Heat is the evidence. Active checks run only on owned or in-scope hosts. Secrets are redacted.
+          Public pages are checked for headers, cookies, TLS, libraries, and leaked tokens.
+          Heat is the evidence. Active path checks run only on owned or in-scope hosts. Secrets are redacted.
         </p>
         <p className="mt-2 text-[11px] text-brand-500">
           {board.connected ? "Store connected." : "Store not configured. The board fills after the scheduled job writes."}
           {board.note ? ` ${board.note}` : ""}
         </p>
+
+        <h2 className="mt-8 text-[11px] tracking-[0.14em] uppercase text-brand-500">Recent runs</h2>
+        <div className="mt-2 overflow-x-auto rounded-lg border border-brand-800">
+          <table className="w-full text-left text-sm">
+            <thead className="text-[11px] tracking-[0.14em] uppercase text-brand-500">
+              <tr>
+                <th className="px-3 py-2">Started</th>
+                <th className="px-3 py-2">Finished</th>
+                <th className="px-3 py-2">Hosts</th>
+                <th className="px-3 py-2">Findings</th>
+              </tr>
+            </thead>
+            <tbody>
+              {board.runs.length === 0 ? (
+                <tr>
+                  <td className="px-3 py-6 text-brand-400" colSpan={4}>No scans recorded yet.</td>
+                </tr>
+              ) : board.runs.map((run) => (
+                <tr key={run.run_id} className="border-t border-brand-800">
+                  <td className="px-3 py-2 text-brand-300">{run.started_at || "—"}</td>
+                  <td className="px-3 py-2 text-brand-300">{run.finished_at || "—"}</td>
+                  <td className="px-3 py-2 tabular-nums">{run.hosts_scanned}</td>
+                  <td className="px-3 py-2 tabular-nums">{run.finding_count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         <div className="mt-8 overflow-x-auto rounded-lg border border-brand-800">
           <table className="w-full text-left text-sm">
@@ -66,12 +95,25 @@ export default function ScanBoard({ board }: { board: SiteBoard }) {
                 Heat {row.heat} · peak {row.peak_heat}
                 {row.scanned_at ? ` · ${row.scanned_at}` : ""}
               </p>
+              {row.tech.length > 0 ? (
+                <p className="mt-2 text-xs text-brand-300">
+                  {row.tech.map((item) => (
+                    <span key={`${item.name}-${item.version}-${item.source}`} className="mr-3">
+                      {item.name}{item.version ? ` ${item.version}` : ""}
+                      {item.eol ? " · end of life" : ""}
+                    </span>
+                  ))}
+                </p>
+              ) : null}
               <ul className="mt-4 space-y-3">
                 {(row.findings || []).length === 0 ? (
                   <li className="text-sm text-brand-400">No evidence facts on this hit.</li>
                 ) : row.findings.map((item) => (
                   <li key={item.id || item.title} className="text-sm">
-                    <p className="text-brand-50">{item.title} <span className="text-brand-500">+{item.heat ?? 0}</span></p>
+                    <p className="text-brand-50">
+                      {item.title} <span className="text-brand-500">+{item.heat ?? 0}</span>
+                      {item.stage ? <span className="text-brand-500"> · {item.stage}</span> : null}
+                    </p>
                     <p className="text-brand-300">{item.evidence}</p>
                     <p className="text-brand-400">{item.remediation}</p>
                   </li>
