@@ -393,18 +393,32 @@ def collect_candidates(store: Any) -> dict[str, Any]:
     return {"ethereum": ethereum, "other_chain": other, "notes": notes, "rows_read": len(rows)}
 
 
-def explain_fork(status: str, drainable: bool) -> str:
-    """Plain description. No call data."""
-    if drainable or status == "broken":
+def explain_fork(
+    status: str,
+    drainable: bool,
+    attacker_up: Any = None,
+    target_down: Any = None,
+) -> str:
+    """Plain description. The balance sentence needs measured deltas. No call data."""
+    try:
+        up = int(attacker_up)
+        down = int(target_down)
+        measured = up > 1000 and down > 1000
+    except (TypeError, ValueError):
+        measured = False
+    if drainable and measured:
         return (
-            "On a local fork, an unprivileged caller increased its own balance while the "
-            "contract's balance fell. Nothing was broadcast."
+            "On a local fork, the caller's balance rose by %s while the contract's "
+            "balance fell by %s. Nothing was broadcast."
+            % (up, down)
         )
     if status in {"ok", "held"}:
         return "The conservation check held. An unprivileged caller did not take value from the contract."
+    if status == "inconclusive":
+        return "Fork verify did not show a measured conservation break. The result is inconclusive and adds no heat."
     if status == "timeout":
         return "The local fork check stopped at its time limit before it finished."
-    if status == "compile-skip":
+    if status in {"compile-skip", "compile"}:
         return "Fork verify did not run because the local check did not compile."
     if status == "skipped":
         return "Fork verify did not run."
@@ -412,6 +426,8 @@ def explain_fork(status: str, drainable: bool) -> str:
         return "Fork verify stopped on an error before it could say whether value moved."
     if status == "not-run":
         return "Fork verify did not run."
+    if status == "broken":
+        return "Fork verify did not measure a balance change, so it does not count as a drain."
     return "Fork verify finished as %s." % (status or "unknown")
 
 
@@ -438,7 +454,12 @@ def fork_from_result(result: Any) -> dict[str, Any]:
     return {
         "status": "broken" if drainable else status,
         "drainable": drainable,
-        "plain": explain_fork("broken" if drainable else status, drainable),
+        "plain": explain_fork(
+            "broken" if drainable else status,
+            drainable,
+            poc.get("attacker_up"),
+            poc.get("target_down"),
+        ),
     }
 
 

@@ -103,11 +103,18 @@ class Selection(unittest.TestCase):
 class ForkWords(unittest.TestCase):
     def test_outcomes_do_not_carry_call_data(self):
         held = rerun.explain_fork("ok", False)
-        broke = rerun.explain_fork("broken", True)
+        broke = rerun.explain_fork("broken", True, 10**18, 10**18)
+        bare = rerun.explain_fork("broken", True)
+        inconclusive = rerun.explain_fork("inconclusive", False)
         self.assertNotIn("0x", held)
         self.assertNotIn("0x", broke)
         self.assertIn("did not take", held)
         self.assertIn("Nothing was broadcast", broke)
+        self.assertIn("rose by", broke)
+        self.assertNotIn("rose", bare)
+        self.assertNotIn("fell", bare)
+        self.assertNotIn("rose", inconclusive)
+        self.assertIn("no heat", inconclusive)
 
     def test_redact_drops_the_stored_sequence(self):
         os.environ["ETH_SCANNER_FORK_VERIFY_REDACT"] = "1"

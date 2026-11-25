@@ -4,11 +4,13 @@ For contracts already at or above ETH_SCANNER_FUZZ_MIN_HEAT, this stage
 spins a Foundry campaign on a local anvil (optionally forked from
 ETH_RPC_URL) and checks a conservation property:
 
-    an unprivileged caller cannot increase its ETH balance while the
-    target's ETH balance decreases.
+    an unprivileged caller cannot increase its ETH or token balance while
+    the target's balance decreases by more than dust.
 
 A broken invariant is recorded as heat_breakdown.exploit_poc with
-drainable=true and a sanitized failing sequence. Nothing is broadcast
+drainable=true only when those measured deltas are present. A compile
+error, a revert, or any other Forge failure is inconclusive and adds no
+heat. Nothing is broadcast
 to mainnet. No signed transactions, no packaged attack scripts.
 
 If ETH_RPC_URL is unset or unusable (quota/auth/repeated 5xx), live
@@ -149,8 +151,13 @@ class ForkVerifyFailure:
 class ForkVerifyReport:
     ran: bool = False
     skipped: bool = True
-    status: str = "skipped"  # ok | broken | skipped | timeout | error | compile-skip
+    status: str = "skipped"  # ok | broken | inconclusive | skipped | timeout | error
     drainable: bool = False
+    failure_class: str = ""
+    failing_test: str = ""
+    reason: str = ""
+    attacker_up: Optional[int] = None
+    target_down: Optional[int] = None
     tool: str = "none"
     heat_in: int = 0
     address: str = ""
@@ -170,6 +177,11 @@ class ForkVerifyReport:
             "skipped": self.skipped,
             "status": self.status,
             "drainable": self.drainable,
+            "failure_class": self.failure_class,
+            "failing_test": self.failing_test,
+            "reason": self.reason,
+            "attacker_up": self.attacker_up,
+            "target_down": self.target_down,
             "tool": self.tool,
             "heat_in": self.heat_in,
             "address": self.address,
@@ -189,6 +201,11 @@ class ForkVerifyReport:
         return {
             "drainable": bool(self.drainable),
             "status": self.status,
+            "failure_class": self.failure_class,
+            "failing_test": self.failing_test,
+            "reason": self.reason,
+            "attacker_up": self.attacker_up,
+            "target_down": self.target_down,
             "tool": self.tool,
             "property": (
                 self.failures[0].property_id
@@ -201,6 +218,8 @@ class ForkVerifyReport:
             "label": (
                 "unprivileged caller extracted value on a local fork — not a live transaction"
                 if self.drainable
+                else "inconclusive; no measured balance change"
+                if self.status == "inconclusive"
                 else "conservation invariant held (or stage skipped)"
             ),
             "bucket_hint": "proven-drainable" if self.drainable else "",
@@ -709,20 +728,55 @@ def _fork_verify_sol(target_hex40: str, attacker_hex40: str, selectors: list[str
         "contract ForkVerifyProperties is Test {\n"
         f'    address constant TARGET = address(bytes20(hex"{target_hex40}"));\n'
         f'    address constant ATTACKER = address(bytes20(hex"{attacker_hex40}"));\n'
+        "    uint256 internal constant DUST = 1000;\n"
         "    uint256 internal attackerStart;\n"
         "    uint256 internal targetStart;\n"
+        "    uint256 internal tokenAttackerStart;\n"
+        "    uint256 internal tokenTargetStart;\n"
         "    bytes4[] internal sels;\n\n"
         "    function setUp() public {\n"
         "        vm.deal(ATTACKER, 10 ether);\n"
         "        attackerStart = ATTACKER.balance;\n"
         "        targetStart = TARGET.balance;\n"
+        "        tokenAttackerStart = _bal(ATTACKER);\n"
+        "        tokenTargetStart = _bal(TARGET);\n"
         f"        bytes4[{n}] memory seed = [{sel_lits}];\n"
         "        for (uint256 i = 0; i < seed.length; i++) {\n"
         "            sels.push(seed[i]);\n"
         "        }\n"
         "    }\n\n"
-        "    function _extracted(uint256 a0, uint256 t0) internal view returns (bool) {\n"
-        "        return ATTACKER.balance > a0 && TARGET.balance < t0;\n"
+        "    function _bal(address who) internal view returns (uint256) {\n"
+        "        (bool ok, bytes memory raw) = TARGET.staticcall(abi.encodeWithSelector(bytes4(hex\"70a08231\"), who));\n"
+        "        if (!ok || raw.length < 32) return 0;\n"
+        "        return abi.decode(raw, (uint256));\n"
+        "    }\n\n"
+        "    function _dec(uint256 n) internal pure returns (string memory) {\n"
+        "        if (n == 0) return \"0\";\n"
+        "        bytes memory buf = new bytes(78);\n"
+        "        uint256 i = 78;\n"
+        "        while (n > 0) {\n"
+        "            i--;\n"
+        "            buf[i] = bytes1(uint8(48 + (n % 10)));\n"
+        "            n /= 10;\n"
+        "        }\n"
+        "        bytes memory out = new bytes(78 - i);\n"
+        "        for (uint256 j = 0; j < out.length; j++) out[j] = buf[i + j];\n"
+        "        return string(out);\n"
+        "    }\n\n"
+        "    /// Revert only when the caller gained ETH or tokens and the target lost the other side.\n"
+        "    function _broke(uint256 ethA, uint256 ethT, uint256 tokA, uint256 tokT) internal view {\n"
+        "        uint256 ethUp = ATTACKER.balance > ethA ? ATTACKER.balance - ethA : 0;\n"
+        "        uint256 ethDown = TARGET.balance < ethT ? ethT - TARGET.balance : 0;\n"
+        "        uint256 nowA = _bal(ATTACKER);\n"
+        "        uint256 nowT = _bal(TARGET);\n"
+        "        uint256 tokUp = nowA > tokA ? nowA - tokA : 0;\n"
+        "        uint256 tokDown = nowT < tokT ? tokT - nowT : 0;\n"
+        "        bool eth = ethUp > DUST && ethDown > DUST;\n"
+        "        bool tok = tokUp > DUST && tokDown > DUST;\n"
+        "        if (!eth && !tok) return;\n"
+        "        uint256 up = eth ? ethUp : tokUp;\n"
+        "        uint256 down = eth ? ethDown : tokDown;\n"
+        "        revert(string.concat(\"profit-attacker-balance attackerUp=\", _dec(up), \" targetDown=\", _dec(down)));\n"
         "    }\n\n"
         "    /// ERC-4626 views. A contract that does not answer them is skipped.\n"
         "    function _vault() internal view returns (bool ok, uint256 assets, uint256 supply, uint256 claimed) {\n"
@@ -756,19 +810,17 @@ def _fork_verify_sol(target_hex40: str, attacker_hex40: str, selectors: list[str
         "    function test_unprivileged_known_selectors_cannot_extract() public {\n"
         "        uint256 price0 = _price();\n"
         "        for (uint256 i = 0; i < sels.length; i++) {\n"
-        "            uint256 a0 = ATTACKER.balance;\n"
-        "            uint256 t0 = TARGET.balance;\n"
+        "            uint256 ethA = ATTACKER.balance;\n"
+        "            uint256 ethT = TARGET.balance;\n"
+        "            uint256 tokA = _bal(ATTACKER);\n"
+        "            uint256 tokT = _bal(TARGET);\n"
         "            vm.prank(ATTACKER);\n"
         "            (bool ok,) = TARGET.call(abi.encodePacked(sels[i]));\n"
         "            ok;\n"
-        "            if (_extracted(a0, t0)) {\n"
-        '                revert("profit-attacker-balance");\n'
-        "            }\n"
+        "            _broke(ethA, ethT, tokA, tokT);\n"
         "            _guard(price0);\n"
         "        }\n"
-        "        if (_extracted(attackerStart, targetStart)) {\n"
-        '            revert("profit-attacker-balance");\n'
-        "        }\n"
+        "        _broke(attackerStart, targetStart, tokenAttackerStart, tokenTargetStart);\n"
         "    }\n\n"
         "    /// Up to eight calls from the outsider. Depth stays inside the fuzz cap.\n"
         "    function testFuzz_unprivileged_sequence_cannot_extract(uint256 seed, uint8 nRaw) public {\n"
@@ -782,14 +834,15 @@ def _fork_verify_sol(target_hex40: str, attacker_hex40: str, selectors: list[str
         "            if (mix % 3 == 0 && ATTACKER.balance > 0) {\n"
         "                pay = bound(mix, 0, ATTACKER.balance / 4);\n"
         "            }\n"
-        "            uint256 a0 = ATTACKER.balance;\n"
-        "            uint256 t0 = TARGET.balance;\n"
+        "            uint256 ethA = ATTACKER.balance;\n"
+        "            uint256 ethT = TARGET.balance;\n"
+        "            uint256 tokA = _bal(ATTACKER);\n"
+        "            uint256 tokT = _bal(TARGET);\n"
         "            vm.prank(ATTACKER);\n"
         "            (bool ok,) = TARGET.call{value: pay}(abi.encodePacked(sel));\n"
         "            ok;\n"
-        "            if (_extracted(a0, t0) || _extracted(attackerStart, targetStart)) {\n"
-        '                revert("profit-attacker-balance");\n'
-        "            }\n"
+        "            _broke(ethA, ethT, tokA, tokT);\n"
+        "            _broke(attackerStart, targetStart, tokenAttackerStart, tokenTargetStart);\n"
         "            _guard(price0);\n"
         "        }\n"
         "    }\n\n"
@@ -803,14 +856,15 @@ def _fork_verify_sol(target_hex40: str, attacker_hex40: str, selectors: list[str
         "        uint256 price0 = _price();\n"
         "        uint256 n = sels.length < 8 ? sels.length : 8;\n"
         "        for (uint256 i = 0; i < n; i++) {\n"
-        "            uint256 a0 = ATTACKER.balance;\n"
-        "            uint256 t0 = TARGET.balance;\n"
+        "            uint256 ethA = ATTACKER.balance;\n"
+        "            uint256 ethT = TARGET.balance;\n"
+        "            uint256 tokA = _bal(ATTACKER);\n"
+        "            uint256 tokT = _bal(TARGET);\n"
         "            vm.prank(ATTACKER);\n"
         "            (bool ok,) = TARGET.call(abi.encodePacked(sels[i]));\n"
         "            ok;\n"
-        "            if (_extracted(a0, t0) || _extracted(attackerStart, targetStart)) {\n"
-        '                revert("profit-attacker-balance");\n'
-        "            }\n"
+        "            _broke(ethA, ethT, tokA, tokT);\n"
+        "            _broke(attackerStart, targetStart, tokenAttackerStart, tokenTargetStart);\n"
         "            _guard(price0);\n"
         "        }\n"
         "    }\n"
@@ -998,77 +1052,191 @@ def _run_forge_verify(
             blob += "\n" + exc.stderr
         timed_out = True
     parsed = parse_forge_output(blob)
-    failed = [n for n in (parsed.get("failed") or []) if not _is_harness_setup_failure(str(n), blob)]
-    if _is_harness_setup_failure("", blob) and not failed:
-        # e.g. "No contracts to fuzz" — not a conservation break.
-        report.notes.append("ignoring forge harness/setup failure")
-    sequence = _sanitize_sequence(_extract_sequence(blob) or "")
-    if not sequence:
-        for label in ("profit-attacker-balance", "erc4626-asset-shortfall", "share-price-monotonic"):
-            if label in (blob or ""):
-                sequence = label
-                break
-    if not sequence and failed:
-        sequence = "forge fail: %s" % failed[0]
-    for name in failed[:8]:
-        prop = str(name)
-        for pid in report.property_ids:
-            if pid.lower().replace("_", "") in prop.lower().replace("_", ""):
-                prop = pid
-                break
+    verdict = classify_forge_verify(blob)
+    report.failure_class = str(verdict["failure_class"] or "")
+    report.failing_test = str(verdict["failing_test"] or "")
+    report.reason = str(verdict["reason"] or "")
+    report.attacker_up = verdict["attacker_up"]
+    report.target_down = verdict["target_down"]
+    report.sequence = report.failing_test
+    if report.failing_test or report.reason:
         report.failures.append(ForkVerifyFailure(
-            property_id=prop,
+            property_id=report.failure_class or "forge",
             tool="forge",
-            reproduction=sequence[:800],
-            evidence=("property failed: %s" % name)[:300],
+            reproduction=report.failing_test,
+            evidence=report.reason[:300],
         ))
-    report.sequence = sequence[:800]
-    # A profit-invariant break is success of the *stage* (drainable), not a tool crash.
-    text = blob or ""
-    profit_hit = "profit-attacker-balance" in text or any(
-        "profit-attacker-balance" in (
-            str(getattr(item, "property_id", "") or "") + str(getattr(item, "evidence", "") or "")
-        )
-        for item in report.failures
-    )
-    accounting_hit = any(name in text for name in ("erc4626-asset-shortfall", "share-price-monotonic"))
-    if profit_hit:
-        report.ran = True
-        report.skipped = False
+    report.ran = True
+    report.skipped = False
+    if verdict["drainable"]:
         report.drainable = True
         report.status = "broken"
-        report.notes.append("conservation invariant broke on local fork")
-        report.notes.append("sequence: %s" % (report.sequence[:240] or "(see forge fail name)"))
-    elif accounting_hit:
-        report.ran = True
-        report.skipped = False
+        report.notes.append(
+            "measured conservation break attackerUp=%s targetDown=%s test=%s"
+            % (report.attacker_up, report.target_down, report.failing_test or "unknown")
+        )
+    elif verdict["status"] == "accounting":
         report.drainable = False
         report.status = "accounting"
-        report.notes.append("fork invariant broke without an unprivileged balance increase")
-    elif timed_out:
-        report.ran = True
-        report.skipped = False
+        report.notes.append("fork invariant broke without a measured balance change")
+    elif timed_out and verdict["status"] == "ok":
         report.status = "timeout"
         report.notes.append("forge test timed out after %ss" % budget_s)
+    elif verdict["status"] == "inconclusive":
+        report.drainable = False
+        report.status = "inconclusive"
+        report.notes.append(
+            "inconclusive %s test=%s reason=%s"
+            % (report.failure_class or "other", report.failing_test or "-", report.reason or "-")
+        )
     elif proc is not None and proc.returncode != 0:
-        report.ran = True
-        report.skipped = False
-        low = (blob or "").lower()
-        if any(tok in low for tok in ("compilation failed", "compiler error", "could not compile")):
-            report.status = "compile-skip"
-            report.notes.append("fork-verify compile-skip")
-        else:
-            report.status = "error"
-            tail = (blob or "")[-240:].replace("\n", " ").strip()
-            report.notes.append("forge test exit=%s — %s" % (proc.returncode, tail[:200]))
+        report.drainable = False
+        report.status = "inconclusive"
+        report.failure_class = report.failure_class or "other"
+        report.reason = report.reason or "forge exited %s without a measured balance change" % proc.returncode
+        report.notes.append("inconclusive %s" % report.reason)
     else:
-        report.ran = True
-        report.skipped = False
+        report.drainable = False
         report.status = "ok"
         report.notes.append(
             "forge test exit=0 passed=%s failed=0"
             % parsed.get("passed_n")
         )
+
+
+DUST = 1000
+_MEASURED_FAIL = re.compile(
+    r"\[FAIL:\s*profit-attacker-balance attackerUp=(\d+) targetDown=(\d+)\]\s+(\S+)"
+)
+_ANY_FAIL = re.compile(r"\[FAIL(?::\s*([^\]]*))?\]\s+(\S+)")
+_LONG_HEX = re.compile(r"0x[0-9a-fA-F]{8,}")
+_ACCOUNTING = {"erc4626-asset-shortfall", "share-price-monotonic"}
+
+
+def _test_name(raw: str) -> str:
+    name = (raw or "").split("(")[0].strip()
+    return re.sub(r"[^A-Za-z0-9_]", "", name)[:80]
+
+
+def _redact_reason(raw: str) -> str:
+    text = _LONG_HEX.sub("0x…", raw or "")
+    text = re.sub(r"(?i)(private[_-]?key|mnemonic|secret|api[_-]?key)[=:\s]+\S+", r"\1=[redacted]", text)
+    return re.sub(r"\s+", " ", text).strip()[:180]
+
+
+def classify_forge_verify(blob: str) -> dict[str, Any]:
+    """Drainable only for a measured conservation break. Other failures are inconclusive."""
+    empty: dict[str, Any] = {
+        "status": "ok",
+        "drainable": False,
+        "failure_class": "",
+        "failing_test": "",
+        "reason": "",
+        "attacker_up": None,
+        "target_down": None,
+    }
+    text = blob or ""
+    measured = _MEASURED_FAIL.search(text)
+    if measured:
+        up = int(measured.group(1))
+        down = int(measured.group(2))
+        name = _test_name(measured.group(3))
+        if up > DUST and down > DUST:
+            return {
+                **empty,
+                "status": "broken",
+                "drainable": True,
+                "failure_class": "conservation",
+                "failing_test": name,
+                "reason": "profit-attacker-balance attackerUp=%d targetDown=%d" % (up, down),
+                "attacker_up": up,
+                "target_down": down,
+            }
+        return {
+            **empty,
+            "status": "inconclusive",
+            "failure_class": "dust",
+            "failing_test": name,
+            "reason": "measured change was dust",
+            "attacker_up": up,
+            "target_down": down,
+        }
+    low = text.lower()
+    if any(tok in low for tok in ("compilation failed", "compiler error", "could not compile", "compiler run failed")):
+        return {
+            **empty,
+            "status": "inconclusive",
+            "failure_class": "compile",
+            "reason": "the local check did not compile",
+        }
+    fails = []
+    for reason, name in _ANY_FAIL.findall(text):
+        if _is_harness_setup_failure(name, reason):
+            continue
+        fails.append((_redact_reason(reason), _test_name(name)))
+    if not fails and _is_harness_setup_failure("", text):
+        return {
+            **empty,
+            "status": "inconclusive",
+            "failure_class": "other",
+            "reason": "harness setup did not finish",
+        }
+    if not fails:
+        return empty
+    reason, name = fails[0]
+    if reason in _ACCOUNTING:
+        return {
+            **empty,
+            "status": "accounting",
+            "failure_class": "accounting",
+            "failing_test": name,
+            "reason": reason,
+        }
+    klass = "revert" if any(tok in reason.lower() for tok in ("revert", "error", "panic")) else "other"
+    return {
+        **empty,
+        "status": "inconclusive",
+        "failure_class": klass,
+        "failing_test": name,
+        "reason": reason or "the test failed without a measured balance change",
+    }
+
+
+def rescore_unmeasured_drain(row: dict[str, Any]) -> dict[str, Any]:
+    """Drop drainable heat that has no measured attacker-up and target-down deltas."""
+    hb = dict(row.get("heat_breakdown") or {})
+    poc = hb.get("exploit_poc") if isinstance(hb.get("exploit_poc"), dict) else {}
+    poc = dict(poc)
+    try:
+        measured = int(poc.get("attacker_up")) > DUST and int(poc.get("target_down")) > DUST
+    except (TypeError, ValueError):
+        measured = False
+    drainable = bool(hb.get("drainable") or poc.get("drainable"))
+    out = dict(row)
+    out["dropped"] = False
+    if not drainable or measured:
+        return out
+    try:
+        bonus = int(hb.get("exploit_poc_heat") or 0)
+    except (TypeError, ValueError):
+        bonus = 0
+    if bonus <= 0:
+        bonus = exploit_poc_heat()
+    heat = max(0, int(row.get("heat") or 0) - bonus)
+    hb["drainable"] = False
+    hb["exploit_poc_heat"] = 0
+    hb["profit_invariant_broke"] = False
+    hb["total"] = heat
+    poc["drainable"] = False
+    poc["status"] = "inconclusive"
+    poc["label"] = "no measured balance change"
+    hb["exploit_poc"] = poc
+    out["heat"] = heat
+    out["heat_breakdown"] = hb
+    if str(out.get("bucket") or "") == "manual-review" and heat < 6:
+        out["bucket"] = "lane-a-cool"
+    out["dropped"] = True
+    return out
 
 
 def _is_harness_setup_failure(name: str, blob: str) -> bool:

@@ -263,7 +263,7 @@ Set `ETH_SCANNER_WHATSABI=0` to keep the fork fuzz path on evmole only.
 
 ## Sequence invariants
 
-A fixed catalog of at most 8 unprivileged sequences, each at most 4 calls (deposit, donate, withdraw, redeem), checks three properties: `totalAssets` covers `convertToAssets(totalSupply)`, share price does not fall on a non-admin sequence, and the attacker’s balance does not rise. The one-call probe is the first sequence. The same three checks run inside the local-fork Foundry harness after each outsider call. A missing ERC-4626 view is skipped. An extraction still marks the fork report drainable. A solvency or price failure does not.
+A fixed catalog of at most 8 unprivileged sequences, each at most 4 calls (deposit, donate, withdraw, redeem), checks three properties: `totalAssets` covers `convertToAssets(totalSupply)`, share price does not fall on a non-admin sequence, and the attacker’s balance does not rise. The one-call probe is the first sequence. The same three checks run inside the local-fork Foundry harness after each outsider call. A missing ERC-4626 view is skipped. An extraction marks the fork report drainable only when the measured caller balance rose and the contract balance fell by more than dust. A compile error, a revert, or any other Forge failure is inconclusive and adds no heat. The balance sentence is printed only for those measured deltas. A solvency or price failure does not mark the report drainable.
 
 ```bash
 python -m eth_scanner sequence-invariants --model fair --json

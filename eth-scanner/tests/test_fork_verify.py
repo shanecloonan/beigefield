@@ -22,15 +22,19 @@ from eth_scanner.engines.fork_verify import (
     PLANT_ADDRESS,
     apply_fork_verify,
     apply_fork_verify_to_row,
+    classify_forge_verify,
     fork_verify_enabled,
     fuzz_min_heat,
     list_high_heat_rows,
+    rescore_unmeasured_drain,
     run_fork_verify,
     selector4,
     selectors_from_source,
     should_run_fork_verify,
     write_fork_verify_project,
 )
+
+GIZA = "0x590830dfdf9a3f68afcdde2694773debdf267774"
 from eth_scanner.research.keccak import selector4 as keccak_selector4
 from eth_scanner.types import FunnelResult
 
@@ -128,6 +132,81 @@ class SelectorsAndHarness(unittest.TestCase):
             self.assertIn('address(bytes20(hex"', sol)
             self.assertTrue((root / "foundry.toml").is_file())
             self.assertIn("unprivileged_known_selectors_cannot_extract", props)
+
+
+class MeasuredDrain(unittest.TestCase):
+    def test_a_source_echo_without_deltas_is_inconclusive(self):
+        blob = "\n".join([
+            "[FAIL: EvmError: Revert] test_unprivileged_known_selectors_cannot_extract() (gas: 100)",
+            'revert("profit-attacker-balance");',
+            "caller balance rose while contract fell",
+            "Traces: 0x590830dfdf9a3f68afcdde2694773debdf267774",
+        ])
+        verdict = classify_forge_verify(blob)
+        self.assertFalse(verdict["drainable"])
+        self.assertEqual(verdict["status"], "inconclusive")
+        self.assertEqual(verdict["failure_class"], "revert")
+        self.assertEqual(verdict["failing_test"], "test_unprivileged_known_selectors_cannot_extract")
+        self.assertNotIn("590830", verdict["reason"])
+
+    def test_measured_conservation_break_is_drainable(self):
+        blob = (
+            "[FAIL: profit-attacker-balance attackerUp=1000000000000000000 "
+            "targetDown=500000000000000000] test_unprivileged_known_selectors_cannot_extract() (gas: 10)\n"
+        )
+        verdict = classify_forge_verify(blob)
+        self.assertTrue(verdict["drainable"])
+        self.assertEqual(verdict["attacker_up"], 10**18)
+        self.assertEqual(verdict["target_down"], 5 * 10**17)
+        self.assertEqual(verdict["failing_test"], "test_unprivileged_known_selectors_cannot_extract")
+
+    def test_dust_and_one_sided_changes_are_not_drainable(self):
+        dust = classify_forge_verify(
+            "[FAIL: profit-attacker-balance attackerUp=1 targetDown=1] test_funded_perturbed_outsider_cannot_extract()\n"
+        )
+        self.assertFalse(dust["drainable"])
+        self.assertEqual(dust["failure_class"], "dust")
+        other = classify_forge_verify(
+            "[FAIL: revert] test_unprivileged_known_selectors_cannot_extract() attackerUp=999999 targetDown=0\n"
+        )
+        self.assertFalse(other["drainable"])
+        self.assertEqual(other["status"], "inconclusive")
+
+    def test_compile_failure_is_inconclusive_with_no_heat(self):
+        verdict = classify_forge_verify("Error (2314): Compilation failed")
+        self.assertEqual(verdict["status"], "inconclusive")
+        self.assertEqual(verdict["failure_class"], "compile")
+        self.assertFalse(verdict["drainable"])
+
+    def test_giza_unmeasured_drain_drops(self):
+        row = rescore_unmeasured_drain({
+            "address": GIZA,
+            "heat": 6,
+            "bucket": "manual-review",
+            "heat_breakdown": {
+                "total": 6,
+                "drainable": True,
+                "exploit_poc_heat": 6,
+                "exploit_poc": {"drainable": True, "status": "broken"},
+            },
+        })
+        self.assertTrue(row["dropped"])
+        self.assertEqual(row["heat"], 0)
+        self.assertFalse(row["heat_breakdown"]["drainable"])
+        self.assertEqual(row["heat_breakdown"]["exploit_poc_heat"], 0)
+        self.assertEqual(row["bucket"], "lane-a-cool")
+        kept = rescore_unmeasured_drain({
+            "address": GIZA,
+            "heat": 12,
+            "bucket": "manual-review",
+            "heat_breakdown": {
+                "drainable": True,
+                "exploit_poc_heat": 6,
+                "exploit_poc": {"drainable": True, "attacker_up": 10**18, "target_down": 10**18},
+            },
+        })
+        self.assertFalse(kept["dropped"])
+        self.assertEqual(kept["heat"], 12)
 
 
 class ApplyAndHeat(unittest.TestCase):
