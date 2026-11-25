@@ -248,6 +248,18 @@ python -m eth_scanner certora-check \
   --json
 ```
 
+## hevm value check
+
+hevm stays an unmodified AGPL command-line tool. It is not imported or vendored. `hevm-value` runs only with `--on-shortlist` and only against a loopback fork. The question is whether a non-owner can move value through a withdraw, redeem, or transferFrom selector. A missing `hevm` binary is a skip, and the unit-test job does not install it. Set `ETH_SCANNER_HEVM_BIN` to a local binary. The command does not print the fork URL and does not store calldata. A reachable symbolic path adds 0. Heat is added only when a local trace shows the non-owner balance up and the contract balance down by more than dust. The board shows `hevm` when the check ran.
+
+```bash
+python -m eth_scanner hevm-value \
+  --address 0x1111111111111111111111111111111111111111 \
+  --fork-url http://127.0.0.1:8545 \
+  --on-shortlist \
+  --json
+```
+
 Slither, Aderyn, and Semgrep each get a timeout (`--timeout`, clamped to 5–180 seconds). Semgrep uses `research/semgrep/solidity.yml`. Set `ETH_SCANNER_SEMGREP_RULES` to a local checkout of a Decurity-style Solidity pack to add those rules; the default run does not download a ruleset.
 
 Findings are normalized to one scale. An allowlisted high-confidence funds detector adds 3 points of `static_evidence`, a medium detector adds 1, and the component caps at 6. Ownable / AccessControl hits, style checks, and informational detectors add 0. The points are a heat component, not a verdict.

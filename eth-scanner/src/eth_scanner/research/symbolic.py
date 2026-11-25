@@ -10,6 +10,9 @@ Documented commands (also in research/README.md):
 
     # hevm — symbolic execution of a view signature against deployed bytecode
     hevm symbolic --code <deployed-bytecode-hex> --sig "totalAssets()" --smttimeout 5000
+
+The shortlist question (can a non-owner move value) is a separate command
+built by hevm_value_argv. It runs only against a loopback fork.
 """
 
 from __future__ import annotations
@@ -25,6 +28,16 @@ from eth_scanner.research.types import Finding, LayerSkip
 HALMOS_CMD_DOC = "halmos --function check_ --solver-timeout-assertion 2000"
 HEVM_CMD_DOC = 'hevm symbolic --code <deployed-bytecode-hex> --sig "totalAssets()" --smttimeout 5000'
 
+# Value-moving signatures. The selector is a name we already classify, not a recipe.
+VALUE_SIGS: tuple[tuple[str, str], ...] = (
+    ("withdraw()", "3ccfd60b"),
+    ("withdraw(uint256)", "2e1a7d4d"),
+    ("withdraw(uint256,address,address)", "b460af94"),
+    ("redeem(uint256)", "db006a75"),
+    ("redeem(uint256,address,address)", "ba087652"),
+    ("transferFrom(address,address,uint256)", "23b872dd"),
+)
+
 
 def halmos_available() -> bool:
     return bool(shutil.which("halmos"))
@@ -32,6 +45,39 @@ def halmos_available() -> bool:
 
 def hevm_available() -> bool:
     return bool(shutil.which("hevm"))
+
+
+def hevm_value_argv(
+    binary: str,
+    *,
+    rpc: str,
+    address: str,
+    caller: str,
+    signature: str,
+    timeout_s: int,
+) -> list[str]:
+    """Unmodified hevm symbolic on one fork address. Refuses a public RPC."""
+    from eth_scanner.deep.blend.ityfuzz_runner import local_rpc
+
+    if not local_rpc(rpc):
+        raise ValueError("hevm refuses a non-local RPC")
+    seconds = max(1, int(timeout_s))
+    return [
+        binary,
+        "symbolic",
+        "--rpc",
+        rpc,
+        "--address",
+        address,
+        "--caller",
+        caller,
+        "--sig",
+        signature,
+        "--smt-timeout",
+        str(seconds),
+        "--max-iterations",
+        "2",
+    ]
 
 
 def _tail(text: str, n: int = 6) -> str:

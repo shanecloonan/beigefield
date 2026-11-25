@@ -55,6 +55,7 @@ def halmos_bin() -> Optional[str]:
 
 
 def hevm_bin() -> Optional[str]:
+    """hevm on PATH, or ETH_SCANNER_HEVM_BIN. The shortlist value check uses this."""
     return _which("ETH_SCANNER_HEVM_BIN", ["hevm"])
 
 
