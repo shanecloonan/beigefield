@@ -312,6 +312,14 @@ python -m eth_scanner upgrade-layout \
 A weekly job scores ten authored bug-class labels with the corpus patterns and the three shape leads. The baseline is 0.9: nine classes hit, and signature replay is the miss. scabench and Web3Bugs stay outside the tree. DeFiVulnLabs is not fetched. The snippets are original shapes, and the score adds no heat.
 
 
+## Fund-flow graph
+
+`fund-flow` reads local source, or a list of bytecode selectors, and records external calls, approvals, and value edges. Oracles, AMMs, lending markets, and bridges are roles. A path that moves value through one of those roles gets a score from 0 to 6. The board shows `flow`. Heat stays 0.
+
+```bash
+python -m eth_scanner fund-flow --source vault.sol --json
+```
+
 ## Shaped-transaction watch
 
 `watch-shaped` reads mined receipts. A fresh contract whose funds rose is ordered ahead of one whose funds did not. A flash-loan log plus at least eight logs, touching a watched address, is a shape. Bytecode clones from a local index are queued with it. `--blocks` uses `ETH_RPC_URL` for one `eth_getLogs` and at most three receipts, capped at 800 CU. Pending-transaction methods are refused. The board shows `shaped`. Heat stays 0.

@@ -1112,6 +1112,15 @@ def main(argv: list[str] | None = None) -> int:
     watch.add_argument("--enqueue", action="store_true", help="upsert the queue as fresh-deploy targets")
     watch.add_argument("--json", action="store_true")
 
+    flow = sub.add_parser(
+        "fund-flow",
+        help="External calls, approvals, and value edges. The score is a lead and adds no heat.",
+    )
+    flow.add_argument("--address", default="", help="0x… target")
+    flow.add_argument("--source", default="", help="local Solidity file")
+    flow.add_argument("--selectors", default="", help="comma-separated bytecode selectors")
+    flow.add_argument("--json", action="store_true")
+
     args, rest = p.parse_known_args(argv)
     if args.cmd == "surface":
         return surface_main(rest)
@@ -2204,6 +2213,34 @@ def main(argv: list[str] | None = None) -> int:
             print(_json.dumps(public, indent=2))
         else:
             print("watch-shaped hits=%s queue=%s" % (public["hits"], len(public["queue"])))
+        return 0
+
+    if args.cmd == "fund-flow":
+        import json as _json
+        from eth_scanner.flow.graph import build_flow
+        source = ""
+        if args.source:
+            source = Path(args.source).read_text(encoding="utf-8", errors="replace")
+        selectors = [part.strip() for part in str(args.selectors or "").split(",") if part.strip()]
+        report = build_flow(source, address=str(args.address or ""), selectors=selectors)
+        public = {
+            "status": report.get("status"),
+            "address": report.get("address"),
+            "nodes": len(report.get("nodes") or []),
+            "edges": len(report.get("edges") or []),
+            "paths": len(report.get("paths") or []),
+            "flow_score": report.get("flow_score"),
+            "heat": 0,
+            "heat_breakdown": {"flow": bool(report.get("flow")), "flow_score": report.get("flow_score")},
+            "note": report.get("note"),
+        }
+        if args.json:
+            print(_json.dumps(public, indent=2))
+        else:
+            print(
+                "fund-flow nodes=%s edges=%s score=%s"
+                % (public["nodes"], public["edges"], public["flow_score"])
+            )
         return 0
 
     if args.cmd == "fork-verify":
