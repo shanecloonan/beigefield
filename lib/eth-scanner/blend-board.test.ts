@@ -324,3 +324,16 @@ test("storage layout and metadata tags do not change heat", () => {
   assert.equal(board.leaderboard[0].heat, 3);
   assert.deepEqual(board.leaderboard[0].evidence_tags, ["static", "layout", "metadata"]);
 });
+
+test("external suite tags do not change heat", () => {
+  const board = summarizeBlendRuns([
+    {
+      address: ADDR_A,
+      heat: 0,
+      status: "done",
+      heat_breakdown: { erc4626_suite: true, crytic_properties: true },
+    },
+  ]);
+  assert.equal(board.leaderboard[0].heat, 0);
+  assert.deepEqual(board.leaderboard[0].evidence_tags, ["erc4626", "properties"]);
+});
