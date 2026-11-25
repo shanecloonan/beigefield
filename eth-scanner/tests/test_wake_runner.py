@@ -10,7 +10,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from eth_scanner.engines.wake_runner import parse_wake, run_wake
+from eth_scanner.deep.runners import EngineRunResult
+from eth_scanner.engines.wake_runner import parse_wake, run_wake, run_wake_fuzz, wake_rule
+from eth_scanner.logic.static_norm import score_static
+from eth_scanner.logic.static_run import run_static_command
 
 RAW = json.dumps({
     "detections": [{
@@ -58,6 +61,67 @@ class WakeRunner(unittest.TestCase):
         self.assertEqual(report["detections"][0]["detector"], "unused-import")
         self.assertTrue(report["evidence_only"])
         self.assertEqual(report["heat_contribution"], 0)
+
+
+class WakeStatic(unittest.TestCase):
+    def test_high_impact_names_join_the_allowlist(self):
+        self.assertEqual(wake_rule("reentrancy", "high"), "reentrancy-eth")
+        self.assertEqual(wake_rule("reentrancy", "warning"), "reentrancy-no-eth")
+        self.assertEqual(wake_rule("unsafe-delegatecall", "high"), "controlled-delegatecall")
+        self.assertEqual(wake_rule("unchecked-return-value", "medium"), "unchecked-transfer")
+        self.assertEqual(wake_rule("unused-import", "warning"), "unused-import")
+        scored = score_static([
+            {"engine": "wake", "rule": "reentrancy-eth", "generic": True, "evidence": "impact=high"},
+            {"engine": "wake", "rule": "unused-import", "generic": True, "evidence": "style"},
+        ])
+        self.assertEqual(scored["points"], 3)
+
+    def test_static_command_scores_a_mapped_wake_hit(self):
+        def engines(_source: str, _timeout: int):
+            return [EngineRunResult(
+                "wake",
+                "ok",
+                findings=[{
+                    "engine": "wake",
+                    "rule": "unsafe-delegatecall",
+                    "generic": True,
+                    "evidence": "delegatecall target",
+                }],
+            )]
+
+        report = run_static_command(source="contract T {}", engines_fn=engines)
+        self.assertEqual(report["heat"], 3)
+        self.assertTrue(report["heat_breakdown"]["wake"])
+        self.assertEqual(report["findings"][0]["rule"], "controlled-delegatecall")
+
+
+class WakeFuzz(unittest.TestCase):
+    def test_off_shortlist_does_not_run(self):
+        calls = []
+
+        def runner(argv, timeout):
+            calls.append(argv)
+            return 0, ""
+
+        report = run_wake_fuzz("/tmp", on_shortlist=False, runner=runner)
+        self.assertEqual(calls, [])
+        self.assertEqual(report["heat"], 0)
+        self.assertFalse(report["ran"])
+
+    def test_a_failure_keeps_no_sequence(self):
+        import tempfile
+        def runner(argv, timeout):
+            return 1, "failed 0x" + "ab" * 8
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tests = Path(tmp) / "tests"
+            tests.mkdir()
+            (tests / "test_hold.py").write_text("def test_hold():\n    assert True\n", encoding="utf-8")
+            report = run_wake_fuzz(tmp, on_shortlist=True, runner=runner)
+        self.assertEqual(report["status"], "failed")
+        self.assertEqual(report["heat"], 0)
+        self.assertNotIn("abab", json.dumps(report))
+        self.assertIn("not stored", report["note"])
 
 
 if __name__ == "__main__":

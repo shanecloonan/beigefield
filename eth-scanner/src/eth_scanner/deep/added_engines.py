@@ -15,7 +15,7 @@ from typing import Any, Optional
 from eth_scanner.deep.findings import EngineFinding, make_finding
 from eth_scanner.deep.runners import EngineRunResult
 from eth_scanner.decompile.heimdall import decompile_unverified_funded
-from eth_scanner.engines.wake_runner import parse_wake
+from eth_scanner.engines.wake_runner import parse_wake, wake_rule
 
 
 def wake_bin() -> Optional[str]:
@@ -117,10 +117,11 @@ def run_unverified_decompile(
 def _wake_findings(raw: str) -> list[EngineFinding]:
     findings: list[EngineFinding] = []
     for row in parse_wake(raw):
+        rule = wake_rule(row["detector"], row["impact"])
         finding = make_finding(
             engine="wake",
-            rule=row["detector"],
-            title=row["detector"],
+            rule=rule,
+            title=rule,
             severity=row["impact"],
             confidence=row["confidence"],
             evidence="impact=%s confidence=%s" % (row["impact"], row["confidence"]),

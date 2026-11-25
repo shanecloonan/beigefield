@@ -183,6 +183,7 @@ export function evidenceTags(breakdown: Record<string, unknown> | null): string[
   if (flagged("decompile_triage")) tags.push("decompile");
   if (amount("certora_evidence") > 0 || flagged("certora")) tags.push("certora");
   if (flagged("hevm")) tags.push("hevm");
+  if (flagged("wake")) tags.push("wake");
   if (amount("unprotected_evidence") > 0) tags.push("unprotected");
   if (amount("proxy_evidence") > 0) tags.push("proxy");
   if (amount("fresh_evidence") > 0) tags.push("fresh");
