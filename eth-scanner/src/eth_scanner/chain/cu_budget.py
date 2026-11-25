@@ -1,6 +1,8 @@
 """Per-run compute-unit budget for the capped Alchemy endpoint.
 
-Shane's org cap is $50/month, about 96 million CU. These estimates are the
+Shane's Alchemy cash cap is $10/month, shared across chains. The coded
+ceiling below stays 96 million CU so Ethereum's 50-scan example is not
+cut. These estimates are the
 conservative published Alchemy costs (debug traces counted at 1,000 CU).
 A method that is not listed costs ``DEFAULT_UNKNOWN_CU``. Charging before
 the call means a 429 still counts.
@@ -19,6 +21,7 @@ from typing import Any
 CU_ESTIMATES: dict[str, int] = {
     "eth_blockNumber": 10,
     "eth_getBalance": 19,
+    "eth_chainId": 10,
     "eth_getCode": 19,
     "eth_getStorageAt": 17,
     "eth_getTransactionByHash": 17,
@@ -45,10 +48,15 @@ MONTHLY_SCAN_EXAMPLE = {
     "org_cap_cu": 96_000_000,
 }
 
-# Ethereum keeps the 50/day example. Each extra EVM chain gets a smaller
-# share so BNB, Arbitrum, and Base together stay near 10% of the org cap.
+# Ethereum keeps the 50/day example. BNB, Arbitrum, and Base stay at 8.
+# Optimism and Polygon are newer on this pipeline and stay at 4 so the
+# shared Alchemy cash cap ($10/month) is not spent by raising Ethereum.
 EXTRA_CHAIN_SCANS_PER_DAY = 8
+NEW_CHAIN_SCANS_PER_DAY = 4
+# One discover pass. eth_getCode is charged before the call.
+DISCOVER_RUN_CU = 2000
 _CU_PER_SCAN = DEFAULT_TRACE_SEED_CU + DEFAULT_STORAGE_CU + DEFAULT_LIVENESS_CU
+_EXTRA_CHAINS = ("bsc", "arbitrum", "base", "optimism", "polygon")
 
 
 def chain_daily_scans(chain: str) -> int:
@@ -60,12 +68,23 @@ def chain_daily_scans(chain: str) -> int:
         return int(MONTHLY_SCAN_EXAMPLE["scans_per_day"])
     if name in {"bsc", "arbitrum", "base"}:
         return EXTRA_CHAIN_SCANS_PER_DAY
+    if name in {"optimism", "polygon"}:
+        return NEW_CHAIN_SCANS_PER_DAY
     return 0
+
+
+def discover_run_cap(chain: str) -> int:
+    """CU a non-Ethereum discover pass may spend. Ethereum is not discovered here."""
+    from eth_scanner.chains.registry import normalize_chain
+
+    if normalize_chain(chain) == "ethereum":
+        return 0
+    return DISCOVER_RUN_CU
 
 
 def multi_chain_monthly_cu() -> dict[str, Any]:
     """Combined ceiling. The Ethereum line matches MONTHLY_SCAN_EXAMPLE."""
-    scans = {name: chain_daily_scans(name) for name in ("ethereum", "bsc", "arbitrum", "base")}
+    scans = {name: chain_daily_scans(name) for name in ("ethereum",) + _EXTRA_CHAINS}
     daily = sum(scans.values())
     monthly = daily * 30 * _CU_PER_SCAN
     ethereum = scans["ethereum"] * 30 * _CU_PER_SCAN

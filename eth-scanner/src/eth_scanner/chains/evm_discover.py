@@ -1,4 +1,4 @@
-"""Find funded contracts on BNB Chain, Arbitrum, and Base. Read-only.
+"""Find funded contracts on BNB Chain, Arbitrum, Base, Optimism, and Polygon. Read-only.
 
 Dollars come from DefiLlama's per-chain TVL, not the protocol's total.
 A bare address is used only when that protocol lists this chain alone.
@@ -20,15 +20,28 @@ from typing import Any, Callable, Optional
 
 from eth_scanner.chains.evm import call_with_backoff, evm_chain
 from eth_scanner.chains.registry import normalize_chain
-from eth_scanner.chain.cu_budget import chain_daily_scans, multi_chain_monthly_cu
+from eth_scanner.chain.cu_budget import (
+    CuBudget,
+    chain_daily_scans,
+    discover_run_cap,
+    multi_chain_monthly_cu,
+)
 from eth_scanner.types import DEFAULT_MIN_FUNDS_USD, Target
 
 LLAMA_PROTOCOLS = "https://api.llama.fi/protocols"
-LLAMA_NAME = {"bsc": "Binance", "arbitrum": "Arbitrum", "base": "Base"}
+LLAMA_NAME = {
+    "bsc": "Binance",
+    "arbitrum": "Arbitrum",
+    "base": "Base",
+    "optimism": "Optimism",
+    "polygon": "Polygon",
+}
 PREFIXES = {
     "bsc": ("bsc:", "binance:"),
     "arbitrum": ("arbitrum:",),
     "base": ("base:",),
+    "optimism": ("optimism:", "op:"),
+    "polygon": ("polygon:", "matic:"),
 }
 DEFAULT_LIMIT = 10
 MAX_LIMIT = 20
@@ -62,7 +75,15 @@ def discover(
     floor = max(float(DEFAULT_MIN_FUNDS_USD), float(min_usd or 0))
     picked = _select(_protocols(fetch), name, floor)[:cap]
     degraded = False
+    guard = CuBudget(discover_run_cap(name))
     for row in picked:
+        if not guard.allow("eth_getCode"):
+            degraded = True
+            row["degraded"] = True
+            row["has_code"] = None
+            row["rpc_note"] = "CU budget reached; TVL evidence kept"
+            continue
+        guard.charge("eth_getCode")
         if rpc is None:
             def live(url: str, method: str, params: list[Any]) -> Any:
                 return _rpc_call(url, method, params)
@@ -94,6 +115,8 @@ def discover(
         "degraded": degraded,
         "candidates": picked,
         "daily_scans": chain_daily_scans(cfg.name),
+        "cu_spent": guard.spent,
+        "cu_cap": guard.cap,
         "monthly_cu": budget["monthly_cu"],
         "ethereum_monthly_cu": budget["ethereum_monthly_cu"],
         "within_cap": budget["within_cap"],

@@ -1007,18 +1007,33 @@ def run_scan_cycle(
     return progress
 
 
-def _cycle_blocked(store: ScanStore, owner: str) -> bool:
-    return _lease_blocks(_read_cursor(store, CYCLE_CURSOR_ID), owner)
+def cycle_cursor_id(chain: str = "ethereum") -> str:
+    """Ethereum keeps the historical cursor id. Every other chain has its own."""
+    from eth_scanner.chains.registry import normalize_chain
+
+    name = normalize_chain(chain)
+    if name == "ethereum":
+        return CYCLE_CURSOR_ID
+    return "%s:%s" % (CYCLE_CURSOR_ID, name)
 
 
-def _claim_cycle(store: ScanStore, owner: str) -> bool:
+def _cycle_blocked(store: ScanStore, owner: str, cursor_id: str = CYCLE_CURSOR_ID) -> bool:
+    return _lease_blocks(_read_cursor(store, cursor_id), owner)
+
+
+def _claim_cycle(store: ScanStore, owner: str, cursor_id: str = CYCLE_CURSOR_ID) -> bool:
     return _claim_lease(
-        store, _read_cursor(store, CYCLE_CURSOR_ID), owner,
-        0, 0, "", 0, CYCLE_CURSOR_ID,
+        store, _read_cursor(store, cursor_id), owner,
+        0, 0, "", 0, cursor_id,
     )
 
 
-def _touch_cycle(store: ScanStore, owner: str, progress: ScanCycleProgress) -> None:
+def _touch_cycle(
+    store: ScanStore,
+    owner: str,
+    progress: ScanCycleProgress,
+    cursor_id: str = CYCLE_CURSOR_ID,
+) -> None:
     body = _base_row(
         cursor=progress.random_scanned,
         list_size=0,
@@ -1028,7 +1043,7 @@ def _touch_cycle(store: ScanStore, owner: str, progress: ScanCycleProgress) -> N
         progress=None,
         last=None,
         lease=True,
-        cursor_id=CYCLE_CURSOR_ID,
+        cursor_id=cursor_id,
     )
     stats = body["stats"]
     stats["phase"] = progress.phase
@@ -1042,8 +1057,13 @@ def _touch_cycle(store: ScanStore, owner: str, progress: ScanCycleProgress) -> N
         return
 
 
-def _release_cycle(store: ScanStore, owner: str, progress: ScanCycleProgress) -> None:
-    latest = _read_cursor(store, CYCLE_CURSOR_ID)
+def _release_cycle(
+    store: ScanStore,
+    owner: str,
+    progress: ScanCycleProgress,
+    cursor_id: str = CYCLE_CURSOR_ID,
+) -> None:
+    latest = _read_cursor(store, cursor_id)
     holder = str(_stats(latest).get("lease_owner") or "")
     if holder and holder != owner:
         return
@@ -1056,7 +1076,7 @@ def _release_cycle(store: ScanStore, owner: str, progress: ScanCycleProgress) ->
         progress=None,
         last=None,
         lease=False,
-        cursor_id=CYCLE_CURSOR_ID,
+        cursor_id=cursor_id,
     )
     body["status"] = progress.status if progress.status in {"done", "error", "running", "noop", "budget"} else "running"
     if progress.message:
@@ -1077,37 +1097,56 @@ def _release_cycle(store: ScanStore, owner: str, progress: ScanCycleProgress) ->
         return
 
 
-def acquire_scan_cycle(store: ScanStore, *, wait_s: float = 1200.0, poll_s: float = 20.0) -> str:
-    """Take the shared scan-cycle lease, waiting out a monitor or backfill hold.
+def acquire_scan_cycle(
+    store: ScanStore,
+    *,
+    wait_s: float = 1200.0,
+    poll_s: float = 20.0,
+    chain: str = "ethereum",
+) -> str:
+    """Take one chain's scan-cycle lease, waiting out a holder on that chain.
 
+    Ethereum uses the historical ``scan-cycle`` id, so the monitor and the
+    signal rerun still exclude each other. Another chain never takes that id.
     Returns the owner id. Raises TimeoutError when the lease stays taken.
     """
     owner = _lease_owner()
+    cursor_id = cycle_cursor_id(chain)
     deadline = time.monotonic() + max(0.0, float(wait_s))
     while True:
-        if not _cycle_blocked(store, owner) and _claim_cycle(store, owner):
+        if not _cycle_blocked(store, owner, cursor_id) and _claim_cycle(store, owner, cursor_id):
             return owner
         if time.monotonic() >= deadline:
             raise TimeoutError("another scan cycle holds the cursor")
         time.sleep(max(0.05, float(poll_s)))
 
 
-def refresh_scan_cycle(store: ScanStore, owner: str, address: str = "") -> None:
+def refresh_scan_cycle(
+    store: ScanStore,
+    owner: str,
+    address: str = "",
+    chain: str = "ethereum",
+) -> None:
     """Extend the lease so a long rerun is not treated as abandoned."""
     progress = ScanCycleProgress()
     progress.phase = "signal-rerun"
     progress.status = "running"
     progress.current_address = address
     progress.message = "signal rerun"
-    _touch_cycle(store, owner, progress)
+    _touch_cycle(store, owner, progress, cycle_cursor_id(chain))
 
 
-def release_scan_cycle(store: ScanStore, owner: str, message: str = "signal rerun finished") -> None:
+def release_scan_cycle(
+    store: ScanStore,
+    owner: str,
+    message: str = "signal rerun finished",
+    chain: str = "ethereum",
+) -> None:
     progress = ScanCycleProgress()
     progress.phase = "signal-rerun"
     progress.status = "done"
     progress.message = message[:240]
-    _release_cycle(store, owner, progress)
+    _release_cycle(store, owner, progress, cycle_cursor_id(chain))
 
 
 def _next_pending_list(

@@ -61,7 +61,7 @@ def precompiles(chain: str) -> dict[str, str]:
     found = dict(COMMON_PRECOMPILES)
     if name == "arbitrum":
         found.update(ARBITRUM_PRECOMPILES)
-    elif name == "base":
+    elif name in {"base", "optimism"}:
         found.update(BASE_PRECOMPILES)
     return found
 
@@ -100,7 +100,7 @@ def interpret_block(chain: str, block: Any) -> dict[str, Any]:
         if l1 is None:
             report["degraded"] = True
         return report
-    if name == "base":
+    if name in {"base", "optimism"}:
         report["head_kind"] = "l2"
         report["l1_source"] = "L1Block-precompile"
         report["l1_precompile"] = "0x4200000000000000000000000000000000000015"

@@ -595,13 +595,33 @@ def main(argv: list[str] | None = None) -> int:
 
     evd = sub.add_parser(
         "evm-discover",
-        help="Read BNB, Arbitrum, or Base TVL. Adds no heat and does not touch Ethereum.",
+        help="Read per-chain TVL for a non-Ethereum EVM chain. Adds no heat.",
     )
-    evd.add_argument("--chain", required=True, choices=("bsc", "arbitrum", "base", "bnb", "arb"))
+    evd.add_argument(
+        "--chain",
+        required=True,
+        choices=("bsc", "arbitrum", "base", "optimism", "polygon", "bnb", "arb", "op", "matic"),
+    )
     evd.add_argument("--limit", type=int, default=10)
     evd.add_argument("--min-usd", type=float, default=None)
     evd.add_argument("--dry-run", action="store_true")
     evd.add_argument("--json", action="store_true")
+
+    fork = sub.add_parser(
+        "evm-fork",
+        help="Plan a local anvil fork for one EVM chain. Does not broadcast. Off unless --run.",
+    )
+    fork.add_argument("--chain", required=True)
+    fork.add_argument("--run", action="store_true", help="start a loopback anvil and stop it after eth_chainId")
+    fork.add_argument("--json", action="store_true")
+
+    src = sub.add_parser(
+        "evm-source",
+        help="Ask Etherscan v2 or Sourcify whether source is published. Adds no heat.",
+    )
+    src.add_argument("--chain", required=True)
+    src.add_argument("--address", required=True)
+    src.add_argument("--json", action="store_true")
 
     sem = sub.add_parser(
         "evm-semantics",
@@ -1017,6 +1037,20 @@ def main(argv: list[str] | None = None) -> int:
             ],
         }
         print(_json.dumps(out, indent=2))
+        return 0
+
+    if args.cmd == "evm-fork":
+        import json as _json
+        from eth_scanner.chains.fork_plan import plan_fork
+        report = plan_fork(args.chain, execute=bool(args.run))
+        print(_json.dumps(report, indent=2))
+        return 0 if not report.get("refused") else 2
+
+    if args.cmd == "evm-source":
+        import json as _json
+        from eth_scanner.chains.source_verify import source_status
+        report = source_status(args.chain, args.address)
+        print(_json.dumps(report, indent=2))
         return 0
 
     if args.cmd == "evm-semantics":
