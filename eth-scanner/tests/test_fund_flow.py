@@ -27,6 +27,7 @@ class FundFlowTests(unittest.TestCase):
         self.assertEqual(role_of("IOracle.latestAnswer"), "oracle")
         self.assertEqual(role_of("IPair.getReserves"), "amm")
         self.assertEqual(role_of("IBridge.lock"), "bridge")
+        self.assertEqual(role_of("ILending.borrow"), "lending")
         self.assertEqual(role_of("helper"), "external")
 
     def test_a_value_path_is_scored_and_the_body_is_dropped(self):

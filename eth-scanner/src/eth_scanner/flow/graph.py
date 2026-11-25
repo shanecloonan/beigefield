@@ -20,6 +20,8 @@ _VALUE = re.compile(
     r"\.transfer\s*\(|\.call\s*\{\s*value|\.send\s*\(",
     re.I,
 )
+
+
 def _add_node(nodes: dict[str, dict[str, Any]], addr: str, role: str, label: str) -> None:
     current = nodes.get(addr)
     if current is None:
