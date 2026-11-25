@@ -33,8 +33,12 @@ class EvmChains(unittest.TestCase):
         self.assertEqual(evm_chain("bsc").chain_id, 56)
         self.assertEqual(evm_chain("arbitrum").chain_id, 42161)
         self.assertEqual(evm_chain("base").chain_id, 8453)
+        self.assertEqual(evm_chain("optimism").chain_id, 10)
+        self.assertEqual(evm_chain("polygon").chain_id, 137)
         self.assertEqual(normalize_chain("bnb"), "bsc")
         self.assertEqual(normalize_chain("arb"), "arbitrum")
+        self.assertEqual(normalize_chain("op"), "optimism")
+        self.assertEqual(normalize_chain("matic"), "polygon")
         self.assertEqual(normalize_chain("eth"), "ethereum")
         self.assertEqual(evm_chain("bsc").native_symbol, "BNB")
         self.assertEqual(evm_chain("base").native_price_id, "ethereum")
@@ -51,6 +55,8 @@ class EvmChains(unittest.TestCase):
 
     def test_other_chains_use_the_env_or_a_public_endpoint(self):
         previous = os.environ.pop("BSC_RPC_URL", None)
+        previous_eth = os.environ.pop("ETH_RPC_URL", None)
+        previous_key = os.environ.pop("ALCHEMY_API_KEY", None)
         try:
             public = rpc_choice("bsc")
             os.environ["BSC_RPC_URL"] = "https://bnb-mainnet.g.alchemy.com/v2/secret-value"
@@ -61,6 +67,14 @@ class EvmChains(unittest.TestCase):
                 os.environ.pop("BSC_RPC_URL", None)
             else:
                 os.environ["BSC_RPC_URL"] = previous
+            if previous_eth is None:
+                os.environ.pop("ETH_RPC_URL", None)
+            else:
+                os.environ["ETH_RPC_URL"] = previous_eth
+            if previous_key is None:
+                os.environ.pop("ALCHEMY_API_KEY", None)
+            else:
+                os.environ["ALCHEMY_API_KEY"] = previous_key
         self.assertEqual(public["source"], "public")
         self.assertTrue(public["url"].startswith("https://bsc-dataseed"))
         self.assertEqual(configured["source"], "configured")
@@ -112,6 +126,8 @@ class EvmChains(unittest.TestCase):
             return "0x1"
 
         previous = os.environ.pop("BASE_RPC_URL", None)
+        previous_eth = os.environ.pop("ETH_RPC_URL", None)
+        previous_key = os.environ.pop("ALCHEMY_API_KEY", None)
         try:
             result = call_with_backoff("base", "eth_chainId", [], rpc=rpc, pause=pauses.append)
         finally:
@@ -119,6 +135,14 @@ class EvmChains(unittest.TestCase):
                 os.environ.pop("BASE_RPC_URL", None)
             else:
                 os.environ["BASE_RPC_URL"] = previous
+            if previous_eth is None:
+                os.environ.pop("ETH_RPC_URL", None)
+            else:
+                os.environ["ETH_RPC_URL"] = previous_eth
+            if previous_key is None:
+                os.environ.pop("ALCHEMY_API_KEY", None)
+            else:
+                os.environ["ALCHEMY_API_KEY"] = previous_key
         self.assertEqual(result, "0x1")
         self.assertEqual(pauses, [1.0])
         self.assertEqual(len(calls), 2)
@@ -144,6 +168,26 @@ class EvmChains(unittest.TestCase):
         bsc = store.claim_pending(10, "bsc-worker", chain="bnb")
         self.assertEqual(bsc[0]["address"], BSC.lower())
         self.assertEqual(bsc[0]["chain"], "bsc")
+
+    def test_a_shared_alchemy_key_is_reused_and_never_described(self):
+        previous = {name: os.environ.pop(name, None) for name in ("OPTIMISM_RPC_URL", "ETH_RPC_URL", "ALCHEMY_API_KEY")}
+        try:
+            os.environ["ETH_RPC_URL"] = "https://eth-mainnet.g.alchemy.com/v2/shared-key"
+            choice = rpc_choice("op")
+            summary = json.dumps(describe_all())
+            eth = rpc_choice("ethereum")
+        finally:
+            for name, value in previous.items():
+                if value is None:
+                    os.environ.pop(name, None)
+                else:
+                    os.environ[name] = value
+        self.assertEqual(choice["source"], "alchemy")
+        self.assertTrue(choice["url"].startswith("https://opt-mainnet.g.alchemy.com/v2/"))
+        self.assertNotIn("shared-key", summary)
+        self.assertNotIn("http", summary)
+        self.assertEqual(eth["source"], "configured")
+        self.assertTrue(eth["url"].endswith("/v2/shared-key"))
 
 
 if __name__ == "__main__":

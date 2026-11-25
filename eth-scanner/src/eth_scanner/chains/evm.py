@@ -1,13 +1,16 @@
 """EVM chain config. Ethereum stays chain id 1 and ETH_RPC_URL.
 
-BNB Chain, Arbitrum One, and Base reuse the same pipeline. Their RPC
-comes from BSC_RPC_URL, ARBITRUM_RPC_URL, or BASE_RPC_URL. When that
-variable is unset, a free public endpoint is used and a 429 is retried
-once. Ethereum does not gain a new public fallback here.
+BNB Chain, Arbitrum One, Base, Optimism, and Polygon reuse the same
+pipeline. Each chain reads its own env (BSC_RPC_URL, ARBITRUM_RPC_URL,
+BASE_RPC_URL, OPTIMISM_RPC_URL, POLYGON_RPC_URL). When that variable is
+unset, the key in ETH_RPC_URL is reused on that chain's Alchemy host.
+When there is no Alchemy key, a free public endpoint is used and a 429
+is retried once. Ethereum does not gain a public fallback and does not
+get its URL rewritten.
 
-Shane's capped Alchemy key also serves bnb-mainnet.g.alchemy.com,
-arb-mainnet.g.alchemy.com, and base-mainnet.g.alchemy.com. Those hosts
-share the existing $50/month cap. This module never prints a URL.
+Alchemy serves every chain here: eth-mainnet, bnb-mainnet, arb-mainnet,
+base-mainnet, opt-mainnet, and polygon-mainnet. They share the $10/month
+cap. This module never prints a URL or a key.
 """
 
 from __future__ import annotations
@@ -97,6 +100,40 @@ EVM_CHAINS: dict[str, EvmChain] = {
             _token("USDC", "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", "usd-coin", 6),
         ),
     ),
+    "optimism": EvmChain(
+        name="optimism",
+        chain_id=10,
+        native_symbol="ETH",
+        native_price_id="ethereum",
+        rpc_env="OPTIMISM_RPC_URL",
+        public_rpcs=(
+            "https://mainnet.optimism.io",
+            "https://optimism.publicnode.com",
+        ),
+        alchemy_host="opt-mainnet.g.alchemy.com",
+        tokens=(
+            _token("WETH", "0x4200000000000000000000000000000000000006", "ethereum", 18),
+            _token("USDC", "0x0b2c639c533813f4aa9d7837caf62653d097ff85", "usd-coin", 6),
+            _token("USDT", "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58", "tether", 6),
+        ),
+    ),
+    "polygon": EvmChain(
+        name="polygon",
+        chain_id=137,
+        native_symbol="POL",
+        native_price_id="polygon-ecosystem-token",
+        rpc_env="POLYGON_RPC_URL",
+        public_rpcs=(
+            "https://polygon-rpc.com",
+            "https://polygon-bor-rpc.publicnode.com",
+        ),
+        alchemy_host="polygon-mainnet.g.alchemy.com",
+        tokens=(
+            _token("WPOL", "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270", "polygon-ecosystem-token", 18),
+            _token("USDC", "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", "usd-coin", 6),
+            _token("USDT", "0xc2132d05d31c914a87c6611c10748aeb04b58e8f", "tether", 6),
+        ),
+    ),
 }
 
 # Read-only probes. A recognized error means the method exists.
@@ -132,15 +169,52 @@ def evm_chain(value: object) -> EvmChain:
     return cfg
 
 
+def alchemy_api_key() -> str:
+    """Key from ALCHEMY_API_KEY or from an Alchemy ETH_RPC_URL. Empty if neither.
+
+    The value is for building a URL. Callers must not log it.
+    """
+    explicit = (os.environ.get("ALCHEMY_API_KEY") or "").strip()
+    if explicit and all(ch not in explicit for ch in "/?# \n\t"):
+        return explicit
+    raw = (os.environ.get("ETH_RPC_URL") or "").strip()
+    if "alchemy.com" not in raw.lower() or "/v2/" not in raw:
+        return ""
+    key = raw.split("/v2/", 1)[1].split("/", 1)[0].split("?", 1)[0].strip()
+    if not key or any(ch in key for ch in " \n\t"):
+        return ""
+    return key
+
+
+def rpc_endpoints(value: object) -> list[dict[str, str]]:
+    """Ordered URLs. Ethereum is only ETH_RPC_URL. Other chains fall through."""
+    cfg = evm_chain(value)
+    found: list[dict[str, str]] = []
+    configured = (os.environ.get(cfg.rpc_env) or "").strip()
+    if configured:
+        found.append({"source": "configured", "url": configured})
+    elif cfg.name != "ethereum":
+        key = alchemy_api_key()
+        if key and cfg.alchemy_host:
+            found.append({
+                "source": "alchemy",
+                "url": "https://%s/v2/%s" % (cfg.alchemy_host, key),
+            })
+    if cfg.name != "ethereum":
+        for public in cfg.public_rpcs:
+            if all(item["url"] != public for item in found):
+                found.append({"source": "public", "url": public})
+    return found
+
+
 def rpc_choice(value: object) -> dict[str, Any]:
     """Which URL a caller may use. Ethereum with no ETH_RPC_URL stays unset."""
     cfg = evm_chain(value)
-    configured = (os.environ.get(cfg.rpc_env) or "").strip()
-    if configured:
-        return {"chain": cfg.name, "source": "configured", "env": cfg.rpc_env, "url": configured}
-    if cfg.name == "ethereum" or not cfg.public_rpcs:
+    endpoints = rpc_endpoints(cfg.name)
+    if not endpoints:
         return {"chain": cfg.name, "source": "unset", "env": cfg.rpc_env, "url": ""}
-    return {"chain": cfg.name, "source": "public", "env": cfg.rpc_env, "url": cfg.public_rpcs[0]}
+    first = endpoints[0]
+    return {"chain": cfg.name, "source": first["source"], "env": cfg.rpc_env, "url": first["url"]}
 
 
 def describe(value: object) -> dict[str, Any]:
@@ -163,7 +237,7 @@ def describe(value: object) -> dict[str, Any]:
 
 
 def describe_all() -> list[dict[str, Any]]:
-    return [describe(name) for name in ("ethereum", "bsc", "arbitrum", "base")]
+    return [describe(name) for name in ("ethereum", "bsc", "arbitrum", "base", "optimism", "polygon")]
 
 
 def explorer_chainid(value: object) -> int:
@@ -261,14 +335,7 @@ def call_with_backoff(
     Ethereum never receives the public list. ``rpc`` is ``(url, method, params)``.
     """
     cfg = evm_chain(value)
-    urls: list[str] = []
-    configured = (os.environ.get(cfg.rpc_env) or "").strip()
-    if configured:
-        urls.append(configured)
-    if cfg.name != "ethereum":
-        for public in cfg.public_rpcs:
-            if public not in urls:
-                urls.append(public)
+    urls = [item["url"] for item in rpc_endpoints(cfg.name)]
     if not urls:
         raise RuntimeError("%s RPC is unset" % cfg.rpc_env)
     last: Optional[BaseException] = None

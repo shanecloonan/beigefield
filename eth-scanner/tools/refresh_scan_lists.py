@@ -185,8 +185,14 @@ def _pool(protocols: list[dict], onchain: dict[str, float]) -> list[dict]:
                     "not_recently_scanned": True,
                     "big_name": False,
                 })
-    for chain in ("bsc", "arbitrum", "base"):
-        llama = {"bsc": "Binance", "arbitrum": "Arbitrum", "base": "Base"}[chain]
+    for chain in ("bsc", "arbitrum", "base", "optimism", "polygon"):
+        llama = {
+            "bsc": "Binance",
+            "arbitrum": "Arbitrum",
+            "base": "Base",
+            "optimism": "Optimism",
+            "polygon": "Polygon",
+        }[chain]
         for row in protocols:
             address = _address_for(row, chain, llama)
             if not address or address in seen:

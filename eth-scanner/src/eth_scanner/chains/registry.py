@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 DEFAULT_CHAIN = "ethereum"
-SUPPORTED_CHAINS = ("ethereum", "bsc", "arbitrum", "base", "solana")
+SUPPORTED_CHAINS = ("ethereum", "bsc", "arbitrum", "base", "optimism", "polygon", "solana")
 
 _ALIASES = {
     "": "ethereum",
@@ -24,6 +24,11 @@ _ALIASES = {
     "arbitrum-one": "arbitrum",
     "arbitrum": "arbitrum",
     "base": "base",
+    "op": "optimism",
+    "optimism": "optimism",
+    "matic": "polygon",
+    "polygon": "polygon",
+    "pol": "polygon",
 }
 
 _SOLANA_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"

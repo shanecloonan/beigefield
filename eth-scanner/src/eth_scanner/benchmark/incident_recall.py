@@ -39,7 +39,14 @@ IMPL_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"
 # This benchmark asks a public node whether code is still there. The
 # scanner's Ethereum path still has no public RPC fallback.
 ETH_CODE_RPC = "https://ethereum.publicnode.com"
-CHAIN_ID = {"ethereum": 1, "bsc": 56, "arbitrum": 42161, "base": 8453}
+CHAIN_ID = {
+    "ethereum": 1,
+    "bsc": 56,
+    "arbitrum": 42161,
+    "base": 8453,
+    "optimism": 10,
+    "polygon": 137,
+}
 _LLAMA_CHAIN = {
     "ethereum": "ethereum",
     "eth": "ethereum",
@@ -48,6 +55,10 @@ _LLAMA_CHAIN = {
     "binance": "bsc",
     "arbitrum": "arbitrum",
     "base": "base",
+    "optimism": "optimism",
+    "op": "optimism",
+    "polygon": "polygon",
+    "matic": "polygon",
     "solana": "solana",
 }
 

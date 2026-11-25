@@ -11,7 +11,7 @@ from typing import Any, Literal, Optional
 
 # Ethereum is the default. Solana stays its own adapter. The other names
 # are EVM chains that reuse this pipeline.
-Chain = Literal["ethereum", "solana", "bsc", "arbitrum", "base"]
+Chain = Literal["ethereum", "solana", "bsc", "arbitrum", "base", "optimism", "polygon"]
 SrcConfidence = Literal["high", "med", "low"]
 IrConfidence = Literal["high", "med", "low"]
 Bucket = Literal[

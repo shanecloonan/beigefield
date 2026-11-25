@@ -36,7 +36,7 @@ def chain_of_reason(reason: str) -> str:
         if not part.startswith("chain="):
             continue
         name = part.split("=", 1)[1]
-        if name in {"ethereum", "bsc", "arbitrum", "base"}:
+        if name in {"ethereum", "bsc", "arbitrum", "base", "optimism", "polygon"}:
             return name
     return "ethereum"
 

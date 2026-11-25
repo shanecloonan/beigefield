@@ -114,6 +114,8 @@ class EvmDiscover(unittest.TestCase):
         self.assertEqual(saved["enqueued"], [])
         self.assertEqual(chain_daily_scans("ethereum"), 50)
         self.assertEqual(chain_daily_scans("arbitrum"), 8)
+        self.assertEqual(chain_daily_scans("optimism"), 4)
+        self.assertEqual(chain_daily_scans("polygon"), 4)
         rows = [{"address": "0x%040x" % i, "chain": "arbitrum", "status": "pending"} for i in range(1, 12)]
         rows.append({"address": ETH, "chain": "ethereum", "status": "pending"})
         picked = select_work(rows, "arbitrum")
