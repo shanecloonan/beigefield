@@ -66,8 +66,17 @@ _CHAIN = re.compile(r"chain=([a-z0-9]+)")
 _SIGNALS = re.compile(r"signals=([^;]*)")
 
 
-def queue_path() -> Path:
-    return Path(__file__).resolve().parents[3] / "data" / "small_value_under5k_queue.json"
+def normalize_queue_id(queue_id: str | None = "1") -> str:
+    """Queue 1 is the file a trigger push already scans. Anything else stays there."""
+    text = str(queue_id or "1").strip().lower()
+    if text in {"2", "q2", "queue-2", "queue2"}:
+        return "2"
+    return "1"
+
+
+def queue_path(queue_id: str | None = "1") -> Path:
+    name = "small_value_under5k_queue_2.json" if normalize_queue_id(queue_id) == "2" else "small_value_under5k_queue.json"
+    return Path(__file__).resolve().parents[3] / "data" / name
 
 
 def data_dir() -> Path:
@@ -346,8 +355,8 @@ def rank_candidates(
     return ranked[:cap], ranked[cap:]
 
 
-def load_queue_entries() -> list[dict[str, Any]]:
-    path = queue_path()
+def load_queue_entries(queue_id: str | None = "1") -> list[dict[str, Any]]:
+    path = queue_path(queue_id)
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -480,9 +489,15 @@ def prepare_batch(
     *,
     budget_cu: int,
     batch_size: int = 0,
+    queue_id: str | None = "1",
 ) -> dict[str, Any]:
-    """Select the next under-$5k batch. Does not read the historical signal tables."""
-    entries = load_queue_entries()
+    """Select the next under-$5k batch. Does not read the historical signal tables.
+
+    ``queue_id`` 1 is the original file. 2 is the follow-up file. An empty
+    value stays on queue 1, which is what a trigger push runs.
+    """
+    qid = normalize_queue_id(queue_id)
+    entries = load_queue_entries(qid)
     size = int(batch_size) if int(batch_size or 0) > 0 else SMALL_VALUE_BATCH
     skip = set(load_seen())
     finished, err = finished_addresses(store, [str(row.get("address") or "") for row in entries])
@@ -493,15 +508,18 @@ def prepare_batch(
         batch_size=size,
         budget_cu=budget_cu,
     )
+    label = "small-value under $%d batch" % int(FUNDS_MAX_USD)
+    if qid == "2":
+        label = "small-value under $%d queue 2" % int(FUNDS_MAX_USD)
     notes = [
-        "small-value under $%d batch, %d queued, %d already finished"
-        % (int(FUNDS_MAX_USD), len(entries), len(finished)),
+        "%s, %d queued, %d already finished" % (label, len(entries), len(finished)),
     ]
     if err:
         notes.append("finished lookup failed; this batch may repeat: " + err)
     selected = [as_signal_row(row) for row in selected_entries]
     plan = {
-        "mode": "small-value-under5k",
+        "mode": "small-value-under5k" if qid == "1" else "small-value-under5k-2",
+        "queue_id": qid,
         "rows_read": len(entries),
         "signals": len(entries),
         "queue": len(entries),

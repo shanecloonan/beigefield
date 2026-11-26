@@ -165,5 +165,79 @@ class BatchRun(unittest.TestCase):
         self.assertEqual(second["skipped_finished"], 75)
 
 
+class QueueTwo(unittest.TestCase):
+    def test_an_unset_queue_stays_on_the_first_file(self):
+        self.assertEqual(queue.queue_path(), queue.queue_path("1"))
+        self.assertEqual(queue.queue_path(""), queue.queue_path("1"))
+        self.assertEqual(queue.queue_path("nope"), queue.queue_path("1"))
+        self.assertEqual(queue.queue_path("2").name, "small_value_under5k_queue_2.json")
+
+    def test_file_matches_the_followup_pool_and_skips_queue_one(self):
+        pool = json.loads((ROOT / "data" / "small_value_under5k_queue_2_pool.json").read_text(encoding="utf-8"))
+        q1 = {row["address"] for row in queue.load_queue_entries("1")}
+        blocked = set(q1) | rerun.load_seen() | set(queue.NEVER_ADDRESSES)
+        kept, _deferred = queue.rank_candidates(pool["candidates"], limit=queue.QUEUE_LIMIT, blocked=blocked)
+        payload = json.loads(queue.queue_path("2").read_text(encoding="utf-8"))
+        committed = [row["address"] for row in payload["entries"]]
+        self.assertEqual(committed, [row["address"] for row in kept])
+        self.assertEqual(len(committed), 300)
+        self.assertEqual(len(set(committed)), 300)
+        self.assertEqual(set(committed) & q1, set())
+        self.assertEqual(set(committed) & rerun.load_seen(), set())
+        old = json.loads((ROOT / "data" / "small_value_queue.json").read_text(encoding="utf-8"))
+        old_addrs = {str(row["address"]).lower() for row in old["entries"]}
+        for row in payload["entries"]:
+            self.assertLess(float(row["funds_usd"]), 5000)
+            self.assertGreaterEqual(float(row["funds_usd"]), 100)
+            self.assertEqual(row["chain"], "ethereum")
+            self.assertNotIn(row["address"], old_addrs)
+            self.assertIn(row["reason_class"], queue.REASON_SCORE)
+        self.assertEqual(payload["batch_size"], 75)
+        self.assertEqual(payload["batch_cu"], queue.SMALL_VALUE_BATCH_CU)
+
+    def test_dry_run_can_select_queue_two_without_touching_queue_one(self):
+        store = MemoryStore()
+
+        def boom(address, **kwargs):
+            raise AssertionError("dry-run scanned")
+
+        class Settings:
+            eth_rpc_url = "http://127.0.0.1:1"
+
+        report = rerun.run_signal_rerun(
+            store,
+            Settings(),
+            budget_cu=4_000_000,
+            dry_run=True,
+            scan_one=boom,
+            small_value_batch=True,
+            batch_size=75,
+            queue_id="2",
+        )
+        self.assertEqual(report["status"], "dry-run")
+        self.assertEqual(report["mode"], "small-value-under5k-2")
+        self.assertEqual(report["queue_id"], "2")
+        self.assertEqual(report["queue"], 300)
+        self.assertEqual(report["selected"], 75)
+        self.assertLessEqual(report["budget_cu"], queue.SMALL_VALUE_BATCH_CU)
+        chosen = [row["address"] for row in report["selected_rows"]]
+        q1 = [row["address"] for row in queue.load_queue_entries("1")]
+        q2 = [row["address"] for row in queue.load_queue_entries("2")]
+        self.assertEqual(chosen, q2[:75])
+        self.assertEqual(set(chosen) & set(q1), set())
+        default = rerun.run_signal_rerun(
+            store,
+            Settings(),
+            budget_cu=250_000,
+            dry_run=True,
+            scan_one=boom,
+            small_value_batch=True,
+            batch_size=75,
+        )
+        self.assertEqual(default["mode"], "small-value-under5k")
+        self.assertEqual(default["queue_id"], "1")
+        self.assertEqual([row["address"] for row in default["selected_rows"]], q1[:75])
+
+
 if __name__ == "__main__":
     unittest.main()

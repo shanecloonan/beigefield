@@ -1,5 +1,6 @@
 # Read-only Lane A with fork verify on. Pushing eth-scanner/signal-rerun.trigger
-# to main scans the next under-$5k high-likelihood batch (75 contracts, 250k CU).
+# to main scans the next under-$5k high-likelihood batch from queue 1
+# (75 contracts, 250k CU). workflow_dispatch can select queue 2.
 # workflow_dispatch mode "historical" re-scores stored signals inside 4M CU.
 # The monitor and the backfill leave fork verify off. This job holds the
 # shared scan-cycle lease so those crons do not scan at the same time.
@@ -19,6 +20,13 @@ on:
           - small-value-batch
           - historical
         default: small-value-batch
+      queue:
+        description: "Which under-$5k queue a small-value batch reads. 1 is the current file. 2 is the follow-up. Ignored for historical. A trigger push stays on queue 1."
+        type: choice
+        options:
+          - "1"
+          - "2"
+        default: "1"
 
 permissions:
   contents: read
@@ -74,6 +82,7 @@ jobs:
           ETH_SCANNER_FUZZ_TIMEOUT_S: "45"
           ETH_SCANNER_FUZZ_RUNS: "8"
           RERUN_MODE: ${{ github.event.inputs.mode || 'small-value-batch' }}
+          RERUN_QUEUE: ${{ github.event.inputs.queue || '1' }}
         run: |
           set -euo pipefail
           if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
@@ -88,6 +97,9 @@ jobs:
           if [ "${RERUN_MODE}" = "historical" ]; then
             echo "signal-rerun historical, fork verify on, fuzz min heat 0, budget 4000000 CU"
             python -m eth_scanner signal-rerun --budget-cu 4000000 --deadline-minutes 55 --lease-wait-minutes 20 --json
+          elif [ "${RERUN_QUEUE}" = "2" ]; then
+            echo "signal-rerun small-value under 5000 queue 2, fork verify on, batch 75, budget 250000 CU"
+            python -m eth_scanner signal-rerun --small-value-batch --queue 2 --batch-size 75 --budget-cu 250000 --deadline-minutes 55 --lease-wait-minutes 20 --json
           else
             echo "signal-rerun small-value under 5000, fork verify on, batch 75, budget 250000 CU"
             python -m eth_scanner signal-rerun --small-value-batch --batch-size 75 --budget-cu 250000 --deadline-minutes 55 --lease-wait-minutes 20 --json
