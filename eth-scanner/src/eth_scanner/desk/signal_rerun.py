@@ -55,6 +55,10 @@ _URL = re.compile(r"https?://\S+", re.I)
 _CALLDATA = re.compile(r"0x[0-9a-fA-F]{16,}")
 _SEED = Path(__file__).with_name("signal_rerun_seed.json")
 _SEEN = Path(__file__).with_name("signal_rerun_seen.json")
+# One-shot list of desk rows written done when Alchemy stopped the pass.
+# Removed after those rows are cleared so a later real "no" is left alone.
+_RELEASE = Path(__file__).resolve().parents[3] / "data" / "signal_rerun_release.json"
+_PROVIDER_STOPS = frozenset({"monthly capacity", "auth", "rate limited"})
 _EVIDENCE_KEYS = (
     "invariants_failed",
     "privileged_callable",
@@ -862,6 +866,150 @@ def _snapshot(candidate: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def provider_stopped(reason: str) -> bool:
+    """True when Alchemy, not the scan, ended the pass. That is not a verdict."""
+    return str(reason or "") in _PROVIDER_STOPS
+
+
+def _evidence_total(row: dict[str, Any]) -> int:
+    breakdown = _breakdown(row)
+    drainable = bool(breakdown.get("drainable"))
+    return evidence_components(breakdown, drainable=drainable)["total"]
+
+
+def _false_finished(row: dict[str, Any]) -> bool:
+    """A done desk row with no evidence. A provider stop used to write these."""
+    if str(row.get("status") or "") != "done":
+        return False
+    source = str(row.get("discovery_source") or "")
+    if source and source != "signal_rerun":
+        return False
+    key = str(row.get("dedupe_key") or "")
+    if key and not key.startswith("signal-rerun:"):
+        return False
+    if _num(row.get("heat")) != 0 or _num(row.get("blend_heat")) != 0:
+        return False
+    bucket = str(row.get("blend_bucket") or "no")
+    if bucket not in {"no", ""}:
+        return False
+    return _evidence_total(row) == 0
+
+
+def load_release_addresses(path: Path | None = None) -> list[str]:
+    """Addresses whose false-finished desk rows should be cleared once."""
+    path = path or _RELEASE
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    items = raw.get("addresses") if isinstance(raw, dict) else raw
+    if not isinstance(items, list):
+        return []
+    found: list[str] = []
+    for item in items:
+        raw_addr = item if isinstance(item, str) else (item.get("address") if isinstance(item, dict) else "")
+        addr = safe_address(raw_addr)
+        if addr and addr not in found:
+            found.append(addr)
+    return found
+
+
+def _desk_rows(store: Any, dedupe_key: str) -> list[dict[str, Any]]:
+    req = getattr(store, "_req", None)
+    if callable(req):
+        rows = req(
+            "GET",
+            "test_scan_runs",
+            query={
+                "select": "dedupe_key,address,status,discovery_source,heat,blend_heat,blend_bucket,heat_breakdown",
+                "dedupe_key": "eq.%s" % dedupe_key,
+                "limit": "5",
+            },
+        )
+        return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+    return [
+        row for row in (getattr(store, "test_runs", None) or [])
+        if isinstance(row, dict) and str(row.get("dedupe_key") or "") == dedupe_key
+    ]
+
+
+def _delete_desk(store: Any, dedupe_key: str) -> None:
+    req = getattr(store, "_req", None)
+    if callable(req):
+        req(
+            "DELETE",
+            "test_scan_runs",
+            query={"dedupe_key": "eq.%s" % dedupe_key},
+            prefer="return=minimal",
+        )
+        return
+    runs = getattr(store, "test_runs", None)
+    if isinstance(runs, list):
+        store.test_runs = [
+            row for row in runs
+            if str(row.get("dedupe_key") or "") != dedupe_key
+        ]
+
+
+def release_false_finished(store: Any, addresses: list[str] | None = None) -> dict[str, Any]:
+    """Drop signal-rerun rows that were marked done with no evidence.
+
+    A real maybe, yes, or any heat above 0 is left in place. Missing rows
+    are reported and not treated as an error.
+    """
+    wanted = list(addresses) if addresses is not None else load_release_addresses()
+    released: list[dict[str, str]] = []
+    kept: list[dict[str, Any]] = []
+    for addr in wanted:
+        key = "signal-rerun:%s" % addr
+        rows = _desk_rows(store, key)
+        if not rows:
+            kept.append({"address": addr, "reason": "no desk row"})
+            continue
+        cleared = False
+        for row in rows:
+            if not _false_finished(row):
+                kept.append({
+                    "address": addr,
+                    "reason": "kept",
+                    "status": str(row.get("status") or ""),
+                    "heat": _num(row.get("heat")),
+                    "blend_bucket": str(row.get("blend_bucket") or ""),
+                })
+                continue
+            _delete_desk(store, key)
+            released.append({"address": addr, "dedupe_key": key})
+            cleared = True
+            break
+        if not cleared and not any(item.get("address") == addr and item.get("reason") == "kept" for item in kept):
+            kept.append({"address": addr, "reason": "kept"})
+    return {"released": released, "kept": kept}
+
+
+class _HoldWrites:
+    """Drop finished writes after Alchemy has already stopped the pass."""
+
+    def __init__(self, inner: Any, proxy: CuProxy):
+        self._inner = inner
+        self._proxy = proxy
+
+    def save_result(self, address: str, result: Any) -> Any:
+        if provider_stopped(self._proxy.stop_reason):
+            return None
+        return self._inner.save_result(address, result)
+
+    def save_test_scan_run(self, row: dict[str, Any]) -> Any:
+        if provider_stopped(self._proxy.stop_reason):
+            return None
+        save = getattr(self._inner, "save_test_scan_run", None)
+        if not callable(save):
+            return None
+        return save(row)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._inner, name)
+
+
 def run_signal_rerun(
     store: Any,
     settings: Any,
@@ -880,7 +1028,13 @@ def run_signal_rerun(
     ``small_value_batch`` scans the next under-$5k queue batch and does not
     walk the historical signal tables. The proxy cap stays on that batch.
     ``queue_id`` defaults to queue 1. Queue 2 is the follow-up file.
+
+    A provider stop (Alchemy capacity, auth, or 429) does not write a
+    finished verdict. The contract that hit the stop stays unfinished.
     """
+    released: dict[str, Any] = {"released": [], "kept": []}
+    if small_value_batch and not dry_run:
+        released = release_false_finished(store)
     if small_value_batch:
         from eth_scanner.desk.small_value_under5k import prepare_batch
 
@@ -895,6 +1049,7 @@ def run_signal_rerun(
         plan = dict(prepared["plan"])
         plan["estimate"] = estimate_cu(len(selected))
         plan["budget_cu"] = budget_cu
+        plan["released"] = released
     else:
         collected = collect_candidates(store)
         seen = load_seen()
@@ -954,6 +1109,7 @@ def run_signal_rerun(
     if scan_one is None:
         from eth_scanner.lane_a.worker import run_one as scan_one
 
+    guarded = _HoldWrites(store, proxy)
     started = time.monotonic()
     rerun: list[dict[str, Any]] = []
     unfinished: list[dict[str, Any]] = []
@@ -971,12 +1127,16 @@ def run_signal_rerun(
             refresh_scan_cycle(store, owner, candidate["address"])
             before = _snapshot(candidate)
             try:
-                result = scan_one(candidate["address"], settings=settings, store=store)
+                result = scan_one(candidate["address"], settings=settings, store=guarded)
             except RpcUnavailable:
                 stop = "rpc unavailable"
                 unfinished = [_snapshot(row) for row in selected[index:]]
                 break
             except Exception as exc:  # noqa: BLE001 — one contract must not end the pass
+                if provider_stopped(proxy.stop_reason):
+                    stop = proxy.stop_reason
+                    unfinished = [_snapshot(row) for row in selected[index:]]
+                    break
                 before.update({
                     "new_verdict": before["old_verdict"],
                     "new_heat": before["old_heat"],
@@ -990,6 +1150,10 @@ def run_signal_rerun(
                     unfinished = [_snapshot(row) for row in selected[index + 1:]]
                     break
                 continue
+            if provider_stopped(proxy.stop_reason):
+                stop = proxy.stop_reason
+                unfinished = [_snapshot(row) for row in selected[index:]]
+                break
             parts = apply_evidence_heat(result, int(before["peak"]))
             try:
                 store.save_result(candidate["address"], result)
