@@ -364,5 +364,169 @@ class DryRun(unittest.TestCase):
         self.assertEqual(report["cu_used"], 0)
 
 
+def _bare_result():
+    class Result:
+        heat = 0
+        heat_breakdown = {}
+        notes = []
+        contract_name = "Skipped"
+        invariant_results = []
+        bucket = "lane-a-cool"
+        funds_usd = None
+        drop_reason = ""
+        stage_trace = []
+        hypotheses = []
+        value_movers = []
+        contract_class = ""
+        scope = ""
+        src_confidence = "low"
+        ir_confidence = "low"
+        dropped = False
+        funds_breakdown = []
+        funds_status = ""
+        funds_checked_at = None
+        engine_leads = []
+        confirmed_findings = []
+        engine_timing = {}
+
+    return Result()
+
+
+class ProviderStop(unittest.TestCase):
+    def test_release_drops_empty_done_and_keeps_real_heat(self):
+        store = MemoryStore()
+        empty = "0xa0b9cc50c460dde28321c34fcd7161434655a38f"
+        hot = "0x00000069abbb0b1ad6975bcf753eee15d318a0bf"
+        store.test_runs = [
+            {
+                "dedupe_key": "signal-rerun:%s" % empty,
+                "address": empty,
+                "status": "done",
+                "discovery_source": "signal_rerun",
+                "heat": 0,
+                "blend_heat": 0,
+                "blend_bucket": "no",
+                "heat_breakdown": {"original_peak": 5, "total": 0},
+            },
+            {
+                "dedupe_key": "signal-rerun:%s" % hot,
+                "address": hot,
+                "status": "done",
+                "discovery_source": "signal_rerun",
+                "heat": 4,
+                "blend_heat": 4,
+                "blend_bucket": "maybe",
+                "heat_breakdown": {"invariants_failed": 4, "total": 4},
+            },
+        ]
+        report = rerun.release_false_finished(store, [empty, hot])
+        self.assertEqual([row["address"] for row in report["released"]], [empty])
+        self.assertEqual([row["address"] for row in store.test_runs], [hot])
+
+    def test_capacity_stop_does_not_write_a_finished_verdict(self):
+        class Upstream(BaseHTTPRequestHandler):
+            def do_POST(self) -> None:  # noqa: N802
+                length = int(self.headers.get("Content-Length") or 0)
+                self.rfile.read(length)
+                body = json.dumps({
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "error": {"code": 429, "message": "Monthly capacity limit exceeded"},
+                }).encode("utf-8")
+                self.send_response(429)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, fmt: str, *args) -> None:
+                return
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Upstream)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        upstream = "http://127.0.0.1:%d" % server.server_address[1]
+        store = MemoryStore()
+        saved = []
+
+        def scan_one(address, settings=None, store=None, **kwargs):
+            import urllib.error
+            import urllib.request
+            payload = json.dumps({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "eth_chainId",
+                "params": [],
+            }).encode("utf-8")
+            req = urllib.request.Request(
+                settings.eth_rpc_url,
+                data=payload,
+                headers={"Content-Type": "application/json"},
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    resp.read()
+            except urllib.error.HTTPError:
+                pass
+            result = _bare_result()
+            if store is not None:
+                store.save_result(address, result)
+            saved.append(address)
+            return result
+
+        class Settings:
+            def __init__(self):
+                self.eth_rpc_url = upstream
+                self.range_min_usd = None
+                self.range_max_usd = None
+
+        try:
+            report = rerun.run_signal_rerun(
+                store,
+                Settings(),
+                budget_cu=250_000,
+                deadline_s=120,
+                lease_wait_s=2,
+                small_value_batch=True,
+                batch_size=75,
+                scan_one=scan_one,
+            )
+        finally:
+            server.shutdown()
+            server.server_close()
+
+        self.assertEqual(report["status"], "monthly capacity")
+        self.assertEqual(report["stop_reason"], "monthly capacity")
+        self.assertEqual(report["rerun_count"], 0)
+        self.assertEqual(len(saved), 1)
+        self.assertGreaterEqual(len(report["unfinished"]), 1)
+        self.assertEqual(report["unfinished"][0]["address"], saved[0])
+        self.assertEqual(store.results, [])
+        self.assertFalse(any(str(row.get("status") or "") == "done" for row in store.test_runs))
+
+    def test_a_finished_scan_still_persists(self):
+        store = MemoryStore()
+
+        def scan_one(address, settings=None, store=None, **kwargs):
+            return _bare_result()
+
+        class Settings:
+            eth_rpc_url = "http://127.0.0.1:9"
+            range_min_usd = None
+            range_max_usd = None
+
+        report = rerun.run_signal_rerun(
+            store,
+            Settings(),
+            budget_cu=rerun.PER_CONTRACT_CU,
+            deadline_s=120,
+            lease_wait_s=2,
+            scan_one=scan_one,
+        )
+        self.assertEqual(report["status"], "done")
+        self.assertEqual(report["rerun_count"], 1)
+        self.assertEqual(len(store.test_runs), 1)
+        self.assertEqual(store.test_runs[0]["status"], "done")
+
+
 if __name__ == "__main__":
     unittest.main()
