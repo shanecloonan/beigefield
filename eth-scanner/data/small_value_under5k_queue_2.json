@@ -1,0 +1,4882 @@
+{
+  "version": 1,
+  "generated_at": "2026-11-26T05:34:12Z",
+  "chain": "ethereum",
+  "queue": "2",
+  "count": 300,
+  "batch_size": 75,
+  "batch_cu": 250000,
+  "cutoffs": {
+    "funds_min_usd": 100,
+    "funds_max_usd_exclusive": 5000,
+    "queue_limit": 300,
+    "measure": "native ETH + WETH/USDC/USDT/DAI/WBTC/stETH/wstETH/USDe priced on public RPC, same band as queue 1"
+  },
+  "breakdown": {
+    "clone-erc4626-inflation": 5,
+    "lending-underscanned": 29,
+    "amm-fork-thin-pool": 266
+  },
+  "lists": {
+    "erc4626-registry": 5,
+    "compound-fork-getAllMarkets": 29,
+    "univ2-fork-allPairs": 266
+  },
+  "names": {
+    "zensats": 1,
+    "ERC-4626 vault": 1,
+    "ammalgam-vaults": 1,
+    "protectorate": 1,
+    "RockSolid": 1,
+    "onyx": 1,
+    "cozy": 11,
+    "damm-finance": 3,
+    "cream": 4,
+    "minterest": 2,
+    "tonpound": 4,
+    "bao-markets": 1,
+    "donkey": 2,
+    "venus": 1,
+    "youswap": 4,
+    "ethervista": 40,
+    "ShibaSwap": 85,
+    "luaswap": 5,
+    "supernova": 6,
+    "minidex": 13,
+    "swipeswap": 7,
+    "unicly": 18,
+    "MotoSwap": 9,
+    "defi-swap": 14,
+    "versedex": 6,
+    "integral": 3,
+    "swapr": 2,
+    "solidly-v2": 7,
+    "bxh": 2,
+    "justmoney": 6,
+    "bullionFX": 1,
+    "saitaswap": 5,
+    "Kwikswap": 8,
+    "bamboodefi": 4,
+    "capitaldex": 1,
+    "ElkFinance": 4,
+    "cypher-v2": 2,
+    "standard-tech": 2,
+    "groveswap": 1,
+    "akronswap": 1,
+    "empiredex": 3,
+    "pepedex": 2,
+    "tamaswap": 1,
+    "sumswap": 2,
+    "convergence": 2
+  },
+  "funds_le_1900": 240,
+  "median_funds": 450,
+  "deferred_count": 31,
+  "discovery": {
+    "method": "Same classes and ranker as queue 1. New rows are Uniswap V2 fork allPairs, Compound-fork getAllMarkets, and ERC-4626 vault registries, then the native-ETH plus major-token funds probe. Public RPC only.",
+    "excluded": "queue 1, the signal-rerun seen skip list, the signal-rerun seed, hand exclusions, canonical name rules, and every address already in the candidate pools. The production scan database was not readable from this run; the batch job still skips stored signal-rerun rows marked done.",
+    "class_check": "Every kept pair answered getReserves, every kept market answered exchangeRateStored, and every kept vault answered totalAssets. One registry vault that did not was dropped."
+  },
+  "entries": [
+    {
+      "address": "0x18e2f4f2e6565187fce73ecc707579e5f7933f74",
+      "chain": "ethereum",
+      "contract_name": "zensats",
+      "funds_usd": 112.13,
+      "reason_class": "clone-erc4626-inflation",
+      "score": 46,
+      "peak_heat": 4,
+      "signals": [
+        "vault"
+      ],
+      "unverified": false,
+      "family": "erc4626",
+      "list": "erc4626-registry",
+      "source": "erc4626-registry"
+    },
+    {
+      "address": "0xcf8eafc3b1d92801238faadc22d2a7b83fb96c10",
+      "chain": "ethereum",
+      "contract_name": "ERC-4626 vault",
+      "funds_usd": 240.14,
+      "reason_class": "clone-erc4626-inflation",
+      "score": 46,
+      "peak_heat": 4,
+      "signals": [
+        "vault"
+      ],
+      "unverified": false,
+      "family": "erc4626",
+      "list": "erc4626-registry",
+      "source": "erc4626-registry"
+    },
+    {
+      "address": "0x8417430a31851ae0a36a854394227c5d86be8fc9",
+      "chain": "ethereum",
+      "contract_name": "ammalgam-vaults",
+      "funds_usd": 503.37,
+      "reason_class": "clone-erc4626-inflation",
+      "score": 46,
+      "peak_heat": 4,
+      "signals": [
+        "vault"
+      ],
+      "unverified": false,
+      "family": "erc4626",
+      "list": "erc4626-registry",
+      "source": "erc4626-registry"
+    },
+    {
+      "address": "0xaf53431488e871d103baa0280b6360998f0f9926",
+      "chain": "ethereum",
+      "contract_name": "protectorate",
+      "funds_usd": 563.76,
+      "reason_class": "clone-erc4626-inflation",
+      "score": 46,
+      "peak_heat": 4,
+      "signals": [
+        "vault"
+      ],
+      "unverified": false,
+      "family": "erc4626",
+      "list": "erc4626-registry",
+      "source": "erc4626-registry"
+    },
+    {
+      "address": "0x7a12d4b719f5aa479ecd60defed909fb2a37e428",
+      "chain": "ethereum",
+      "contract_name": "RockSolid",
+      "funds_usd": 3903.0,
+      "reason_class": "clone-erc4626-inflation",
+      "score": 46,
+      "peak_heat": 4,
+      "signals": [
+        "vault"
+      ],
+      "unverified": false,
+      "family": "erc4626",
+      "list": "erc4626-registry",
+      "source": "erc4626-registry"
+    },
+    {
+      "address": "0x830dacd5d0a62afa92c9bc6878461e9cd317b085",
+      "chain": "ethereum",
+      "contract_name": "onyx",
+      "funds_usd": 101.0,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x7d61ed92a6778f5abf5c94085739f1edabec2800"
+    },
+    {
+      "address": "0x8c83b281fa131360fc90a83397a3afa5c1d8e8a7",
+      "chain": "ethereum",
+      "contract_name": "cozy",
+      "funds_usd": 114.91,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x895879b2c1fbb6ccfcd101f2d3f3c76363664f92"
+    },
+    {
+      "address": "0xf146c26136c1f80c9f0967d27bcb7e500d45681f",
+      "chain": "ethereum",
+      "contract_name": "cozy",
+      "funds_usd": 136.84,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x895879b2c1fbb6ccfcd101f2d3f3c76363664f92"
+    },
+    {
+      "address": "0x63d6b99659f7b05b054deef582f5daaa51780e80",
+      "chain": "ethereum",
+      "contract_name": "damm-finance",
+      "funds_usd": 156.83,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x4f96ab61520a6636331a48a11eafba8fb51f74e4"
+    },
+    {
+      "address": "0x9435f39c4a1a51765dd4294fc84fe024f5ace0d2",
+      "chain": "ethereum",
+      "contract_name": "cream",
+      "funds_usd": 164.78,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0xbdc857eae1d15ad171e11af6fc3e99413ed57ec4"
+    },
+    {
+      "address": "0xba2e90b4dcdb235e46b9554360e31f2afa1d8b35",
+      "chain": "ethereum",
+      "contract_name": "cream",
+      "funds_usd": 176.31,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0xbdc857eae1d15ad171e11af6fc3e99413ed57ec4"
+    },
+    {
+      "address": "0xf428189d73a7a17b8eb8f5637654063edd728df8",
+      "chain": "ethereum",
+      "contract_name": "minterest",
+      "funds_usd": 211.1,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0xd13f50274a68abf2384c79248adc259b3777c081"
+    },
+    {
+      "address": "0x6365b24999105afd1bc44ddd43718b2407e43298",
+      "chain": "ethereum",
+      "contract_name": "tonpound",
+      "funds_usd": 212.28,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x1775286cbe9db126a95abf52c58a3214fca26803"
+    },
+    {
+      "address": "0xc5fa52aa356203ae375d0a98d7423c350b5b31c6",
+      "chain": "ethereum",
+      "contract_name": "tonpound",
+      "funds_usd": 217.4,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x1775286cbe9db126a95abf52c58a3214fca26803"
+    },
+    {
+      "address": "0x06078583447f9c0b4b688ace305de8a342c7af2b",
+      "chain": "ethereum",
+      "contract_name": "tonpound",
+      "funds_usd": 234.46,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x1775286cbe9db126a95abf52c58a3214fca26803"
+    },
+    {
+      "address": "0x7d4377114fd3c61c59d72de48102bf6acd3882b1",
+      "chain": "ethereum",
+      "contract_name": "cozy",
+      "funds_usd": 249.61,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x895879b2c1fbb6ccfcd101f2d3f3c76363664f92"
+    },
+    {
+      "address": "0xbf0852a95ec76e87f7431fa505b27937c9836372",
+      "chain": "ethereum",
+      "contract_name": "damm-finance",
+      "funds_usd": 266.88,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x4f96ab61520a6636331a48a11eafba8fb51f74e4"
+    },
+    {
+      "address": "0x118823514681353634ff95837939e783d85b18af",
+      "chain": "ethereum",
+      "contract_name": "damm-finance",
+      "funds_usd": 352.51,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x4f96ab61520a6636331a48a11eafba8fb51f74e4"
+    },
+    {
+      "address": "0xc42d8f3d791c107c458b2fea025a36669b51fc5f",
+      "chain": "ethereum",
+      "contract_name": "cream",
+      "funds_usd": 374.71,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0xbdc857eae1d15ad171e11af6fc3e99413ed57ec4"
+    },
+    {
+      "address": "0xf635fdf9b36b557bd281aa02fdfaebec04cd084a",
+      "chain": "ethereum",
+      "contract_name": "bao-markets",
+      "funds_usd": 394.66,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x0be1fdc1e87127c4fe7c05bae6437e3cf90bf8d8"
+    },
+    {
+      "address": "0x41f4766b0368f43d1312f63350635eb155040832",
+      "chain": "ethereum",
+      "contract_name": "minterest",
+      "funds_usd": 509.23,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0xd13f50274a68abf2384c79248adc259b3777c081"
+    },
+    {
+      "address": "0x7ecc1d6fc7f63b003de4391dfd4c78365e844e1d",
+      "chain": "ethereum",
+      "contract_name": "cozy",
+      "funds_usd": 600.06,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x895879b2c1fbb6ccfcd101f2d3f3c76363664f92"
+    },
+    {
+      "address": "0x19b3bde6f02fc2c985947dcc1dc2a4cddfd43ee8",
+      "chain": "ethereum",
+      "contract_name": "cream",
+      "funds_usd": 731.22,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0xbdc857eae1d15ad171e11af6fc3e99413ed57ec4"
+    },
+    {
+      "address": "0xaef3f76e426d2f0139eaecd19672dd9c9a3fc582",
+      "chain": "ethereum",
+      "contract_name": "cozy",
+      "funds_usd": 919.4,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x895879b2c1fbb6ccfcd101f2d3f3c76363664f92"
+    },
+    {
+      "address": "0x97f84825d16b32ca97afc1c8bf51ab1086bcff1f",
+      "chain": "ethereum",
+      "contract_name": "cozy",
+      "funds_usd": 925.3,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x895879b2c1fbb6ccfcd101f2d3f3c76363664f92"
+    },
+    {
+      "address": "0x9affb6d8568cefa2837d251b1553967430d1a5e5",
+      "chain": "ethereum",
+      "contract_name": "cozy",
+      "funds_usd": 1168.51,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x895879b2c1fbb6ccfcd101f2d3f3c76363664f92"
+    },
+    {
+      "address": "0x43647239ede197099b57bf72d0373f8049acfb0f",
+      "chain": "ethereum",
+      "contract_name": "cozy",
+      "funds_usd": 1378.03,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x895879b2c1fbb6ccfcd101f2d3f3c76363664f92"
+    },
+    {
+      "address": "0x65ca80f2373c4943c9f0f476cf53167261e3208b",
+      "chain": "ethereum",
+      "contract_name": "donkey",
+      "funds_usd": 1453.73,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x55e41bc3a99aa24e194d507517b1e8b65efdaa9e"
+    },
+    {
+      "address": "0x366a6c33ff4157b3759f5ca15af214d407aa4844",
+      "chain": "ethereum",
+      "contract_name": "donkey",
+      "funds_usd": 1582.77,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x55e41bc3a99aa24e194d507517b1e8b65efdaa9e"
+    },
+    {
+      "address": "0x913f50d0195e92bb76c453d61b969dc5d20afa3d",
+      "chain": "ethereum",
+      "contract_name": "cozy",
+      "funds_usd": 1704.0,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x895879b2c1fbb6ccfcd101f2d3f3c76363664f92"
+    },
+    {
+      "address": "0xd8add9b41d4e1cd64edad8722ab0ba8d35536657",
+      "chain": "ethereum",
+      "contract_name": "venus",
+      "funds_usd": 1972.01,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x687a01ecf6d3907658f7a7c714749fac32336d1b"
+    },
+    {
+      "address": "0x8ad4475d330926cc4387d3d1b0c80688e71bf310",
+      "chain": "ethereum",
+      "contract_name": "tonpound",
+      "funds_usd": 2013.71,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x1775286cbe9db126a95abf52c58a3214fca26803"
+    },
+    {
+      "address": "0x11581582aa816c8293e67c726af49fc2c8b98c6e",
+      "chain": "ethereum",
+      "contract_name": "cozy",
+      "funds_usd": 2702.55,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x895879b2c1fbb6ccfcd101f2d3f3c76363664f92"
+    },
+    {
+      "address": "0xe6ef65ec40d943c3f675165b0b17e06862fe3d82",
+      "chain": "ethereum",
+      "contract_name": "cozy",
+      "funds_usd": 4139.92,
+      "reason_class": "lending-underscanned",
+      "score": 44,
+      "peak_heat": 4,
+      "signals": [
+        "lending"
+      ],
+      "unverified": false,
+      "family": "",
+      "list": "compound-fork-getAllMarkets",
+      "source": "compound-fork-getAllMarkets:0x895879b2c1fbb6ccfcd101f2d3f3c76363664f92"
+    },
+    {
+      "address": "0x8c29c67fc6c2638db3b4497973595fc8eb0204cf",
+      "chain": "ethereum",
+      "contract_name": "youswap",
+      "funds_usd": 100.0,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xa7028337d3da1f04d638cc3b4dd09411486b49ea"
+    },
+    {
+      "address": "0x9db2836267c60e625bf61ff998a571128e8dc0b3",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 100.64,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0xbdb6677b8429d329cda862ebc2031e8083e90fab",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 101.96,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0xb8e2a981f878e6be597e4a0c187e2757b1322760",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 103.39,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xc63bebf8a5af8ca3c7913f90ae8dedc8a8505a2e",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 105.22,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xae06088ecb0e668db494ee64ae78af5e5b510797",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 106.42,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xe0f7a2b725ee756d0c3a3eeb6f04cd51d22a3454",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 106.54,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xd6be3b9780572f0215afb3e4d15751955503cebe",
+      "chain": "ethereum",
+      "contract_name": "luaswap",
+      "funds_usd": 106.99,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x0388c1e0f210abae597b7de712b9510c6c36c857"
+    },
+    {
+      "address": "0x83540501967b040d942badc61f89f736e509cae8",
+      "chain": "ethereum",
+      "contract_name": "supernova",
+      "funds_usd": 107.34,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x5aef44edfc5a7edd30826c724ea12d7be15bdc30"
+    },
+    {
+      "address": "0xfd8618765990a76dad18781b62a642874fac72ee",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 110.68,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x7efd2be9d23cb8a39f9526120441fdef5b31d736",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 114.01,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x51ded664624e7285dcd32d175bb43bf5b43f4454",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 114.4,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0xd26d052420e0fcc3e640243d7b9b57e0b28acf5f",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 114.43,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x603fe9a7987319219e44b33134fdf4b1c3b941b7",
+      "chain": "ethereum",
+      "contract_name": "minidex",
+      "funds_usd": 115.75,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x1e2c2102cf8efcaaaf20ffe926469ec7cd0d0f6e"
+    },
+    {
+      "address": "0x66e3992623785d58195b6a9bd45b6657a64a3fab",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 116.57,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x2a56926c32e040bc6db8493e1fd5c96a50e0faa7",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 118.18,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0xf830763552e7d6d46a37c2abb103d0f55ed0cfa9",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 118.57,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0xad31ff64f5db3def8166daece0b3e41d0dcce76c",
+      "chain": "ethereum",
+      "contract_name": "swipeswap",
+      "funds_usd": 119.06,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x8a93b6865c4492ff17252219b87ea6920848edc0"
+    },
+    {
+      "address": "0x4200901bea80abc54023c30b9fb1f7ac2c897f4a",
+      "chain": "ethereum",
+      "contract_name": "unicly",
+      "funds_usd": 119.62,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xbacc776b231c571a7e6ab7bc2c8a099e07153377"
+    },
+    {
+      "address": "0x9b0a330333be460132a9f3c29a69eb21d4a22a5e",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 122.17,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x79bcd8d7003ca27bc4d53d07d3df3847336ee670",
+      "chain": "ethereum",
+      "contract_name": "MotoSwap",
+      "funds_usd": 122.55,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x81c9cbc47d700da1777abd831d8da3f526dfae24"
+    },
+    {
+      "address": "0xa610313e19f3dcc58254ef24b0d002ee91225387",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 122.67,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xd94e796cf6d4b3a0ad3a3dbdfb9e30036ec1cb4a",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 123.54,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xe4e0e70aafb0fe46634069f5adee92d30cc7cb81",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 123.78,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0xeaeb52ec6a629336b8dcfe022e6306831aa0619c",
+      "chain": "ethereum",
+      "contract_name": "minidex",
+      "funds_usd": 127.8,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x1e2c2102cf8efcaaaf20ffe926469ec7cd0d0f6e"
+    },
+    {
+      "address": "0x59f7a66a2fbcaf203cee71359b51142238f85b78",
+      "chain": "ethereum",
+      "contract_name": "defi-swap",
+      "funds_usd": 128.56,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9deb29c9a4c7a88a3c0257393b7f3335338d9a9d"
+    },
+    {
+      "address": "0xd0a9c569342da0d52ca409c5cf1eac19635de728",
+      "chain": "ethereum",
+      "contract_name": "versedex",
+      "funds_usd": 129.71,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xee3e9e46e34a27dc755a63e2849c9913ee1a06e2"
+    },
+    {
+      "address": "0x611cbd6744fa310a1a75fad66261b90305e998e1",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 132.15,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x9ea468e0ffc6a6dbfc6c81e81efe15719fd88b67",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 132.29,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x64ad70b217b98fd5fa0430fa134c54f9dfd69b9a",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 133.72,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x25aa1a25fefff1a2640b066cf7751e7d90b8c27c",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 134.58,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0xfa08fa948bd2ac1bf11d6687d7e81819d7a484dc",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 135.06,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x4b7990e743a0237fb5c2f0cf4083e7b15c43a09f",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 135.59,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x2fe16dd18bba26e457b7dd2080d5674312b026a2",
+      "chain": "ethereum",
+      "contract_name": "integral",
+      "funds_usd": 136.9,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xc480b33ee5229de3fbdfad1d2dcd3f3bad0c56c6"
+    },
+    {
+      "address": "0x3087967c5a28f8a83c0b8261808b28512a5da2ce",
+      "chain": "ethereum",
+      "contract_name": "defi-swap",
+      "funds_usd": 139.91,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9deb29c9a4c7a88a3c0257393b7f3335338d9a9d"
+    },
+    {
+      "address": "0xf1f00b3c234bbf09d6ef35bb274ad6da6e300582",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 141.75,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x811558bf214fea2eebe750b54dd9783db262045a",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 143.57,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x7bd34c4a2d893e8771fa8338f975984b48196b59",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 144.75,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x5819e84f30d41454c0e9d6b5f04a7603c720c9bf",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 146.96,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x27a0c7e1d6051c334d1e80ef6f521aa38eb0a448",
+      "chain": "ethereum",
+      "contract_name": "versedex",
+      "funds_usd": 147.88,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xee3e9e46e34a27dc755a63e2849c9913ee1a06e2"
+    },
+    {
+      "address": "0x29c100633da99703a75d1a4799efc94112509d6a",
+      "chain": "ethereum",
+      "contract_name": "defi-swap",
+      "funds_usd": 148.44,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9deb29c9a4c7a88a3c0257393b7f3335338d9a9d"
+    },
+    {
+      "address": "0xea86f2362a91ad9f725934fe33aa1ab24775fa0a",
+      "chain": "ethereum",
+      "contract_name": "minidex",
+      "funds_usd": 149.86,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x1e2c2102cf8efcaaaf20ffe926469ec7cd0d0f6e"
+    },
+    {
+      "address": "0x422ad1293bbddc1b1465781e28530ff78119dc38",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 157.83,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xaa350b5e696b21e1a5a35378b5ca6440926f8985",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 158.73,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xd694cad4f40bef311301a1ca8376665bc426c8f1",
+      "chain": "ethereum",
+      "contract_name": "supernova",
+      "funds_usd": 161.49,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x5aef44edfc5a7edd30826c724ea12d7be15bdc30"
+    },
+    {
+      "address": "0xc5bd38c4a7339818c6a0ee8f053a52ba56a663d6",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 164.46,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x7a44d56ba0ce8bb5f0359c473b6b637db1ff216b",
+      "chain": "ethereum",
+      "contract_name": "swapr",
+      "funds_usd": 164.81,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xd34971bab6e5e356fd250715f5de0492bb070452"
+    },
+    {
+      "address": "0x6ff14236858f3cea952376b847170adc4a9ae44f",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 169.93,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0xb42d590eb1e21b254ac678ebd78cba85ce9ae83b",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 171.28,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x8b1d9ef2bf469701c8953825f214ad5a0814b38f",
+      "chain": "ethereum",
+      "contract_name": "unicly",
+      "funds_usd": 173.5,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xbacc776b231c571a7e6ab7bc2c8a099e07153377"
+    },
+    {
+      "address": "0x7ba8b798ac0f8a2bfe7f912a54e34dca764c316e",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 176.14,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0xf1d46b96dc29757780077cad731407e161259367",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 176.73,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x3f051df334f3b8d8aa70cc5374379f36a64f4b70",
+      "chain": "ethereum",
+      "contract_name": "unicly",
+      "funds_usd": 177.05,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xbacc776b231c571a7e6ab7bc2c8a099e07153377"
+    },
+    {
+      "address": "0x8bfc29fc5675be9d6a11dee5b6c0c8f927802281",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 177.33,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x1cf74bebb1974ecd077a308e07b5ef012a49aa98",
+      "chain": "ethereum",
+      "contract_name": "unicly",
+      "funds_usd": 181.7,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xbacc776b231c571a7e6ab7bc2c8a099e07153377"
+    },
+    {
+      "address": "0x3bc6b9602568c1088a29a888f9661f57757e349f",
+      "chain": "ethereum",
+      "contract_name": "unicly",
+      "funds_usd": 183.55,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xbacc776b231c571a7e6ab7bc2c8a099e07153377"
+    },
+    {
+      "address": "0x2625f07613120f12c256dfa195a8f7094568e2c3",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 186.88,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x98f29f527c8e0ecc67a3c2d5567833bee01f2a12",
+      "chain": "ethereum",
+      "contract_name": "swapr",
+      "funds_usd": 196.6,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xd34971bab6e5e356fd250715f5de0492bb070452"
+    },
+    {
+      "address": "0xc90f34061af7a81b25e4a1f83fc99cf5ea2d83a4",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 198.52,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x1a2eaaeb59908d7b5be401fca12ba14330f43887",
+      "chain": "ethereum",
+      "contract_name": "youswap",
+      "funds_usd": 200.0,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xa7028337d3da1f04d638cc3b4dd09411486b49ea"
+    },
+    {
+      "address": "0x48187e512f5338f06222ac574576744129736efd",
+      "chain": "ethereum",
+      "contract_name": "solidly-v2",
+      "funds_usd": 201.97,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x777de5fe8117caaa7b44f396e93a401cf5c9d4d6"
+    },
+    {
+      "address": "0x45ecadc95216a3dab2bd37defde2ca805dfac277",
+      "chain": "ethereum",
+      "contract_name": "bxh",
+      "funds_usd": 203.71,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x8d0fca60fdf50cfe65e3e667a37ff3010d6d1e8d"
+    },
+    {
+      "address": "0x2c3bd1277ea42c4ed594211493898bae52281a2c",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 204.05,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x556ee2fa5314bd309cb06e46a7359a0287a4950c",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 210.38,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x3187feb2bf79fce819c6fc9d62597a638163c30f",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 214.93,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xcdb49866c473bfd0a4dbf64e48d7db2cd31796df",
+      "chain": "ethereum",
+      "contract_name": "minidex",
+      "funds_usd": 218.61,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x1e2c2102cf8efcaaaf20ffe926469ec7cd0d0f6e"
+    },
+    {
+      "address": "0x4ae12cf3aef260bbb763c08669e2afd0e98bdf84",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 219.62,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0xdc806458b80c608870b9621604199dc4c0f6a470",
+      "chain": "ethereum",
+      "contract_name": "unicly",
+      "funds_usd": 220.1,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xbacc776b231c571a7e6ab7bc2c8a099e07153377"
+    },
+    {
+      "address": "0xb7a12d87775a9bc496f7baa88966e414bfffabe8",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 221.65,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x3cbc144eb04916fb3ac8b6a3ffb39cdfdea23437",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 223.26,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x21bce45d6bb49520fec91e1e1e6650834748e7ea",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 225.93,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x457aa8fa9ba75337f50fc5ee719fcda152092330",
+      "chain": "ethereum",
+      "contract_name": "justmoney",
+      "funds_usd": 227.52,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xd36aba9ec96523b0a89886c76065852adfe2eb39"
+    },
+    {
+      "address": "0x42bf7367d96afeeecdb6209c8a6573ce6d55b511",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 235.83,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xc044b084e3fbf5179a14b1af382c85f6f4c2202d",
+      "chain": "ethereum",
+      "contract_name": "bullionFX",
+      "funds_usd": 236.08,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x5e7cfe3db397d3df3f516d79a072f4c2ae5f39bb"
+    },
+    {
+      "address": "0x5a85b27b56f428d58f40b389fbbd7b95a33f253d",
+      "chain": "ethereum",
+      "contract_name": "saitaswap",
+      "funds_usd": 236.56,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x35113a300ca0d7621374890abfeac30e88f214b1"
+    },
+    {
+      "address": "0xaf075507f9b503b9c5860f6510b157a3682df9df",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 236.56,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x030725ba5feadd41de3a6f5132b004144a6b8b01",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 239.26,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0xb9b4e543020439b88532fff21fa18775256a58ac",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 245.33,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xb10c1840f562f0ac914da2bad3290833c75fdddf",
+      "chain": "ethereum",
+      "contract_name": "luaswap",
+      "funds_usd": 247.47,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x0388c1e0f210abae597b7de712b9510c6c36c857"
+    },
+    {
+      "address": "0x4811c9384bc8447945806a2319159054b228fda7",
+      "chain": "ethereum",
+      "contract_name": "defi-swap",
+      "funds_usd": 253.34,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9deb29c9a4c7a88a3c0257393b7f3335338d9a9d"
+    },
+    {
+      "address": "0xacefce78e31332cf2d1b9e770d609c31d26afc09",
+      "chain": "ethereum",
+      "contract_name": "minidex",
+      "funds_usd": 258.12,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x1e2c2102cf8efcaaaf20ffe926469ec7cd0d0f6e"
+    },
+    {
+      "address": "0x79aec2604855d6eddc26dd558ec9a91a630b2997",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 266.82,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xf5e4b5f58703582ad142b15e6c303dbb3cf7de8a",
+      "chain": "ethereum",
+      "contract_name": "solidly-v2",
+      "funds_usd": 272.62,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x777de5fe8117caaa7b44f396e93a401cf5c9d4d6"
+    },
+    {
+      "address": "0x2e4405dc1317e7d1cbfdb0b2073d3662b5da13db",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 273.07,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xdf38cd2363df744c9e6c5def59b6a2ff6a1f4d10",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 274.47,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x97f088b0175a7319059d8e705286aa035077d624",
+      "chain": "ethereum",
+      "contract_name": "solidly-v2",
+      "funds_usd": 274.5,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x777de5fe8117caaa7b44f396e93a401cf5c9d4d6"
+    },
+    {
+      "address": "0xe65299b3e494022fea6b34525ac795a28a32ce43",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 286.07,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x5a89feea78872d7a10dda3ddb95ce7a05b99081a",
+      "chain": "ethereum",
+      "contract_name": "versedex",
+      "funds_usd": 286.21,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xee3e9e46e34a27dc755a63e2849c9913ee1a06e2"
+    },
+    {
+      "address": "0xd0922ddbf6ce8332f680b2d4fdaa0722126ed2f7",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 292.73,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x0124634e7a6325babbbe39fed7d7f9a6bce2c88f",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 297.1,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x2a0dc9ca8062721b87bfc3e39b8f360bfc1181a3",
+      "chain": "ethereum",
+      "contract_name": "minidex",
+      "funds_usd": 301.09,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x1e2c2102cf8efcaaaf20ffe926469ec7cd0d0f6e"
+    },
+    {
+      "address": "0xe0427a927929abd3cfb017b7844550d4bf147e50",
+      "chain": "ethereum",
+      "contract_name": "Kwikswap",
+      "funds_usd": 302.55,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xdd9efcbdf9f422e2fc159efe77add3730d48056d"
+    },
+    {
+      "address": "0xd2fc04d2c34e868bb0bc65be5a5daaf2a7a7b64f",
+      "chain": "ethereum",
+      "contract_name": "minidex",
+      "funds_usd": 303.17,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x1e2c2102cf8efcaaaf20ffe926469ec7cd0d0f6e"
+    },
+    {
+      "address": "0xb76f3bf5f1d669f931064a2a84aa5499232b00e1",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 304.31,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x59c6e1059c904b192b883c5f7e42b347e8833216",
+      "chain": "ethereum",
+      "contract_name": "bamboodefi",
+      "funds_usd": 305.98,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x3823ac41b77e51bf0e6536ce465479cbdedcaea9"
+    },
+    {
+      "address": "0xd2ff8e592e09dccb2d27ed91a8e023ee3c4d00fc",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 307.57,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x17f780b6b93f26d2760d17b3fa6207dba49f8c6c",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 311.25,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x07094c3d05525392ba1e2f532a4af6f4d14bdb0c",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 315.53,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x85323e31bca3a8da8c5307671dde878c4bbcdd36",
+      "chain": "ethereum",
+      "contract_name": "capitaldex",
+      "funds_usd": 316.33,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x03407772f5ebfb9b10df007a2dd6fff4ede47b53"
+    },
+    {
+      "address": "0xe92cc0e5db597066b3c26016b2fb32830401a31a",
+      "chain": "ethereum",
+      "contract_name": "ElkFinance",
+      "funds_usd": 317.08,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x6511eba915fc1b94b2364289cca2b27ae5898d80"
+    },
+    {
+      "address": "0x50d3f135681304feef9f80d1d03404e2a0707e82",
+      "chain": "ethereum",
+      "contract_name": "minidex",
+      "funds_usd": 318.1,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x1e2c2102cf8efcaaaf20ffe926469ec7cd0d0f6e"
+    },
+    {
+      "address": "0xfa2048b1008039ca629747353791baef47e25456",
+      "chain": "ethereum",
+      "contract_name": "ElkFinance",
+      "funds_usd": 322.75,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x6511eba915fc1b94b2364289cca2b27ae5898d80"
+    },
+    {
+      "address": "0x1f61a49589865dbdd8ea798b3ccbaee4c5c5f2f7",
+      "chain": "ethereum",
+      "contract_name": "unicly",
+      "funds_usd": 334.92,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xbacc776b231c571a7e6ab7bc2c8a099e07153377"
+    },
+    {
+      "address": "0x509a06592cd945b1fe9819fe5241173790ce6ecf",
+      "chain": "ethereum",
+      "contract_name": "saitaswap",
+      "funds_usd": 335.77,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x35113a300ca0d7621374890abfeac30e88f214b1"
+    },
+    {
+      "address": "0x6e7ae922140efed0c7dbc9066b50b9f933fd755a",
+      "chain": "ethereum",
+      "contract_name": "swipeswap",
+      "funds_usd": 336.86,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x8a93b6865c4492ff17252219b87ea6920848edc0"
+    },
+    {
+      "address": "0x3418d20cd7609680c47634c48dd33181e0ba03db",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 342.18,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x9cd2a3d4adeec326704097ac5b2687b2cb46a2ad",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 343.25,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x27c5966d8ce3b3cdda5aba645d0bbd9410cf57c6",
+      "chain": "ethereum",
+      "contract_name": "minidex",
+      "funds_usd": 345.88,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x1e2c2102cf8efcaaaf20ffe926469ec7cd0d0f6e"
+    },
+    {
+      "address": "0x6cd34dcc0fca7fa7d2ada313e9bb965f74f81da2",
+      "chain": "ethereum",
+      "contract_name": "unicly",
+      "funds_usd": 348.03,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xbacc776b231c571a7e6ab7bc2c8a099e07153377"
+    },
+    {
+      "address": "0xfeea92041bcc1c00f5934663955a6825e1a297b0",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 348.38,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x63d3afecaf08a5b50a91565a60f5a7c52f498971",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 351.77,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x6f5716df72ce3902d7e0a48cab46261d2e2bad93",
+      "chain": "ethereum",
+      "contract_name": "cypher-v2",
+      "funds_usd": 363.83,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xcc8e4c2998395e56d06d985ba791138edf48a8d4"
+    },
+    {
+      "address": "0xd4d2140ed70dcf8794a986f0cfd07560ee738c71",
+      "chain": "ethereum",
+      "contract_name": "integral",
+      "funds_usd": 367.8,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xc480b33ee5229de3fbdfad1d2dcd3f3bad0c56c6"
+    },
+    {
+      "address": "0xfc789fc17368c2b66709efe09c0aa76dc2c131d3",
+      "chain": "ethereum",
+      "contract_name": "standard-tech",
+      "funds_usd": 368.98,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x53ac1d1fa4f9f6c604b8b198ce29a50d28cba893"
+    },
+    {
+      "address": "0x8fd90ebcd1b0e783fd313a2ffdc4149f269f7236",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 387.19,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x54bfd4fa6dde7ce96140728b126af72702e4b354",
+      "chain": "ethereum",
+      "contract_name": "justmoney",
+      "funds_usd": 388.24,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xd36aba9ec96523b0a89886c76065852adfe2eb39"
+    },
+    {
+      "address": "0x5e3065381788c7a1ee323c2d3e1b73c872976e72",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 388.65,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x8e5fb73900b9093c9f51d2032e6aba4ae378476e",
+      "chain": "ethereum",
+      "contract_name": "unicly",
+      "funds_usd": 389.65,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xbacc776b231c571a7e6ab7bc2c8a099e07153377"
+    },
+    {
+      "address": "0x4956bfbeb99b825ae3720e135bee6ee9a1b3902e",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 391.81,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x1a98aae831759efa5a36f78336defa156957bc07",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 394.94,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x53b7420c59a4721ce621283f137e2eadff26fa3d",
+      "chain": "ethereum",
+      "contract_name": "swipeswap",
+      "funds_usd": 398.41,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x8a93b6865c4492ff17252219b87ea6920848edc0"
+    },
+    {
+      "address": "0x6a0a4110504e992a45a88b4666125eb0dd183e72",
+      "chain": "ethereum",
+      "contract_name": "supernova",
+      "funds_usd": 400.82,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x5aef44edfc5a7edd30826c724ea12d7be15bdc30"
+    },
+    {
+      "address": "0xd14399e7f42822dea1aa9318de453b3356122532",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 401.77,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x9f12f4b11056f4adddf08e8f56aa227010e464ac",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 407.4,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x7eaaf27ca935a2e448bbb400e3b37287eb6294eb",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 410.31,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0xdf8ef8a76c33b4f259bb72241a8697e307548c8b",
+      "chain": "ethereum",
+      "contract_name": "groveswap",
+      "funds_usd": 411.96,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x6c565c5bbdc7f023cae8a2495105a531caac6e54"
+    },
+    {
+      "address": "0xb49b4bc127889d64d73969f5a482d6306d3bc186",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 416.43,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x1914122308ccb9ff67f3b587ca59d230c6abdc25",
+      "chain": "ethereum",
+      "contract_name": "defi-swap",
+      "funds_usd": 419.05,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9deb29c9a4c7a88a3c0257393b7f3335338d9a9d"
+    },
+    {
+      "address": "0x50b2c07f0269ebf0e906feeea9d5c90c42d9fd24",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 431.78,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x656c36882a3d5fb1ba47fbeb3346033437a8c690",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 439.26,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x923347d1ec146e524ed8208f1be4820cfa95d6b0",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 443.92,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x4c568562039b3e70725eafcebbf91e7d3c9cdb76",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 445.02,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0xcd452c162da7761f08f656b8e5ede3a385981378",
+      "chain": "ethereum",
+      "contract_name": "solidly-v2",
+      "funds_usd": 448.73,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x777de5fe8117caaa7b44f396e93a401cf5c9d4d6"
+    },
+    {
+      "address": "0x5e8981ac03c349ecff06ad1b0fe70c2f573ac790",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 449.75,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x975a4ff7e35565f33fb9666ee7f08041d0569aee",
+      "chain": "ethereum",
+      "contract_name": "swipeswap",
+      "funds_usd": 465.14,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x8a93b6865c4492ff17252219b87ea6920848edc0"
+    },
+    {
+      "address": "0xee9d02cb7b1e983fe56d94bfe115879c0c50f40c",
+      "chain": "ethereum",
+      "contract_name": "MotoSwap",
+      "funds_usd": 468.77,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x81c9cbc47d700da1777abd831d8da3f526dfae24"
+    },
+    {
+      "address": "0xbb6d133d7f36705ea058cfd706082aa382f23de9",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 474.11,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xc0bf67bb0d2cfbca8615e45eaa947e796aca931b",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 490.51,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x447a8103596af3ad1ed8dcdff53b1dd599264cd6",
+      "chain": "ethereum",
+      "contract_name": "ElkFinance",
+      "funds_usd": 491.03,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x6511eba915fc1b94b2364289cca2b27ae5898d80"
+    },
+    {
+      "address": "0x35e9c7f45b9cbafa6c294bfcc591aab39cbfa44c",
+      "chain": "ethereum",
+      "contract_name": "MotoSwap",
+      "funds_usd": 494.81,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x81c9cbc47d700da1777abd831d8da3f526dfae24"
+    },
+    {
+      "address": "0xd4a07ab7d094aa7ae102f1b285b852b8d0f424b8",
+      "chain": "ethereum",
+      "contract_name": "bxh",
+      "funds_usd": 496.73,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x8d0fca60fdf50cfe65e3e667a37ff3010d6d1e8d"
+    },
+    {
+      "address": "0x43f0e5f2304f261dfa5359a0b74ff030e498d904",
+      "chain": "ethereum",
+      "contract_name": "integral",
+      "funds_usd": 505.75,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xc480b33ee5229de3fbdfad1d2dcd3f3bad0c56c6"
+    },
+    {
+      "address": "0x1c66d959688ced0d47cfb943db0c12f4a7e9f594",
+      "chain": "ethereum",
+      "contract_name": "unicly",
+      "funds_usd": 509.79,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xbacc776b231c571a7e6ab7bc2c8a099e07153377"
+    },
+    {
+      "address": "0x1bcd6b0e97b51d76fd1752111a1fe2b473f655ee",
+      "chain": "ethereum",
+      "contract_name": "swipeswap",
+      "funds_usd": 517.98,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x8a93b6865c4492ff17252219b87ea6920848edc0"
+    },
+    {
+      "address": "0xbd504d0a4b16a77e531722c3aea770161347dea7",
+      "chain": "ethereum",
+      "contract_name": "akronswap",
+      "funds_usd": 524.81,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xaf39606bec181887951ab6912ac7ea216bd6e4b4"
+    },
+    {
+      "address": "0x97d9877ff71e514864f7bfc37abda73d13245f55",
+      "chain": "ethereum",
+      "contract_name": "defi-swap",
+      "funds_usd": 529.63,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9deb29c9a4c7a88a3c0257393b7f3335338d9a9d"
+    },
+    {
+      "address": "0x844146b6a5318cacbc059505a42ff5f21afe9fa1",
+      "chain": "ethereum",
+      "contract_name": "saitaswap",
+      "funds_usd": 540.9,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x35113a300ca0d7621374890abfeac30e88f214b1"
+    },
+    {
+      "address": "0x8d5a1dcdc0fb93de2103977b1ffeacb16066025b",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 550.25,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xa36af59353067a60f76f301611dd21b9f135c551",
+      "chain": "ethereum",
+      "contract_name": "MotoSwap",
+      "funds_usd": 560.55,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x81c9cbc47d700da1777abd831d8da3f526dfae24"
+    },
+    {
+      "address": "0x08d0b9aa7121f5b70f1109ebd4b04b18a6322fc7",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 573.93,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x1c8edca101c30d85e1ce32f354e27f5cabafe466",
+      "chain": "ethereum",
+      "contract_name": "bamboodefi",
+      "funds_usd": 575.34,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x3823ac41b77e51bf0e6536ce465479cbdedcaea9"
+    },
+    {
+      "address": "0xf3033c8d381f16d9d466b0517e6ccced0f493fb6",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 577.64,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x9de898825f7f851694e4c93d7f233b35787c99a7",
+      "chain": "ethereum",
+      "contract_name": "empiredex",
+      "funds_usd": 586.29,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xd674b01e778cf43d3e6544985f893355f46a74a5"
+    },
+    {
+      "address": "0xa47b332014b332194616057f0fd82cf1152c74e1",
+      "chain": "ethereum",
+      "contract_name": "MotoSwap",
+      "funds_usd": 601.63,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x81c9cbc47d700da1777abd831d8da3f526dfae24"
+    },
+    {
+      "address": "0x8380f233ff5553f536d9e204de735ba8ca10e556",
+      "chain": "ethereum",
+      "contract_name": "empiredex",
+      "funds_usd": 616.18,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xd674b01e778cf43d3e6544985f893355f46a74a5"
+    },
+    {
+      "address": "0x18f5e1a28cdc4bad5d19380dc717641eab1f53f1",
+      "chain": "ethereum",
+      "contract_name": "defi-swap",
+      "funds_usd": 623.21,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9deb29c9a4c7a88a3c0257393b7f3335338d9a9d"
+    },
+    {
+      "address": "0x7885e359a085372ebcf1ed6829402f149d02c600",
+      "chain": "ethereum",
+      "contract_name": "luaswap",
+      "funds_usd": 628.21,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x0388c1e0f210abae597b7de712b9510c6c36c857"
+    },
+    {
+      "address": "0xe3b07bc14a3c96e55f474492f1c1c3324cb9ccfe",
+      "chain": "ethereum",
+      "contract_name": "supernova",
+      "funds_usd": 633.89,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x5aef44edfc5a7edd30826c724ea12d7be15bdc30"
+    },
+    {
+      "address": "0x338eabfa7775793b0a9d01e96b21bb334a39e451",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 638.74,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x4b5cd5807c6819cf9e83f79d979781460a13f16e",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 645.04,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x41e1633719d5c1df86888f1e1a8d8d32202b6d27",
+      "chain": "ethereum",
+      "contract_name": "swipeswap",
+      "funds_usd": 665.63,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x8a93b6865c4492ff17252219b87ea6920848edc0"
+    },
+    {
+      "address": "0x36df698fb1e4c072a9c85e9848edd9c4c96dd194",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 681.98,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x9467a2d9c07cebce3708ca32eeb2b9219aeb31b8",
+      "chain": "ethereum",
+      "contract_name": "saitaswap",
+      "funds_usd": 711.34,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x35113a300ca0d7621374890abfeac30e88f214b1"
+    },
+    {
+      "address": "0x43d4f85a793f7354966b5a6199b3909fabe50fac",
+      "chain": "ethereum",
+      "contract_name": "defi-swap",
+      "funds_usd": 717.38,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9deb29c9a4c7a88a3c0257393b7f3335338d9a9d"
+    },
+    {
+      "address": "0xdb6655a7050ae52caaae5cf3d36098129a5e16f1",
+      "chain": "ethereum",
+      "contract_name": "supernova",
+      "funds_usd": 718.52,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x5aef44edfc5a7edd30826c724ea12d7be15bdc30"
+    },
+    {
+      "address": "0x2574c142f25a0111e73dbf46c838646759ba1a6e",
+      "chain": "ethereum",
+      "contract_name": "cypher-v2",
+      "funds_usd": 719.93,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xcc8e4c2998395e56d06d985ba791138edf48a8d4"
+    },
+    {
+      "address": "0x1aed31e03c0a3ff7a6c841f0de45838e09176fd4",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 749.52,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xa2f91b69db309d23e09783cad5fb1402dff5b37e",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 780.86,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xd75e77026b998a62c80b93fcf71aef1255d2b0ec",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 783.92,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xb2924b0a238976d231c361a64a885e61b1006d15",
+      "chain": "ethereum",
+      "contract_name": "MotoSwap",
+      "funds_usd": 785.5,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x81c9cbc47d700da1777abd831d8da3f526dfae24"
+    },
+    {
+      "address": "0x1b1753b114874481f8bcedb65f2c9f76470fc875",
+      "chain": "ethereum",
+      "contract_name": "pepedex",
+      "funds_usd": 787.55,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x460b2005b3318982feada99f7ebf13e1d6f6effe"
+    },
+    {
+      "address": "0x6d2a35e903f95a8aca302de7688d12e26f1a08d8",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 795.89,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x65fabaf7e6c5380243e063d8559d84e589db6438",
+      "chain": "ethereum",
+      "contract_name": "luaswap",
+      "funds_usd": 801.05,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x0388c1e0f210abae597b7de712b9510c6c36c857"
+    },
+    {
+      "address": "0x02328931f7fb70098021a4446cea73936f41cef8",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 802.48,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x5572e5e8119b6b747f286f3b63082a64f8b24856",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 821.96,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x75b181849a7ecf684f62fcc929236765f5efb0ec",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 835.84,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x7ac1a76f4570661543149a04c4be34d8e8deb11c",
+      "chain": "ethereum",
+      "contract_name": "tamaswap",
+      "funds_usd": 880.02,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x00000021543ed46b665a74484c82b71e4eb61e34"
+    },
+    {
+      "address": "0x8784a0f6d01a9fe3b1b6e803ceaa7549c655b580",
+      "chain": "ethereum",
+      "contract_name": "standard-tech",
+      "funds_usd": 882.49,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x53ac1d1fa4f9f6c604b8b198ce29a50d28cba893"
+    },
+    {
+      "address": "0x8875535944d6728e0439657671b1d5c060fc75fa",
+      "chain": "ethereum",
+      "contract_name": "unicly",
+      "funds_usd": 939.3,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xbacc776b231c571a7e6ab7bc2c8a099e07153377"
+    },
+    {
+      "address": "0xb591d863c458a6fb1a498a51964b1195f5f5c4c9",
+      "chain": "ethereum",
+      "contract_name": "sumswap",
+      "funds_usd": 951.87,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x96ff042f8c6757fce515d171f194b5816cafee11"
+    },
+    {
+      "address": "0xe5c4bd4c562ac9df1b33ffbccd2341981a462825",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 979.69,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x682831244b0e97946abc52cb1893cce398de3a35",
+      "chain": "ethereum",
+      "contract_name": "versedex",
+      "funds_usd": 983.18,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xee3e9e46e34a27dc755a63e2849c9913ee1a06e2"
+    },
+    {
+      "address": "0xae933d0a8d630e30a2e035284e35f232f4590e33",
+      "chain": "ethereum",
+      "contract_name": "Kwikswap",
+      "funds_usd": 987.94,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xdd9efcbdf9f422e2fc159efe77add3730d48056d"
+    },
+    {
+      "address": "0xa27e5775317f3f301b5b08babcde0a20feae7f09",
+      "chain": "ethereum",
+      "contract_name": "ElkFinance",
+      "funds_usd": 994.33,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x6511eba915fc1b94b2364289cca2b27ae5898d80"
+    },
+    {
+      "address": "0x9909d09656fce21d1904f662b99382b887a9c5da",
+      "chain": "ethereum",
+      "contract_name": "defi-swap",
+      "funds_usd": 1020.48,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9deb29c9a4c7a88a3c0257393b7f3335338d9a9d"
+    },
+    {
+      "address": "0x2a529766847129f8cc13cebc6b7dfe89ee49d55c",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 1034.32,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x71cb6c7d2179ae0fb6d32f3484fa9e225e47d15e",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 1082.0,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x0f671104e68b9f56c29a2ba4a22288c6499d71ab",
+      "chain": "ethereum",
+      "contract_name": "solidly-v2",
+      "funds_usd": 1136.42,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x777de5fe8117caaa7b44f396e93a401cf5c9d4d6"
+    },
+    {
+      "address": "0x559fe81784cc80acdd3e1ae5b2a8d5b7a8120f76",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 1137.06,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x6c327fa5c54043f419b798148429b4fdbd207d10",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 1148.96,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x7a019e9f33af312b5e5c6b065fbc733ccaa09f39",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 1163.62,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x79c860158366dd5c977fb4a5eaea16aa93a13479",
+      "chain": "ethereum",
+      "contract_name": "Kwikswap",
+      "funds_usd": 1171.07,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xdd9efcbdf9f422e2fc159efe77add3730d48056d"
+    },
+    {
+      "address": "0xb41136cfd8860b5680c7f58f667572584ffa566c",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 1172.78,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xbc96b7890bb0131703cf0382732f02ff3dfd206c",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 1189.55,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x9d7d2e2c67ef21a0d3ee5b309d417d0ff601392f",
+      "chain": "ethereum",
+      "contract_name": "minidex",
+      "funds_usd": 1209.92,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x1e2c2102cf8efcaaaf20ffe926469ec7cd0d0f6e"
+    },
+    {
+      "address": "0x829080c535559f165e4f32a5edb9be28aea6eb3c",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 1213.82,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x12a132927a47e8ea1535f491061bc6cbe460c46b",
+      "chain": "ethereum",
+      "contract_name": "youswap",
+      "funds_usd": 1216.09,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xa7028337d3da1f04d638cc3b4dd09411486b49ea"
+    },
+    {
+      "address": "0xd9b908363f10530d16bb6162e04d8de66920dda5",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 1230.88,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x87f006e8356ea8214896a41b829b72169f1723d9",
+      "chain": "ethereum",
+      "contract_name": "justmoney",
+      "funds_usd": 1261.93,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xd36aba9ec96523b0a89886c76065852adfe2eb39"
+    },
+    {
+      "address": "0xe46e4af11fd00d881fcccfbfe2d6b78612c48337",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 1339.0,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x54c4c936911dcd4755f6007987c50b4cdb448174",
+      "chain": "ethereum",
+      "contract_name": "pepedex",
+      "funds_usd": 1351.96,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x460b2005b3318982feada99f7ebf13e1d6f6effe"
+    },
+    {
+      "address": "0x64a35e5b8bc5d3f2dd43d1d2c5c26d2e57d86bbe",
+      "chain": "ethereum",
+      "contract_name": "youswap",
+      "funds_usd": 1450.35,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xa7028337d3da1f04d638cc3b4dd09411486b49ea"
+    },
+    {
+      "address": "0x642431623ae5d73c19fc931aaea0d4677303880c",
+      "chain": "ethereum",
+      "contract_name": "solidly-v2",
+      "funds_usd": 1450.97,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x777de5fe8117caaa7b44f396e93a401cf5c9d4d6"
+    },
+    {
+      "address": "0xd5a547f21c2d76667c239e14f1fe65a5d9fd5d50",
+      "chain": "ethereum",
+      "contract_name": "convergence",
+      "funds_usd": 1548.65,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x4eef5746ed22a2fd368629c1852365bf5dcb79f1"
+    },
+    {
+      "address": "0xa856139af24e63cc24d888728cd5eef574601374",
+      "chain": "ethereum",
+      "contract_name": "defi-swap",
+      "funds_usd": 1596.84,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9deb29c9a4c7a88a3c0257393b7f3335338d9a9d"
+    },
+    {
+      "address": "0x843fdc30d42c7561503aaa040556051b892a32e7",
+      "chain": "ethereum",
+      "contract_name": "unicly",
+      "funds_usd": 1626.83,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xbacc776b231c571a7e6ab7bc2c8a099e07153377"
+    },
+    {
+      "address": "0x2f62a3f785d23be0d03bcf34821fc0619ae53910",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 1640.28,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x106293047d8263f86e4e3550bb44d4e5455e7e89",
+      "chain": "ethereum",
+      "contract_name": "justmoney",
+      "funds_usd": 1675.73,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xd36aba9ec96523b0a89886c76065852adfe2eb39"
+    },
+    {
+      "address": "0x9e2ad5024b4955f38287c076ae113857ece02d27",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 1703.31,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x48736fd9f1e70696259c8d3f83f25d3c795e0897",
+      "chain": "ethereum",
+      "contract_name": "unicly",
+      "funds_usd": 1750.51,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xbacc776b231c571a7e6ab7bc2c8a099e07153377"
+    },
+    {
+      "address": "0xec3bb25709b042bdcddaee8a50cd13ee41feed85",
+      "chain": "ethereum",
+      "contract_name": "unicly",
+      "funds_usd": 1820.26,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xbacc776b231c571a7e6ab7bc2c8a099e07153377"
+    },
+    {
+      "address": "0x294fff8fbfe37da6ffd410b4ca370b92ae853a9b",
+      "chain": "ethereum",
+      "contract_name": "versedex",
+      "funds_usd": 1916.34,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xee3e9e46e34a27dc755a63e2849c9913ee1a06e2"
+    },
+    {
+      "address": "0xf5438e9711e6332f4b1926d6750a65704a65c75b",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 2037.0,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x0d70947cd19df8c67e6bbec9c7e21ec54df61c0f",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 2050.13,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x6491f4cf9c084ef8fc055eaaf735bdceccf69370",
+      "chain": "ethereum",
+      "contract_name": "defi-swap",
+      "funds_usd": 2173.1,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9deb29c9a4c7a88a3c0257393b7f3335338d9a9d"
+    },
+    {
+      "address": "0xcfd23ba4f3ac68b484e26cb7aa275e48dab7a93c",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 2179.49,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x5716d2cbf2f44b5b9e3ed7b7a6eb58ce5996f318",
+      "chain": "ethereum",
+      "contract_name": "saitaswap",
+      "funds_usd": 2207.03,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x35113a300ca0d7621374890abfeac30e88f214b1"
+    },
+    {
+      "address": "0x6cbefa95e42960e579c2a3058c05c6a08e2498e9",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 2211.08,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xd426817f86f318f625deb1adf6c553f5f7cf6d8d",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 2246.4,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0xf3f82bc165a83425e81b8f2858d786e41ab21671",
+      "chain": "ethereum",
+      "contract_name": "versedex",
+      "funds_usd": 2274.58,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xee3e9e46e34a27dc755a63e2849c9913ee1a06e2"
+    },
+    {
+      "address": "0xe2ca82f662fd7eadec92541af83456bae88dc166",
+      "chain": "ethereum",
+      "contract_name": "minidex",
+      "funds_usd": 2345.01,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x1e2c2102cf8efcaaaf20ffe926469ec7cd0d0f6e"
+    },
+    {
+      "address": "0x9b7e74b56400eeb15f9760c847ccc678f7223f70",
+      "chain": "ethereum",
+      "contract_name": "unicly",
+      "funds_usd": 2366.47,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xbacc776b231c571a7e6ab7bc2c8a099e07153377"
+    },
+    {
+      "address": "0x970cf9b7346fbaea0588f03356a104100eb675e2",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 2368.83,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x163b890f4892d593945579028ec44ef0f20a4633",
+      "chain": "ethereum",
+      "contract_name": "empiredex",
+      "funds_usd": 2410.36,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xd674b01e778cf43d3e6544985f893355f46a74a5"
+    },
+    {
+      "address": "0xfc7b7cda3b9491b9e08aa54dde1e1207eedb6c0e",
+      "chain": "ethereum",
+      "contract_name": "unicly",
+      "funds_usd": 2433.54,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xbacc776b231c571a7e6ab7bc2c8a099e07153377"
+    },
+    {
+      "address": "0xd1516ab7f9b5ebeb2c0678b1c550a7273a801201",
+      "chain": "ethereum",
+      "contract_name": "Kwikswap",
+      "funds_usd": 2510.64,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xdd9efcbdf9f422e2fc159efe77add3730d48056d"
+    },
+    {
+      "address": "0x4087d0e6e513f260de87408bee9334a5742cfdf4",
+      "chain": "ethereum",
+      "contract_name": "defi-swap",
+      "funds_usd": 2531.45,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9deb29c9a4c7a88a3c0257393b7f3335338d9a9d"
+    },
+    {
+      "address": "0x11457ef2b71087d18651106f23ed59dd8ec0da6c",
+      "chain": "ethereum",
+      "contract_name": "MotoSwap",
+      "funds_usd": 2537.87,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x81c9cbc47d700da1777abd831d8da3f526dfae24"
+    },
+    {
+      "address": "0x570eb9e14e7c3c46827e9c1381baa95dfb821dc9",
+      "chain": "ethereum",
+      "contract_name": "MotoSwap",
+      "funds_usd": 2573.13,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x81c9cbc47d700da1777abd831d8da3f526dfae24"
+    },
+    {
+      "address": "0x8507673bee915646a7e837b9e90d6494c303e6fa",
+      "chain": "ethereum",
+      "contract_name": "unicly",
+      "funds_usd": 2635.79,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xbacc776b231c571a7e6ab7bc2c8a099e07153377"
+    },
+    {
+      "address": "0x8b59be2fc6fccc2256cc4841843a13ce29da16bd",
+      "chain": "ethereum",
+      "contract_name": "defi-swap",
+      "funds_usd": 2677.35,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9deb29c9a4c7a88a3c0257393b7f3335338d9a9d"
+    },
+    {
+      "address": "0x4a2b4f76ab77c7ee3820f16967741209d0a8779e",
+      "chain": "ethereum",
+      "contract_name": "convergence",
+      "funds_usd": 2691.56,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x4eef5746ed22a2fd368629c1852365bf5dcb79f1"
+    },
+    {
+      "address": "0xc95389f2883cf6c9099a25f1cf356d881e5a07c6",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 2706.11,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xe64cce041a6705c23f7df94af9cd824efb740a79",
+      "chain": "ethereum",
+      "contract_name": "justmoney",
+      "funds_usd": 2771.46,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xd36aba9ec96523b0a89886c76065852adfe2eb39"
+    },
+    {
+      "address": "0x7d2a83dbfb562226666e75b08d55c6b226df9eda",
+      "chain": "ethereum",
+      "contract_name": "minidex",
+      "funds_usd": 2881.45,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x1e2c2102cf8efcaaaf20ffe926469ec7cd0d0f6e"
+    },
+    {
+      "address": "0xbf41a6ac5e15ada4acb739399a423871a78ace62",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 2893.09,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x29baa9ebcce8552b030bc1138d5d64893018b329",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 2980.02,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x5a1fd72b299f523ff0c0b3f5ed27e3bb889266cf",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 3024.16,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xd9439f8ef8ec20f3aec8f6203e91d572673bcfd8",
+      "chain": "ethereum",
+      "contract_name": "justmoney",
+      "funds_usd": 3047.36,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xd36aba9ec96523b0a89886c76065852adfe2eb39"
+    },
+    {
+      "address": "0x492e507a9b3645c458e16408ec8c2468a3ef82f3",
+      "chain": "ethereum",
+      "contract_name": "bamboodefi",
+      "funds_usd": 3057.23,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x3823ac41b77e51bf0e6536ce465479cbdedcaea9"
+    },
+    {
+      "address": "0x6593f97975400fcfee16a44d8448bb0509743e8e",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 3109.55,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xd360131b77ead72f1f23fb185b4896fe01dc8cb5",
+      "chain": "ethereum",
+      "contract_name": "defi-swap",
+      "funds_usd": 3136.15,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9deb29c9a4c7a88a3c0257393b7f3335338d9a9d"
+    },
+    {
+      "address": "0x0c795fcc8f38248ecdf1ec49ce2e97f68ca14e82",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 3136.42,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xbfa245e01d9e14f8b38f2ca19b2ac857e27e5640",
+      "chain": "ethereum",
+      "contract_name": "minidex",
+      "funds_usd": 3141.21,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x1e2c2102cf8efcaaaf20ffe926469ec7cd0d0f6e"
+    },
+    {
+      "address": "0x7407aef20b224a02c0f074a50b086b8de9d02509",
+      "chain": "ethereum",
+      "contract_name": "bamboodefi",
+      "funds_usd": 3164.75,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x3823ac41b77e51bf0e6536ce465479cbdedcaea9"
+    },
+    {
+      "address": "0x6f4a05f54172e53d9f937a46f3ab9aca4f1dbd6e",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 3193.69,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xd0dcb7a4f8cfcdb29364d621ca5d997b7eddbc46",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 3349.68,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xdc033a6edf526ebd55ee64147a00d52f6059ed58",
+      "chain": "ethereum",
+      "contract_name": "unicly",
+      "funds_usd": 3439.07,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xbacc776b231c571a7e6ab7bc2c8a099e07153377"
+    },
+    {
+      "address": "0x67654fe31de4c8cbbced58fd8d27ab01126ec9cf",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 3603.27,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xa092794b8774e531f96664646775ec8183a4a7ec",
+      "chain": "ethereum",
+      "contract_name": "Kwikswap",
+      "funds_usd": 3676.36,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xdd9efcbdf9f422e2fc159efe77add3730d48056d"
+    },
+    {
+      "address": "0x96258bb42779bf300cf69c9b5bd2ba5245cb4bc4",
+      "chain": "ethereum",
+      "contract_name": "luaswap",
+      "funds_usd": 3752.34,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x0388c1e0f210abae597b7de712b9510c6c36c857"
+    },
+    {
+      "address": "0x2bd89edcc9130b113da1cfff86ee103e1545cc1b",
+      "chain": "ethereum",
+      "contract_name": "Kwikswap",
+      "funds_usd": 3767.0,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xdd9efcbdf9f422e2fc159efe77add3730d48056d"
+    },
+    {
+      "address": "0xe351c5517da206948e678018b98f248fa6759e5a",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 3848.11,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xd0a9bb124c4611ec375d93b5e9f20156c73b2004",
+      "chain": "ethereum",
+      "contract_name": "ethervista",
+      "funds_usd": 3949.11,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x9a27cb5ae0b2cee0bb71f9a85c0d60f3920757b4"
+    },
+    {
+      "address": "0x3f2da328f692dae75bef1b9f93431c641bc14e15",
+      "chain": "ethereum",
+      "contract_name": "Kwikswap",
+      "funds_usd": 4018.32,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xdd9efcbdf9f422e2fc159efe77add3730d48056d"
+    },
+    {
+      "address": "0xc149ebc76142b337b2cd5ffa3b27af9812cd9952",
+      "chain": "ethereum",
+      "contract_name": "sumswap",
+      "funds_usd": 4096.34,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x96ff042f8c6757fce515d171f194b5816cafee11"
+    },
+    {
+      "address": "0x4610ba8d5d10fba8c048a2051a0883ce04eabace",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 4128.1,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x4b09b1a92e8bc8e04c48fce66485cbd148405fbb",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 4150.52,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0xc1576448b8e9ad83abadf38dffd4000bf51ac2f0",
+      "chain": "ethereum",
+      "contract_name": "Kwikswap",
+      "funds_usd": 4178.66,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0xdd9efcbdf9f422e2fc159efe77add3730d48056d"
+    },
+    {
+      "address": "0xa04505aaa5d5e0e4d4a8e0b121d875e83a701d66",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 4279.42,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x0d0142f28c7c57b041bbf834fd260600a8ce07bc",
+      "chain": "ethereum",
+      "contract_name": "swipeswap",
+      "funds_usd": 4418.33,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x8a93b6865c4492ff17252219b87ea6920848edc0"
+    },
+    {
+      "address": "0x625217acc1dc368296febf69be184ebf3d9fb172",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 4510.43,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x302c53b6176f750e5547d775645dc8778524fcc1",
+      "chain": "ethereum",
+      "contract_name": "MotoSwap",
+      "funds_usd": 4519.95,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x81c9cbc47d700da1777abd831d8da3f526dfae24"
+    },
+    {
+      "address": "0x63a65a174cc725824188940255ad41c371f28f28",
+      "chain": "ethereum",
+      "contract_name": "solidly-v2",
+      "funds_usd": 4576.7,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x777de5fe8117caaa7b44f396e93a401cf5c9d4d6"
+    },
+    {
+      "address": "0x2c8bb9c001af6aefff130cb7fcb41bdefc8c385c",
+      "chain": "ethereum",
+      "contract_name": "ShibaSwap",
+      "funds_usd": 4636.84,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x115934131916c8b277dd010ee02de363c09d037c"
+    },
+    {
+      "address": "0x3e30fbdf2b486a0d6ac62df0ac96afb7867d2984",
+      "chain": "ethereum",
+      "contract_name": "supernova",
+      "funds_usd": 4949.47,
+      "reason_class": "amm-fork-thin-pool",
+      "score": 38,
+      "peak_heat": 4,
+      "signals": [
+        "amm"
+      ],
+      "unverified": false,
+      "family": "univ2",
+      "list": "univ2-fork-allPairs",
+      "source": "univ2-fork-allPairs:0x5aef44edfc5a7edd30826c724ea12d7be15bdc30"
+    }
+  ]
+}

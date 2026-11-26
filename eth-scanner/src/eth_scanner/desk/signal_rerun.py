@@ -873,16 +873,23 @@ def run_signal_rerun(
     scan_one: Any = None,
     small_value_batch: bool = False,
     batch_size: int = 0,
+    queue_id: str = "1",
 ) -> dict[str, Any]:
     """Collect, cut to the CU budget, then re-score. Fail soft on 429 and on the cap.
 
     ``small_value_batch`` scans the next under-$5k queue batch and does not
     walk the historical signal tables. The proxy cap stays on that batch.
+    ``queue_id`` defaults to queue 1. Queue 2 is the follow-up file.
     """
     if small_value_batch:
         from eth_scanner.desk.small_value_under5k import prepare_batch
 
-        prepared = prepare_batch(store, budget_cu=budget_cu, batch_size=batch_size)
+        prepared = prepare_batch(
+            store,
+            budget_cu=budget_cu,
+            batch_size=batch_size,
+            queue_id=queue_id,
+        )
         budget_cu = int(prepared["budget_cu"])
         selected = prepared["selected"]
         plan = dict(prepared["plan"])
