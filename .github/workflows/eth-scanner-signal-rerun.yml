@@ -1,6 +1,7 @@
 # Read-only Lane A with fork verify on. Pushing eth-scanner/signal-rerun.trigger
 # to main scans the next under-$5k high-likelihood batch from queue 1
-# (75 contracts, 250k CU). workflow_dispatch can select queue 2.
+# (75 contracts, 250k CU). Pushing eth-scanner/signal-rerun-q2.trigger scans
+# queue 2 the same way. workflow_dispatch can still select either queue.
 # workflow_dispatch mode "historical" re-scores stored signals inside 4M CU.
 # The monitor and the backfill leave fork verify off. This job holds the
 # shared scan-cycle lease so those crons do not scan at the same time.
@@ -11,6 +12,7 @@ on:
     branches: [main]
     paths:
       - eth-scanner/signal-rerun.trigger
+      - eth-scanner/signal-rerun-q2.trigger
   workflow_dispatch:
     inputs:
       mode:
@@ -21,7 +23,7 @@ on:
           - historical
         default: small-value-batch
       queue:
-        description: "Which under-$5k queue a small-value batch reads. 1 is the current file. 2 is the follow-up. Ignored for historical. A trigger push stays on queue 1."
+        description: "Which under-$5k queue a small-value batch reads. 1 is the current file. 2 is the follow-up. Ignored for historical. A push of signal-rerun.trigger stays on queue 1. A push of signal-rerun-q2.trigger selects queue 2."
         type: choice
         options:
           - "1"
@@ -82,7 +84,6 @@ jobs:
           ETH_SCANNER_FUZZ_TIMEOUT_S: "45"
           ETH_SCANNER_FUZZ_RUNS: "8"
           RERUN_MODE: ${{ github.event.inputs.mode || 'small-value-batch' }}
-          RERUN_QUEUE: ${{ github.event.inputs.queue || '1' }}
         run: |
           set -euo pipefail
           if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
@@ -94,6 +95,21 @@ jobs:
             exit 0
           fi
           cd eth-scanner
+          # Queue 1's trigger file stays on queue 1. Only the q2 file selects queue 2.
+          RERUN_QUEUE="$(python - <<'PY'
+          import json
+          import os
+          from eth_scanner.desk.signal_rerun import queue_id_for_github_event
+
+          path = os.environ.get("GITHUB_EVENT_PATH") or ""
+          try:
+              with open(path, encoding="utf-8") as handle:
+                  event = json.load(handle)
+          except OSError:
+              event = {}
+          print(queue_id_for_github_event(event, os.environ.get("GITHUB_EVENT_NAME") or ""))
+          PY
+          )"
           if [ "${RERUN_MODE}" = "historical" ]; then
             echo "signal-rerun historical, fork verify on, fuzz min heat 0, budget 4000000 CU"
             python -m eth_scanner signal-rerun --budget-cu 4000000 --deadline-minutes 55 --lease-wait-minutes 20 --json

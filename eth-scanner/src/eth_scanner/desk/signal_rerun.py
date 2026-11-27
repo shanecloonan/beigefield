@@ -59,6 +59,10 @@ _SEEN = Path(__file__).with_name("signal_rerun_seen.json")
 # Removed after those rows are cleared so a later real "no" is left alone.
 _RELEASE = Path(__file__).resolve().parents[3] / "data" / "signal_rerun_release.json"
 _PROVIDER_STOPS = frozenset({"monthly capacity", "auth", "rate limited"})
+# A push of the first file stays on queue 1. A push of only the second
+# file selects queue 2. workflow_dispatch still uses its queue input.
+Q1_TRIGGER = "eth-scanner/signal-rerun.trigger"
+Q2_TRIGGER = "eth-scanner/signal-rerun-q2.trigger"
 _EVIDENCE_KEYS = (
     "invariants_failed",
     "privileged_callable",
@@ -66,6 +70,43 @@ _EVIDENCE_KEYS = (
     "corroborated_leads",
     "gated_leads",
 )
+
+
+def queue_id_for_github_event(event: dict | None, event_name: str = "") -> str:
+    """Which under-$5k queue this Actions event should scan.
+
+    ``workflow_dispatch`` uses its queue input. A push that includes
+    ``signal-rerun.trigger`` stays on queue 1, even if that same push also
+    touches the queue 2 file. A push that includes only
+    ``signal-rerun-q2.trigger`` selects queue 2. Every other payload stays
+    on queue 1.
+    """
+    payload = event if isinstance(event, dict) else {}
+    if str(event_name or "") == "workflow_dispatch":
+        inputs = payload.get("inputs")
+        raw = ""
+        if isinstance(inputs, dict):
+            raw = str(inputs.get("queue") or "").strip()
+        return "2" if raw == "2" else "1"
+    files: set[str] = set()
+    commits = payload.get("commits")
+    if not isinstance(commits, list):
+        commits = []
+    head = payload.get("head_commit")
+    if isinstance(head, dict):
+        commits = [*commits, head]
+    for commit in commits:
+        if not isinstance(commit, dict):
+            continue
+        for key in ("added", "modified", "removed"):
+            names = commit.get(key) or []
+            if not isinstance(names, list):
+                continue
+            for name in names:
+                files.add(str(name).replace("\\", "/"))
+    if Q1_TRIGGER in files or Q2_TRIGGER not in files:
+        return "1"
+    return "2"
 
 
 def redact(text: str) -> str:
