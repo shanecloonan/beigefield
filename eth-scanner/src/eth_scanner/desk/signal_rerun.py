@@ -72,14 +72,30 @@ _EVIDENCE_KEYS = (
 )
 
 
+def queue_id_for_changed_files(paths) -> str:
+    """Queue selected by the files a push actually changed.
+
+    A push that includes ``signal-rerun.trigger`` stays on queue 1, even
+    when that same push also touches the queue 2 file. A push that includes
+    only ``signal-rerun-q2.trigger`` selects queue 2.
+    """
+    files: set[str] = set()
+    for name in paths or []:
+        text = str(name or "").replace("\\", "/").strip()
+        if text:
+            files.add(text)
+    if Q1_TRIGGER in files or Q2_TRIGGER not in files:
+        return "1"
+    return "2"
+
+
 def queue_id_for_github_event(event: dict | None, event_name: str = "") -> str:
     """Which under-$5k queue this Actions event should scan.
 
-    ``workflow_dispatch`` uses its queue input. A push that includes
-    ``signal-rerun.trigger`` stays on queue 1, even if that same push also
-    touches the queue 2 file. A push that includes only
-    ``signal-rerun-q2.trigger`` selects queue 2. Every other payload stays
-    on queue 1.
+    ``workflow_dispatch`` uses its queue input. A push uses the files listed
+    on that event. Every other payload stays on queue 1. The workflow itself
+    reads ``git diff-tree`` of the checked-out commit, because a push payload
+    on the runner can omit those file lists.
     """
     payload = event if isinstance(event, dict) else {}
     if str(event_name or "") == "workflow_dispatch":
@@ -88,25 +104,21 @@ def queue_id_for_github_event(event: dict | None, event_name: str = "") -> str:
         if isinstance(inputs, dict):
             raw = str(inputs.get("queue") or "").strip()
         return "2" if raw == "2" else "1"
-    files: set[str] = set()
     commits = payload.get("commits")
     if not isinstance(commits, list):
         commits = []
     head = payload.get("head_commit")
     if isinstance(head, dict):
         commits = [*commits, head]
+    names: list[str] = []
     for commit in commits:
         if not isinstance(commit, dict):
             continue
         for key in ("added", "modified", "removed"):
-            names = commit.get(key) or []
-            if not isinstance(names, list):
-                continue
-            for name in names:
-                files.add(str(name).replace("\\", "/"))
-    if Q1_TRIGGER in files or Q2_TRIGGER not in files:
-        return "1"
-    return "2"
+            found = commit.get(key) or []
+            if isinstance(found, list):
+                names.extend(str(name) for name in found)
+    return queue_id_for_changed_files(names)
 
 
 def redact(text: str) -> str:
