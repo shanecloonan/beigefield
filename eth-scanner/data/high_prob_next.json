@@ -1,0 +1,3590 @@
+{
+  "min_funds_usd": 5000,
+  "max_funds_usd": 9000000,
+  "note": "DefiLlama Ethereum contracts at or above $5,000 that are not on the master list. The one-shot job still skips any address that already has a finished scan. This file is not the monitor feed.",
+  "candidates": [
+    {
+      "address": "0xca1207647ff814039530d7d35df0e1dd2e91fa84",
+      "protocol": "Chamber Vaults",
+      "slug": "chamber-vaults",
+      "category": "Indexes",
+      "est_usd_held": 80333.04,
+      "signals": [
+        "vault",
+        "dex",
+        "index"
+      ],
+      "drain_probability": 0.5,
+      "audits": "2"
+    },
+    {
+      "address": "0x62359ed7505efc61ff1d56fef82158ccaffa23d7",
+      "protocol": "cVault Finance",
+      "slug": "cvault-finance",
+      "category": "Yield",
+      "est_usd_held": 4503168.44,
+      "signals": [
+        "vault",
+        "yield"
+      ],
+      "drain_probability": 0.4,
+      "audits": "2"
+    },
+    {
+      "address": "0xdab396ccf3d84cf2d07c4454e10c8a6f5b008d2b",
+      "protocol": "Goldfinch",
+      "slug": "goldfinch",
+      "category": "Uncollateralized Lending",
+      "est_usd_held": 1997768.27,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0xcdf7028ceab81fa0c6971208e83fa7872994bee5",
+      "protocol": "Threshold thUSD",
+      "slug": "threshold-thusd",
+      "category": "CDP",
+      "est_usd_held": 1605092.11,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0xb753428af26e81097e7fd17f40c88aaa3e04902c",
+      "protocol": "Saffron Vaults",
+      "slug": "saffron-vaults",
+      "category": "Yield",
+      "est_usd_held": 1149837.26,
+      "signals": [
+        "vault",
+        "yield"
+      ],
+      "drain_probability": 0.4,
+      "audits": "2"
+    },
+    {
+      "address": "0x4d1c297d39c5c1277964d0e3f8aa901493664530",
+      "protocol": "Puffer Vaults",
+      "slug": "puffer-vaults",
+      "category": "Onchain Capital Allocator",
+      "est_usd_held": 383835.25,
+      "signals": [
+        "vault"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0x5283d291dbcf85356a21ba090e6db59121208b44",
+      "protocol": "Blur Lending",
+      "slug": "blur-lending",
+      "category": "NFT Lending",
+      "est_usd_held": 228292.37,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0x53d0ea0a685220718dc6a0a6e4617194c6f37921",
+      "protocol": "INFER",
+      "slug": "infer",
+      "category": "CDP",
+      "est_usd_held": 200823.68,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0x045da4bfe02b320f4403674b3b7d121737727a36",
+      "protocol": "DeFi Franc",
+      "slug": "defi-franc",
+      "category": "CDP",
+      "est_usd_held": 155858.65,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0x55c08ca52497e2f1534b59e2917bf524d4765257",
+      "protocol": "UwU Lend",
+      "slug": "uwu-lend",
+      "category": "Lending",
+      "est_usd_held": 79272.44,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0x5dfe42eea70a3e6f93ee54ed9c321af07a85535c",
+      "protocol": "Union Protocol",
+      "slug": "union-protocol",
+      "category": "Uncollateralized Lending",
+      "est_usd_held": 69606.73,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0xaffbe9a60f1f45e057fd9b6dc70004bb0ccc8b99",
+      "protocol": "Theoriq AlphaVault ETH",
+      "slug": "theoriq-alphavault-eth",
+      "category": "Onchain Capital Allocator",
+      "est_usd_held": 67458.62,
+      "signals": [
+        "vault"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0x4332f8a38f14bd3d8d1553af27d7c7ac6c27278d",
+      "protocol": "Ape Finance",
+      "slug": "ape-finance",
+      "category": "Lending",
+      "est_usd_held": 53086.3,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0x41d5d79431a913c4ae7d69a668ecdfe5ff9dfb68",
+      "protocol": "Inverse Finance Frontier",
+      "slug": "inverse-finance-frontier",
+      "category": "CDP",
+      "est_usd_held": 35933.08,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0x24ae124c4cc33d6791f8e8b63520ed7107ac8b3e",
+      "protocol": "DSU Money",
+      "slug": "dsu-money",
+      "category": "CDP",
+      "est_usd_held": 19398.66,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0x569424c5ee13884a193773fdc5d1c5f79c443a51",
+      "protocol": "Pine Protocol",
+      "slug": "pine-protocol",
+      "category": "NFT Lending",
+      "est_usd_held": 15781.97,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0x05be1d4c307c19450a6fd7ce7307ce72a3829a60",
+      "protocol": "International Meme Fund V1",
+      "slug": "international-meme-fund-v1",
+      "category": "CDP",
+      "est_usd_held": 12054.67,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0xce246eea10988c495b4a90a905ee9237a0f91543",
+      "protocol": "VaultCraft",
+      "slug": "vaultcraft",
+      "category": "Yield",
+      "est_usd_held": 11857.94,
+      "signals": [
+        "vault",
+        "yield"
+      ],
+      "drain_probability": 0.4,
+      "audits": "2"
+    },
+    {
+      "address": "0x53011e93f21ec7a74cdfbb7e6548f1abce306833",
+      "protocol": "LendeXe Finance",
+      "slug": "lendexe-finance",
+      "category": "Lending",
+      "est_usd_held": 10653.76,
+      "signals": [
+        "lending",
+        "dex"
+      ],
+      "drain_probability": 0.4,
+      "audits": "2"
+    },
+    {
+      "address": "0x6bb61215298f296c55b19ad842d3df69021da2ef",
+      "protocol": "Drops",
+      "slug": "drops",
+      "category": "NFT Lending",
+      "est_usd_held": 9336.4,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0x7635b612792e4bfb7f2fa12a3e5d5a3f2e3c34bc",
+      "protocol": "Alternity",
+      "slug": "alternity",
+      "category": "CDP",
+      "est_usd_held": 5658.83,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0x943c5f4f54509d1e78b1fcd93b92c43ce83d3141",
+      "protocol": "Amphora",
+      "slug": "amphora",
+      "category": "Lending",
+      "est_usd_held": 5229.92,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0xa5b947687163fe88c3e6af5b17ae69896f4abccf",
+      "protocol": "H2Odata",
+      "slug": "h2odata",
+      "category": "CDP",
+      "est_usd_held": 5075.9,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0xfc60fc0145d7330e5abcfc52af7b043a1ce18e7d",
+      "protocol": "GVNR Diamond Hands",
+      "slug": "gvnr-diamond-hands",
+      "category": "CDP",
+      "est_usd_held": 5014.88,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.4,
+      "audits": "0"
+    },
+    {
+      "address": "0x5dd1a7a369e8273371d2dbf9d83356057088082c",
+      "protocol": "Flying Tulip Lend",
+      "slug": "flying-tulip-lend",
+      "category": "Lending",
+      "est_usd_held": 7954806.08,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x6123b0049f904d730db3c36a31167d9d4121fa6b",
+      "protocol": "Ribbon",
+      "slug": "ribbon",
+      "category": "Options Vault",
+      "est_usd_held": 2604486.63,
+      "signals": [
+        "vault"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x1d88713b483a8e45cff0e5cd7c2e15e5fab4534d",
+      "protocol": "StakeStone Berachain Vault",
+      "slug": "stakestone-berachain-vault",
+      "category": "Onchain Capital Allocator",
+      "est_usd_held": 2191898.1,
+      "signals": [
+        "vault"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x09ce2b746c32528b7d864a1e3979bd97d2f095ab",
+      "protocol": "DeFIL",
+      "slug": "defil",
+      "category": "Lending",
+      "est_usd_held": 1618958.43,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x31429d1856ad1377a8a0079410b297e1a9e214c2",
+      "protocol": "Angle",
+      "slug": "angle",
+      "category": "CDP",
+      "est_usd_held": 1484810.86,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x3b6564b5da73a41d3a66e6558a98fd0e9e1e77ad",
+      "protocol": "Unitus",
+      "slug": "unitus",
+      "category": "Lending",
+      "est_usd_held": 1067030.09,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x2a54ba2964c8cd459dc568853f79813a60761b58",
+      "protocol": "Interest Protocol",
+      "slug": "interest-protocol",
+      "category": "CDP",
+      "est_usd_held": 1014128.83,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x431ad2ff6a9c365805ebad47ee021148d6f7dbe0",
+      "protocol": "dForce Lending",
+      "slug": "dforce-lending",
+      "category": "Lending",
+      "est_usd_held": 968764.79,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0xb620be8a1949aa9532e6a3510132864ef9bc3f82",
+      "protocol": "LendFlare",
+      "slug": "lendflare",
+      "category": "Lending",
+      "est_usd_held": 966792.39,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x0d02755a5700414b26ff040e1de35d337df56218",
+      "protocol": "BendDAO APE Staking",
+      "slug": "benddao-ape-staking",
+      "category": "Yield",
+      "est_usd_held": 662439.89,
+      "signals": [
+        "yield",
+        "staking"
+      ],
+      "drain_probability": 0.3,
+      "audits": "0"
+    },
+    {
+      "address": "0x0fedba9178b70e8b54e2af08ebffcf28a1e5a43b",
+      "protocol": "Reservoir Protocol",
+      "slug": "reservoir-protocol",
+      "category": "CDP",
+      "est_usd_held": 441177.13,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0xbe1a001fe942f96eea22ba08783140b9dcc09d28",
+      "protocol": "Beta Finance V1",
+      "slug": "beta-finance-v1",
+      "category": "Lending",
+      "est_usd_held": 413463.29,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x3c2f61f2e27c865981d2e7aaf6b2cdf823030039",
+      "protocol": "TermMax",
+      "slug": "termmax",
+      "category": "Lending",
+      "est_usd_held": 399664.1,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0xce722f60f35c37ab295adc4e6ba45bcc7ca89dd6",
+      "protocol": "JPEG'd",
+      "slug": "jpegd",
+      "category": "NFT Lending",
+      "est_usd_held": 376510.1,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x8888801af4d980682e47f1a9036e589479e835c5",
+      "protocol": "88mph",
+      "slug": "88mph",
+      "category": "Lending",
+      "est_usd_held": 359460.7,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x6f620ec89b8479e97a6985792d0c64f237566746",
+      "protocol": "WePiggy",
+      "slug": "wepiggy",
+      "category": "Lending",
+      "est_usd_held": 343068.19,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0xda7ad9dea9397cffddae2f8a052b82f1484252b3",
+      "protocol": "River Omni-CDP",
+      "slug": "river-omni-cdp",
+      "category": "CeDeFi",
+      "est_usd_held": 333109.6,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0xed1167b6dc64e8a366db86f2e952a482d0981ebd",
+      "protocol": "Lybra V1",
+      "slug": "lybra-v1",
+      "category": "CDP",
+      "est_usd_held": 237658.36,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0xda47862a83dac0c112ba89c6abc2159b95afd71c",
+      "protocol": "PrismaLST",
+      "slug": "prismalst",
+      "category": "CDP",
+      "est_usd_held": 227705.55,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x695f775551fb0d28b64101c9507c06f334b4ba86",
+      "protocol": "Bundles",
+      "slug": "bundles",
+      "category": "Indexes",
+      "est_usd_held": 204359.44,
+      "signals": [
+        "dex",
+        "index"
+      ],
+      "drain_probability": 0.3,
+      "audits": "0"
+    },
+    {
+      "address": "0x4576e6825b462b6916d2a41e187626e9090a92c6",
+      "protocol": "Mesher",
+      "slug": "mesher",
+      "category": "Lending",
+      "est_usd_held": 180669.37,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x92e187a03b6cd19cb6af293ba17f2745fd2357d5",
+      "protocol": "Unit Protocol",
+      "slug": "unit-protocol",
+      "category": "CDP",
+      "est_usd_held": 180167.87,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x6c0aeceedc55c9d55d8b99216a670d85330941c3",
+      "protocol": "Parallel Protocol V3",
+      "slug": "parallel-protocol-v3",
+      "category": "CDP",
+      "est_usd_held": 167752.96,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0xe020b01b6fbd83066aa2e8ee0ccd1eb8d9cc70bf",
+      "protocol": "Arcade.xyz",
+      "slug": "arcade.xyz",
+      "category": "NFT Lending",
+      "est_usd_held": 143827.76,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x72e9d9038ce484ee986fea183f8d8df93f9ada13",
+      "protocol": "SmartCredit",
+      "slug": "smartcredit",
+      "category": "Lending",
+      "est_usd_held": 143163.24,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0xf0b2dd79324a66d2108c961d680f7616e1486bb0",
+      "protocol": "Silo V3",
+      "slug": "silo-v3",
+      "category": "Lending",
+      "est_usd_held": 136180.24,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0xf655c8567e0f213e6c634cd2a68d992152161dc6",
+      "protocol": "Impermax V2",
+      "slug": "impermax-v2",
+      "category": "Lending",
+      "est_usd_held": 112376.48,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x0e4e7f2aecf408aff4f82f067677050239bdc58a",
+      "protocol": "Fungify",
+      "slug": "fungify",
+      "category": "Lending",
+      "est_usd_held": 107614.66,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x120a3879da835a5af037bb2d1456bebd6b54d4ba",
+      "protocol": "Revest Finance",
+      "slug": "revest-finance",
+      "category": "NFT Lending",
+      "est_usd_held": 71263.01,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x2791bfd60d232150bff86b39b7146c0eaaa2ba81",
+      "protocol": "BiFi",
+      "slug": "bifi",
+      "category": "Lending",
+      "est_usd_held": 67213.56,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0xade6fdaba1643e4d1eef68da7170f234470938c6",
+      "protocol": "Fractional Art",
+      "slug": "fractional-art",
+      "category": "Indexes",
+      "est_usd_held": 64276.66,
+      "signals": [
+        "dex",
+        "index"
+      ],
+      "drain_probability": 0.3,
+      "audits": "0"
+    },
+    {
+      "address": "0xed40834a13129509a89be39a9be9c0e96a0ddd71",
+      "protocol": "Warp Protocol",
+      "slug": "warp-protocol",
+      "category": "Lending",
+      "est_usd_held": 39247.77,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x9a96ec9b57fb64fbc60b423d1f4da7691bd35079",
+      "protocol": "Ajna V2",
+      "slug": "ajna-v2",
+      "category": "Lending",
+      "est_usd_held": 27331.88,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0xab846fb6c81370327e784ae7cbb6d6a6af6ff4bf",
+      "protocol": "Paladin Vote",
+      "slug": "paladin-vote",
+      "category": "Lending",
+      "est_usd_held": 23637.7,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x6c16119b20fa52600230f074b349da3cb861a7e3",
+      "protocol": "Alkemi",
+      "slug": "alkemi",
+      "category": "Lending",
+      "est_usd_held": 21919.74,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x4c19596f5aaff459fa38b0f7ed92f11ae6543784",
+      "protocol": "TrueFi",
+      "slug": "truefi",
+      "category": "Uncollateralized Lending",
+      "est_usd_held": 21655.78,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0xa2cd3d43c775978a96bdbf12d733d5a1ed94fb18",
+      "protocol": "Onyx Protocol",
+      "slug": "onyx-protocol",
+      "category": "Lending",
+      "est_usd_held": 20220.88,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x5f18ea482ad5cc6bc65803817c99f477043dce85",
+      "protocol": "Agility LSD",
+      "slug": "agility-lsd",
+      "category": "Indexes",
+      "est_usd_held": 18005.59,
+      "signals": [
+        "dex",
+        "index"
+      ],
+      "drain_probability": 0.3,
+      "audits": "0"
+    },
+    {
+      "address": "0xc9fe6e1c76210be83dc1b5b20ec7fd010b0b1d15",
+      "protocol": "Fringe V1",
+      "slug": "fringe-v1",
+      "category": "Lending",
+      "est_usd_held": 15950.77,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0xaeb3607ec434454ceb308f5cd540875efb54309a",
+      "protocol": "Sturdy V2",
+      "slug": "sturdy-v2",
+      "category": "Lending",
+      "est_usd_held": 15777.42,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x5cb17273bfe227bd791ceee31c9d5db6289f2797",
+      "protocol": "Tonpound",
+      "slug": "tonpound",
+      "category": "Lending",
+      "est_usd_held": 15134.89,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0xc0a4df35568f116c370e6a6a6022ceb908eeddac",
+      "protocol": "Umee",
+      "slug": "umee",
+      "category": "Lending",
+      "est_usd_held": 15052.9,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x4c5cb5d87709387f8821709f7a6664f00dcf0c93",
+      "protocol": "Raft",
+      "slug": "raft",
+      "category": "CDP",
+      "est_usd_held": 14261.65,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0xb4d930279552397bba2ee473229f89ec245bc365",
+      "protocol": "MahaDAO Arth",
+      "slug": "mahadao-arth",
+      "category": "CDP",
+      "est_usd_held": 13465.99,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x2fda8c6783aa36bed645bad28a4cdc8769dcd252",
+      "protocol": "DAM Finance",
+      "slug": "dam-finance",
+      "category": "CDP",
+      "est_usd_held": 12315.86,
+      "signals": [
+        "cdp"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x149cac67f1cd5d80651e7c9bb359ec285d821a05",
+      "protocol": "Minterest",
+      "slug": "minterest",
+      "category": "Lending",
+      "est_usd_held": 11296.59,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x09d6f0f5a21f5be4f59e209747e2d07f50bc694c",
+      "protocol": "NFTfi",
+      "slug": "nftfi",
+      "category": "NFT Lending",
+      "est_usd_held": 10213.68,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0xfac77a24e52b463ba9857d6b758ba41ae20e31ff",
+      "protocol": "LSDx ETHx",
+      "slug": "lsdx-ethx",
+      "category": "Indexes",
+      "est_usd_held": 9397.78,
+      "signals": [
+        "dex",
+        "index"
+      ],
+      "drain_probability": 0.3,
+      "audits": "0"
+    },
+    {
+      "address": "0x403d512ab96103562dcafe4635545e8ee2753f6e",
+      "protocol": "Wild Credit",
+      "slug": "wild-credit",
+      "category": "Lending",
+      "est_usd_held": 5496.47,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x74232704659ef37c08995e386a2e26cc27a8d7b1",
+      "protocol": "Strike",
+      "slug": "strike",
+      "category": "Lending",
+      "est_usd_held": 5171.38,
+      "signals": [
+        "lending"
+      ],
+      "drain_probability": 0.3,
+      "audits": "2"
+    },
+    {
+      "address": "0x0954906da0bf32d5479e25f46056d22f08464cab",
+      "protocol": "Index Coop",
+      "slug": "index-coop",
+      "category": "Indexes",
+      "est_usd_held": 8121501.34,
+      "signals": [
+        "dex",
+        "index"
+      ],
+      "drain_probability": 0.2,
+      "audits": "2"
+    },
+    {
+      "address": "0xb1a5700fa2358173fe465e6ea4ff52e36e88e2ad",
+      "protocol": "Blast pre-launch Farm",
+      "slug": "blast-pre-launch-farm",
+      "category": "Farm",
+      "est_usd_held": 1531746.38,
+      "signals": [
+        "farm"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x0a6e7ba5042b38349e437ec6db6214aec7b35676",
+      "protocol": "Swell L2 Farm",
+      "slug": "swell-l2-farm",
+      "category": "Farm",
+      "est_usd_held": 1245796.99,
+      "signals": [
+        "farm"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x2ba592f78db6436527729929aaf6c908497cb200",
+      "protocol": "CRETH2",
+      "slug": "creth2",
+      "category": "Liquid Staking",
+      "est_usd_held": 1174664.9,
+      "signals": [
+        "staking"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x7dedbce5a2e31e4c75f87fea60bf796c17718715",
+      "protocol": "Penpie",
+      "slug": "penpie",
+      "category": "Yield",
+      "est_usd_held": 735691.13,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x59a529070fbb61e6d6c91f952ccb7f35c34cf8aa",
+      "protocol": "Asymmetry Finance",
+      "slug": "asymmetry-finance",
+      "category": "Indexes",
+      "est_usd_held": 731005.5,
+      "signals": [
+        "dex",
+        "index"
+      ],
+      "drain_probability": 0.2,
+      "audits": "2"
+    },
+    {
+      "address": "0x3a880652f47bfaa771908c07dd8673a787daed3a",
+      "protocol": "DerivaDEX",
+      "slug": "derivadex",
+      "category": "Derivatives",
+      "est_usd_held": 610176.49,
+      "signals": [
+        "dex",
+        "derivative"
+      ],
+      "drain_probability": 0.2,
+      "audits": "2"
+    },
+    {
+      "address": "0x252739487c1fa66eaeae7ced41d6358ab2a6bca9",
+      "protocol": "Arca Labs ArCoin",
+      "slug": "arca-labs-arcoin",
+      "category": "RWA",
+      "est_usd_held": 449855.15,
+      "signals": [
+        "rwa"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x2be056e595110b30ddd5eaf674bdac54615307d9",
+      "protocol": "AirPuff",
+      "slug": "airpuff",
+      "category": "Leveraged Farming",
+      "est_usd_held": 362648.7,
+      "signals": [
+        "farm"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0xf17a3fe536f8f7847f1385ec1bc967b2ca9cae8d",
+      "protocol": "Alongside",
+      "slug": "alongside",
+      "category": "Indexes",
+      "est_usd_held": 338540.72,
+      "signals": [
+        "dex",
+        "index"
+      ],
+      "drain_probability": 0.2,
+      "audits": "2"
+    },
+    {
+      "address": "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2",
+      "protocol": "Sushi BentoBox",
+      "slug": "sushi-bentobox",
+      "category": "Yield",
+      "est_usd_held": 329335.94,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x7777777777697cfeecf846a76326da79cc606517",
+      "protocol": "xSigma",
+      "slug": "xsigma",
+      "category": "Dexs",
+      "est_usd_held": 317175.19,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0xad32a8e6220741182940c5abf610bde99e737b2d",
+      "protocol": "PieDAO",
+      "slug": "piedao",
+      "category": "Indexes",
+      "est_usd_held": 272917.55,
+      "signals": [
+        "dex",
+        "index"
+      ],
+      "drain_probability": 0.2,
+      "audits": "2"
+    },
+    {
+      "address": "0x4161725d019690a3e0de50f6be67b07a86a9fae1",
+      "protocol": "TokenPocket",
+      "slug": "tokenpocket",
+      "category": "Staking Pool",
+      "est_usd_held": 212407.35,
+      "signals": [
+        "staking"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0xf2f9a7e93f845b3ce154efbeb64fb9346fcce509",
+      "protocol": "UniPower",
+      "slug": "unipower",
+      "category": "Yield",
+      "est_usd_held": 183846.57,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x90d53b872ce6421122b41a290acdd22a5ed931bd",
+      "protocol": "Frigg.eco",
+      "slug": "frigg.eco",
+      "category": "RWA",
+      "est_usd_held": 182532.15,
+      "signals": [
+        "rwa"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x88acdd2a6425c3faae4bc9650fd7e27e0bebb7ab",
+      "protocol": "Alchemist",
+      "slug": "alchemist",
+      "category": "Yield",
+      "est_usd_held": 176905.51,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x40986a85b4cfcdb054a6cbfb1210194fee51af88",
+      "protocol": "UniFarm",
+      "slug": "unifarm",
+      "category": "Yield",
+      "est_usd_held": 173574.28,
+      "signals": [
+        "yield",
+        "farm"
+      ],
+      "drain_probability": 0.2,
+      "audits": "2"
+    },
+    {
+      "address": "0x5200f539478f58d9aea962095ba3b16b5e550e00",
+      "protocol": "Clearpool TPOOL",
+      "slug": "clearpool-tpool",
+      "category": "RWA",
+      "est_usd_held": 148639.11,
+      "signals": [
+        "rwa"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0xda7c0810ce6f8329786160bb3d1734cf6661ca6e",
+      "protocol": "Jaypeggers",
+      "slug": "jaypeggers",
+      "category": "Yield",
+      "est_usd_held": 135005.86,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0xe60779cc1b2c1d0580611c526a8df0e3f870ec48",
+      "protocol": "unshETH",
+      "slug": "unsheth",
+      "category": "Indexes",
+      "est_usd_held": 131684.72,
+      "signals": [
+        "dex",
+        "index"
+      ],
+      "drain_probability": 0.2,
+      "audits": "2"
+    },
+    {
+      "address": "0x66c0dded8433c9ea86c8cf91237b14e10b4d70b7",
+      "protocol": "Mars Poolin",
+      "slug": "mars-poolin",
+      "category": "Yield",
+      "est_usd_held": 121300.27,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0xb3999f658c0391d94a37f7ff328f3fec942bcadc",
+      "protocol": "Hashflow",
+      "slug": "hashflow",
+      "category": "DEX Aggregator",
+      "est_usd_held": 106098.44,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x86772b1409b61c639eaac9ba0acfbb6e238e5f83",
+      "protocol": "Indexed Finance",
+      "slug": "indexed-finance",
+      "category": "Indexes",
+      "est_usd_held": 99714.51,
+      "signals": [
+        "dex",
+        "index"
+      ],
+      "drain_probability": 0.2,
+      "audits": "2"
+    },
+    {
+      "address": "0xf4dc48d260c93ad6a96c5ce563e70ca578987c74",
+      "protocol": "Babylon Finance",
+      "slug": "babylon-finance",
+      "category": "Indexes",
+      "est_usd_held": 91612.3,
+      "signals": [
+        "dex",
+        "index"
+      ],
+      "drain_probability": 0.2,
+      "audits": "2"
+    },
+    {
+      "address": "0xe63684bcf2987892cefb4caa79bd21b34e98a291",
+      "protocol": "ChickenSwap",
+      "slug": "chickenswap",
+      "category": "Dexs",
+      "est_usd_held": 82262.27,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x5f64ab1544d28732f0a24f4713c2c8ec0da089f0",
+      "protocol": "Memento DFM",
+      "slug": "memento-dfm",
+      "category": "Indexes",
+      "est_usd_held": 78811.97,
+      "signals": [
+        "dex",
+        "index"
+      ],
+      "drain_probability": 0.2,
+      "audits": "2"
+    },
+    {
+      "address": "0x4d953cf077c0c95ba090226e59a18fcf97db44ec",
+      "protocol": "MiniSwap",
+      "slug": "miniswap",
+      "category": "Dexs",
+      "est_usd_held": 75101.91,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x8db253a1943dddf1af9bcf8706ac9a0ce939d922",
+      "protocol": "Unbound",
+      "slug": "unbound",
+      "category": "Derivatives",
+      "est_usd_held": 72810.19,
+      "signals": [
+        "derivative"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x44564d0bd94343f72e3c8a0d22308b7fa71db0bb",
+      "protocol": "BasketDAO",
+      "slug": "basketdao",
+      "category": "Indexes",
+      "est_usd_held": 67210.29,
+      "signals": [
+        "dex",
+        "index"
+      ],
+      "drain_probability": 0.2,
+      "audits": "2"
+    },
+    {
+      "address": "0xf3dcbc6d72a4e1892f7917b7c43b74131df8480e",
+      "protocol": "Big Data Protocol",
+      "slug": "big-data-protocol",
+      "category": "Yield",
+      "est_usd_held": 51093.42,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x515d7e9d75e2b76db60f8a051cd890eba23286bc",
+      "protocol": "Governor DAO",
+      "slug": "governor-dao",
+      "category": "Yield",
+      "est_usd_held": 47961.56,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0xc9bca88b04581699fab5aa276ccaff7df957cbbf",
+      "protocol": "Ethervista",
+      "slug": "ethervista",
+      "category": "Dexs",
+      "est_usd_held": 47103.82,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x38e4adb44ef08f22f5b5b76a8f0c2d0dcbe7dca1",
+      "protocol": "PowerPool",
+      "slug": "powerpool",
+      "category": "Indexes",
+      "est_usd_held": 35137.39,
+      "signals": [
+        "dex",
+        "index"
+      ],
+      "drain_probability": 0.2,
+      "audits": "2"
+    },
+    {
+      "address": "0xe53ec727dbdeb9e2d5456c3be40cff031ab40a55",
+      "protocol": "SuperFarm",
+      "slug": "superfarm",
+      "category": "Services",
+      "est_usd_held": 31134.41,
+      "signals": [
+        "farm"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x286c0936c7eaf6651099ab5dab9ee5a6cb5d229d",
+      "protocol": "KwikSwap",
+      "slug": "kwikswap",
+      "category": "Dexs",
+      "est_usd_held": 28998.03,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x321c2fe4446c7c963dc41dd58879af648838f98d",
+      "protocol": "Cryptex V1",
+      "slug": "cryptex-v1",
+      "category": "Indexes",
+      "est_usd_held": 27975.17,
+      "signals": [
+        "dex",
+        "index"
+      ],
+      "drain_probability": 0.2,
+      "audits": "2"
+    },
+    {
+      "address": "0xbd965230588eaa536de6aa45e8ebbc01638535e0",
+      "protocol": "Motoswap AMM",
+      "slug": "motoswap-amm",
+      "category": "Dexs",
+      "est_usd_held": 27930.85,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x3fa729b4548becbad4eab6ef18413470e6d5324c",
+      "protocol": "Mover",
+      "slug": "mover",
+      "category": "Yield",
+      "est_usd_held": 26341.56,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0xff75ced57419bcaebe5f05254983b013b0646ef5",
+      "protocol": "Cook Finance",
+      "slug": "cook-finance",
+      "category": "Indexes",
+      "est_usd_held": 21182.31,
+      "signals": [
+        "dex",
+        "index"
+      ],
+      "drain_probability": 0.2,
+      "audits": "2"
+    },
+    {
+      "address": "0x19ae49b9f38dd836317363839a5f6bfbfa7e319a",
+      "protocol": "SaitaSwap",
+      "slug": "saitaswap",
+      "category": "Dexs",
+      "est_usd_held": 9075.52,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0xbbc2ae13b23d715c30720f079fcd9b4a74093505",
+      "protocol": "Ethernity Chain",
+      "slug": "ethernity-chain",
+      "category": "Yield",
+      "est_usd_held": 7247.48,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x89cf5c1b3bc04ea54795b37a85258f1dfc9c31df",
+      "protocol": "SwingHook",
+      "slug": "swinghook",
+      "category": "Dexs",
+      "est_usd_held": 7228.05,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x8e729198d1c59b82bd6bba579310c40d740a11c2",
+      "protocol": "Alvara",
+      "slug": "alvara",
+      "category": "Yield Aggregator",
+      "est_usd_held": 5558.74,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.2,
+      "audits": "0"
+    },
+    {
+      "address": "0x3abf2a4f8452ccc2cf7b4c1e4663147600646f66",
+      "protocol": "Juicebox V1",
+      "slug": "juicebox-v1",
+      "category": "Launchpad",
+      "est_usd_held": 8612498.38,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x0a638f07acc6969abf392bb009f216d22adea36d",
+      "protocol": "Brickken",
+      "slug": "brickken",
+      "category": "RWA",
+      "est_usd_held": 8405713.47,
+      "signals": [
+        "rwa"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x1925450f5e5fb974b0aae1f3408cf5286fbd1a72",
+      "protocol": "YO Protocol",
+      "slug": "yo-protocol",
+      "category": "Yield Aggregator",
+      "est_usd_held": 8095310.81,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x0b38210ea11411557c13457d4da7dc6ea731b88a",
+      "protocol": "Api3",
+      "slug": "api3",
+      "category": "Risk Curators",
+      "est_usd_held": 8060725.05,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x1b40183efb4dd766f11bda7a7c3ad8982e998421",
+      "protocol": "Vesper V2",
+      "slug": "vesper-v2",
+      "category": "Yield Aggregator",
+      "est_usd_held": 7833994.49,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xadb2437e6f65682b85f814fbc12fec0508a7b1d0",
+      "protocol": "UNCX Network V3",
+      "slug": "uncx-network-v3",
+      "category": "Token Locker",
+      "est_usd_held": 7399968.94,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xb0076de78dc50581770bba1d211ddc0ad4f2a241",
+      "protocol": "edgeX Bridge",
+      "slug": "edgex-bridge",
+      "category": "Bridge",
+      "est_usd_held": 6530559.47,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x9e32b13ce7f2e80a01932b42553652e053d6ed8e",
+      "protocol": "Metis Bridge",
+      "slug": "metis-bridge",
+      "category": "Canonical Bridge",
+      "est_usd_held": 6169236.7,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x259338656198ec7a76c729514d3cb45dfbf768a1",
+      "protocol": "Resolv USR",
+      "slug": "resolv-usr",
+      "category": "Basis Trading",
+      "est_usd_held": 6085466.16,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x0f2d719407fdbeff09d87557abb7232601fd9f29",
+      "protocol": "Synapse Cross Chain Bridge",
+      "slug": "synapse-cross-chain-bridge",
+      "category": "Cross Chain Bridge",
+      "est_usd_held": 5946964.69,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x4f9254c83eb525f9fcf346490bbb3ed28a81c667",
+      "protocol": "cBridge",
+      "slug": "cbridge",
+      "category": "Bridge",
+      "est_usd_held": 5629906.31,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xabd4c63d2616a5201454168269031355f4764337",
+      "protocol": "Orderly Bridge",
+      "slug": "orderly-bridge",
+      "category": "Bridge",
+      "est_usd_held": 5560332.55,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x1d926bbe67425c9f507b9a0e8030eedc7880bf33",
+      "protocol": "Superform",
+      "slug": "superform",
+      "category": "Yield Aggregator",
+      "est_usd_held": 4494365.55,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x9416ba76e88d873050a06e5956a3ebf10386b863",
+      "protocol": "The Idols",
+      "slug": "the-idols",
+      "category": "Reserve Currency",
+      "est_usd_held": 4444077.17,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xe28b3b32b6c345a34ff64674606124dd5aceca30",
+      "protocol": "Injective Bridge",
+      "slug": "injective-bridge",
+      "category": "Bridge",
+      "est_usd_held": 4398096.94,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x0cec1a9154ff802e7934fc916ed7ca50bde6844e",
+      "protocol": "PoolTogether V3",
+      "slug": "pooltogether-v3",
+      "category": "Yield Lottery",
+      "est_usd_held": 4392703.25,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xea5edef1287afdf9eb8a46f9773abfc10820c61c",
+      "protocol": "Easedefi.org",
+      "slug": "easedefi.org",
+      "category": "Insurance",
+      "est_usd_held": 4216025.66,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x9813037ee2218799597d83d4a5b6f3b6778218d9",
+      "protocol": "ShibaSwap V1",
+      "slug": "shibaswap-v1",
+      "category": "Dexs",
+      "est_usd_held": 4104347.85,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x429881672b9ae42b8eba0e26cd9c73711b891ca5",
+      "protocol": "Pickle",
+      "slug": "pickle",
+      "category": "Yield Aggregator",
+      "est_usd_held": 3973255.32,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "3"
+    },
+    {
+      "address": "0x14cf922aa1512adfc34409b63e18d391e4a86a2f",
+      "protocol": "ETH Strategy",
+      "slug": "eth-strategy",
+      "category": "Onchain Capital Allocator",
+      "est_usd_held": 3878554.6,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x0e29e5abbb5fd88e28b2d355774e73bd47de3bcd",
+      "protocol": "Hakka Finance",
+      "slug": "hakka-finance",
+      "category": "Derivatives",
+      "est_usd_held": 3703376.3,
+      "signals": [
+        "derivative"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xa0246c9032bc3a600820415ae600c6388619a14d",
+      "protocol": "Harvest Finance",
+      "slug": "harvest-finance",
+      "category": "Yield Aggregator",
+      "est_usd_held": 3613169.16,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "1"
+    },
+    {
+      "address": "0x6055dc6ff1077eebe5e6d2ba1a1f53d7ef8430de",
+      "protocol": "Eclipse Bridge",
+      "slug": "eclipse-bridge",
+      "category": "Canonical Bridge",
+      "est_usd_held": 3515142.93,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0xfd418e42783382e86ae91e445406600ba144d162",
+      "protocol": "Zircuit",
+      "slug": "zircuit",
+      "category": "Canonical Bridge",
+      "est_usd_held": 3332940.23,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0xef3a930e1ffffacd2fc13434ac81bd278b0ecc8d",
+      "protocol": "Stafi",
+      "slug": "stafi",
+      "category": "Liquid Staking",
+      "est_usd_held": 3207221.84,
+      "signals": [
+        "staking"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x72953a5c32413614d24c29c84a66ae4b59581bbf",
+      "protocol": "CLever",
+      "slug": "clever",
+      "category": "Yield",
+      "est_usd_held": 3196507.54,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xe0e05c43c097b0982db6c9d626c4eb9e95c3b9ce",
+      "protocol": "Unslashed",
+      "slug": "unslashed",
+      "category": "Insurance",
+      "est_usd_held": 2488991.23,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xc5102fe9359fd9a28f877a67e36b0f050d81a3cc",
+      "protocol": "Hop Protocol",
+      "slug": "hop-protocol",
+      "category": "Cross Chain Bridge",
+      "est_usd_held": 2202515.04,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x111111111117dc0aa78b770fa6a738034120c302",
+      "protocol": "1inch Swap",
+      "slug": "1inch-swap",
+      "category": "DEX Aggregator",
+      "est_usd_held": 2062270.84,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x256f2d67e52fe834726d2ddcd8413654f5eb8b53",
+      "protocol": "SolvBTC",
+      "slug": "solvbtc",
+      "category": "Bridge",
+      "est_usd_held": 1979085.47,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0xc55126051b22ebb829d00368f4b12bde432de5da",
+      "protocol": "Pirex",
+      "slug": "pirex",
+      "category": "Yield",
+      "est_usd_held": 1882861.1,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x618679df9efcd19694bb1daa8d00718eacfa2883",
+      "protocol": "Universe XYZ",
+      "slug": "universe-xyz",
+      "category": "Yield",
+      "est_usd_held": 1749700.46,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x3ec8798b81485a254928b70cda1cf0a2bb0b74d7",
+      "protocol": "Gro",
+      "slug": "gro",
+      "category": "Yield",
+      "est_usd_held": 1744849.61,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xc9746f73cc33a36c2cd55b8aefd732586946cedd",
+      "protocol": "BOB Bridge",
+      "slug": "bob-bridge",
+      "category": "Bridge",
+      "est_usd_held": 1727138.7,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x10dea67478c5f8c5e2d90e5e9b26dbe60c54d800",
+      "protocol": "Taiko Bridge",
+      "slug": "taiko-bridge",
+      "category": "Canonical Bridge",
+      "est_usd_held": 1705088.51,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0xd38bb40815d2b0c2d2c866e0c72c5728ffc76dd9",
+      "protocol": "Symbiosis",
+      "slug": "symbiosis",
+      "category": "Cross Chain Bridge",
+      "est_usd_held": 1569965.52,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xc4441c2be5d8fa8126822b9929ca0b81ea0de38e",
+      "protocol": "Usual ETH0",
+      "slug": "usual-eth0",
+      "category": "Synthetics",
+      "est_usd_held": 1536556.78,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0xb9d7dddca9a4ac480991865efef82e01273f79c3",
+      "protocol": "LUSD ChickenBonds",
+      "slug": "lusd-chickenbonds",
+      "category": "Yield Aggregator",
+      "est_usd_held": 1490126.09,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x59d9356e565ab3a36dd77763fc0d87feaf85508c",
+      "protocol": "Mountain Protocol",
+      "slug": "mountain-protocol",
+      "category": "RWA",
+      "est_usd_held": 1283429.38,
+      "signals": [
+        "rwa"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x52a8845df664d76c69d2eea607cd793565af42b8",
+      "protocol": "ApeX Pro",
+      "slug": "apex-pro",
+      "category": "Derivatives",
+      "est_usd_held": 1283042.21,
+      "signals": [
+        "derivative"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xcb1592591996765ec0efc1f92599a19767ee5ffa",
+      "protocol": "Bio Protocol",
+      "slug": "bio-protocol",
+      "category": "Launchpad",
+      "est_usd_held": 1218673.49,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x96c645d3d3706f793ef52c19bbace441900ed47d",
+      "protocol": "Mt Pelerin",
+      "slug": "mt-pelerin",
+      "category": "Risk Curators",
+      "est_usd_held": 1128225.04,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x6033f7f88332b8db6ad452b7c6d5bb643990ae3f",
+      "protocol": "Lisk Bridge",
+      "slug": "lisk-bridge",
+      "category": "Canonical Bridge",
+      "est_usd_held": 1104464.04,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0xcf0c122c6b73ff809c693db761e7baebe62b6a2e",
+      "protocol": "FlokiFi Locker",
+      "slug": "flokifi-locker",
+      "category": "Token Locker",
+      "est_usd_held": 1075248.99,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x221657776846890989a759ba2973e427dff5c9bb",
+      "protocol": "Augur",
+      "slug": "augur",
+      "category": "Prediction Market",
+      "est_usd_held": 1016459.73,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xb705268213d593b8fd88d3fdeff93aff5cbdcfae",
+      "protocol": "IDEX Classic",
+      "slug": "idex-classic",
+      "category": "Dexs",
+      "est_usd_held": 957340.08,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x9fdbde76236998dc2836fe67a9954ede456a1d63",
+      "protocol": "Baseline Protocol",
+      "slug": "baseline-protocol",
+      "category": "Liquidity Manager",
+      "est_usd_held": 909746.46,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x57b96d4af698605563a4653d882635da59bf11af",
+      "protocol": "SOFA.org",
+      "slug": "sofa.org",
+      "category": "Options",
+      "est_usd_held": 844649.61,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xa0b73e1ff0b80914ab6fe0444e65848c4c34450b",
+      "protocol": "Defi Swap",
+      "slug": "defi-swap",
+      "category": "Dexs",
+      "est_usd_held": 832359.63,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xd291e7a03283640fdc51b121ac401383a46cc623",
+      "protocol": "Rari Capital",
+      "slug": "rari-capital",
+      "category": "Yield Aggregator",
+      "est_usd_held": 813691.91,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xff20817765cb7f73d4bde2e66e067e58d11095c2",
+      "protocol": "Flexa",
+      "slug": "flexa",
+      "category": "Payments",
+      "est_usd_held": 800638.82,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x4e352cf164e64adcbad318c3a1e222e9eba4ce42",
+      "protocol": "MCDEX",
+      "slug": "mcdex",
+      "category": "Dexs",
+      "est_usd_held": 785998.8,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "1"
+    },
+    {
+      "address": "0x6810e776880c02933d47db1b9fc05908e5386b96",
+      "protocol": "Gnosis Protocol v1",
+      "slug": "gnosis-protocol-v1",
+      "category": "Prediction Market",
+      "est_usd_held": 759370.88,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xf1dc500fde233a4055e25e5bbf516372bc4f6871",
+      "protocol": "Saddle Finance",
+      "slug": "saddle-finance",
+      "category": "Dexs",
+      "est_usd_held": 731813.76,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x6bea7cfef803d1e3d5f7c0103f7ded065644e197",
+      "protocol": "Gamma",
+      "slug": "gamma",
+      "category": "Liquidity Manager",
+      "est_usd_held": 699491.85,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x584bc13c7d411c00c01a62e8019472de68768430",
+      "protocol": "Hegic",
+      "slug": "hegic",
+      "category": "Options",
+      "est_usd_held": 693308.3,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xbbbbbbb5aa847a2003fbc6b5c16df0bd1e725f61",
+      "protocol": "B.Protocol",
+      "slug": "b.protocol",
+      "category": "Liquidations",
+      "est_usd_held": 661367.43,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x7f3edcdd180dbe4819bd98fee8929b5cedb3adeb",
+      "protocol": "xToken",
+      "slug": "xtoken",
+      "category": "Liquidity Manager",
+      "est_usd_held": 635313.23,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xa0df17b5ac76ababa36e1450e2cbcd18a620c845",
+      "protocol": "Fake World Assets V2",
+      "slug": "fake-world-assets-v2",
+      "category": "Luck Games",
+      "est_usd_held": 593480.05,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x875773784af8135ea0ef43b5a374aad105c5d39e",
+      "protocol": "Idle",
+      "slug": "idle",
+      "category": "Yield Aggregator",
+      "est_usd_held": 546982.17,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x111111517e4929d3dcbdfa7cce55d30d4b6bc4d6",
+      "protocol": "ICHI",
+      "slug": "ichi",
+      "category": "Liquidity Manager",
+      "est_usd_held": 513495.71,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x02f92800f57bcd74066f5709f1daa1a4302df875",
+      "protocol": "Peapods Finance",
+      "slug": "peapods-finance",
+      "category": "Yield",
+      "est_usd_held": 505185.43,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x0ada190c81b814548ddc2f6adc4a689ce7c1fe73",
+      "protocol": "yAxis",
+      "slug": "yaxis",
+      "category": "Yield Aggregator",
+      "est_usd_held": 487619.58,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x5d8d9f5b96f4438195be9b99eee6118ed4304286",
+      "protocol": "Cover Protocol",
+      "slug": "cover-protocol",
+      "category": "Insurance",
+      "est_usd_held": 480617.78,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xeb964a1a6fab73b8c72a0d15c7337fa4804f484d",
+      "protocol": "Hemi Bridge",
+      "slug": "hemi-bridge",
+      "category": "Canonical Bridge",
+      "est_usd_held": 476768.82,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0xf5238462e7235c7b62811567e63dd17d12c2eaa0",
+      "protocol": "CACHE.Gold",
+      "slug": "cache.gold",
+      "category": "RWA",
+      "est_usd_held": 466552.74,
+      "signals": [
+        "rwa"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x66fd8de541c0594b4dccdfc13bf3a390e50d3afd",
+      "protocol": "Turtle Club",
+      "slug": "turtle-club",
+      "category": "Onchain Capital Allocator",
+      "est_usd_held": 449966.18,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0xf063fe1ab7a291c5d06a86e14730b00bf24cb589",
+      "protocol": "DxSale",
+      "slug": "dxsale",
+      "category": "Launchpad",
+      "est_usd_held": 432365.41,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xa1d0e215a23d7030842fc67ce582a6afa3ccab83",
+      "protocol": "YFII",
+      "slug": "yfii",
+      "category": "Yield Aggregator",
+      "est_usd_held": 427922.98,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "1"
+    },
+    {
+      "address": "0x95a4492f028aa1fd432ea71146b433e7b4446611",
+      "protocol": "APY Finance",
+      "slug": "apy-finance",
+      "category": "Yield",
+      "est_usd_held": 405511.73,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xf88b137cfa667065955abd17525e89edcf4d6426",
+      "protocol": "iTrust Finance",
+      "slug": "itrust-finance",
+      "category": "Insurance",
+      "est_usd_held": 390523.11,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x993864e43caa7f7f12953ad6feb1d1ca635b875f",
+      "protocol": "SingularityDAO",
+      "slug": "singularitydao",
+      "category": "Yield",
+      "est_usd_held": 363458.02,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x94e0bab2f6ab1f19f4750e42d7349f2740513ad5",
+      "protocol": "Unicly",
+      "slug": "unicly",
+      "category": "Dexs",
+      "est_usd_held": 330559.98,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xc834fa996fa3bec7aad3693af486ae53d8aa8b50",
+      "protocol": "Convergence",
+      "slug": "convergence",
+      "category": "Dexs",
+      "est_usd_held": 326866.24,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x14778860e937f509e651192a90589de711fb88a9",
+      "protocol": "Cyber",
+      "slug": "cyber",
+      "category": "Chain",
+      "est_usd_held": 317035.24,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0xd82fd4d6d62f89a1e50b1db69ad19932314aa408",
+      "protocol": "Liquis",
+      "slug": "liquis",
+      "category": "Yield",
+      "est_usd_held": 315668.02,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x5da151b95657e788076d04d56234bd93e409cb09",
+      "protocol": "OTSea",
+      "slug": "otsea",
+      "category": "Dexs",
+      "est_usd_held": 313233.68,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xd23ac27148af6a2f339bd82d0e3cff380b5093de",
+      "protocol": "Siren",
+      "slug": "siren",
+      "category": "Options",
+      "est_usd_held": 309640.4,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xb8baa0e4287890a5f79863ab62b7f175cecbd433",
+      "protocol": "Swerve",
+      "slug": "swerve",
+      "category": "Dexs",
+      "est_usd_held": 300987.24,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "3"
+    },
+    {
+      "address": "0x75e2fc69ff2ac12af65ba7d321bbf4f878c535d2",
+      "protocol": "Stockereum",
+      "slug": "stockereum",
+      "category": "Launchpad",
+      "est_usd_held": 290033.37,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0xa1313eb9f3a445606d9583bcac3ebeb56a858279",
+      "protocol": "Tacit",
+      "slug": "tacit",
+      "category": "Privacy",
+      "est_usd_held": 288927.25,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0xe172e9b6cfbeeb5593bdce3f077356fdb33af904",
+      "protocol": "The Interfold",
+      "slug": "the-interfold",
+      "category": "Privacy",
+      "est_usd_held": 285099.14,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x87cc45fff5c0933bb6af6bae7fc013b7ec7df2ee",
+      "protocol": "Fyde Protocol",
+      "slug": "fyde-protocol",
+      "category": "Yield Aggregator",
+      "est_usd_held": 258537.71,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xd8f1460044925d2d5c723c7054cd9247027415b7",
+      "protocol": "Clipper",
+      "slug": "clipper",
+      "category": "Dexs",
+      "est_usd_held": 241781.3,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xfd0205066521550d7d7ab19da8f72bb004b4c341",
+      "protocol": "Bunni V2",
+      "slug": "bunni-v2",
+      "category": "Dexs",
+      "est_usd_held": 222897.21,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xdefa1d21c5f1cbeac00eeb54b44c7d86467cc3a3",
+      "protocol": "Almanak",
+      "slug": "almanak",
+      "category": "Onchain Capital Allocator",
+      "est_usd_held": 219489.75,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x104f3152d8ebfc3f679392977356962ff36566ac",
+      "protocol": "ChainPort",
+      "slug": "chainport",
+      "category": "Bridge",
+      "est_usd_held": 208995.24,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x3449fc1cd036255ba1eb19d65ff4ba2b8903a69a",
+      "protocol": "Basis Cash",
+      "slug": "basis-cash",
+      "category": "Algo-Stables",
+      "est_usd_held": 205663.03,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x249ca82617ec3dfb2589c4c17ab7ec9765350a18",
+      "protocol": "Verse",
+      "slug": "verse",
+      "category": "Dexs",
+      "est_usd_held": 202698.16,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xe0ad1806fd3e7edf6ff52fdb822432e847411033",
+      "protocol": "OnX Finance",
+      "slug": "onx-finance",
+      "category": "Yield Aggregator",
+      "est_usd_held": 185742.85,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xef9cd7882c067686691b6ff49e650b43afbbcc6b",
+      "protocol": "FinNexus",
+      "slug": "finnexus",
+      "category": "Options",
+      "est_usd_held": 180949.45,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x93aa0ccd1e5628d3a841c4dbdf602d9eb04085d6",
+      "protocol": "Pepu Bridge",
+      "slug": "pepu-bridge",
+      "category": "Bridge",
+      "est_usd_held": 170368.27,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x3e5a19c91266ad8ce2477b91585d1856b84062df",
+      "protocol": "Ancient8",
+      "slug": "ancient8",
+      "category": "Chain",
+      "est_usd_held": 170143.65,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x896e145568624a498c5a909187363ae947631503",
+      "protocol": "Wasabix",
+      "slug": "wasabix",
+      "category": "Yield",
+      "est_usd_held": 157638.43,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xc353bf07405304aeab75f4c2fac7e88d6a68f98e",
+      "protocol": "HOPE Swap",
+      "slug": "hope-swap",
+      "category": "Dexs",
+      "est_usd_held": 149844.15,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xe4815ae53b124e7263f08dcdbbb757d41ed658c6",
+      "protocol": "ZKSwap",
+      "slug": "zkswap",
+      "category": "Chain",
+      "est_usd_held": 130152.03,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x32fb7d6e0cbeb9433772689aa4647828cc7cbba8",
+      "protocol": "Cove Boosties",
+      "slug": "cove-boosties",
+      "category": "Yield Aggregator",
+      "est_usd_held": 128391.48,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xd83ae04c9ed29d6d3e6bf720c71bc7beb424393e",
+      "protocol": "InsureDAO",
+      "slug": "insuredao",
+      "category": "Insurance",
+      "est_usd_held": 122056.68,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xbea98c05eeae2f3bc8c3565db7551eb738c8ccab",
+      "protocol": "Geyser",
+      "slug": "geyser",
+      "category": "Yield",
+      "est_usd_held": 118875.56,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x630d98424efe0ea27fb1b3ab7741907dffeaad78",
+      "protocol": "PEAKDEFI",
+      "slug": "peakdefi",
+      "category": "Yield",
+      "est_usd_held": 110225.93,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x0aacfbec6a24756c20d41914f2caba817c0d8521",
+      "protocol": "Yam Finance",
+      "slug": "yam-finance",
+      "category": "Synthetics",
+      "est_usd_held": 108470.1,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "3"
+    },
+    {
+      "address": "0x8861cff2366c1128fd699b68304ad99a0764ef9a",
+      "protocol": "Cyclone",
+      "slug": "cyclone",
+      "category": "Yield",
+      "est_usd_held": 103962.66,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x72377f31e30a405282b522d588aebbea202b4f23",
+      "protocol": "Varen",
+      "slug": "varen",
+      "category": "Dexs",
+      "est_usd_held": 98887.23,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x4554cc10898f92d45378b98d6d6c2dd54c687fb2",
+      "protocol": "Juicebox V3",
+      "slug": "juicebox-v3",
+      "category": "Launchpad",
+      "est_usd_held": 95742.68,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x0000000000095413afc295d19edeb1ad7b71c952",
+      "protocol": "Tokenlon AMM",
+      "slug": "tokenlon-amm",
+      "category": "Dexs",
+      "est_usd_held": 92892.82,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xbf776e4fca664d791c4ee3a71e2722990e003283",
+      "protocol": "Smoothy",
+      "slug": "smoothy",
+      "category": "Dexs",
+      "est_usd_held": 89054.27,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xb1d1eae60eea9525032a6dcb4c1ce336a1de71be",
+      "protocol": "Derive V1",
+      "slug": "derive-v1",
+      "category": "Options",
+      "est_usd_held": 89028.95,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x23f3d4625aef6f0b84d50db1d53516e6015c0c9b",
+      "protocol": "Thetanuts Finance",
+      "slug": "thetanuts-finance",
+      "category": "Options",
+      "est_usd_held": 88925.56,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xb1f66997a5760428d3a87d68b90bfe0ae64121cc",
+      "protocol": "LuaSwap",
+      "slug": "luaswap",
+      "category": "Dexs",
+      "est_usd_held": 87577.24,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x89a8c847f41c0dfa6c8b88638bacca8a0b777da7",
+      "protocol": "Elixir",
+      "slug": "elixir",
+      "category": "Yield",
+      "est_usd_held": 82432.26,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x7448c7456a97769f6cd04f1e83a4a23ccdc46abd",
+      "protocol": "Maverick V1",
+      "slug": "maverick-v1",
+      "category": "Dexs",
+      "est_usd_held": 78645.47,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x1ceb5cb57c4d4e2b2433641b95dd330a33185a44",
+      "protocol": "Keep3r Network",
+      "slug": "keep3r-network",
+      "category": "Derivatives",
+      "est_usd_held": 77777.63,
+      "signals": [
+        "derivative"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xed1480d12be41d92f36f5f7bdd88212e381a3677",
+      "protocol": "FIAT DAO",
+      "slug": "fiat-dao",
+      "category": "Yield",
+      "est_usd_held": 77258.82,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xd0345d30fd918d7682398acbcdf139c808998709",
+      "protocol": "Lixir Finance",
+      "slug": "lixir-finance",
+      "category": "Liquidity Manager",
+      "est_usd_held": 74278.28,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x043c308bb8a5ae96d0093444be7f56459f1340b1",
+      "protocol": "SumSwap",
+      "slug": "sumswap",
+      "category": "Dexs",
+      "est_usd_held": 73105.62,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x518b63da813d46556fea041a88b52e3caa8c16a8",
+      "protocol": "Antfarm finance",
+      "slug": "antfarm-finance",
+      "category": "Liquidity Manager",
+      "est_usd_held": 70123.48,
+      "signals": [
+        "farm"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x888888435fde8e7d4c54cab67f206e4199454c60",
+      "protocol": "DFX V2",
+      "slug": "dfx-v2",
+      "category": "Dexs",
+      "est_usd_held": 67824.44,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x0258f474786ddfd37abce6df6bbb1dd5dfc4434a",
+      "protocol": "Orion Pools",
+      "slug": "orion-pools",
+      "category": "Dexs",
+      "est_usd_held": 66397.16,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x5de8ab7e27f6e7a1fff3e5b337584aa43961beef",
+      "protocol": "SMARDEX AMM",
+      "slug": "smardex-amm",
+      "category": "Dexs",
+      "est_usd_held": 64619.15,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x888888888889c00c67689029d7856aac1065ec11",
+      "protocol": "Opium",
+      "slug": "opium",
+      "category": "Options",
+      "est_usd_held": 63193.86,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xda187eb6f4d7ee3a0b8f5cd81eed8d347f5693ad",
+      "protocol": "Harbor",
+      "slug": "harbor",
+      "category": "Yield",
+      "est_usd_held": 56256.55,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x4297394c20800e8a38a619a243e9bbe7681ff24e",
+      "protocol": "Hot Cross",
+      "slug": "hot-cross",
+      "category": "Chain",
+      "est_usd_held": 56127.25,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0xc881255e4d639b42e326158c7b8ccb7f33459261",
+      "protocol": "BitSwap",
+      "slug": "bitswap",
+      "category": "Cross Chain Bridge",
+      "est_usd_held": 52799.23,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x9ae380f0272e2162340a5bb646c354271c0f5cfc",
+      "protocol": "Conic Finance",
+      "slug": "conic-finance",
+      "category": "Yield",
+      "est_usd_held": 52627.77,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xab37e1358b639fd877f015027bb62d3ddaa7557e",
+      "protocol": "Lien",
+      "slug": "lien",
+      "category": "Options",
+      "est_usd_held": 51587.44,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x725c263e32c72ddc3a19bea12c5a0479a81ee688",
+      "protocol": "Bridge Mutual",
+      "slug": "bridge-mutual",
+      "category": "Insurance",
+      "est_usd_held": 50974.9,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x92868a5255c628da08f550a858a802f5351c5223",
+      "protocol": "CrossChain Bridge",
+      "slug": "crosschain-bridge",
+      "category": "Cross Chain Bridge",
+      "est_usd_held": 50473.97,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x777172d858dc1599914a1c4c6c9fc48c99a60990",
+      "protocol": "Solidly V2",
+      "slug": "solidly-v2",
+      "category": "Dexs",
+      "est_usd_held": 48450.27,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xeeaa40b28a2d1b0b08f6f97bb1dd4b75316c6107",
+      "protocol": "CVI Finance",
+      "slug": "cvi-finance",
+      "category": "Synthetics",
+      "est_usd_held": 44648.93,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x12ef10a4fc6e1ea44b4ca9508760ff51c647bb71",
+      "protocol": "Restake Finance",
+      "slug": "restake-finance",
+      "category": "Liquid Restaking",
+      "est_usd_held": 39996.37,
+      "signals": [
+        "staking"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x24a6a37576377f63f194caa5f518a60f45b42921",
+      "protocol": "Float Protocol",
+      "slug": "float-protocol",
+      "category": "Yield",
+      "est_usd_held": 39975.9,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x0b342c51d1592c41068d5d4b4da4a68c0a04d5a4",
+      "protocol": "OneSwap",
+      "slug": "oneswap",
+      "category": "Dexs",
+      "est_usd_held": 39027.34,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xb1f1f47061a7be15c69f378cb3f69423bd58f2f8",
+      "protocol": "Flashstake",
+      "slug": "flashstake",
+      "category": "Yield",
+      "est_usd_held": 37387.8,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xb57420fad6731b004309d5a0ec7c6c906adb8df7",
+      "protocol": "DotOracle",
+      "slug": "dotoracle",
+      "category": "Bridge",
+      "est_usd_held": 32205.88,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x752efadc0a7e05ad1bcccda22c141d01a75ef1e4",
+      "protocol": "CompliFi",
+      "slug": "complifi",
+      "category": "Derivatives",
+      "est_usd_held": 30846.21,
+      "signals": [
+        "derivative"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x544c42fbb96b39b21df61cf322b5edc285ee7429",
+      "protocol": "InsurAce",
+      "slug": "insurace",
+      "category": "Insurance",
+      "est_usd_held": 29912.51,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x79256db1bdb6259315a1a3d7dd237f69cadfd8fc",
+      "protocol": "Typhoon Cash",
+      "slug": "typhoon-cash",
+      "category": "Privacy",
+      "est_usd_held": 29354.28,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x0aee8703d34dd9ae107386d3eff22ae75dd616d1",
+      "protocol": "Tranche Finance",
+      "slug": "tranche-finance",
+      "category": "Yield",
+      "est_usd_held": 27503.99,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x6399c842dd2be3de30bf99bc7d1bbf6fa3650e70",
+      "protocol": "Premia V2",
+      "slug": "premia-v2",
+      "category": "Options",
+      "est_usd_held": 26944.53,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xe7dee4823ee18f1347f1cf7997f70b94efde2e1f",
+      "protocol": "Form Network",
+      "slug": "form-network",
+      "category": "Chain",
+      "est_usd_held": 25785.05,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x67c5870b4a41d4ebef24d2456547a03f1f3e094b",
+      "protocol": "GoodDollar",
+      "slug": "gooddollar",
+      "category": "Yield",
+      "est_usd_held": 25356.23,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x000000c396558ffbab5ea628f39658bdf61345b3",
+      "protocol": "Bunni v1",
+      "slug": "bunni-v1",
+      "category": "Liquidity Manager",
+      "est_usd_held": 24930.24,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "3"
+    },
+    {
+      "address": "0x1c9ba9144505aaba12f4b126fda9807150b88f80",
+      "protocol": "XUSD Money",
+      "slug": "xusd-money",
+      "category": "Algo-Stables",
+      "est_usd_held": 23969.63,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x066798d9ef0833ccc719076dab77199ecbd178b0",
+      "protocol": "SakePerp",
+      "slug": "sakeperp",
+      "category": "Dexs",
+      "est_usd_held": 23624.14,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x49e833337ece7afe375e44f4e3e8481029218e5c",
+      "protocol": "Value Liquid",
+      "slug": "value-liquid",
+      "category": "Dexs",
+      "est_usd_held": 23433.88,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xbbbbca6a901c926f240b89eacb641d8aec7aeafd",
+      "protocol": "Loopring",
+      "slug": "loopring",
+      "category": "Dexs",
+      "est_usd_held": 23203.0,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x0391d2021f89dc339f60fff84546ea23e337750f",
+      "protocol": "BarnBridge",
+      "slug": "barnbridge",
+      "category": "Yield Aggregator",
+      "est_usd_held": 22621.92,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xba8a621b4a54e61c442f5ec623687e2a942225ef",
+      "protocol": "SandClock",
+      "slug": "sandclock",
+      "category": "Yield",
+      "est_usd_held": 22367.14,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x904f36d74bed2ef2729eaa1c7a5b70dea2966a02",
+      "protocol": "Blueberry",
+      "slug": "blueberry",
+      "category": "Yield",
+      "est_usd_held": 21967.7,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x8929e9dbd2785e3ba16175e596cdd61520fee0d1",
+      "protocol": "Altitude",
+      "slug": "altitude",
+      "category": "Cross Chain Bridge",
+      "est_usd_held": 21781.4,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x757bc268bd50da88b2d0cf1966652b18e56ca803",
+      "protocol": "Yapeswap",
+      "slug": "yapeswap",
+      "category": "Dexs",
+      "est_usd_held": 21382.86,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "3"
+    },
+    {
+      "address": "0xb17548c7b510427baac4e267bea62e800b247173",
+      "protocol": "Swarm Markets",
+      "slug": "swarm-markets",
+      "category": "Dexs",
+      "est_usd_held": 21256.11,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xf56842af3b56fd72d17cb103f92d027bba912e89",
+      "protocol": "BambooDeFi",
+      "slug": "bamboodefi",
+      "category": "Dexs",
+      "est_usd_held": 21218.9,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x20945ca1df56d237fd40036d47e866c7dccd2114",
+      "protocol": "Nsure",
+      "slug": "nsure",
+      "category": "Insurance",
+      "est_usd_held": 19148.01,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0xd55c9fb62e176a8eb6968f32958fefdd0962727e",
+      "protocol": "Mind Network",
+      "slug": "mind-network",
+      "category": "AI Agents",
+      "est_usd_held": 19082.4,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xe4b5936dce1820f84509c89cce0f28c87988bad8",
+      "protocol": "Universe Finance",
+      "slug": "universe-finance",
+      "category": "Liquidity Manager",
+      "est_usd_held": 19070.07,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x1a23a6bfbadb59fa563008c0fb7cf96dfcf34ea1",
+      "protocol": "CoFiX",
+      "slug": "cofix",
+      "category": "Dexs",
+      "est_usd_held": 18890.24,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x7a5d3a9dcd33cb8d527f7b5f96eb4fef43d55636",
+      "protocol": "RadioShack",
+      "slug": "radioshack",
+      "category": "Dexs",
+      "est_usd_held": 18682.57,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xa91ac63d040deb1b7a5e4d4134ad23eb0ba07e14",
+      "protocol": "Bella Protocol",
+      "slug": "bella-protocol",
+      "category": "Yield",
+      "est_usd_held": 16959.24,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x7636d8722fdf7cd34232a915e48e96aa3eb386bf",
+      "protocol": "Singularity Finance",
+      "slug": "singularity-finance",
+      "category": "Yield",
+      "est_usd_held": 14831.25,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x736ecc5237b31edec6f1ab9a396fae2416b1d96e",
+      "protocol": "Gasp",
+      "slug": "gasp",
+      "category": "Cross Chain Bridge",
+      "est_usd_held": 14647.28,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0xb26c4b3ca601136daf98593feaeff9e0ca702a8d",
+      "protocol": "Aladdin DAO",
+      "slug": "aladdin-dao",
+      "category": "Yield Aggregator",
+      "est_usd_held": 14126.77,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x5a75a093747b72a0e14056352751edf03518031d",
+      "protocol": "EmiSwap",
+      "slug": "emiswap",
+      "category": "Dexs",
+      "est_usd_held": 14104.2,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x06b0c26235699b15e940e8807651568b995a8e01",
+      "protocol": "MFinance",
+      "slug": "mfinance",
+      "category": "Yield",
+      "est_usd_held": 13868.89,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x38e382f74dfb84608f3c1f10187f6bef5951de93",
+      "protocol": "MultiBit Protocol",
+      "slug": "multibit-protocol",
+      "category": "Bridge",
+      "est_usd_held": 13605.06,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x01597e397605bf280674bf292623460b4204c375",
+      "protocol": "Bent Finance",
+      "slug": "bent-finance",
+      "category": "Yield",
+      "est_usd_held": 13156.67,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x6e15a54b5ecac17e58dadeddbe8506a7560252f9",
+      "protocol": "SynFutures V1",
+      "slug": "synfutures-v1",
+      "category": "Derivatives",
+      "est_usd_held": 12746.92,
+      "signals": [
+        "derivative"
+      ],
+      "drain_probability": 0.1,
+      "audits": "1"
+    },
+    {
+      "address": "0xc12d099be31567add4e4e4d0d45691c3f58f5663",
+      "protocol": "Auctus",
+      "slug": "auctus",
+      "category": "Options",
+      "est_usd_held": 12660.13,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x95d8bf2f57cf973251972b496dc6b1d9c6b5bce3",
+      "protocol": "Blueprint",
+      "slug": "blueprint",
+      "category": "Dexs",
+      "est_usd_held": 12649.99,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xf4cd3d3fda8d7fd6c5a500203e38640a70bf9577",
+      "protocol": "YFDAI",
+      "slug": "yfdai",
+      "category": "Services",
+      "est_usd_held": 12625.91,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xaaa843fb2916c0b57454270418e121c626402aaa",
+      "protocol": "Arcadia V1",
+      "slug": "arcadia-v1",
+      "category": "Leveraged Farming",
+      "est_usd_held": 12557.02,
+      "signals": [
+        "farm"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xbf900809f4c73e5a3476eb183d8b06a27e61f8e5",
+      "protocol": "Vanilla",
+      "slug": "vanilla",
+      "category": "Derivatives",
+      "est_usd_held": 11576.49,
+      "signals": [
+        "derivative"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x6d4ca1177087924edfe0908ef655169ea766fdc3",
+      "protocol": "Hedgehog",
+      "slug": "hedgehog",
+      "category": "Liquidity Manager",
+      "est_usd_held": 10448.81,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x8fe6a43672fca70d41e112b8426387665fd061ec",
+      "protocol": "Everstrat",
+      "slug": "everstrat",
+      "category": "Liquidity Manager",
+      "est_usd_held": 10229.58,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x9c7beba8f6ef6643abd725e45a4e8387ef260649",
+      "protocol": "Gravity by Galxe Bridge",
+      "slug": "gravity-by-galxe-bridge",
+      "category": "Canonical Bridge",
+      "est_usd_held": 9529.15,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x14b14f83e94d81a0b2bd26e5a2d5343f9355fd12",
+      "protocol": "Powaa Protocol",
+      "slug": "powaa-protocol",
+      "category": "Services",
+      "est_usd_held": 9026.93,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xd478161c952357f05f0292b56012cd8457f1cfbf",
+      "protocol": "Polkamarkets",
+      "slug": "polkamarkets",
+      "category": "Prediction Market",
+      "est_usd_held": 8778.91,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x727f064a78dc734d33eec18d5370aef32ffd46e4",
+      "protocol": "Orion Money",
+      "slug": "orion-money",
+      "category": "Yield",
+      "est_usd_held": 8676.93,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x3da932456d082cba208feb0b096d49b202bf89c8",
+      "protocol": "Dego Finance",
+      "slug": "dego-finance",
+      "category": "Services",
+      "est_usd_held": 8407.31,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x2f57430a6ceda85a67121757785877b4a71b8e6d",
+      "protocol": "DefiPlaza",
+      "slug": "defiplaza",
+      "category": "Dexs",
+      "est_usd_held": 8238.19,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xb7ea86464a24586c8bfa34dfbc637c511fece8be",
+      "protocol": "Hollow",
+      "slug": "hollow",
+      "category": "Reserve Currency",
+      "est_usd_held": 7996.88,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0xe63d6b308bce0f6193aec6b7e6eba005f41e36ab",
+      "protocol": "StoneDefi",
+      "slug": "stonedefi",
+      "category": "Yield Aggregator",
+      "est_usd_held": 7717.12,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x236eb848c95b231299b4aa9f56c73d6893462720",
+      "protocol": "Yellow",
+      "slug": "yellow",
+      "category": "Dexs",
+      "est_usd_held": 7484.64,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x0f5f3e11302a91f806d5589ec6081494b63ba05a",
+      "protocol": "Whale Game",
+      "slug": "whale-game",
+      "category": "Prediction Market",
+      "est_usd_held": 7353.29,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x8ce9137d39326ad0cd6491fb5cc0cba0e089b6a9",
+      "protocol": "Swipe",
+      "slug": "swipe",
+      "category": "Dexs",
+      "est_usd_held": 7131.43,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xa283aa7cfbb27ef0cfbcb2493dd9f4330e0fd304",
+      "protocol": "Mushrooms Finance",
+      "slug": "mushrooms-finance",
+      "category": "Yield Aggregator",
+      "est_usd_held": 6950.71,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xfe9a29ab92522d14fc65880d817214261d8479ae",
+      "protocol": "SnowSwap",
+      "slug": "snowswap",
+      "category": "Dexs",
+      "est_usd_held": 6763.63,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "3"
+    },
+    {
+      "address": "0x5f0e628b693018f639d10e4a4f59bd4d8b2b6b44",
+      "protocol": "Whiteheart",
+      "slug": "whiteheart",
+      "category": "Options",
+      "est_usd_held": 6284.73,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xa9b1eb5908cfc3cdf91f9b8b3a74108598009096",
+      "protocol": "Bounce Finance",
+      "slug": "bounce-finance",
+      "category": "Launchpad",
+      "est_usd_held": 6066.31,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    },
+    {
+      "address": "0x8f5ac7f3cfeffb6eb638a8add2d32661f82c03fd",
+      "protocol": "Manga FI",
+      "slug": "manga-fi",
+      "category": "Yield",
+      "est_usd_held": 6023.42,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xe1b583dc66e0a24fd9af2dc665f6f5e48978e106",
+      "protocol": "Mercurity",
+      "slug": "mercurity",
+      "category": "Dexs",
+      "est_usd_held": 5769.11,
+      "signals": [
+        "dex"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0x67d85a291fcdc862a78812a3c26d55e28ffb2701",
+      "protocol": "Asymetrix Protocol",
+      "slug": "asymetrix-protocol",
+      "category": "Yield",
+      "est_usd_held": 5381.8,
+      "signals": [
+        "yield"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xd6123271f980d966b00ca4fca6c2c021f05e2e73",
+      "protocol": "Tranchess Ether",
+      "slug": "tranchess-ether",
+      "category": "Liquid Staking",
+      "est_usd_held": 5275.24,
+      "signals": [
+        "staking"
+      ],
+      "drain_probability": 0.1,
+      "audits": "2"
+    },
+    {
+      "address": "0xadaf95906c05c5c5de12db00a38e0b02d7ffd5e9",
+      "protocol": "Lode Markets",
+      "slug": "lode-markets",
+      "category": "Liquidity Manager",
+      "est_usd_held": 5150.83,
+      "signals": [],
+      "drain_probability": 0.1,
+      "audits": "0"
+    }
+  ]
+}
