@@ -29,9 +29,10 @@ This is the follow-up to `small_value_under5k_queue.json`. That file is unchange
 Signal-rerun reads **one** queue and scans **one batch**, then stops. Finished addresses are the `signal-rerun:<address>` rows already stored as done.
 
 - **Batch:** 75 contracts, proxy cap 250,000 CU. Four batches cover this queue.
+- **Queue 2 trigger:** push `eth-scanner/signal-rerun-q2.trigger` to `main`. The workflow runs `--small-value-batch --queue 2`. Each push must change the file. One push scans one batch.
 - **Queue 2, manually:** Actions → *eth-scanner-signal-rerun* → *Run workflow* → mode `small-value-batch`, queue `2`.
 - **Queue 2, local:** `cd eth-scanner && python -m eth_scanner signal-rerun --small-value-batch --queue 2 --batch-size 75 --budget-cu 250000 --deadline-minutes 55 --dry-run --json`
-- **Queue 1 is unchanged:** push `eth-scanner/signal-rerun.trigger`, or run the workflow with queue `1` (the default). That command does not pass `--queue`.
+- **Queue 1 is unchanged:** push `eth-scanner/signal-rerun.trigger`, or run the workflow with queue `1` (the default). That command does not pass `--queue`. A push that includes the queue 1 file stays on queue 1.
 
 Watch the Actions log for `mode` (`small-value-under5k-2`), `queue_id` (`2`), `selected`, `rerun_count`, `skipped_finished`, `cu_used`, and `status`.
 

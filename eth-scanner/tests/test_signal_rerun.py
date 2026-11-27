@@ -528,5 +528,59 @@ class ProviderStop(unittest.TestCase):
         self.assertEqual(store.test_runs[0]["status"], "done")
 
 
+class TriggerQueue(unittest.TestCase):
+    def test_queue_1_push_stays_on_queue_1(self):
+        event = {"commits": [{"modified": [rerun.Q1_TRIGGER]}]}
+        self.assertEqual(rerun.queue_id_for_github_event(event, "push"), "1")
+
+    def test_queue_2_file_alone_selects_queue_2(self):
+        event = {"head_commit": {"added": [rerun.Q2_TRIGGER]}}
+        self.assertEqual(rerun.queue_id_for_github_event(event, "push"), "2")
+
+    def test_queue_1_file_wins_when_both_change(self):
+        event = {
+            "commits": [
+                {"modified": [rerun.Q2_TRIGGER]},
+                {"modified": [rerun.Q1_TRIGGER]},
+            ]
+        }
+        self.assertEqual(rerun.queue_id_for_github_event(event, "push"), "1")
+
+    def test_an_unrelated_push_stays_on_queue_1(self):
+        event = {"commits": [{"modified": ["README.md"]}]}
+        self.assertEqual(rerun.queue_id_for_github_event(event, "push"), "1")
+        self.assertEqual(rerun.queue_id_for_github_event({}, "push"), "1")
+        self.assertEqual(rerun.queue_id_for_github_event(None, ""), "1")
+
+    def test_dispatch_uses_its_queue_input(self):
+        self.assertEqual(
+            rerun.queue_id_for_github_event({"inputs": {"queue": "2", "mode": "small-value-batch"}}, "workflow_dispatch"),
+            "2",
+        )
+        self.assertEqual(
+            rerun.queue_id_for_github_event({"inputs": {"queue": "1"}}, "workflow_dispatch"),
+            "1",
+        )
+        self.assertEqual(
+            rerun.queue_id_for_github_event({"inputs": {}}, "workflow_dispatch"),
+            "1",
+        )
+
+    def test_workflow_keeps_both_triggers_and_the_queue_1_command(self):
+        root = Path(__file__).resolve().parents[2]
+        text = (root / ".github/workflows/eth-scanner-signal-rerun.yml").read_text(encoding="utf-8")
+        self.assertIn("eth-scanner/signal-rerun.trigger", text)
+        self.assertIn("eth-scanner/signal-rerun-q2.trigger", text)
+        self.assertIn("queue_id_for_github_event", text)
+        self.assertIn("python -m eth_scanner signal-rerun --small-value-batch --batch-size 75 --budget-cu 250000", text)
+        self.assertIn("python -m eth_scanner signal-rerun --small-value-batch --queue 2 --batch-size 75 --budget-cu 250000", text)
+        queue1 = text.split("else", 1)[1]
+        self.assertNotIn("--queue 2", queue1)
+        self.assertIn('elif [ "${RERUN_QUEUE}" = "2" ]', text)
+        self.assertIn("workflow_dispatch", text)
+        self.assertIn("group: eth-scanner-signal-rerun", text)
+        self.assertIn("cancel-in-progress: false", text)
+
+
 if __name__ == "__main__":
     unittest.main()
