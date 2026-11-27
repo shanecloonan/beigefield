@@ -594,7 +594,7 @@ class TriggerQueue(unittest.TestCase):
         self.assertIn("run_mode_for_changed_files", text)
         self.assertIn("addresses_from_full_path_trigger", text)
         self.assertIn('ARGS+=(--address "${ADDR}")', text)
-        self.assertIn("--budget-cu 250000 --deadline-minutes 320", text)
+        self.assertIn("--budget-cu 60000 --deadline-minutes 320", text)
         self.assertIn("not starting a queue", text)
         self.assertNotIn("--address", queue1)
         self.assertNotIn("full-path", queue1)
@@ -606,12 +606,17 @@ class FullPath(unittest.TestCase):
 
     def test_trigger_file_lists_the_heated_batch_in_order(self):
         found = rerun.addresses_from_full_path_trigger()
-        self.assertGreaterEqual(len(found), 62)
-        self.assertEqual(found[0], "0xbceb5f6877d979ec621ae694da1102cb95691ad3")
-        self.assertEqual(found[1], "0xda06ee2dacf9245aa80072a4407debdea0d7e341")
-        self.assertEqual(found[2], "0xb48c056c5608ba2ee4cd94af2bf4b1f25295bd7e")
-        self.assertEqual(len(found), len(set(found)))
+        self.assertEqual(found, [
+            "0xc88f47067db2e25851317a2fdae73a22c0777c37",
+            "0xf80e51afb613d764fa61751affd3313c190a86bb",
+            "0x19b3bde6f02fc2c985947dcc1dc2a4cddfd43ee8",
+            "0xc42d8f3d791c107c458b2fea025a36669b51fc5f",
+            "0xba2e90b4dcdb235e46b9554360e31f2afa1d8b35",
+            "0x9435f39c4a1a51765dd4294fc84fe024f5ace0d2",
+            "0x56b49615b468c14237236caffee4d5b7c65a82f8",
+        ])
         self.assertNotIn(self.ADDR, found)
+        self.assertNotIn("0xbceb5f6877d979ec621ae694da1102cb95691ad3", found)
         self.assertEqual(rerun.address_from_full_path_trigger(), found[0])
         self.assertEqual(rerun.addresses_from_full_path_trigger("no address here"), [])
         listed = rerun.addresses_from_full_path_trigger(
