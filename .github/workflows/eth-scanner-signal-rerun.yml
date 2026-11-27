@@ -6,7 +6,10 @@
 # does not start either under-$5k queue. Pushing eth-scanner/high-prob.trigger
 # scans the next 300 unscanned contracts at or above $5,000 (normal scan,
 # then fork and fuzz only where heat is above 0, 400k CU) and does not start
-# either under-$5k queue. The job timeout covers that batch.
+# either under-$5k queue. Pushing eth-scanner/held-funds.trigger measures
+# ETH and major-token balances and scans the richest 500 unscanned contracts
+# (normal scan, then fork and fuzz only where heat is above 0, 400k CU).
+# The job timeout covers that batch.
 # Queue runs still stop on their own 55 minute deadline. workflow_dispatch
 # can still select either queue.
 # workflow_dispatch mode "historical" re-scores stored signals inside 4M CU.
@@ -22,6 +25,7 @@ on:
       - eth-scanner/signal-rerun-q2.trigger
       - eth-scanner/full-path.trigger
       - eth-scanner/high-prob.trigger
+      - eth-scanner/held-funds.trigger
   workflow_dispatch:
     inputs:
       mode:
@@ -137,7 +141,7 @@ jobs:
           print(run_mode_for_changed_files(os.environ.get("CHANGED_FILES", "").splitlines()))
           PY
           )"
-            if [ "${MODE}" != "full-path" ] && [ "${MODE}" != "high-prob" ]; then
+            if [ "${MODE}" != "full-path" ] && [ "${MODE}" != "high-prob" ] && [ "${MODE}" != "held-funds" ]; then
               RERUN_QUEUE="$(CHANGED_FILES="$CHANGED" python - <<'PY'
           import os
           from eth_scanner.desk.signal_rerun import queue_id_for_changed_files
@@ -168,6 +172,9 @@ jobs:
           elif [ "${MODE}" = "high-prob" ]; then
             echo "signal-rerun high-prob next 300, normal scan then fork on heat above 0, budget 400000 CU"
             python -m eth_scanner high-prob-batch --limit 300 --budget-cu 400000 --deadline-minutes 300 --lease-wait-minutes 20 --json
+          elif [ "${MODE}" = "held-funds" ]; then
+            echo "signal-rerun held-funds next 500 by measured balances, normal scan then fork on heat above 0, budget 400000 CU"
+            python -m eth_scanner held-funds-batch --limit 500 --budget-cu 400000 --deadline-minutes 300 --lease-wait-minutes 20 --json
           elif [ "${RERUN_MODE}" = "historical" ]; then
             echo "signal-rerun historical, fork verify on, fuzz min heat 0, budget 4000000 CU"
             timeout 60m python -m eth_scanner signal-rerun --budget-cu 4000000 --deadline-minutes 55 --lease-wait-minutes 20 --json
