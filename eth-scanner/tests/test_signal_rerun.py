@@ -536,6 +536,11 @@ class TriggerQueue(unittest.TestCase):
     def test_queue_2_file_alone_selects_queue_2(self):
         event = {"head_commit": {"added": [rerun.Q2_TRIGGER]}}
         self.assertEqual(rerun.queue_id_for_github_event(event, "push"), "2")
+        self.assertEqual(rerun.queue_id_for_changed_files([rerun.Q2_TRIGGER]), "2")
+        self.assertEqual(
+            rerun.queue_id_for_changed_files(["  " + rerun.Q2_TRIGGER, ""]),
+            "2",
+        )
 
     def test_queue_1_file_wins_when_both_change(self):
         event = {
@@ -571,11 +576,14 @@ class TriggerQueue(unittest.TestCase):
         text = (root / ".github/workflows/eth-scanner-signal-rerun.yml").read_text(encoding="utf-8")
         self.assertIn("eth-scanner/signal-rerun.trigger", text)
         self.assertIn("eth-scanner/signal-rerun-q2.trigger", text)
-        self.assertIn("queue_id_for_github_event", text)
+        self.assertIn("queue_id_for_changed_files", text)
+        self.assertIn("git diff-tree -m --no-commit-id --name-only -r HEAD", text)
+        self.assertIn("workflow_dispatch", text)
         self.assertIn("python -m eth_scanner signal-rerun --small-value-batch --batch-size 75 --budget-cu 250000", text)
         self.assertIn("python -m eth_scanner signal-rerun --small-value-batch --queue 2 --batch-size 75 --budget-cu 250000", text)
-        queue1 = text.split("else", 1)[1]
+        queue1 = text.rsplit("else", 1)[1]
         self.assertNotIn("--queue 2", queue1)
+        self.assertIn("--batch-size 75", queue1)
         self.assertIn('elif [ "${RERUN_QUEUE}" = "2" ]', text)
         self.assertIn("workflow_dispatch", text)
         self.assertIn("group: eth-scanner-signal-rerun", text)
