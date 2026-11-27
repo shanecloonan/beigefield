@@ -10,9 +10,11 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import threading
 import time
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Optional
@@ -63,6 +65,10 @@ _PROVIDER_STOPS = frozenset({"monthly capacity", "auth", "rate limited"})
 # file selects queue 2. workflow_dispatch still uses its queue input.
 Q1_TRIGGER = "eth-scanner/signal-rerun.trigger"
 Q2_TRIGGER = "eth-scanner/signal-rerun-q2.trigger"
+# One address, fork verify, and fuzz. A push of this file does not read
+# either under-$5k queue. The address is the first 20-byte hex token.
+FULL_PATH_TRIGGER = "eth-scanner/full-path.trigger"
+_FULL_PATH_FILE = Path(__file__).resolve().parents[3] / "full-path.trigger"
 _EVIDENCE_KEYS = (
     "invariants_failed",
     "privileged_callable",
@@ -70,6 +76,40 @@ _EVIDENCE_KEYS = (
     "corroborated_leads",
     "gated_leads",
 )
+
+
+def _changed_set(paths) -> set[str]:
+    files: set[str] = set()
+    for name in paths or []:
+        text = str(name or "").replace("\\", "/").strip()
+        if text:
+            files.add(text)
+    return files
+
+
+def run_mode_for_changed_files(paths) -> str:
+    """``full-path`` scans the trigger file's address and does not start a queue.
+
+    A commit that contains the full-path trigger stays on that one contract
+    even when a queue trigger file is in the same commit.
+    """
+    if FULL_PATH_TRIGGER in _changed_set(paths):
+        return "full-path"
+    return "queue"
+
+
+def address_from_full_path_trigger(text: str | None = None) -> str:
+    """First 20-byte address in the full-path trigger file. Empty when absent."""
+    if text is None:
+        try:
+            text = _FULL_PATH_FILE.read_text(encoding="utf-8")
+        except OSError:
+            return ""
+    for token in str(text or "").replace(",", " ").split():
+        addr = safe_address(token.strip("\"'"))
+        if addr:
+            return addr
+    return ""
 
 
 def queue_id_for_changed_files(paths) -> str:
@@ -520,6 +560,97 @@ def fork_from_result(result: Any) -> dict[str, Any]:
     }
 
 
+def explain_fuzz(block: dict[str, Any]) -> str:
+    """Plain fuzz outcome. Property names only. No call data."""
+    status = str(block.get("status") or "")
+    tool = str(block.get("tool") or "none")
+    ran = bool(block.get("ran")) and status not in {"", "skipped", "compile-skip"}
+    if not ran:
+        if status == "compile-skip":
+            return "Fuzz did not run because the local harness did not compile."
+        if status == "skipped":
+            return "Fuzz did not run."
+        return "Fuzz did not run."
+    count = 0
+    failures = block.get("failures")
+    if isinstance(failures, list):
+        count = len(failures)
+    else:
+        count = _num(block.get("failure_count"))
+    if count:
+        return (
+            "Fuzz ran with %s and reported %d property failure(s). "
+            "A property failure is not a drain until a local fork measures value leaving the contract. "
+            "Nothing was broadcast."
+            % (tool, count)
+        )
+    return "Fuzz ran with %s and did not report a property failure." % tool
+
+
+def fuzz_from_result(result: Any) -> dict[str, Any]:
+    breakdown = getattr(result, "heat_breakdown", None) or {}
+    if not isinstance(breakdown, dict):
+        breakdown = {}
+    block = breakdown.get("fuzz") if isinstance(breakdown.get("fuzz"), dict) else {}
+    status = str(block.get("status") or "")
+    ran = bool(block.get("ran")) and status not in {"", "skipped", "compile-skip"}
+    names: list[str] = []
+    for item in block.get("failures") or []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("property_id") or item.get("property") or "")
+        if name and "0x" not in name.lower():
+            names.append(redact(name)[:80])
+    return {
+        "status": status or ("ok" if ran else "not-run"),
+        "ran": ran,
+        "tool": str(block.get("tool") or "none"),
+        "properties": _num(block.get("properties_checked")),
+        "failure_count": len(block.get("failures") or []) if isinstance(block.get("failures"), list) else _num(block.get("failure_count")),
+        "properties_failed": names[:8],
+        "plain": explain_fuzz(block),
+    }
+
+
+def _stage_executed(block: Any, *, executed_key: str = "ran") -> bool:
+    """True when that engine finished a real check. A skip stays pending."""
+    if not isinstance(block, dict) or not block:
+        return False
+    status = str(block.get("status") or "")
+    if status in {"", "skipped", "compile-skip", "pending"}:
+        return False
+    if executed_key == "executed":
+        return bool(block.get("executed"))
+    return bool(block.get("ran"))
+
+
+def record_executed_stages(result: Any) -> list[str]:
+    """Clear slow stages that actually ran. Empty facts do not change heat."""
+    from eth_scanner.stages.fusion import complete_stage
+
+    breakdown = dict(getattr(result, "heat_breakdown", None) or {})
+    before_heat = _num(getattr(result, "heat", 0))
+    before_fused = _num(breakdown.get("fused_heat"))
+    cleared: list[str] = []
+    checks = (
+        ("fork", breakdown.get("exploit_poc"), "ran"),
+        ("fuzz", breakdown.get("fuzz"), "ran"),
+        ("halmos", breakdown.get("symbolic"), "executed"),
+        ("hevm", breakdown.get("hevm"), "ran"),
+        ("kontrol", breakdown.get("kontrol"), "ran"),
+    )
+    for stage_id, block, key in checks:
+        if not _stage_executed(block, executed_key=key):
+            continue
+        breakdown = complete_stage(breakdown, stage_id, facts=[], confidence=0.9)
+        cleared.append(stage_id)
+    if _num(breakdown.get("fused_heat")) != before_fused and "fused_heat" in (getattr(result, "heat_breakdown", None) or {}):
+        breakdown["fused_heat"] = before_fused
+    result.heat_breakdown = breakdown
+    result.heat = before_heat
+    return cleared
+
+
 def result_row(result: Any) -> dict[str, Any]:
     breakdown = getattr(result, "heat_breakdown", None) or {}
     return {
@@ -848,7 +979,39 @@ def apply_evidence_heat(result: Any, historical_peak: int) -> dict[str, int]:
     return parts
 
 
-def persist_desk(store: Any, result: Any, address: str, parts: dict[str, int], historical_peak: int) -> str:
+def _touch_created_at(store: Any, dedupe_key: str) -> None:
+    """Make this desk row the newest scan so the board shows it."""
+    stamp = datetime.now(timezone.utc).isoformat()
+    runs = getattr(store, "test_runs", None)
+    if isinstance(runs, list):
+        for row in runs:
+            if str(row.get("dedupe_key") or "") == dedupe_key:
+                row["created_at"] = stamp
+                row["finished_at"] = stamp
+    req = getattr(store, "_req", None)
+    if not callable(req):
+        return
+    try:
+        req(
+            "PATCH",
+            "test_scan_runs",
+            {"created_at": stamp, "finished_at": stamp},
+            query={"dedupe_key": "eq.%s" % dedupe_key},
+            prefer="return=minimal",
+        )
+    except Exception:  # noqa: BLE001 — the heat row is already stored
+        pass
+
+
+def persist_desk(
+    store: Any,
+    result: Any,
+    address: str,
+    parts: dict[str, int],
+    historical_peak: int,
+    *,
+    refresh_seen_at: bool = False,
+) -> str:
     """Write the row the public board reads. The first pass never did this."""
     breakdown = dict(getattr(result, "heat_breakdown", None) or {})
     breakdown["original_peak"] = int(historical_peak or 0)
@@ -903,6 +1066,8 @@ def persist_desk(store: Any, result: Any, address: str, parts: dict[str, int], h
             )
         except Exception:  # noqa: BLE001 — heat on the inserted row still ranks
             pass
+    if refresh_seen_at:
+        _touch_created_at(store, "signal-rerun:%s" % address)
     return ""
 
 
@@ -1063,6 +1228,89 @@ class _HoldWrites:
         return getattr(self._inner, name)
 
 
+def _rows_for_address(store: Any, address: str) -> list[dict[str, Any]]:
+    """Recent desk rows for one address. A failed read leaves the scan with peak 0."""
+    addr = safe_address(address)
+    if not addr:
+        return []
+    rows: list[dict[str, Any]] = []
+    req = getattr(store, "_req", None)
+    if callable(req):
+        select = (
+            "address,chain,heat,blend_heat,blend_bucket,bucket,heat_breakdown,"
+            "notes,drop_reason,contract_name,created_at,status,invariant_results"
+        )
+        found: Any = []
+        for filt in ("ilike.%s" % addr, "eq.%s" % addr):
+            try:
+                found = req(
+                    "GET",
+                    "test_scan_runs",
+                    query={
+                        "select": select,
+                        "address": filt,
+                        "order": "created_at.desc",
+                        "limit": "25",
+                    },
+                )
+                break
+            except Exception:  # noqa: BLE001 — try the other filter, then scan anyway
+                found = []
+        if isinstance(found, list):
+            rows.extend(item for item in found if isinstance(item, dict))
+    memory = getattr(store, "test_runs", None)
+    if isinstance(memory, list):
+        for item in memory:
+            if isinstance(item, dict) and safe_address(item.get("address")) == addr:
+                rows.append(item)
+    return rows
+
+
+def candidate_for_address(store: Any, address: str) -> dict[str, Any]:
+    """One contract. The stored peak is kept beside the new evidence score."""
+    addr = safe_address(address)
+    folded, _other = fold_signals(_rows_for_address(store, addr))
+    if folded:
+        chosen = dict(folded[0])
+        reasons = list(chosen.get("reasons") or [])
+        if "one-shot" not in reasons:
+            reasons.append("one-shot")
+        chosen["reasons"] = reasons
+        return chosen
+    return {
+        "chain": "ethereum",
+        "address": addr,
+        "peak": 0,
+        "reasons": ["one-shot"],
+        "name": "",
+        "latest": {},
+        "signal": True,
+    }
+
+
+class _FullPathEnv:
+    """Turn on the one-shot fuzz/Halmos gate for the scan, then put it back."""
+
+    def __init__(self, enabled: bool):
+        self.enabled = enabled
+        self.previous: Optional[str] = None
+
+    def __enter__(self) -> "_FullPathEnv":
+        if self.enabled:
+            self.previous = os.environ.get("ETH_SCANNER_FULL_PATH")
+            os.environ["ETH_SCANNER_FULL_PATH"] = "1"
+        return self
+
+    def __exit__(self, *_exc: Any) -> bool:
+        if not self.enabled:
+            return False
+        if self.previous is None:
+            os.environ.pop("ETH_SCANNER_FULL_PATH", None)
+        else:
+            os.environ["ETH_SCANNER_FULL_PATH"] = self.previous
+        return False
+
+
 def run_signal_rerun(
     store: Any,
     settings: Any,
@@ -1075,6 +1323,7 @@ def run_signal_rerun(
     small_value_batch: bool = False,
     batch_size: int = 0,
     queue_id: str = "1",
+    address: str = "",
 ) -> dict[str, Any]:
     """Collect, cut to the CU budget, then re-score. Fail soft on 429 and on the cap.
 
@@ -1082,13 +1331,44 @@ def run_signal_rerun(
     walk the historical signal tables. The proxy cap stays on that batch.
     ``queue_id`` defaults to queue 1. Queue 2 is the follow-up file.
 
-    A provider stop (Alchemy capacity, auth, or 429) does not write a
-    finished verdict. The contract that hit the stop stays unfinished.
+    ``address`` scans that one contract and does not read either under-$5k
+    queue. Fork verify and fuzz are the caller's env flags. A provider stop
+    (Alchemy capacity, auth, or 429) does not write a finished verdict. The
+    contract that hit the stop stays unfinished.
     """
+    one = safe_address(address)
+    if str(address or "").strip() and not one:
+        return {
+            "status": "error",
+            "mode": "full-path",
+            "notes": ["address is not a 20-byte hex contract"],
+            "rerun": [],
+            "changes": [],
+            "cu_used": 0,
+            "selected": 0,
+        }
     released: dict[str, Any] = {"released": [], "kept": []}
-    if small_value_batch and not dry_run:
-        released = release_false_finished(store)
-    if small_value_batch:
+    if one:
+        selected = [candidate_for_address(store, one)]
+        plan = {
+            "mode": "full-path",
+            "address": one,
+            "rows_read": 0,
+            "signals": 1,
+            "skipped_finished": 0,
+            "selected": 1,
+            "deferred_budget": [],
+            "other_chain": [],
+            "notes": [
+                "one contract; the under-$5k queues were not read",
+                "fork and fuzz clear only after they run; hevm and kontrol stay pending when those binaries are absent",
+            ],
+            "estimate": estimate_cu(1),
+            "budget_cu": int(budget_cu),
+        }
+    elif small_value_batch:
+        if not dry_run:
+            released = release_false_finished(store)
         from eth_scanner.desk.small_value_under5k import prepare_batch
 
         prepared = prepare_batch(
@@ -1180,7 +1460,8 @@ def run_signal_rerun(
             refresh_scan_cycle(store, owner, candidate["address"])
             before = _snapshot(candidate)
             try:
-                result = scan_one(candidate["address"], settings=settings, store=guarded)
+                with _FullPathEnv(bool(one)):
+                    result = scan_one(candidate["address"], settings=settings, store=guarded)
             except RpcUnavailable:
                 stop = "rpc unavailable"
                 unfinished = [_snapshot(row) for row in selected[index:]]
@@ -1208,11 +1489,21 @@ def run_signal_rerun(
                 unfinished = [_snapshot(row) for row in selected[index:]]
                 break
             parts = apply_evidence_heat(result, int(before["peak"]))
+            cleared: list[str] = []
+            if one:
+                cleared = record_executed_stages(result)
             try:
                 store.save_result(candidate["address"], result)
             except Exception:  # noqa: BLE001 — the desk row is the one the site reads
                 pass
-            desk_error = persist_desk(store, result, candidate["address"], parts, int(before["peak"]))
+            desk_error = persist_desk(
+                store,
+                result,
+                candidate["address"],
+                parts,
+                int(before["peak"]),
+                refresh_seen_at=bool(one),
+            )
             after = result_row(result)
             new_verdict = desk_verdict(after)
             new_heat = parts["total"]
@@ -1223,6 +1514,12 @@ def run_signal_rerun(
                 "fork": fork_from_result(result),
                 "changed": new_verdict != before["old_verdict"] or new_heat != before["old_heat"],
             })
+            if one:
+                breakdown = result.heat_breakdown if isinstance(result.heat_breakdown, dict) else {}
+                before["fuzz"] = fuzz_from_result(result)
+                before["stages_cleared"] = cleared
+                before["pending_stages"] = [str(name) for name in (breakdown.get("pending_stages") or [])]
+                before["score_state"] = str(breakdown.get("score_state") or "")
             if desk_error:
                 before["desk_error"] = desk_error
             rerun.append(before)
