@@ -1,2 +1,66 @@
-0x7cd5e2d0056a7a7f09cbb86e540ef4f6dccc97dd
-xSNXAdmin full-path. One contract, read-only fork verify and fuzz. Does not start the under-$5k queues.
+# Full-path batch. Heat descending, then funds_usd descending.
+# Fork verify with redaction, fuzz min heat 0, lead fuzzer, Halmos.
+# Does not start the under-$5k queues. Hevm and Kontrol stay pending when their binaries are absent.
+# A later push of this file skips a contract whose stored pending stages no longer include fork or fuzz.
+0xbceb5f6877d979ec621ae694da1102cb95691ad3  # LYTPool heat 6 funds 22937682
+0xda06ee2dacf9245aa80072a4407debdea0d7e341  # StakedAvantCoinV2 heat 6 funds 21412075
+0xb48c056c5608ba2ee4cd94af2bf4b1f25295bd7e  # VaultV2 heat 6 funds 15267011
+0x181e5738d593ce29ccdc91bc562d45da3c480796  # VaultV2 heat 6 funds 8009167
+0x04422053addbc9bb2759b248b574e3fca76bc145  # VaultV2 heat 6 funds 7664200
+0xe48fc1a3fd6c3da483fb587d6c24151e402be02c  # VaultV2 heat 6 funds 7534725
+0x0b6c8ef0de1be5ed1b59e6e7a67fb9442fb9e49c  # MetaMorphoV1_1 heat 6 funds 6131873
+0x5e2339bcb89b42782cee454b46c7c6f88c0e4f83  # VaultV2 heat 6 funds 5390707
+0x1878805799273d10ae96a58201a6f5254cf9824f  # VaultV2 heat 6 funds 3640851
+0x9b5e92fd227876b4c07a8c02367e2cb23c639dfa  # MetaMorphoV1_1 heat 6 funds 3104255
+0x43fb24ad02a101acc128eb2ad76a240245c2ad47  # VaultV2 heat 6 funds 2899822
+0x8793cd69895c45b2d2474236b3cb28fc5c764775  # yTHOR heat 6 funds 2133065
+0x184ad7447d04aa8ce6f75f781bd00e37421b6eaf  # VaultV2 heat 6 funds 2064828
+0x68a65f315bcd3c3456d1368ff88bc661856548e1  # VaultV2 heat 6 funds 2060308
+0xb344e331a3cda61d329fb3cca2be5942da87c418  # VaultV2 heat 6 funds 1826676
+0x6ab8dd6124e5f5789b8b5074c5760b9917a2dfc6  # VaultV2 heat 6 funds 1472438
+0x7ad470ba664cfc15998db4d458699a4e76f2d0b6  # VaultV2 heat 6 funds 1204057
+0x6bb9d07be70d5c2c80c30b469759be92f6405c6b  # VaultV2 heat 6 funds 1093041
+0xa99d875b78336cc2e5252b8a94463cfbb04a9120  # VaultV2 heat 6 funds 1024759
+0x62fe596d59fb077c2df736df212e0affb522dc78  # MetaMorphoV1_1 heat 6 funds 971153
+0x32401b9fb79065bc15949de0bd43927492f02f0c  # VaultV2 heat 6 funds 736704
+0x3fda67f7583380e67ef93072294a7fac882fd7e7  # MoneyMarket heat 6 funds 712587
+0x9b7cca326004967f9d2b7cf5f2328d82cf65b302  # MetaMorphoV1_1 heat 6 funds 674312
+0x62578b2c9676e951c476d77406f8914e5446b661  # MetaMorphoV1_1 heat 6 funds 615079
+0x5e577efb2807d106e2a8bdde3fc5fcffffc9ec13  # VaultV2 heat 6 funds 613631
+0xf39ac02dec8fae8292d5f42202e4cd885356256b  # VaultV2 heat 6 funds 527130
+0xcdace5073d9ca7379498ea8c728302e06d2f4f9b  # StakingVault heat 6 funds 501667
+0xd78f89b311c27c4c71487aeb73742665cd13b941  # VaultV2 heat 6 funds 468705
+0x7b9e07f03116e5f334b2c9f539515ca5e31fd063  # EmeraldVault heat 6 funds 355850
+0xdc55fe3d11d8eca631d9db6fcc999cd26fe733be  # EmeraldVault heat 6 funds 314950
+0x7ceb0f01cb7187a2ebed5661ecc4d5701d8f2350  # VaultV2 heat 6 funds 230353
+0x241e82c79452f51fbfc89fac6d912e021db1a3b7  # Hydro heat 6 funds 227809
+0xdcb9a6d103dae1ab571f746bb83ded53e665880a  # VaultV2 heat 6 funds 183871
+0x1f7bae0549f9f0baf15d0d637900056bb9434c36  # VaultV3 heat 6 funds 167961
+0xedc72b49542e4362c677b8369bc23882ed635a75  # MetaMorphoV1_1 heat 6 funds 149864
+0x3ace737610da61d004c748275eafd2ecc99802be  # VaultV2 heat 6 funds 144293
+0x2e87d6bfa3f2a932e0c70a32607c0b839404984d  # MetaMorphoV1_1 heat 6 funds 139661
+0x5e5b30c5fd07da26d1e515dfedb1d37c93417652  # VaultV2 heat 6 funds 130752
+0x6110d61dd1133b0f845f1025d6678cd22a11a2fe  # SpiceFiNFT4626 heat 6 funds 54047
+0x8f0cb368c63fbedf7a90e43fe50f7eb8b9411746  # ETHVault heat 6 funds 6938
+0x7ee64f74792c307446cd92d23e551efae3172a28  # MigratableWethTransmuter heat 6 funds 4511
+0x588c13e685e44b22dc6647937481c816e5fee086  # CEther heat 6 funds 1341
+0x8ea8fcd938d45d2461e023b96044acab4780f07b  # CEtherDelegate heat 6 funds 1308
+0xfbd8aaf46ab3c2732fa930e5b343cd67cea5054c  # CEtherDelegate heat 6 funds 1089
+0x673f9cb9bea1525bd982c061125c285d79d8fbe2  # CEtherDelegate heat 6 funds 838
+0xf635fdf9b36b557bd281aa02fdfaebec04cd084a  # CEther heat 6 funds 405
+0x258592543a2d018e5bdd3bd74d422f952d4b3c1b  # CEtherDelegate heat 6 funds 173
+0x18e2f4f2e6565187fce73ecc707579e5f7933f74  # ZenjiWbtcLlamaUsdtStakeDao heat 6 funds 113
+0x3bc801419479865b24b4d32fab0bf64638abbd5f  # BTCDStaking heat 5 funds 1767725
+0x14c88821738adb21fe5434ad228949d59b065ad6  # Vault heat 5 funds 626854
+0xfa17f7aadbfac2c5d3c8125555404c1ae17df853  # VaultV2 heat 5 funds 556872
+0xdb1281191bd51d4e4412b0e3323001759d18939f  # Vault heat 5 funds 314430
+0x7122985656e38bdc0302db86685bb972b145bd3c  # Stone heat 3 funds 5141143
+0xbffb9c118db06225b5b7a5e74d1532e29bd70e86  # YieldVault heat 3 funds 706536
+0x4521a4225efdf50d402d2afbd85e70a9f255f105  # AsyncVault heat 3 funds 571228
+0xc88f47067db2e25851317a2fdae73a22c0777c37  # oneBTC heat 3 funds 341269
+0xf80e51afb613d764fa61751affd3313c190a86bb  # Altitude heat 3 funds 21659
+0x19b3bde6f02fc2c985947dcc1dc2a4cddfd43ee8  # CCollateralCapErc20Delegate heat 3 funds 731
+0xc42d8f3d791c107c458b2fea025a36669b51fc5f  # CCollateralCapErc20Delegate heat 3 funds 375
+0xba2e90b4dcdb235e46b9554360e31f2afa1d8b35  # CWrappedNativeDelegator heat 3 funds 181
+0x9435f39c4a1a51765dd4294fc84fe024f5ace0d2  # CCollateralCapErc20Delegate heat 3 funds 165
+0x56b49615b468c14237236caffee4d5b7c65a82f8  # CoinbaseSmartWallet heat 3 funds 119

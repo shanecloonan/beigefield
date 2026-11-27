@@ -65,8 +65,8 @@ _PROVIDER_STOPS = frozenset({"monthly capacity", "auth", "rate limited"})
 # file selects queue 2. workflow_dispatch still uses its queue input.
 Q1_TRIGGER = "eth-scanner/signal-rerun.trigger"
 Q2_TRIGGER = "eth-scanner/signal-rerun-q2.trigger"
-# One address, fork verify, and fuzz. A push of this file does not read
-# either under-$5k queue. The address is the first 20-byte hex token.
+# An ordered address list, fork verify, and fuzz. A push of this file does
+# not read either under-$5k queue. Addresses are 20-byte hex tokens, in order.
 FULL_PATH_TRIGGER = "eth-scanner/full-path.trigger"
 _FULL_PATH_FILE = Path(__file__).resolve().parents[3] / "full-path.trigger"
 _EVIDENCE_KEYS = (
@@ -88,28 +88,43 @@ def _changed_set(paths) -> set[str]:
 
 
 def run_mode_for_changed_files(paths) -> str:
-    """``full-path`` scans the trigger file's address and does not start a queue.
+    """``full-path`` scans the trigger file's addresses and does not start a queue.
 
-    A commit that contains the full-path trigger stays on that one contract
-    even when a queue trigger file is in the same commit.
+    A commit that contains the full-path trigger stays on that list even when
+    a queue trigger file is in the same commit.
     """
     if FULL_PATH_TRIGGER in _changed_set(paths):
         return "full-path"
     return "queue"
 
 
-def address_from_full_path_trigger(text: str | None = None) -> str:
-    """First 20-byte address in the full-path trigger file. Empty when absent."""
+def addresses_from_full_path_trigger(text: str | None = None) -> list[str]:
+    """20-byte addresses in the full-path trigger, in file order, duplicates dropped.
+
+    A ``#`` comment is ignored. An empty or missing file returns an empty list.
+    """
     if text is None:
         try:
             text = _FULL_PATH_FILE.read_text(encoding="utf-8")
         except OSError:
-            return ""
-    for token in str(text or "").replace(",", " ").split():
+            return []
+    found: list[str] = []
+    seen: set[str] = set()
+    lines = []
+    for line in str(text or "").splitlines():
+        lines.append(line.split("#", 1)[0])
+    for token in " ".join(lines).replace(",", " ").split():
         addr = safe_address(token.strip("\"'"))
-        if addr:
-            return addr
-    return ""
+        if addr and addr not in seen:
+            seen.add(addr)
+            found.append(addr)
+    return found
+
+
+def address_from_full_path_trigger(text: str | None = None) -> str:
+    """First 20-byte address in the full-path trigger file. Empty when absent."""
+    found = addresses_from_full_path_trigger(text)
+    return found[0] if found else ""
 
 
 def queue_id_for_changed_files(paths) -> str:
@@ -365,6 +380,52 @@ def fold_signals(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list
     ranked = [item for item in best.values() if item.get("signal")]
     ranked.sort(key=lambda item: (-int(item["peak"]), item["address"]))
     return ranked, other
+
+
+def fork_or_fuzz_pending(candidate: dict[str, Any]) -> bool:
+    """True when the stored row still lists fork or fuzz, or has no stage list yet.
+
+    A row whose pending stages are only hevm and kontrol is already past this
+    pass. A row with no ``pending_stages`` key has never recorded them, so the
+    trigger still asks for the check.
+    """
+    latest = candidate.get("latest") if isinstance(candidate.get("latest"), dict) else {}
+    breakdown = _breakdown(latest)
+    if "pending_stages" not in breakdown:
+        return True
+    pending = breakdown.get("pending_stages")
+    if not isinstance(pending, list):
+        return True
+    names = {str(item) for item in pending}
+    return "fork" in names or "fuzz" in names
+
+
+def take_in_order(
+    candidates: list[dict[str, Any]],
+    *,
+    budget_cu: int = DEFAULT_BUDGET_CU,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Keep a file-order prefix that fits the CU estimate. The rest are deferred.
+
+    Unlike ``prioritize``, this does not re-sort. The trigger file is already
+    heat descending, then funds descending.
+    """
+    cap = max(0, int(budget_cu))
+    selected: list[dict[str, Any]] = []
+    deferred: list[dict[str, Any]] = []
+    spent = 0
+    for row in candidates:
+        if spent + PER_CONTRACT_CU > cap:
+            deferred.append({
+                "chain": row.get("chain") or "ethereum",
+                "address": row.get("address") or "",
+                "peak": int(row.get("peak") or 0),
+                "reason": "cu budget",
+            })
+            continue
+        selected.append(row)
+        spent += PER_CONTRACT_CU
+    return selected, deferred
 
 
 def prioritize(
@@ -1324,6 +1385,7 @@ def run_signal_rerun(
     batch_size: int = 0,
     queue_id: str = "1",
     address: str = "",
+    addresses: Optional[list[str]] = None,
 ) -> dict[str, Any]:
     """Collect, cut to the CU budget, then re-score. Fail soft on 429 and on the cap.
 
@@ -1331,13 +1393,32 @@ def run_signal_rerun(
     walk the historical signal tables. The proxy cap stays on that batch.
     ``queue_id`` defaults to queue 1. Queue 2 is the follow-up file.
 
-    ``address`` scans that one contract and does not read either under-$5k
-    queue. Fork verify and fuzz are the caller's env flags. A provider stop
-    (Alchemy capacity, auth, or 429) does not write a finished verdict. The
-    contract that hit the stop stays unfinished.
+    ``address`` or ``addresses`` scans those contracts, in the order given,
+    and does not read either under-$5k queue. A row that no longer lists fork
+    or fuzz is skipped. The CU estimate keeps a prefix; the rest stay pending.
+    Fork verify and fuzz are the caller's env flags. A provider stop (Alchemy
+    capacity, auth, or 429) does not write a finished verdict. The contract
+    that hit the stop stays unfinished. A deadline leaves the rest unfinished.
     """
-    one = safe_address(address)
-    if str(address or "").strip() and not one:
+    raw_list: list[str] = []
+    if addresses:
+        raw_list.extend(str(item) for item in addresses)
+    elif str(address or "").strip():
+        raw_list.append(str(address))
+    ones: list[str] = []
+    bad: list[str] = []
+    seen_addr: set[str] = set()
+    for item in raw_list:
+        addr = safe_address(item)
+        if not addr:
+            if str(item or "").strip():
+                bad.append(redact(str(item))[:80])
+            continue
+        if addr not in seen_addr:
+            seen_addr.add(addr)
+            ones.append(addr)
+    full_path = bool(raw_list)
+    if full_path and not ones:
         return {
             "status": "error",
             "mode": "full-path",
@@ -1348,22 +1429,44 @@ def run_signal_rerun(
             "selected": 0,
         }
     released: dict[str, Any] = {"released": [], "kept": []}
-    if one:
-        selected = [candidate_for_address(store, one)]
+    if full_path:
+        waiting: list[dict[str, Any]] = []
+        skipped_clear: list[str] = []
+        for addr in ones:
+            candidate = candidate_for_address(store, addr)
+            if not fork_or_fuzz_pending(candidate):
+                skipped_clear.append(addr)
+                continue
+            reasons = list(candidate.get("reasons") or [])
+            if "batch" not in reasons and len(ones) > 1:
+                reasons.append("batch")
+            candidate["reasons"] = reasons
+            waiting.append(candidate)
+        selected, deferred = take_in_order(waiting, budget_cu=budget_cu)
+        notes = [
+            "%d contract(s) in file order; the under-$5k queues were not read" % len(ones),
+            "fork and fuzz clear only after they run; hevm and kontrol stay pending when those binaries are absent",
+            "heat stays the fresh evidence sum; a fork or fuzz result is not an automatic yes",
+        ]
+        if skipped_clear:
+            notes.append("%d already clear of fork and fuzz; left as stored" % len(skipped_clear))
+        if deferred:
+            notes.append("%d deferred past the CU estimate; their stages stay pending" % len(deferred))
+        if bad:
+            notes.append("%d token(s) were not 20-byte addresses" % len(bad))
         plan = {
             "mode": "full-path",
-            "address": one,
+            "addresses": ones,
+            "address": ones[0] if len(ones) == 1 else "",
             "rows_read": 0,
-            "signals": 1,
-            "skipped_finished": 0,
-            "selected": 1,
-            "deferred_budget": [],
+            "signals": len(waiting),
+            "skipped_finished": len(skipped_clear),
+            "skipped_clear": skipped_clear,
+            "selected": len(selected),
+            "deferred_budget": deferred,
             "other_chain": [],
-            "notes": [
-                "one contract; the under-$5k queues were not read",
-                "fork and fuzz clear only after they run; hevm and kontrol stay pending when those binaries are absent",
-            ],
-            "estimate": estimate_cu(1),
+            "notes": notes,
+            "estimate": estimate_cu(len(selected)),
             "budget_cu": int(budget_cu),
         }
     elif small_value_batch:
@@ -1460,7 +1563,7 @@ def run_signal_rerun(
             refresh_scan_cycle(store, owner, candidate["address"])
             before = _snapshot(candidate)
             try:
-                with _FullPathEnv(bool(one)):
+                with _FullPathEnv(full_path):
                     result = scan_one(candidate["address"], settings=settings, store=guarded)
             except RpcUnavailable:
                 stop = "rpc unavailable"
@@ -1490,7 +1593,7 @@ def run_signal_rerun(
                 break
             parts = apply_evidence_heat(result, int(before["peak"]))
             cleared: list[str] = []
-            if one:
+            if full_path:
                 cleared = record_executed_stages(result)
             try:
                 store.save_result(candidate["address"], result)
@@ -1502,7 +1605,7 @@ def run_signal_rerun(
                 candidate["address"],
                 parts,
                 int(before["peak"]),
-                refresh_seen_at=bool(one),
+                refresh_seen_at=full_path,
             )
             after = result_row(result)
             new_verdict = desk_verdict(after)
@@ -1514,7 +1617,7 @@ def run_signal_rerun(
                 "fork": fork_from_result(result),
                 "changed": new_verdict != before["old_verdict"] or new_heat != before["old_heat"],
             })
-            if one:
+            if full_path:
                 breakdown = result.heat_breakdown if isinstance(result.heat_breakdown, dict) else {}
                 before["fuzz"] = fuzz_from_result(result)
                 before["stages_cleared"] = cleared
