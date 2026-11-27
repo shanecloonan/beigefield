@@ -200,6 +200,7 @@ class ForkVerifyReport:
     def exploit_poc_dict(self) -> dict[str, Any]:
         return {
             "drainable": bool(self.drainable),
+            "ran": bool(self.ran),
             "status": self.status,
             "failure_class": self.failure_class,
             "failing_test": self.failing_test,

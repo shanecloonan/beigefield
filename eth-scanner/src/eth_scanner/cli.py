@@ -738,6 +738,11 @@ def main(argv: list[str] | None = None) -> int:
         choices=["1", "2"],
         help="Under-$5k queue. 1 is the current file. 2 is the follow-up. Default 1.",
     )
+    rerun.add_argument(
+        "--address",
+        default="",
+        help="Scan this one contract with the scan-cycle lease. Does not read the under-$5k queues.",
+    )
     rerun.add_argument("--json", action="store_true")
 
     similar = sub.add_parser(
@@ -1530,6 +1535,7 @@ def main(argv: list[str] | None = None) -> int:
             small_value_batch=bool(args.small_value_batch),
             batch_size=max(0, int(args.batch_size)),
             queue_id=str(args.queue or "1"),
+            address=str(args.address or ""),
         )
         print(_json.dumps(report, indent=2, default=str))
         return 0

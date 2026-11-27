@@ -1,7 +1,9 @@
 # Read-only Lane A with fork verify on. Pushing eth-scanner/signal-rerun.trigger
 # to main scans the next under-$5k high-likelihood batch from queue 1
 # (75 contracts, 250k CU). Pushing eth-scanner/signal-rerun-q2.trigger scans
-# queue 2 the same way. workflow_dispatch can still select either queue.
+# queue 2 the same way. Pushing eth-scanner/full-path.trigger scans only the
+# address in that file (fork verify, fuzz, 120k CU) and does not start either
+# under-$5k queue. workflow_dispatch can still select either queue.
 # workflow_dispatch mode "historical" re-scores stored signals inside 4M CU.
 # The monitor and the backfill leave fork verify off. This job holds the
 # shared scan-cycle lease so those crons do not scan at the same time.
@@ -13,6 +15,7 @@ on:
     paths:
       - eth-scanner/signal-rerun.trigger
       - eth-scanner/signal-rerun-q2.trigger
+      - eth-scanner/full-path.trigger
   workflow_dispatch:
     inputs:
       mode:
@@ -101,7 +104,9 @@ jobs:
           cd eth-scanner
           # The push payload on the runner can omit commit file lists, so a push
           # reads git diff-tree of the checked-out commit. Queue 1's trigger file
-          # still wins when both files change. workflow_dispatch uses its input.
+          # still wins when both queue files change. A full-path trigger scans
+          # one address and does not start a queue. workflow_dispatch uses its input.
+          MODE="queue"
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             CHANGED=""
             RERUN_QUEUE="$(python - <<'PY'
@@ -117,15 +122,36 @@ jobs:
               echo "signal-rerun could not read the files changed in HEAD; not guessing a queue."
               exit 1
             fi
-            RERUN_QUEUE="$(CHANGED_FILES="$CHANGED" python - <<'PY'
+            MODE="$(CHANGED_FILES="$CHANGED" python - <<'PY'
+          import os
+          from eth_scanner.desk.signal_rerun import run_mode_for_changed_files
+          print(run_mode_for_changed_files(os.environ.get("CHANGED_FILES", "").splitlines()))
+          PY
+          )"
+            if [ "${MODE}" != "full-path" ]; then
+              RERUN_QUEUE="$(CHANGED_FILES="$CHANGED" python - <<'PY'
           import os
           from eth_scanner.desk.signal_rerun import queue_id_for_changed_files
           print(queue_id_for_changed_files(os.environ.get("CHANGED_FILES", "").splitlines()))
           PY
           )"
+            else
+              RERUN_QUEUE=""
+            fi
           fi
-          echo "signal-rerun queue ${RERUN_QUEUE} from: ${CHANGED:-workflow_dispatch}"
-          if [ "${RERUN_MODE}" = "historical" ]; then
+          if [ "${MODE}" = "full-path" ]; then
+            ADDR="$(python - <<'PY'
+          from eth_scanner.desk.signal_rerun import address_from_full_path_trigger
+          print(address_from_full_path_trigger())
+          PY
+          )"
+            if [ -z "${ADDR}" ]; then
+              echo "full-path trigger has no address; not starting a queue."
+              exit 1
+            fi
+            echo "signal-rerun full-path ${ADDR}, fork verify on, fuzz min heat 0, budget 120000 CU"
+            python -m eth_scanner signal-rerun --address "${ADDR}" --budget-cu 120000 --deadline-minutes 55 --lease-wait-minutes 20 --json
+          elif [ "${RERUN_MODE}" = "historical" ]; then
             echo "signal-rerun historical, fork verify on, fuzz min heat 0, budget 4000000 CU"
             python -m eth_scanner signal-rerun --budget-cu 4000000 --deadline-minutes 55 --lease-wait-minutes 20 --json
           elif [ "${RERUN_QUEUE}" = "2" ]; then

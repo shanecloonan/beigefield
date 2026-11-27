@@ -65,6 +65,18 @@ _CACHE_LOCK = threading.Lock()
 _MEM_CACHE: dict[str, dict[str, Any]] = {}
 
 
+def full_path_enabled() -> bool:
+    """One-shot scans fuzz and Halmos even when Slither found no lead.
+
+    The monitor and the under-$5k queues leave this unset. A property
+    failure from those engines still adds no heat by itself.
+    """
+    raw = os.environ.get("ETH_SCANNER_FULL_PATH")
+    if raw is None or not str(raw).strip():
+        return False
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+
+
 @dataclass
 class AdvancedEngineReport:
     ran_slither: bool = False
@@ -266,6 +278,9 @@ def run_advanced_engines(
     has_slither_lead = any(l.get("engine") == "slither" for l in report.leads)
     inv_needs = any((r.get("status") or "").lower() in {"failed", "unknown"} for r in inv)
     is_lead = has_slither_lead or inv_needs
+    # Mythril stays on the lead gate. Fuzz and Halmos also run for a one-shot
+    # full-path scan so a provisional maybe is actually checked.
+    check_deep = is_lead or full_path_enabled()
 
     # --- Mythril (gated) ---------------------------------------------------
     if is_lead:
@@ -329,7 +344,7 @@ def run_advanced_engines(
 
     # --- Fuzz (Medusa → Foundry) on leads only -----------------------------
     fuzz_report: Optional[FuzzReport] = None
-    if run_fuzz and is_lead and rpc_url:
+    if run_fuzz and check_deep and rpc_url:
         try:
             fuzz_report = run_lead_fuzz(
                 address=address,
@@ -366,12 +381,15 @@ def run_advanced_engines(
             report.notes.append("fuzz error (non-blocking): %s" % str(exc)[:160])
             report.fuzz = {"status": "error", "ran": False, "skipped": True}
     elif run_fuzz:
-        report.notes.append("fuzz skipped — need Slither lead or failed/unknown invariant + rpc")
+        if check_deep and not rpc_url:
+            report.notes.append("fuzz skipped — no ETH_RPC_URL")
+        else:
+            report.notes.append("fuzz skipped — need Slither lead or failed/unknown invariant + rpc")
         report.fuzz = {"status": "skipped", "ran": False, "skipped": True}
 
     # --- Halmos symbolic on leads only -------------------------------------
     halmos_report: Optional[HalmosReport] = None
-    if run_halmos and is_lead:
+    if run_halmos and check_deep:
         try:
             halmos_report = run_lead_halmos(
                 address=address,
