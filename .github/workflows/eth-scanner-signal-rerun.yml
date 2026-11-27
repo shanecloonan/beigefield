@@ -43,6 +43,9 @@ jobs:
     timeout-minutes: 70
     steps:
       - uses: actions/checkout@v4
+        with:
+          # diff-tree needs the parent. A depth-1 checkout lists no files.
+          fetch-depth: 2
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
@@ -110,6 +113,10 @@ jobs:
           )"
           else
             CHANGED="$(git diff-tree -m --no-commit-id --name-only -r HEAD)"
+            if [ -z "${CHANGED}" ]; then
+              echo "signal-rerun could not read the files changed in HEAD; not guessing a queue."
+              exit 1
+            fi
             RERUN_QUEUE="$(CHANGED_FILES="$CHANGED" python - <<'PY'
           import os
           from eth_scanner.desk.signal_rerun import queue_id_for_changed_files
