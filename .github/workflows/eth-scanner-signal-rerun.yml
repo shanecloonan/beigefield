@@ -60,6 +60,18 @@ jobs:
           # diff-tree needs the parent. A depth-1 checkout lists no files.
           fetch-depth: 2
       - name: Install Foundry
+        id: foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        continue-on-error: true
+        with:
+          version: stable
+      # GitHub's release host sometimes 504s on the attestation download.
+      # One retry is enough for that blip; a second failure still stops the job.
+      - name: Wait before retrying Foundry
+        if: steps.foundry.outcome == 'failure'
+        run: sleep 20
+      - name: Install Foundry retry
+        if: steps.foundry.outcome == 'failure'
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: stable

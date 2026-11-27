@@ -2,4 +2,5 @@
 # keep contracts holding at least $5,000, and scan the richest 500 that are
 # not already on the board. Fork and fuzz run only when the new heat is above 0.
 # This file does not start an under-$5k queue.
+# Re-run: the first push died in the Foundry install on a GitHub 504.
 held-funds
