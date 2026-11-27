@@ -68,6 +68,9 @@ Q2_TRIGGER = "eth-scanner/signal-rerun-q2.trigger"
 # An ordered address list, fork verify, and fuzz. A push of this file does
 # not read either under-$5k queue. Addresses are 20-byte hex tokens, in order.
 FULL_PATH_TRIGGER = "eth-scanner/full-path.trigger"
+# One-shot high-probability batch. A push of this file does not read either
+# under-$5k queue and does not change the monitor's master-list fingerprint.
+HIGH_PROB_TRIGGER = "eth-scanner/high-prob.trigger"
 _FULL_PATH_FILE = Path(__file__).resolve().parents[3] / "full-path.trigger"
 _EVIDENCE_KEYS = (
     "invariants_failed",
@@ -91,10 +94,15 @@ def run_mode_for_changed_files(paths) -> str:
     """``full-path`` scans the trigger file's addresses and does not start a queue.
 
     A commit that contains the full-path trigger stays on that list even when
-    a queue trigger file is in the same commit.
+    a queue trigger file is in the same commit. ``high-prob`` is the one-shot
+    batch of unscanned contracts at or above $5,000. It wins over a queue
+    file and loses to the full-path list.
     """
-    if FULL_PATH_TRIGGER in _changed_set(paths):
+    files = _changed_set(paths)
+    if FULL_PATH_TRIGGER in files:
         return "full-path"
+    if HIGH_PROB_TRIGGER in files:
+        return "high-prob"
     return "queue"
 
 

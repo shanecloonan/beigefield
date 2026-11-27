@@ -3,7 +3,10 @@
 # (75 contracts, 250k CU). Pushing eth-scanner/signal-rerun-q2.trigger scans
 # queue 2 the same way. Pushing eth-scanner/full-path.trigger scans the
 # addresses in that file, in order (fork verify, fuzz, Halmos, 60k CU) and
-# does not start either under-$5k queue. The job timeout covers that batch.
+# does not start either under-$5k queue. Pushing eth-scanner/high-prob.trigger
+# scans the next 300 unscanned contracts at or above $5,000 (normal scan,
+# then fork and fuzz only where heat is above 0, 400k CU) and does not start
+# either under-$5k queue. The job timeout covers that batch.
 # Queue runs still stop on their own 55 minute deadline. workflow_dispatch
 # can still select either queue.
 # workflow_dispatch mode "historical" re-scores stored signals inside 4M CU.
@@ -18,6 +21,7 @@ on:
       - eth-scanner/signal-rerun.trigger
       - eth-scanner/signal-rerun-q2.trigger
       - eth-scanner/full-path.trigger
+      - eth-scanner/high-prob.trigger
   workflow_dispatch:
     inputs:
       mode:
@@ -107,7 +111,9 @@ jobs:
           # The push payload on the runner can omit commit file lists, so a push
           # reads git diff-tree of the checked-out commit. Queue 1's trigger file
           # still wins when both queue files change. A full-path trigger scans
-          # the address list in that file and does not start a queue.
+          # the address list in that file and does not start a queue. A high-prob
+          # trigger scans the next unscanned contracts at or above $5,000 and
+          # does not start a queue either.
           # workflow_dispatch uses its input.
           MODE="queue"
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
@@ -131,7 +137,7 @@ jobs:
           print(run_mode_for_changed_files(os.environ.get("CHANGED_FILES", "").splitlines()))
           PY
           )"
-            if [ "${MODE}" != "full-path" ]; then
+            if [ "${MODE}" != "full-path" ] && [ "${MODE}" != "high-prob" ]; then
               RERUN_QUEUE="$(CHANGED_FILES="$CHANGED" python - <<'PY'
           import os
           from eth_scanner.desk.signal_rerun import queue_id_for_changed_files
@@ -159,6 +165,9 @@ jobs:
               ARGS+=(--address "${ADDR}")
             done
             python -m eth_scanner signal-rerun "${ARGS[@]}" --budget-cu 60000 --deadline-minutes 320 --lease-wait-minutes 20 --json
+          elif [ "${MODE}" = "high-prob" ]; then
+            echo "signal-rerun high-prob next 300, normal scan then fork on heat above 0, budget 400000 CU"
+            python -m eth_scanner high-prob-batch --limit 300 --budget-cu 400000 --deadline-minutes 300 --lease-wait-minutes 20 --json
           elif [ "${RERUN_MODE}" = "historical" ]; then
             echo "signal-rerun historical, fork verify on, fuzz min heat 0, budget 4000000 CU"
             timeout 60m python -m eth_scanner signal-rerun --budget-cu 4000000 --deadline-minutes 55 --lease-wait-minutes 20 --json
