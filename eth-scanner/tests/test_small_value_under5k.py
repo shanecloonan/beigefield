@@ -239,5 +239,72 @@ class QueueTwo(unittest.TestCase):
         self.assertEqual([row["address"] for row in default["selected_rows"]], q1[:75])
 
 
+class QueueThree(unittest.TestCase):
+    def test_file_is_the_richest_under_five_thousand_and_skips_earlier_queues(self):
+        self.assertEqual(queue.queue_path("3").name, "small_value_under5k_queue_3.json")
+        self.assertEqual(queue.queue_path("nope"), queue.queue_path("1"))
+        payload = json.loads(queue.queue_path("3").read_text(encoding="utf-8"))
+        entries = payload["entries"]
+        self.assertEqual(payload["queue"], "3")
+        self.assertEqual(payload["count"], 500)
+        self.assertEqual(len(entries), 500)
+        addrs = [row["address"] for row in entries]
+        self.assertEqual(len(set(addrs)), 500)
+        pairs = [(float(row["funds_usd"]), row["address"]) for row in entries]
+        self.assertEqual(pairs, sorted(pairs, key=lambda item: (-item[0], item[1])))
+        self.assertGreaterEqual(pairs[-1][0], 0.01)
+        self.assertLess(pairs[0][0], 5000)
+        blocked = {row["address"] for row in queue.load_queue_entries("1")}
+        blocked |= {row["address"] for row in queue.load_queue_entries("2")}
+        old = json.loads((ROOT / "data" / "small_value_queue.json").read_text(encoding="utf-8"))
+        blocked |= {str(row["address"]).lower() for row in old["entries"]}
+        blocked |= rerun.load_seen()
+        blocked |= set(queue.NEVER_ADDRESSES)
+        self.assertEqual(set(addrs) & blocked, set())
+        for row in entries:
+            self.assertEqual(row["chain"], "ethereum")
+            self.assertIn(row["reason_class"], queue.REASON_SCORE)
+
+    def test_dry_run_can_select_queue_three_without_scanning(self):
+        store = MemoryStore()
+
+        def boom(address, **kwargs):
+            raise AssertionError("dry-run scanned")
+
+        class Settings:
+            eth_rpc_url = "http://127.0.0.1:1"
+
+        report = rerun.run_signal_rerun(
+            store,
+            Settings(),
+            budget_cu=4_000_000,
+            dry_run=True,
+            scan_one=boom,
+            small_value_batch=True,
+            batch_size=75,
+            queue_id="3",
+        )
+        self.assertEqual(report["status"], "dry-run")
+        self.assertEqual(report["mode"], "small-value-under5k-3")
+        self.assertEqual(report["queue_id"], "3")
+        self.assertEqual(report["queue"], 500)
+        self.assertEqual(report["selected"], 75)
+        self.assertLessEqual(report["budget_cu"], queue.SMALL_VALUE_BATCH_CU)
+        chosen = [row["address"] for row in report["selected_rows"]]
+        q3 = [row["address"] for row in queue.load_queue_entries("3")]
+        self.assertEqual(chosen, q3[:75])
+        default = rerun.run_signal_rerun(
+            store,
+            Settings(),
+            budget_cu=250_000,
+            dry_run=True,
+            scan_one=boom,
+            small_value_batch=True,
+            batch_size=75,
+        )
+        self.assertEqual(default["queue_id"], "1")
+        self.assertEqual(default["mode"], "small-value-under5k")
+
+
 if __name__ == "__main__":
     unittest.main()

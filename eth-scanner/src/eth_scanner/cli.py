@@ -735,8 +735,8 @@ def main(argv: list[str] | None = None) -> int:
     rerun.add_argument(
         "--queue",
         default="1",
-        choices=["1", "2"],
-        help="Under-$5k queue. 1 is the current file. 2 is the follow-up. Default 1.",
+        choices=["1", "2", "3"],
+        help="Under-$5k queue. 1 is the current file. 2 is the follow-up. 3 is the balance-ranked batch. Default 1.",
     )
     rerun.add_argument(
         "--address",
