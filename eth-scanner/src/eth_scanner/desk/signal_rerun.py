@@ -71,6 +71,9 @@ FULL_PATH_TRIGGER = "eth-scanner/full-path.trigger"
 # One-shot high-probability batch. A push of this file does not read either
 # under-$5k queue and does not change the monitor's master-list fingerprint.
 HIGH_PROB_TRIGGER = "eth-scanner/high-prob.trigger"
+# One-shot batch ranked by ETH and major-token balances measured at the
+# address. A push of this file does not read either under-$5k queue.
+HELD_FUNDS_TRIGGER = "eth-scanner/held-funds.trigger"
 _FULL_PATH_FILE = Path(__file__).resolve().parents[3] / "full-path.trigger"
 _EVIDENCE_KEYS = (
     "invariants_failed",
@@ -94,13 +97,16 @@ def run_mode_for_changed_files(paths) -> str:
     """``full-path`` scans the trigger file's addresses and does not start a queue.
 
     A commit that contains the full-path trigger stays on that list even when
-    a queue trigger file is in the same commit. ``high-prob`` is the one-shot
-    batch of unscanned contracts at or above $5,000. It wins over a queue
-    file and loses to the full-path list.
+    a queue trigger file is in the same commit. ``held-funds`` measures ETH
+    and major-token balances and scans the top contracts. ``high-prob`` is the
+    earlier one-shot batch. Both win over a queue file and lose to the
+    full-path list.
     """
     files = _changed_set(paths)
     if FULL_PATH_TRIGGER in files:
         return "full-path"
+    if HELD_FUNDS_TRIGGER in files:
+        return "held-funds"
     if HIGH_PROB_TRIGGER in files:
         return "high-prob"
     return "queue"

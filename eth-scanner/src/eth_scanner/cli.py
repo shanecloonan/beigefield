@@ -757,6 +757,17 @@ def main(argv: list[str] | None = None) -> int:
     high_prob.add_argument("--dry-run", action="store_true")
     high_prob.add_argument("--json", action="store_true")
 
+    held = sub.add_parser(
+        "held-funds-batch",
+        help="Measure ETH and major-token balances, then scan the richest unscanned vaults and pools. Does not read the under-$5k queues.",
+    )
+    held.add_argument("--limit", type=int, default=500)
+    held.add_argument("--budget-cu", type=int, default=400_000)
+    held.add_argument("--deadline-minutes", type=float, default=300.0)
+    held.add_argument("--lease-wait-minutes", type=float, default=20.0)
+    held.add_argument("--dry-run", action="store_true")
+    held.add_argument("--json", action="store_true")
+
     similar = sub.add_parser(
         "similarity-search",
         help="Rank functions by structural similarity. A neighbor is a lead and adds no heat.",
@@ -1556,6 +1567,21 @@ def main(argv: list[str] | None = None) -> int:
         import json as _json
         from eth_scanner.desk.high_prob import run_high_prob_batch
         report = run_high_prob_batch(
+            store,
+            settings,
+            limit=max(0, int(args.limit)),
+            budget_cu=max(0, int(args.budget_cu)),
+            deadline_s=max(60.0, float(args.deadline_minutes) * 60.0),
+            lease_wait_s=max(0.0, float(args.lease_wait_minutes) * 60.0),
+            dry_run=bool(args.dry_run),
+        )
+        print(_json.dumps(report, indent=2, default=str))
+        return 0
+
+    if args.cmd == "held-funds-batch":
+        import json as _json
+        from eth_scanner.desk.held_funds import run_held_funds_batch
+        report = run_held_funds_batch(
             store,
             settings,
             limit=max(0, int(args.limit)),

@@ -130,6 +130,7 @@ def select_high_prob(
     limit: int = DEFAULT_LIMIT,
     tranche_path: Optional[Path] = None,
     master: Any = None,
+    master_source: str = "master-list",
 ) -> dict[str, Any]:
     """Up to ``limit`` unscanned contracts at or above $5,000, in prior order."""
     finished, err = finished_addresses(store)
@@ -173,7 +174,7 @@ def select_high_prob(
         return len(selected) >= cap
 
     for row in master or []:
-        if take(row, "master-list"):
+        if take(row, master_source):
             break
     if len(selected) < cap:
         for row in load_tranche(tranche_path):
@@ -270,20 +271,31 @@ def run_high_prob_batch(
     scan_one: Any = None,
     tranche_path: Optional[Path] = None,
     master: Any = None,
+    master_source: str = "master-list",
 ) -> dict[str, Any]:
     """Normal-scan up to ``limit`` new contracts, then fork/fuzz where heat > 0.
 
     The CU cap covers both phases. The under-$5k queues are not read.
     """
-    chosen = select_high_prob(store, limit=limit, tranche_path=tranche_path, master=master)
+    chosen = select_high_prob(
+        store, limit=limit, tranche_path=tranche_path, master=master, master_source=master_source,
+    )
+    if master_source == "master-list":
+        origin = "%d from the master list, %d from the new tranche, %d already scanned" % (
+            chosen.get("from_master", 0), chosen.get("from_tranche", 0), chosen.get("skipped_finished", 0),
+        )
+    else:
+        origin = "%d contracts ranked by the balance measured at the address, %d already scanned" % (
+            chosen.get("from_master", 0) + chosen.get("from_tranche", 0),
+            chosen.get("skipped_finished", 0),
+        )
     notes = [
         "normal scan first; fork and fuzz run only when the new heat is above 0",
         "ordered by heat descending, then funds, for the fork pass",
         "the under-$5k queues were not read",
         "heat stays the fresh evidence sum; a fork or fuzz result is not an automatic yes",
         "a provider stop or the CU cap leaves the in-flight contract without a verdict",
-        "%d from the master list, %d from the new tranche, %d already scanned"
-        % (chosen.get("from_master", 0), chosen.get("from_tranche", 0), chosen.get("skipped_finished", 0)),
+        origin,
     ]
     notes.extend(chosen.get("notes") or [])
     selected = list(chosen.get("selected") or [])
