@@ -1405,7 +1405,8 @@ def run_signal_rerun(
 
     ``small_value_batch`` scans the next under-$5k queue batch and does not
     walk the historical signal tables. The proxy cap stays on that batch.
-    ``queue_id`` defaults to queue 1. Queue 2 is the follow-up file.
+    ``queue_id`` defaults to queue 1. Queue 2 is the follow-up file. Queue 3
+    is the balance-ranked batch and has no trigger file.
 
     ``address`` or ``addresses`` scans those contracts, in the order given,
     and does not read either under-$5k queue. A row that no longer lists fork

@@ -67,15 +67,21 @@ _SIGNALS = re.compile(r"signals=([^;]*)")
 
 
 def normalize_queue_id(queue_id: str | None = "1") -> str:
-    """Queue 1 is the file a trigger push already scans. Anything else stays there."""
+    """Queue 1 is the file a trigger push already scans. 2 and 3 are later files."""
     text = str(queue_id or "1").strip().lower()
     if text in {"2", "q2", "queue-2", "queue2"}:
         return "2"
+    if text in {"3", "q3", "queue-3", "queue3"}:
+        return "3"
     return "1"
 
 
 def queue_path(queue_id: str | None = "1") -> Path:
-    name = "small_value_under5k_queue_2.json" if normalize_queue_id(queue_id) == "2" else "small_value_under5k_queue.json"
+    qid = normalize_queue_id(queue_id)
+    name = {
+        "2": "small_value_under5k_queue_2.json",
+        "3": "small_value_under5k_queue_3.json",
+    }.get(qid, "small_value_under5k_queue.json")
     return Path(__file__).resolve().parents[3] / "data" / name
 
 
@@ -493,8 +499,9 @@ def prepare_batch(
 ) -> dict[str, Any]:
     """Select the next under-$5k batch. Does not read the historical signal tables.
 
-    ``queue_id`` 1 is the original file. 2 is the follow-up file. An empty
-    value stays on queue 1, which is what a trigger push runs.
+    ``queue_id`` 1 is the original file. 2 is the follow-up file. 3 is the
+    balance-ranked batch. An empty value stays on queue 1, which is what a
+    trigger push runs. Queue 3 has no trigger file.
     """
     qid = normalize_queue_id(queue_id)
     entries = load_queue_entries(qid)
@@ -508,9 +515,17 @@ def prepare_batch(
         batch_size=size,
         budget_cu=budget_cu,
     )
-    label = "small-value under $%d batch" % int(FUNDS_MAX_USD)
-    if qid == "2":
-        label = "small-value under $%d queue 2" % int(FUNDS_MAX_USD)
+    labels = {
+        "1": "small-value under $%d batch" % int(FUNDS_MAX_USD),
+        "2": "small-value under $%d queue 2" % int(FUNDS_MAX_USD),
+        "3": "small-value under $%d queue 3" % int(FUNDS_MAX_USD),
+    }
+    modes = {
+        "1": "small-value-under5k",
+        "2": "small-value-under5k-2",
+        "3": "small-value-under5k-3",
+    }
+    label = labels.get(qid, labels["1"])
     notes = [
         "%s, %d queued, %d already finished" % (label, len(entries), len(finished)),
     ]
@@ -518,7 +533,7 @@ def prepare_batch(
         notes.append("finished lookup failed; this batch may repeat: " + err)
     selected = [as_signal_row(row) for row in selected_entries]
     plan = {
-        "mode": "small-value-under5k" if qid == "1" else "small-value-under5k-2",
+        "mode": modes.get(qid, modes["1"]),
         "queue_id": qid,
         "rows_read": len(entries),
         "signals": len(entries),
