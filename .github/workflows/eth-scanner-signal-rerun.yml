@@ -1,9 +1,11 @@
 # Read-only Lane A with fork verify on. Pushing eth-scanner/signal-rerun.trigger
 # to main scans the next under-$5k high-likelihood batch from queue 1
 # (75 contracts, 250k CU). Pushing eth-scanner/signal-rerun-q2.trigger scans
-# queue 2 the same way. Pushing eth-scanner/full-path.trigger scans only the
-# address in that file (fork verify, fuzz, 120k CU) and does not start either
-# under-$5k queue. workflow_dispatch can still select either queue.
+# queue 2 the same way. Pushing eth-scanner/full-path.trigger scans the
+# addresses in that file, in order (fork verify, fuzz, Halmos, 250k CU) and
+# does not start either under-$5k queue. The job timeout covers that batch.
+# Queue runs still stop on their own 55 minute deadline. workflow_dispatch
+# can still select either queue.
 # workflow_dispatch mode "historical" re-scores stored signals inside 4M CU.
 # The monitor and the backfill leave fork verify off. This job holds the
 # shared scan-cycle lease so those crons do not scan at the same time.
@@ -43,7 +45,7 @@ concurrency:
 jobs:
   rerun:
     runs-on: ubuntu-latest
-    timeout-minutes: 70
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
         with:
@@ -105,7 +107,8 @@ jobs:
           # The push payload on the runner can omit commit file lists, so a push
           # reads git diff-tree of the checked-out commit. Queue 1's trigger file
           # still wins when both queue files change. A full-path trigger scans
-          # one address and does not start a queue. workflow_dispatch uses its input.
+          # the address list in that file and does not start a queue.
+          # workflow_dispatch uses its input.
           MODE="queue"
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             CHANGED=""
@@ -140,24 +143,29 @@ jobs:
             fi
           fi
           if [ "${MODE}" = "full-path" ]; then
-            ADDR="$(python - <<'PY'
-          from eth_scanner.desk.signal_rerun import address_from_full_path_trigger
-          print(address_from_full_path_trigger())
+            mapfile -t ADDRS < <(python - <<'PY'
+          from eth_scanner.desk.signal_rerun import addresses_from_full_path_trigger
+          for addr in addresses_from_full_path_trigger():
+              print(addr)
           PY
-          )"
-            if [ -z "${ADDR}" ]; then
+          )
+            if [ "${#ADDRS[@]}" -eq 0 ]; then
               echo "full-path trigger has no address; not starting a queue."
               exit 1
             fi
-            echo "signal-rerun full-path ${ADDR}, fork verify on, fuzz min heat 0, budget 120000 CU"
-            python -m eth_scanner signal-rerun --address "${ADDR}" --budget-cu 120000 --deadline-minutes 55 --lease-wait-minutes 20 --json
+            echo "signal-rerun full-path ${#ADDRS[@]} contracts, fork verify on, fuzz min heat 0, budget 250000 CU"
+            ARGS=()
+            for ADDR in "${ADDRS[@]}"; do
+              ARGS+=(--address "${ADDR}")
+            done
+            python -m eth_scanner signal-rerun "${ARGS[@]}" --budget-cu 250000 --deadline-minutes 320 --lease-wait-minutes 20 --json
           elif [ "${RERUN_MODE}" = "historical" ]; then
             echo "signal-rerun historical, fork verify on, fuzz min heat 0, budget 4000000 CU"
-            python -m eth_scanner signal-rerun --budget-cu 4000000 --deadline-minutes 55 --lease-wait-minutes 20 --json
+            timeout 60m python -m eth_scanner signal-rerun --budget-cu 4000000 --deadline-minutes 55 --lease-wait-minutes 20 --json
           elif [ "${RERUN_QUEUE}" = "2" ]; then
             echo "signal-rerun small-value under 5000 queue 2, fork verify on, batch 75, budget 250000 CU"
-            python -m eth_scanner signal-rerun --small-value-batch --queue 2 --batch-size 75 --budget-cu 250000 --deadline-minutes 55 --lease-wait-minutes 20 --json
+            timeout 60m python -m eth_scanner signal-rerun --small-value-batch --queue 2 --batch-size 75 --budget-cu 250000 --deadline-minutes 55 --lease-wait-minutes 20 --json
           else
             echo "signal-rerun small-value under 5000, fork verify on, batch 75, budget 250000 CU"
-            python -m eth_scanner signal-rerun --small-value-batch --batch-size 75 --budget-cu 250000 --deadline-minutes 55 --lease-wait-minutes 20 --json
+            timeout 60m python -m eth_scanner signal-rerun --small-value-batch --batch-size 75 --budget-cu 250000 --deadline-minutes 55 --lease-wait-minutes 20 --json
           fi

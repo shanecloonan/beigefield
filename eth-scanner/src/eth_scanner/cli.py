@@ -740,8 +740,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     rerun.add_argument(
         "--address",
-        default="",
-        help="Scan this one contract with the scan-cycle lease. Does not read the under-$5k queues.",
+        action="append",
+        default=[],
+        help="Scan these contracts in order with the scan-cycle lease. Repeatable. Does not read the under-$5k queues.",
     )
     rerun.add_argument("--json", action="store_true")
 
@@ -1535,7 +1536,7 @@ def main(argv: list[str] | None = None) -> int:
             small_value_batch=bool(args.small_value_batch),
             batch_size=max(0, int(args.batch_size)),
             queue_id=str(args.queue or "1"),
-            address=str(args.address or ""),
+            addresses=[str(item) for item in (args.address or [])],
         )
         print(_json.dumps(report, indent=2, default=str))
         return 0

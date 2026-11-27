@@ -592,8 +592,9 @@ class TriggerQueue(unittest.TestCase):
         self.assertIn("cancel-in-progress: false", text)
         self.assertIn("eth-scanner/full-path.trigger", text)
         self.assertIn("run_mode_for_changed_files", text)
-        self.assertIn("address_from_full_path_trigger", text)
-        self.assertIn("python -m eth_scanner signal-rerun --address", text)
+        self.assertIn("addresses_from_full_path_trigger", text)
+        self.assertIn('ARGS+=(--address "${ADDR}")', text)
+        self.assertIn("--budget-cu 250000 --deadline-minutes 320", text)
         self.assertIn("not starting a queue", text)
         self.assertNotIn("--address", queue1)
         self.assertNotIn("full-path", queue1)
@@ -603,9 +604,20 @@ class TriggerQueue(unittest.TestCase):
 class FullPath(unittest.TestCase):
     ADDR = "0x7cd5e2d0056a7a7f09cbb86e540ef4f6dccc97dd"
 
-    def test_trigger_file_names_one_contract(self):
-        self.assertEqual(rerun.address_from_full_path_trigger(), self.ADDR)
-        self.assertEqual(rerun.address_from_full_path_trigger("no address here"), "")
+    def test_trigger_file_lists_the_heated_batch_in_order(self):
+        found = rerun.addresses_from_full_path_trigger()
+        self.assertGreaterEqual(len(found), 62)
+        self.assertEqual(found[0], "0xbceb5f6877d979ec621ae694da1102cb95691ad3")
+        self.assertEqual(found[1], "0xda06ee2dacf9245aa80072a4407debdea0d7e341")
+        self.assertEqual(found[2], "0xb48c056c5608ba2ee4cd94af2bf4b1f25295bd7e")
+        self.assertEqual(len(found), len(set(found)))
+        self.assertNotIn(self.ADDR, found)
+        self.assertEqual(rerun.address_from_full_path_trigger(), found[0])
+        self.assertEqual(rerun.addresses_from_full_path_trigger("no address here"), [])
+        listed = rerun.addresses_from_full_path_trigger(
+            "0x" + "ab" * 20 + "  # first\n# comment\n0x" + "cd" * 20 + ", 0x" + "ab" * 20
+        )
+        self.assertEqual(listed, ["0x" + "ab" * 20, "0x" + "cd" * 20])
 
     def test_full_path_file_does_not_select_a_queue(self):
         self.assertEqual(rerun.run_mode_for_changed_files([rerun.FULL_PATH_TRIGGER]), "full-path")
@@ -803,6 +815,106 @@ class FullPath(unittest.TestCase):
         self.assertGreater(saved[0]["created_at"], "2026-11-25T03:27:59")
         self.assertNotIn("fork", saved[0]["heat_breakdown"]["pending_stages"])
         self.assertNotIn("fuzz", saved[0]["heat_breakdown"]["pending_stages"])
+
+    def test_batch_keeps_file_order_and_skips_a_cleared_row(self):
+        first = "0x" + "12" * 20
+        second = "0x" + "34" * 20
+        cleared = "0x" + "56" * 20
+        store = MemoryStore()
+        store.test_runs = [{
+            "address": cleared,
+            "chain": "ethereum",
+            "heat": 6,
+            "blend_heat": 6,
+            "blend_bucket": "maybe",
+            "contract_name": "Done",
+            "heat_breakdown": {"pending_stages": ["hevm", "kontrol"], "eoa_admin": 3, "total": 6},
+            "created_at": "2026-11-27T00:00:00Z",
+            "status": "done",
+        }]
+
+        report = rerun.run_signal_rerun(
+            store,
+            object(),
+            budget_cu=rerun.PER_CONTRACT_CU,
+            dry_run=True,
+            addresses=[first, cleared, second, "not-an-address"],
+            small_value_batch=True,
+        )
+        self.assertEqual(report["status"], "dry-run")
+        self.assertEqual(report["mode"], "full-path")
+        self.assertEqual([row["address"] for row in report["selected_rows"]], [first])
+        self.assertEqual(report["deferred_budget"][0]["address"], second)
+        self.assertEqual(report["deferred_budget"][0]["reason"], "cu budget")
+        self.assertEqual(report["skipped_clear"], [cleared])
+        self.assertTrue(any("under-$5k queues were not read" in note for note in report["notes"]))
+        self.assertFalse(rerun.fork_or_fuzz_pending({"latest": {"heat_breakdown": {"pending_stages": ["hevm"]}}}))
+        self.assertTrue(rerun.fork_or_fuzz_pending({"latest": {"heat_breakdown": {"pending_stages": ["fuzz"]}}}))
+        self.assertTrue(rerun.fork_or_fuzz_pending({"latest": {"heat_breakdown": {}}}))
+
+    def test_batch_persists_each_contract_without_an_automatic_yes(self):
+        from eth_scanner.stages.fusion import annotate_stages
+
+        first = "0x" + "12" * 20
+        second = "0x" + "34" * 20
+        seen = []
+
+        def scan_one(address, settings=None, store=None, **kwargs):
+            seen.append(address)
+            result = _bare_result()
+            result.heat = 6
+            result.contract_name = "Vault"
+            result.funds_usd = 10
+            result.heat_breakdown = annotate_stages({
+                "eoa_admin": 3,
+                "corroborated_leads": 3,
+                "total": 6,
+                "exploit_poc": {
+                    "ran": True,
+                    "status": "ok",
+                    "drainable": False,
+                    "attacker_up": 0,
+                    "target_down": 0,
+                },
+                "fuzz": {
+                    "ran": True,
+                    "status": "ok",
+                    "tool": "forge",
+                    "properties_checked": 1,
+                    "failures": [],
+                },
+                "symbolic": {"executed": True, "status": "ok", "ran": True},
+            }, heat=6)
+            self.assertEqual(os.environ.get("ETH_SCANNER_FULL_PATH"), "1")
+            return result
+
+        class Settings:
+            eth_rpc_url = "http://127.0.0.1:9"
+            range_min_usd = None
+            range_max_usd = None
+
+        report = rerun.run_signal_rerun(
+            MemoryStore(),
+            Settings(),
+            budget_cu=250_000,
+            deadline_s=120,
+            lease_wait_s=2,
+            scan_one=scan_one,
+            addresses=[first, second],
+            small_value_batch=True,
+        )
+        self.assertEqual(seen, [first, second])
+        self.assertEqual(report["rerun_count"], 2)
+        self.assertEqual([row["address"] for row in report["rerun"]], [first, second])
+        for row in report["rerun"]:
+            self.assertEqual(row["new_verdict"], "maybe")
+            self.assertEqual(row["new_heat"], 6)
+            self.assertFalse(row["fork"]["drainable"])
+            self.assertNotIn("fork", row["pending_stages"])
+            self.assertNotIn("fuzz", row["pending_stages"])
+            self.assertIn("hevm", row["pending_stages"])
+            self.assertIn("kontrol", row["pending_stages"])
+        self.assertIsNone(os.environ.get("ETH_SCANNER_FULL_PATH"))
 
 
 if __name__ == "__main__":
