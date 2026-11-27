@@ -2,7 +2,7 @@
 # to main scans the next under-$5k high-likelihood batch from queue 1
 # (75 contracts, 250k CU). Pushing eth-scanner/signal-rerun-q2.trigger scans
 # queue 2 the same way. Pushing eth-scanner/full-path.trigger scans the
-# addresses in that file, in order (fork verify, fuzz, Halmos, 250k CU) and
+# addresses in that file, in order (fork verify, fuzz, Halmos, 60k CU) and
 # does not start either under-$5k queue. The job timeout covers that batch.
 # Queue runs still stop on their own 55 minute deadline. workflow_dispatch
 # can still select either queue.
@@ -153,12 +153,12 @@ jobs:
               echo "full-path trigger has no address; not starting a queue."
               exit 1
             fi
-            echo "signal-rerun full-path ${#ADDRS[@]} contracts, fork verify on, fuzz min heat 0, budget 250000 CU"
+            echo "signal-rerun full-path ${#ADDRS[@]} contracts, fork verify on, fuzz min heat 0, budget 60000 CU"
             ARGS=()
             for ADDR in "${ADDRS[@]}"; do
               ARGS+=(--address "${ADDR}")
             done
-            python -m eth_scanner signal-rerun "${ARGS[@]}" --budget-cu 250000 --deadline-minutes 320 --lease-wait-minutes 20 --json
+            python -m eth_scanner signal-rerun "${ARGS[@]}" --budget-cu 60000 --deadline-minutes 320 --lease-wait-minutes 20 --json
           elif [ "${RERUN_MODE}" = "historical" ]; then
             echo "signal-rerun historical, fork verify on, fuzz min heat 0, budget 4000000 CU"
             timeout 60m python -m eth_scanner signal-rerun --budget-cu 4000000 --deadline-minutes 55 --lease-wait-minutes 20 --json
